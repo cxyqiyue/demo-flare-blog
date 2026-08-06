@@ -42,7 +42,7 @@
     "@ai-sdk/openai-compatible": "^3.0.25",
     "@better-auth/core": "1.5.5",
     "@better-auth/utils": "0.3.1",
-    "@cloudflare/workers-oauth-provider": "^0.6.0",
+    "@cloudflare/workers-oauth-provider": "^0.8.3",
     "@hono/zod-validator": "^0.7.6",
     "@hookform/resolvers": "^5.2.2",
     "@modelcontextprotocol/sdk": "1.26.0",
@@ -107,7 +107,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.3.11",
     "@cloudflare/vite-plugin": "^1.37.1",
-    "@cloudflare/vitest-pool-workers": "^0.16.6",
+    "@cloudflare/vitest-pool-workers": "^0.20.1",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@fontsource-variable/noto-sans-sc": "^5.2.9",
     "@fontsource-variable/noto-serif-sc": "^5.2.10",
