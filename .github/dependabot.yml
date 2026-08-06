@@ -1,0 +1,59 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:00"
+      timezone: "America/Los_Angeles"
+
+  - package-ecosystem: "bun"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:00"
+      timezone: "America/Los_Angeles"
+    groups:
+      tanstack:
+        patterns:
+          - "@tanstack/*"
+      tiptap:
+        patterns:
+          - "@tiptap/*"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+      drizzle:
+        patterns:
+          - "drizzle-orm"
+          - "drizzle-zod"
+          - "drizzle-kit"
+      ui:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/vite"
+          - "tw-animate-css"
+          - "tailwind-merge"
+          - "class-variance-authority"
+          - "lucide-react"
+      cloudflare:
+        patterns:
+          - "wrangler"
+          - "@cloudflare/*"
+      tooling:
+        patterns:
+          - "vite"
+          - "vite-tsconfig-paths"
+          - "vitest"
+          - "@vitejs/plugin-react"
+          - "@biomejs/biome"
+          - "@testing-library/*"
+          - "jsdom"
+          - "web-vitals"
+      typescript:
+        patterns:
+          - "typescript"
+          - "@types/*"

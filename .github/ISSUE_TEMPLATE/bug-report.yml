@@ -1,0 +1,31 @@
+name: Bug 报告
+description: 报告程序运行中的错误
+labels: ["bug"]
+assignees: du2333
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 简要说明发生了什么。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      value: |
+        1. 
+        2. 
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果
+  - type: textarea
+    id: context
+    attributes:
+      label: 环境信息/附件
+      description: 版本、截图或报错日志。
