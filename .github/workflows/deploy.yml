@@ -82,6 +82,7 @@ jobs:
           echo "CLOUDFLARE_PURGE_API_TOKEN=${{ secrets.CLOUDFLARE_PURGE_API_TOKEN }}" >> $GITHUB_ENV
           echo "DOMAIN=${{ secrets.DOMAIN }}" >> $GITHUB_ENV
           echo "CDN_DOMAIN=${{ secrets.CDN_DOMAIN }}" >> $GITHUB_ENV
+          echo "ZONE_NAME=${{ vars.ZONE_NAME }}" >> $GITHUB_ENV
           echo "UMAMI_SRC=${{ secrets.UMAMI_SRC }}" >> $GITHUB_ENV
           echo "VITE_UMAMI_WEBSITE_ID=${{ vars.VITE_UMAMI_WEBSITE_ID }}" >> $GITHUB_ENV
           echo "PAGEVIEW_SALT=${{ secrets.PAGEVIEW_SALT }}" >> $GITHUB_ENV
@@ -93,10 +94,8 @@ jobs:
         run: |
           ROUTE="${ROUTE:-${{ vars.ROUTE }}}"
           CUSTOM_DOMAIN="${CUSTOM_DOMAIN:-${{ vars.CUSTOM_DOMAIN }}}"
-          ZONE_NAME="${ZONE_NAME:-${{ vars.ZONE_NAME }}}"
           export ROUTE
           export CUSTOM_DOMAIN
-          export ZONE_NAME
           bun run wrangler:prepare
 
       - name: Generate Secrets JSON

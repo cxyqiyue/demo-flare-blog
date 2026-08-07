@@ -212,7 +212,7 @@ The deployment script (`bun run wrangler:prepare`) generates the `routes` block 
 | **custom_domain** | `ROUTE=custom_domain` or `CUSTOM_DOMAIN=1` | `[{ pattern: "blog.example.com", custom_domain: true }]` | Domain already bound as a Worker custom domain in the Dashboard |
 | **pure workers.dev** | `DOMAIN` empty or ending with `.workers.dev` | `routes: []` | No custom domain, access directly via `xxx.workers.dev` |
 
-> In routes mode, `zone_name` is inferred from `DOMAIN` (the registrable domain). Set `ZONE_NAME` to override when the inference is wrong.
+> In routes mode, `zone_name` is inferred from `DOMAIN` (the registrable domain). Set `ZONE_NAME` to override when the inference is wrong. For example, `DOMAIN=blog.example.com` infers `zone_name=example.com`. If your Cloudflare Zone name differs (e.g. `example.co.uk`), you must set `ZONE_NAME` manually.
 
 ### Step 5: Trigger Deployment
 
@@ -392,6 +392,18 @@ Make sure `CLOUDFLARE_ZONE_ID` / `CLOUDFLARE_PURGE_API_TOKEN` are configured (wi
 ### 7. How do I connect an AI client (MCP)?
 
 This repo ships a built-in MCP Server that connects AI clients (e.g., Claude, Cursor) via OAuth to manage posts, comments, tags, friend links, media, and analytics. Visit `/oauth/consent` and complete the authorization flow.
+
+### 8. Deployment fails with "Could not find zone" — what do I do?
+
+This happens when `ZONE_NAME` is inferred incorrectly. For example, if your `DOMAIN` is `blog.qyfy.kdns.fr`, the script infers `zone_name` as `kdns.fr`, but the actual Cloudflare Zone is `qyfy.kdns.fr`.
+
+**Fix**: Go to your repository Settings → Secrets and variables → Actions → **Variables** and add:
+
+| Variable | Value |
+| :--- | :--- |
+| `ZONE_NAME` | Your Cloudflare Zone name (e.g. `qyfy.kdns.fr`) |
+
+> How to find it: In the Cloudflare Dashboard, open your domain — the Zone name is shown in the page title.
 
 ---
 

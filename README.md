@@ -213,7 +213,7 @@ src/
 | **custom_domain** | `ROUTE=custom_domain` 或 `CUSTOM_DOMAIN=1` | `[{ pattern: "blog.example.com", custom_domain: true }]` | 已在 Dashboard 中把域名绑定为 Worker 自定义域 |
 | **纯 workers.dev** | `DOMAIN` 为空或以 `.workers.dev` 结尾 | `routes: []` | 不绑定自定义域名，直接访问 `xxx.workers.dev` |
 
-> routes 模式下的 `zone_name` 默认从 `DOMAIN` 自动推导（二级域名取注册域），如推导不正确可设置 `ZONE_NAME` 覆盖。
+> routes 模式下的 `zone_name` 默认从 `DOMAIN` 自动推导（二级域名取注册域），如推导不正确可设置 `ZONE_NAME` 覆盖。例如 `DOMAIN=blog.example.com` 会推导出 `zone_name=example.com`，若你的 Cloudflare Zone 名称不是 `example.com`（如 `example.co.uk`），则必须手动设置 `ZONE_NAME`。
 
 ### 阶段 5：触发部署
 
@@ -405,6 +405,18 @@ bun dev
 - **关闭 R2 上传入口**：文章区图床启用后，后台媒体库的「上传」入口（上传按钮、拖拽/粘贴上传）会自动禁用，文章编辑器图片弹窗中的 R2 媒体库选择也会隐藏，避免图片上传/插入到错误位置；已有 R2 图片仍可浏览、改名与删除。
 - **多图床切换**：两家的文章上传按 ImgBB → ffsky 的顺序尝试，其中一家失败会自动尝试下一家，仅当所有已启用且填了 Key 的图床都失败时才返回错误。
 - 图床 API Key 与站点其他配置（SMTP、AI Key 等）一样保存在 D1 配置表中，仅服务端读取，不会下发到浏览器。
+
+### 8.5. 部署报错 "Could not find zone" 怎么办？
+
+这通常是因为 `ZONE_NAME` 推导不正确。例如你使用 `blog.qyfy.kdns.fr` 作为 `DOMAIN`，脚本会自动推导出 `zone_name` 为 `kdns.fr`，但实际 Cloudflare Zone 是 `qyfy.kdns.fr`。
+
+**解决方法**：在仓库 Settings → Secrets and variables → Actions → **Variables** 中添加：
+
+| 变量名 | 值 |
+| :--- | :--- |
+| `ZONE_NAME` | 你的 Cloudflare Zone 名称（如 `qyfy.kdns.fr`） |
+
+> 判断方法：在 Cloudflare Dashboard → 你的域名概览页，页面标题显示的就是 Zone 名称。
 
 ### 9. 如何接入 Agnes AI（国际站 / 国内站）？
 
