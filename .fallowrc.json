@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": ["src/server.ts"],
+  "dynamicallyLoaded": [
+    ".release-it.ts",
+    "src/features/theme/themes/*/index.ts",
+    "tests/apply-migrations.ts",
+    "tests/mocks/tanstack-start-mock.ts"
+  ],
+  "rules": {
+    "unused-dependencies": "warn"
+  },
+  "usedClassMembers": [
+    {
+      "extends": "WorkflowEntrypoint",
+      "members": ["run"]
+    },
+    {
+      "extends": "WorkerEntrypoint",
+      "members": ["fetch"]
+    },
+    {
+      "extends": "DurableObject",
+      "members": ["alarm", "checkLimit", "hash", "verify"]
+    }
+  ],
+  "ignorePatterns": ["worker-configuration.d.ts"]
+}

@@ -4,6 +4,7 @@ import { Loader2, Send } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { getCommentExtensions } from "@/features/comments/components/editor/config";
+import { useCommentImageUploader } from "@/features/image-hosting/hooks/use-comment-image-upload";
 import { normalizeLinkHref } from "@/lib/links/normalize-link-href";
 import { m } from "@/paraglide/messages";
 import CommentEditorToolbar from "../editor/comment-editor-toolbar";
@@ -49,6 +50,9 @@ export const CommentEditor = ({
     }),
   });
 
+  const { enabled: imageHostingEnabled, openUpload } =
+    useCommentImageUploader();
+
   const openLinkModal = useCallback(() => {
     const previousUrl = editor.getAttributes("link").href as string | undefined;
     setModalInitialUrl(previousUrl || "");
@@ -56,9 +60,18 @@ export const CommentEditor = ({
   }, [editor]);
 
   const openImageModal = useCallback(() => {
+    if (imageHostingEnabled) {
+      // 第三方图床已启用：打开官方上传弹窗
+      void openUpload().then((url) => {
+        if (url && editor) {
+          editor.chain().focus().setImage({ src: url }).run();
+        }
+      });
+      return;
+    }
     setModalInitialUrl("");
     setModalType("IMAGE");
-  }, []);
+  }, [editor, imageHostingEnabled, openUpload]);
 
   const handleSubmit = async () => {
     if (isEmpty || isSubmitting) return;

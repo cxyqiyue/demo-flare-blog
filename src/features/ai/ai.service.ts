@@ -22,14 +22,49 @@ type WorkersAITextModel = Parameters<ReturnType<typeof createWorkersAI>>[0];
 
 const TEXT_MODEL = "@cf/zai-org/glm-4.7-flash" satisfies WorkersAITextModel;
 
-export const AI_PROVIDER_NAMES = ["workers-ai", "openai-compatible"] as const;
+export const AI_PROVIDER_NAMES = [
+  "workers-ai",
+  "openai-compatible",
+  "agnes-ai",
+] as const;
 export type AiProviderName = (typeof AI_PROVIDER_NAMES)[number];
+
+// Agnes AI 官方推荐端点（OpenAI 兼容，无限期免费）
+export const AGNES_AI_ENDPOINTS = [
+  {
+    value: "https://apihub.agnes-ai.com/v1",
+    region: "international",
+  },
+  {
+    value: "https://apihub.agnes-ai.cn/v1",
+    region: "international-cn",
+  },
+  {
+    value: "https://api.agnes-ai.cn/v1",
+    region: "china",
+  },
+] as const;
 
 function buildTextModel(
   env: Env,
   ai: AiProviderConfig | undefined,
 ): LanguageModel {
   const openai = ai?.openaiCompatible;
+  const agnes = ai?.agnesAi;
+
+  if (
+    ai?.provider === "agnes-ai" &&
+    agnes?.baseUrl?.trim() &&
+    agnes?.model?.trim()
+  ) {
+    const provider = createOpenAICompatible({
+      name: "agnes-ai",
+      baseURL: agnes.baseUrl.trim().replace(/\/+$/, ""),
+      apiKey: agnes.apiKey?.trim() || undefined,
+    });
+
+    return provider(agnes.model.trim()) as unknown as LanguageModel;
+  }
 
   if (
     ai?.provider === "openai-compatible" &&

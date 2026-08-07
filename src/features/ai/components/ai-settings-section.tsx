@@ -4,7 +4,11 @@ import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AI_PROVIDER_NAMES, type AiProviderName } from "@/features/ai/ai.service";
+import {
+  AGNES_AI_ENDPOINTS,
+  AI_PROVIDER_NAMES,
+  type AiProviderName,
+} from "@/features/ai/ai.service";
 import type { TestAiConnectionInput } from "@/features/ai/ai.schema";
 import type { SystemConfig } from "@/features/config/config.schema";
 import type { Result } from "@/lib/errors";
@@ -20,6 +24,30 @@ interface AiSettingsSectionProps {
       { reason: "AI_CONNECTION_FAILED"; message: string }
     >
   >;
+}
+
+function providerLabel(name: AiProviderName): string {
+  if (name === "workers-ai") return m.settings_ai_provider_workers_ai();
+  if (name === "agnes-ai") return m.settings_ai_provider_agnes_ai();
+  return m.settings_ai_provider_openai_compatible();
+}
+
+function providerDescription(name: AiProviderName): string {
+  if (name === "workers-ai")
+    return m.settings_ai_provider_workers_ai_desc();
+  if (name === "agnes-ai")
+    return m.settings_ai_provider_agnes_ai_desc();
+  return m.settings_ai_provider_openai_compatible_desc();
+}
+
+function agnesEndpointLabel(region: (typeof AGNES_AI_ENDPOINTS)[number]["region"]): string {
+  if (region === "international") {
+    return m.settings_ai_agnes_endpoint_international();
+  }
+  if (region === "international-cn") {
+    return m.settings_ai_agnes_endpoint_international_cn();
+  }
+  return m.settings_ai_agnes_endpoint_china();
 }
 
 export function AiSettingsSection({
@@ -38,10 +66,17 @@ export function AiSettingsSection({
   const aiConfig = watch("ai");
   const provider = aiConfig?.provider ?? "workers-ai";
   const isOpenAiCompatible = provider === "openai-compatible";
+  const isAgnesAi = provider === "agnes-ai";
   const openai = aiConfig?.openaiCompatible;
+  const agnes = aiConfig?.agnesAi;
 
   const isOpenAiConfigured = !!openai?.baseUrl?.trim() && !!openai?.model?.trim();
-  const canTest = isOpenAiCompatible ? isOpenAiConfigured : true;
+  const isAgnesConfigured = !!agnes?.baseUrl?.trim() && !!agnes?.model?.trim();
+  const canTest = isOpenAiCompatible
+    ? isOpenAiConfigured
+    : isAgnesAi
+      ? isAgnesConfigured
+      : true;
 
   const handleTest = async () => {
     if (!canTest) return;
@@ -56,6 +91,11 @@ export function AiSettingsSection({
             baseUrl: openai?.baseUrl || "",
             apiKey: openai?.apiKey || "",
             model: openai?.model || "",
+          },
+          agnesAi: {
+            baseUrl: agnes?.baseUrl || "",
+            apiKey: agnes?.apiKey || "",
+            model: agnes?.model || "",
           },
         },
       });
@@ -126,14 +166,10 @@ export function AiSettingsSection({
                 />
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-foreground">
-                    {name === "workers-ai"
-                      ? m.settings_ai_provider_workers_ai()
-                      : m.settings_ai_provider_openai_compatible()}
+                    {providerLabel(name)}
                   </p>
                   <p className="text-xs leading-relaxed text-muted-foreground">
-                    {name === "workers-ai"
-                      ? m.settings_ai_provider_workers_ai_desc()
-                      : m.settings_ai_provider_openai_compatible_desc()}
+                    {providerDescription(name)}
                   </p>
                 </div>
               </button>
@@ -225,6 +261,136 @@ export function AiSettingsSection({
                 {errors.ai?.openaiCompatible?.apiKey?.message && (
                   <p className="text-xs text-red-500">
                     ! {errors.ai.openaiCompatible.apiKey.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Agnes AI Credentials */}
+        {isAgnesAi && (
+          <div className="space-y-8 p-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="rounded-sm bg-muted/40 p-2">
+                  <Server size={16} className="text-muted-foreground" />
+                </div>
+                <h5 className="text-sm font-medium text-foreground">
+                  {m.settings_ai_creds_title()}
+                </h5>
+              </div>
+            </div>
+
+            <div className="space-y-4 px-2">
+              <label className="text-sm text-muted-foreground">
+                {m.settings_ai_agnes_endpoint_label()}
+              </label>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                {AGNES_AI_ENDPOINTS.map((endpoint) => (
+                  <button
+                    key={endpoint.value}
+                    type="button"
+                    onClick={() => {
+                      setValue(
+                        "ai.agnesAi.baseUrl",
+                        endpoint.value,
+                        {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true,
+                        },
+                      );
+                      setStatus("IDLE");
+                    }}
+                    className={cn(
+                      "flex items-center justify-between gap-2 border p-3 text-left transition-all",
+                      agnes?.baseUrl?.trim() === endpoint.value
+                        ? "border-foreground bg-muted/20"
+                        : "border-border/30 hover:border-border/60",
+                    )}
+                  >
+                    <span className="text-xs font-medium text-foreground">
+                      {agnesEndpointLabel(endpoint.region)}
+                    </span>
+                    <span className="font-mono text-[10px] text-muted-foreground">
+                      {endpoint.value.replace("https://", "")}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-x-16 gap-y-10 px-2 xl:grid-cols-2">
+              <div className="space-y-4">
+                <label
+                  htmlFor="ai-agnes-base-url"
+                  className="text-sm text-muted-foreground"
+                >
+                  {m.settings_ai_creds_base_url_label()}
+                </label>
+                <Input
+                  id="ai-agnes-base-url"
+                  placeholder={m.settings_ai_creds_base_url_ph()}
+                  {...register("ai.agnesAi.baseUrl", {
+                    onChange: () => setStatus("IDLE"),
+                  })}
+                  className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
+                />
+                {errors.ai?.agnesAi?.baseUrl?.message && (
+                  <p className="text-xs text-red-500">
+                    ! {errors.ai.agnesAi.baseUrl.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <label
+                  htmlFor="ai-agnes-model"
+                  className="text-sm text-muted-foreground"
+                >
+                  {m.settings_ai_creds_model_label()}
+                </label>
+                <Input
+                  id="ai-agnes-model"
+                  placeholder={m.settings_ai_creds_model_ph()}
+                  {...register("ai.agnesAi.model", {
+                    onChange: () => setStatus("IDLE"),
+                  })}
+                  className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
+                />
+                {errors.ai?.agnesAi?.model?.message && (
+                  <p className="text-xs text-red-500">
+                    ! {errors.ai.agnesAi.model.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4 xl:col-span-2">
+                <label
+                  htmlFor="ai-agnes-api-key"
+                  className="text-sm text-muted-foreground"
+                >
+                  {m.settings_ai_creds_api_key_label()}
+                </label>
+                <div className="relative group/input">
+                  <Input
+                    id="ai-agnes-api-key"
+                    type="password"
+                    placeholder={m.settings_ai_creds_api_key_ph()}
+                    {...register("ai.agnesAi.apiKey", {
+                      onChange: () => setStatus("IDLE"),
+                    })}
+                    className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
+                  />
+                  <KeyRound
+                    size={14}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
+                  />
+                </div>
+                {errors.ai?.agnesAi?.apiKey?.message && (
+                  <p className="text-xs text-red-500">
+                    ! {errors.ai.agnesAi.apiKey.message}
                   </p>
                 )}
               </div>

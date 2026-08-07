@@ -66,6 +66,22 @@ export function resolveSystemConfig(
         ...DEFAULT_CONFIG.ai?.openaiCompatible,
         ...config?.ai?.openaiCompatible,
       },
+      agnesAi: {
+        ...DEFAULT_CONFIG.ai?.agnesAi,
+        ...config?.ai?.agnesAi,
+      },
+    },
+    imageHosting: {
+      ...DEFAULT_CONFIG.imageHosting,
+      ...config?.imageHosting,
+      imgbb: {
+        ...DEFAULT_CONFIG.imageHosting?.imgbb,
+        ...config?.imageHosting?.imgbb,
+      },
+      ffsky: {
+        ...DEFAULT_CONFIG.imageHosting?.ffsky,
+        ...config?.imageHosting?.ffsky,
+      },
     },
     site: resolveSiteConfig(config),
   };

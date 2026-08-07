@@ -4,6 +4,7 @@ import {
   Check,
   Cpu,
   Hammer,
+  Image as ImageIcon,
   KeyRound,
   LayoutTemplate,
   Loader2,
@@ -29,6 +30,8 @@ import {
 import { useSystemSetting } from "@/features/config/hooks/use-system-setting";
 import { EmailServiceSection } from "@/features/email/components/email-service-section";
 import { useEmailConnection } from "@/features/email/hooks/use-email-connection";
+import { ImageHostingSettingsSection } from "@/features/image-hosting/components/image-hosting-settings-section";
+import { useImageHostingConnection } from "@/features/image-hosting/hooks/use-image-hosting-connection";
 import { OAuthClientsSection } from "@/features/oauth-clients/components/oauth-clients-section";
 import { WebhookSettingsSection } from "@/features/webhook/components/webhook-settings-section";
 import { cn } from "@/lib/utils";
@@ -53,6 +56,7 @@ function RouteComponent() {
   const { settings, saveSettings, isLoading } = useSystemSetting();
   const { testEmailConnection } = useEmailConnection();
   const { testAiConnection } = useAiConnection();
+  const { testImageHostingConnection } = useImageHostingConnection();
   const [activeTab, setActiveTab] = useState("site");
   const formRef = useRef<HTMLFormElement>(null);
   const hasMountedRef = useRef(false);
@@ -71,6 +75,11 @@ function RouteComponent() {
       value: "ai",
       icon: Cpu,
       label: m.settings_tab_ai(),
+    },
+    {
+      value: "image-hosting",
+      icon: ImageIcon,
+      label: m.settings_tab_image_hosting(),
     },
     {
       value: "webhook",
@@ -299,6 +308,20 @@ function RouteComponent() {
                 </p>
               </div>
               <AiSettingsSection testAiConnection={testAiConnection} />
+            </TabsContent>
+
+            <TabsContent value="image-hosting" className="mt-0 space-y-10">
+              <div className="space-y-2 pb-6 border-b border-border/30">
+                <h2 className="text-2xl font-serif font-medium tracking-tight">
+                  {m.settings_image_hosting_title()}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {m.settings_image_hosting_desc()}
+                </p>
+              </div>
+              <ImageHostingSettingsSection
+                testImageHostingConnection={testImageHostingConnection}
+              />
             </TabsContent>
 
             <TabsContent value="webhook" className="mt-0 space-y-10">

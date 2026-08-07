@@ -35,11 +35,12 @@
 - **通知系统** — 邮件 + Webhook 多通道通知，可按事件订阅
 - **全文搜索** — 基于 Orama 的高性能站内搜索
 - **媒体库** — R2 对象存储，图片上传与优化
+- **第三方图床** — 后台设置 → 图床可启用 ImgBB / 幻域图床（ffsky）：文章图片走后端服务端代理上传（key 不下发浏览器、绕开无 CORS 限制），评论区使用 ImgBB 官方上传弹窗；未启用或未配置 Key 时回退到 R2，图床启用后自动关闭 R2 上传入口
 - **用户认证** — GitHub OAuth + 邮箱密码注册/登录，`ADMIN_EMAIL` 自动授予管理员
 - **MCP Server** — 通过 OAuth 连接 AI 客户端（Claude / Cursor 等），管理文章、评论、标签、友链、媒体与统计
 - **数据统计** — 站内浏览量统计（Queue + D1）+ Umami 可选集成
 - **SEO 增强** — Canonical URL、Schema.org 结构化数据、RSS / Sitemap / Robots.txt
-- **AI 辅助** — 支持 Cloudflare Workers AI 或 OpenAI 兼容接口（可自选 Base URL / 模型 / API Key），提供文章摘要、评论审核、标签推荐与 AI 一键生文
+- **AI 辅助** — 支持 Cloudflare Workers AI、Agnes AI（无限期免费，国际站/国内站双端点）或任意 OpenAI 兼容接口（可自选 Base URL / 模型 / API Key），提供文章摘要、评论审核、标签推荐与 AI 一键生文
 - **主题系统** — 可扩展主题契约，完整替换页面与布局（内置 `default` / `fuwari` 两套主题）
 - **导入导出** — Markdown 导入/导出，保留图片与 Frontmatter
 
@@ -56,7 +57,7 @@
 | Durable Objects | 分布式限流 / 密码哈希          |
 | Workflows       | 异步任务（内容审核、定时发布） |
 | Queues          | 消息队列（邮件通知）           |
-| Workers AI      | AI 能力（或接入 OpenAI 兼容接口） |
+| Workers AI      | AI 能力（或接入 Agnes AI / OpenAI 兼容接口） |
 | Images          | 图片优化（可选）               |
 
 ### 前端
@@ -104,7 +105,7 @@ src/
 │   ├── import-export/# Markdown 导入导出
 │   ├── version/     # 版本更新检查
 │   ├── theme/       # 主题系统（契约、注册表、各主题实现）
-│   └── ai/          # AI 集成（Workers AI / OpenAI 兼容接口）
+│   └── ai/          # AI 集成（Workers AI / Agnes AI / OpenAI 兼容接口）
 ├── routes/
 │   ├── _public/     # 公开页面（首页、文章列表/详情、搜索、友链）
 │   ├── _auth/       # 登录/注册/找回密码
@@ -234,10 +235,11 @@ src/
 - [ ] 打开 `/admin`，用 `ADMIN_EMAIL` 注册账号，系统自动赋予管理员权限
 - [ ] 在后台 **设置** 中完善站点标题、描述、头像、favicon、社交链接、SEO 信息
 - [ ] 上传一张图片验证媒体库（R2）可用
+- [ ] （可选）配置第三方图床：后台设置 → 图床，启用 ImgBB（文章 + 评论）或幻域图床 ffsky（文章），填入 API Key 后点「测试连接」；文章图床启用后 R2 上传入口会自动关闭，未启用或未配置 Key 时才回退 R2
 - [ ] （可选）配置 SMTP 邮件：后台设置 → 邮箱，即可使用验证码登录与评论回复通知
 - [ ] （可选）配置 Webhook 通知：后台设置 → 通知，按事件订阅
 - [ ] （可选）开启 Turnstile 人机验证、Umami 统计
-- [ ] （可选）后台设置 → AI 配置 AI 服务：默认 Workers AI，也可切换到 OpenAI 兼容接口（填写 Base URL / 模型 / API Key 后点「测试连接」）
+- [ ] （可选）后台设置 → AI 配置 AI 服务：默认 Workers AI，也可切换到 **Agnes AI**（无限期免费，一键选择国际站/国内站端点）或 OpenAI 兼容接口（填写 Base URL / 模型 / API Key 后点「测试连接」）
 - [ ] 若页面样式异常，在后台设置页手动 **清除 CDN 缓存** 或到 Cloudflare Dashboard 清理
 
 ### 方案二：Cloudflare Dashboard 手动部署
@@ -392,6 +394,29 @@ bun dev
 ### 7. 如何接入 AI 客户端（MCP）？
 
 本仓库内置 MCP Server，通过 OAuth 连接 AI 客户端（如 Claude、Cursor），可管理文章、评论、标签、友链、媒体与统计。访问 `/oauth/consent` 走完授权即可使用。
+
+### 8. 如何配置第三方图床？
+
+后台设置 → 图床，支持两家同时启用，互不冲突：
+
+- **ImgBB**：可分别开启「评论区」与「文章区」。评论区开启后，评论编辑器点图片按钮会弹出 ImgBB 官方上传窗口（无需 API Key）；文章区开启后，文章编辑器上传图片会先走服务端代理上传到 ImgBB。在 [imgbb.com](https://imgbb.com) 登录后到账户页获取 API Key。
+- **幻域图床（ffsky）**：只支持「文章区」，上传同样走服务端代理（其 API 无 CORS，不能由浏览器直接调用），默认接口 `https://pic.ffsky.net/api/1/upload` 可在设置中修改。
+- **R2 回退规则**：文章图片只在「第三方图床未开启，或开启了但未配置可用的 Key」时才会回退到 R2 媒体库；只要文章区图床已启用并配置了 Key，就会只走第三方图床，即使上传失败也只报错、绝不静默写入 R2。
+- **关闭 R2 上传入口**：文章区图床启用后，后台媒体库的「上传」入口（上传按钮、拖拽/粘贴上传）会自动禁用，文章编辑器图片弹窗中的 R2 媒体库选择也会隐藏，避免图片上传/插入到错误位置；已有 R2 图片仍可浏览、改名与删除。
+- **多图床切换**：两家的文章上传按 ImgBB → ffsky 的顺序尝试，其中一家失败会自动尝试下一家，仅当所有已启用且填了 Key 的图床都失败时才返回错误。
+- 图床 API Key 与站点其他配置（SMTP、AI Key 等）一样保存在 D1 配置表中，仅服务端读取，不会下发到浏览器。
+
+### 9. 如何接入 Agnes AI（国际站 / 国内站）？
+
+Agnes AI 无限期免费，使用 OpenAI 兼容协议，后台设置 → AI 配置，选择 **Agnes AI** 后可直接点选端点：
+
+- **国际站**：`https://apihub.agnes-ai.com/v1`（默认）；中国大陆用户网络不佳时，可改用 **国际站（国内加速）** `https://apihub.agnes-ai.cn/v1`，仍使用国际站的 API Key。
+- **国内站**：`https://api.agnes-ai.cn/v1`，需要在 [agnes-ai.cn](https://agnes-ai.cn) 单独注册并获取国内站 API Key。
+
+注意：
+
+- 国际站与国内站 **账号 / API Key / 数据互不互通**，不能混用：国内站 Key 只能用国内端点，国际站 Key 用国际端点或国内加速端点。
+- 填入端点与模型（如 `deepseek-chat` 等，以官方模型列表为准）后点击「测试连接」验证；若返回超时或 401/403，先核对 Key 与端点是否匹配。
 
 ---
 

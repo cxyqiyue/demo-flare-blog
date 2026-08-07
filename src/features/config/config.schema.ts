@@ -42,12 +42,39 @@ export const SystemConfigSchema = z.object({
     .optional(),
   ai: z
     .object({
-      provider: z.enum(["workers-ai", "openai-compatible"]).optional(),
+      provider: z
+        .enum(["workers-ai", "openai-compatible", "agnes-ai"])
+        .optional(),
       openaiCompatible: z
         .object({
           baseUrl: z.string().optional(),
           apiKey: z.string().optional(),
           model: z.string().optional(),
+        })
+        .optional(),
+      agnesAi: z
+        .object({
+          baseUrl: z.string().optional(),
+          apiKey: z.string().optional(),
+          model: z.string().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  imageHosting: z
+    .object({
+      imgbb: z
+        .object({
+          commentEnabled: z.boolean().optional(),
+          articleEnabled: z.boolean().optional(),
+          apiKey: z.string().optional(),
+        })
+        .optional(),
+      ffsky: z
+        .object({
+          articleEnabled: z.boolean().optional(),
+          apiKey: z.string().optional(),
+          apiEndpoint: z.string().optional(),
         })
         .optional(),
     })
@@ -60,6 +87,7 @@ export const createSystemConfigFormSchema = (messages: Messages) =>
     email: SystemConfigSchema.shape.email,
     notification: SystemConfigSchema.shape.notification,
     ai: SystemConfigSchema.shape.ai,
+    imageHosting: SystemConfigSchema.shape.imageHosting,
     site: createSiteConfigInputFormSchema(messages).optional(),
   });
 
@@ -96,6 +124,23 @@ export const DEFAULT_CONFIG: SystemConfig = {
       baseUrl: "",
       apiKey: "",
       model: "",
+    },
+    agnesAi: {
+      baseUrl: "https://apihub.agnes-ai.com/v1",
+      apiKey: "",
+      model: "",
+    },
+  },
+  imageHosting: {
+    imgbb: {
+      commentEnabled: false,
+      articleEnabled: false,
+      apiKey: "",
+    },
+    ffsky: {
+      articleEnabled: false,
+      apiKey: "",
+      apiEndpoint: "https://pic.ffsky.net/api/1/upload",
     },
   },
   site: blogConfig satisfies SiteConfigInput,

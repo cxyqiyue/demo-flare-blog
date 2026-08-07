@@ -3,6 +3,7 @@ import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { Loader2, Send } from "lucide-react";
 import { useCallback, useState } from "react";
 import { getCommentExtensions } from "@/features/comments/components/editor/config";
+import { useCommentImageUploader } from "@/features/image-hosting/hooks/use-comment-image-upload";
 import { normalizeLinkHref } from "@/lib/links/normalize-link-href";
 import { m } from "@/paraglide/messages";
 import FuwariCommentEditorToolbar from "./comment-editor-toolbar";
@@ -48,6 +49,9 @@ export const FuwariCommentEditor = ({
     }),
   });
 
+  const { enabled: imageHostingEnabled, openUpload } =
+    useCommentImageUploader();
+
   const openLinkModal = useCallback(() => {
     const previousUrl = editor.getAttributes("link").href as string | undefined;
     setModalInitialUrl(previousUrl || "");
@@ -55,9 +59,18 @@ export const FuwariCommentEditor = ({
   }, [editor]);
 
   const openImageModal = useCallback(() => {
+    if (imageHostingEnabled) {
+      // 第三方图床已启用：打开官方上传弹窗
+      void openUpload().then((url) => {
+        if (url && editor) {
+          editor.chain().focus().setImage({ src: url }).run();
+        }
+      });
+      return;
+    }
     setModalInitialUrl("");
     setModalType("IMAGE");
-  }, []);
+  }, [editor, imageHostingEnabled, openUpload]);
 
   const handleSubmit = async () => {
     if (isEmpty || isSubmitting) return;

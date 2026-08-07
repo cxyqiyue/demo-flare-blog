@@ -1,6 +1,7 @@
 import { ClientOnly } from "@tanstack/react-router";
 import {
   Check,
+  CloudUpload,
   Globe,
   Image as ImageIcon,
   Link as LinkIcon,
@@ -11,6 +12,7 @@ import {
 import type React from "react";
 import { memo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useArticleImageHostingConfig } from "@/features/image-hosting/hooks/use-article-image-hosting-config";
 import { useMediaPicker } from "@/features/media/components/media-library/hooks";
 import type { MediaAsset } from "@/features/media/components/media-library/types";
 import { getOptimizedImageUrl } from "@/features/media/utils/media.utils";
@@ -96,6 +98,9 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
 
   const [inputUrl, setInputUrl] = useState(initialUrl);
   const [selectedMedia, setSelectedMedia] = useState<MediaAsset | null>(null);
+
+  const { enabled: articleImageHostingEnabled } =
+    useArticleImageHostingConfig();
 
   const {
     mediaItems,
@@ -215,66 +220,80 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
         <div className="flex flex-col flex-1 overflow-hidden min-h-0 bg-background">
           {activeType === "IMAGE" && (
             <div className="flex flex-col flex-1 min-h-0">
-              {/* Search Bar */}
-              <div className="relative shrink-0 border-b border-border/50">
-                <Search
-                  className="absolute left-6 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  size={14}
-                />
-                <input
-                  type="text"
-                  placeholder={m.editor_insert_search_placeholder()}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-transparent border-none text-foreground text-sm font-mono pl-12 pr-6 py-4 focus:ring-0 placeholder:text-muted-foreground/40"
-                />
-              </div>
+              {articleImageHostingEnabled ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center bg-muted/5">
+                  <CloudUpload
+                    size={24}
+                    className="text-muted-foreground/30"
+                  />
+                  <p className="max-w-md text-sm text-muted-foreground">
+                    {m.editor_insert_image_hosting_hint()}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Search Bar */}
+                  <div className="relative shrink-0 border-b border-border/50">
+                    <Search
+                      className="absolute left-6 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      size={14}
+                    />
+                    <input
+                      type="text"
+                      placeholder={m.editor_insert_search_placeholder()}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-transparent border-none text-foreground text-sm font-mono pl-12 pr-6 py-4 focus:ring-0 placeholder:text-muted-foreground/40"
+                    />
+                  </div>
 
-              {/* Media Grid */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-muted/5">
-                {isPending ? (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                      <div
-                        key={i}
-                        className="aspect-square bg-muted/20 animate-pulse border border-border/20"
-                      />
-                    ))}
+                  {/* Media Grid */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-muted/5">
+                    {isPending ? (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                          <div
+                            key={i}
+                            className="aspect-square bg-muted/20 animate-pulse border border-border/20"
+                          />
+                        ))}
+                      </div>
+                    ) : mediaItems.length === 0 ? (
+                      <div className="h-48 flex flex-col items-center justify-center text-muted-foreground gap-2">
+                        <Search size={24} className="opacity-20" />
+                        <span className="text-sm font-mono">
+                          {m.media_grid_empty()}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 content-start pb-4">
+                        {mediaItems.map((media) => (
+                          <MediaItem
+                            key={media.key}
+                            media={media}
+                            isSelected={selectedMedia?.key === media.key}
+                            onSelect={(asset) => {
+                              setSelectedMedia(asset);
+                              setInputUrl(asset.url);
+                            }}
+                          />
+                        ))}
+                        <div
+                          ref={observerTarget}
+                          className="col-span-full h-8 flex items-center justify-center p-4"
+                        >
+                          {isLoadingMore && (
+                            <Loader2
+                              size={14}
+                              className="animate-spin text-muted-foreground"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ) : mediaItems.length === 0 ? (
-                  <div className="h-48 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                    <Search size={24} className="opacity-20" />
-                    <span className="text-sm font-mono">
-                      {m.media_grid_empty()}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 content-start pb-4">
-                    {mediaItems.map((media) => (
-                      <MediaItem
-                        key={media.key}
-                        media={media}
-                        isSelected={selectedMedia?.key === media.key}
-                        onSelect={(asset) => {
-                          setSelectedMedia(asset);
-                          setInputUrl(asset.url);
-                        }}
-                      />
-                    ))}
-                    <div
-                      ref={observerTarget}
-                      className="col-span-full h-8 flex items-center justify-center p-4"
-                    >
-                      {isLoadingMore && (
-                        <Loader2
-                          size={14}
-                          className="animate-spin text-muted-foreground"
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
           )}
 

@@ -9,6 +9,7 @@ import {
   getActiveFormulaModalOpenerKey,
   openFormulaModalForEdit,
 } from "@/components/tiptap-editor/formula-modal-store";
+import { uploadToImageHostingFn } from "@/features/image-hosting/api/image-hosting.api";
 import { uploadImageFn } from "@/features/media/api/media.api";
 import { CodeBlockExtension } from "@/features/posts/editor/extensions/code-block";
 import { ImageExtension } from "@/features/posts/editor/extensions/images";
@@ -32,6 +33,24 @@ async function handleImageUpload(file: File): Promise<ImageUploadResult> {
   const formData = new FormData();
   formData.append("image", file);
 
+  // 优先走第三方图床（服务端代理，API key 不接触浏览器）
+  const hosted = await uploadToImageHostingFn({ data: formData });
+  if (hosted.error) {
+    throw new Error(m.image_hosting_upload_failed());
+  }
+
+  if (hosted.data.mode === "image-hosting") {
+    toast.success(m.image_hosting_upload_success({ name: file.name }), {
+      description: m.image_hosting_upload_success_desc({ name: file.name }),
+    });
+    return {
+      url: hosted.data.url,
+      width: hosted.data.width || undefined,
+      height: hosted.data.height || undefined,
+    };
+  }
+
+  // 未启用第三方图床时回退到默认存储 (R2)
   const result = await uploadImageFn({ data: formData });
   if (result.error) {
     throw new Error(m.media_upload_error_db());
