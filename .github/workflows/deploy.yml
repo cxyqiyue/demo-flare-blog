@@ -122,8 +122,10 @@ jobs:
           jq 'del(.[] | select(. == ""))' secrets.json > secrets.clean.json && mv secrets.clean.json secrets.json
 
       - name: Deploy to Cloudflare Workers
+        env:
+          CLOUDFLARE_ENV: ""
         run: |
-          bunx wrangler secret bulk secrets.json
+          bunx wrangler secret bulk secrets.json --env=""
           bun run build
           bun run deploy
 
