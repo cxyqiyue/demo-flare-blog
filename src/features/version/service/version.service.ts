@@ -36,22 +36,53 @@ export async function checkForUpdate(
       headers.Authorization = `Bearer ${githubToken}`;
     }
 
-    const response = await fetch(
-      `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`,
-      { headers },
-    );
+    const currentVersion = __APP_VERSION__;
+    const githubApi = (path: string) =>
+      fetch(`https://api.github.com/repos/${GITHUB_REPO}${path}`, {
+        headers,
+      });
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
+    const releaseResponse = await githubApi("/releases/latest");
+
+    if (releaseResponse.status === 404) {
+      // 仓库没有 Release：尝试读取最新 tag，避免检查更新永远失败。
+      const tagsResponse = await githubApi("/tags?per_page=1");
+      if (tagsResponse.ok) {
+        const tags = (await tagsResponse.json()) as Array<{ name?: string }>;
+        const latestTag = tags[0]?.name;
+        if (latestTag) {
+          return {
+            latestVersion: latestTag,
+            currentVersion,
+            hasUpdate: isNewer(latestTag, currentVersion),
+            releaseUrl: `https://github.com/${GITHUB_REPO}/tags`,
+            publishedAt: undefined,
+            checkedAt: Date.now(),
+          };
+        }
+      }
+
+      // 既没有 Release 也没有 tag：视为当前已是最新。
+      return {
+        latestVersion: currentVersion,
+        currentVersion,
+        hasUpdate: false,
+        releaseUrl: `https://github.com/${GITHUB_REPO}`,
+        publishedAt: undefined,
+        checkedAt: Date.now(),
+      };
+    }
+
+    if (!releaseResponse.ok) {
+      const body = await releaseResponse.text().catch(() => "");
       throw new Error(
-        `GitHub API error: ${response.status} ${response.statusText}${body ? ` - ${body.slice(0, 500)}` : ""}`,
+        `GitHub API error: ${releaseResponse.status} ${releaseResponse.statusText}${body ? ` - ${body.slice(0, 500)}` : ""}`,
       );
     }
 
-    const json = await response.json();
+    const json = await releaseResponse.json();
     const data = GitHubReleaseSchema.parse(json);
     const latestVersion = data.tag_name; // 比如 "v0.6.0"
-    const currentVersion = __APP_VERSION__;
 
     return {
       latestVersion,
