@@ -17,15 +17,7 @@ type ForgotPasswordSchema = z.infer<
   ReturnType<typeof createForgotPasswordSchema>
 >;
 
-export interface UseForgotPasswordFormOptions {
-  turnstileToken: string | null;
-  turnstilePending: boolean;
-  resetTurnstile: () => void;
-}
-
-export function useForgotPasswordForm(options: UseForgotPasswordFormOptions) {
-  const { turnstileToken, turnstilePending, resetTurnstile } = options;
-
+export function useForgotPasswordForm() {
   const [isSent, setIsSent] = useState(false);
   const [sentEmail, setSentEmail] = useState("");
   const forgotPasswordSchema = createForgotPasswordSchema(m);
@@ -38,12 +30,7 @@ export function useForgotPasswordForm(options: UseForgotPasswordFormOptions) {
     const { error } = await authClient.requestPasswordReset({
       email: data.email,
       redirectTo: `${window.location.origin}/reset-link`,
-      fetchOptions: {
-        headers: { "X-Turnstile-Token": turnstileToken || "" },
-      },
     });
-
-    resetTurnstile();
 
     if (error) {
       toast.error(m.forgot_password_toast_failed(), {
@@ -68,7 +55,6 @@ export function useForgotPasswordForm(options: UseForgotPasswordFormOptions) {
     isSubmitting: form.formState.isSubmitting,
     isSent,
     sentEmail,
-    turnstilePending,
   };
 }
 

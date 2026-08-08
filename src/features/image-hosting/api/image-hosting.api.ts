@@ -4,7 +4,12 @@ import {
   TestImageHostingConnectionInputSchema,
   UploadImageHostingInputSchema,
 } from "@/features/image-hosting/image-hosting.schema";
-import { adminMiddleware, dbMiddleware } from "@/lib/middlewares";
+import {
+  adminMiddleware,
+  authMiddleware,
+  createRateLimitMiddleware,
+  dbMiddleware,
+} from "@/lib/middlewares";
 
 export const uploadToImageHostingFn = createServerFn({
   method: "POST",
@@ -21,6 +26,22 @@ export const testImageHostingConnectionFn = createServerFn({
   .middleware([adminMiddleware])
   .inputValidator(TestImageHostingConnectionInputSchema)
   .handler(({ data }) => ImageHostingService.testConnection(data));
+
+export const uploadCommentImageFn = createServerFn({
+  method: "POST",
+})
+  .middleware([
+    createRateLimitMiddleware({
+      capacity: 20,
+      interval: "1h",
+      key: "image-hosting:comment-upload",
+    }),
+    authMiddleware,
+  ])
+  .inputValidator(UploadImageHostingInputSchema)
+  .handler(({ data, context }) =>
+    ImageHostingService.uploadCommentImage(context, data),
+  );
 
 export const getCommentImageHostingConfigFn = createServerFn()
   .middleware([dbMiddleware])

@@ -6,14 +6,11 @@ import {
 import { getAuth } from "@/lib/auth/auth.server";
 import { getDb } from "@/lib/db";
 import type { RateLimitOptions } from "@/lib/do/rate-limiter";
-import { serverEnv } from "@/lib/env/server.env";
 import {
   createAuthError,
   createPermissionError,
   createRateLimitError,
-  createTurnstileError,
 } from "@/lib/errors";
-import { verifyTurnstileToken } from "@/lib/turnstile";
 
 /* ======================= Error Logging ====================== */
 
@@ -131,33 +128,3 @@ export const createRateLimitMiddleware = (
       return next();
     });
 };
-
-/* ======================= Turnstile ====================== */
-export const turnstileMiddleware = createMiddleware({ type: "function" })
-  .client(async ({ next }) => {
-    // Dynamically import to avoid SSR issues
-    const { getTurnstileToken } = await import("@/components/common/turnstile");
-    const token = getTurnstileToken();
-    return next({
-      headers: {
-        "X-Turnstile-Token": token || "",
-      },
-    });
-  })
-  .server(async ({ next, context }) => {
-    const secretKey = serverEnv(context.env).TURNSTILE_SECRET_KEY;
-    if (!secretKey) return next(); // 未配置则跳过验证
-
-    const token = getRequestHeader("X-Turnstile-Token");
-    if (!token) {
-      throw createTurnstileError("MISSING_TOKEN");
-    }
-
-    const result = await verifyTurnstileToken({ secretKey, token });
-
-    if (!result.success) {
-      throw createTurnstileError("VERIFY_FAILED");
-    }
-
-    return next();
-  });

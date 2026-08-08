@@ -1,5 +1,9 @@
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
+import {
+  getTurnstileConfig,
+  isTurnstileReady,
+} from "@/features/turnstile/service/turnstile.service";
 import { getAuth } from "@/lib/auth/auth.server";
 import { CACHE_CONTROL } from "@/lib/constants";
 import { getDb } from "@/lib/db";
@@ -165,8 +169,12 @@ export const shieldMiddleware = createMiddleware(async (c, next) => {
 /* ======================= Turnstile ====================== */
 export const turnstileMiddleware = createMiddleware<{ Bindings: Env }>(
   async (c, next) => {
-    const secretKey = serverEnv(c.env).TURNSTILE_SECRET_KEY;
-    if (!secretKey) return next(); // 未配置则跳过验证
+    const config = await getTurnstileConfig({
+      db: c.get("db"),
+      env: c.env,
+      executionCtx: c.executionCtx,
+    });
+    if (!isTurnstileReady(config)) return next(); // 未配置则跳过验证
 
     const token = c.req.header("X-Turnstile-Token");
     if (!token) {
@@ -179,7 +187,10 @@ export const turnstileMiddleware = createMiddleware<{ Bindings: Env }>(
       );
     }
 
-    const result = await verifyTurnstileToken({ secretKey, token });
+    const result = await verifyTurnstileToken({
+      secretKey: config.secretKey,
+      token,
+    });
 
     if (!result.success) {
       return c.json(

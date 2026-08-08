@@ -12,6 +12,7 @@ import { ResetPasswordPage } from "./pages/auth/reset-password";
 import { VerifyEmailPage } from "./pages/auth/verify-email";
 import { FriendLinksPage, FriendLinksPageSkeleton } from "./pages/friend-links";
 import { HomePage, HomePageSkeleton } from "./pages/home";
+import { MomentsPage, MomentsPageSkeleton } from "./pages/moments";
 import { PostPage, PostPageSkeleton } from "./pages/post";
 import { PostsPage, PostsPageSkeleton } from "./pages/posts";
 import { SearchPage } from "./pages/search";
@@ -37,6 +38,8 @@ export default {
   UserLayout,
   FriendLinksPage,
   FriendLinksPageSkeleton,
+  MomentsPage,
+  MomentsPageSkeleton,
   SearchPage,
   SubmitFriendLinkPage,
   LoginPage,

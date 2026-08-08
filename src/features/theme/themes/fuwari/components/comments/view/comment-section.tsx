@@ -2,9 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import type { JSONContent } from "@tiptap/react";
 import { LogIn } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
-import { Turnstile, useTurnstile } from "@/components/common/turnstile";
+import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useComments } from "@/features/comments/hooks/use-comments";
 import { rootCommentsByPostIdInfiniteQuery } from "@/features/comments/queries";
@@ -41,53 +39,27 @@ export function FuwariCommentSection({ postId }: FuwariCommentSectionProps) {
   } | null>(null);
 
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
-  const turnstileRef = useRef<HTMLDivElement>(null);
-  const {
-    isPending: turnstilePending,
-    reset: resetTurnstile,
-    turnstileProps,
-  } = useTurnstile("comment");
-
-  const requireTurnstile = () => {
-    if (!turnstilePending) return false;
-    toast.error(m.comments_turnstile_required());
-    turnstileRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
-    throw new Error("TURNSTILE_PENDING");
-  };
 
   const handleCreateComment = async (content: JSONContent) => {
-    requireTurnstile();
-    try {
-      await createComment({
-        data: {
-          postId,
-          content,
-        },
-      });
-    } finally {
-      resetTurnstile();
-    }
+    await createComment({
+      data: {
+        postId,
+        content,
+      },
+    });
   };
 
   const handleCreateReply = async (content: JSONContent) => {
     if (!replyTarget) return;
-    requireTurnstile();
-    try {
-      await createComment({
-        data: {
-          postId,
-          content,
-          rootId: replyTarget.rootId,
-          replyToCommentId: replyTarget.commentId,
-        },
-      });
-      setReplyTarget(null);
-    } finally {
-      resetTurnstile();
-    }
+    await createComment({
+      data: {
+        postId,
+        content,
+        rootId: replyTarget.rootId,
+        replyToCommentId: replyTarget.commentId,
+      },
+    });
+    setReplyTarget(null);
   };
 
   const handleDelete = async () => {
@@ -161,10 +133,6 @@ export function FuwariCommentSection({ postId }: FuwariCommentSectionProps) {
           </Link>
         </div>
       )}
-
-      <div ref={turnstileRef}>
-        <Turnstile {...turnstileProps} />
-      </div>
 
       {/* Comments List */}
       <FuwariCommentList

@@ -15,25 +15,6 @@ declare global {
       reset: (widgetId: string) => void;
       remove: (widgetId: string) => void;
     };
-    __turnstileToken?: string | null;
-  }
-}
-
-/**
- * Get the current global Turnstile token for TanStack Server Functions.
- * Used by the client-side middleware to inject X-Turnstile-Token header.
- */
-export function getTurnstileToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.__turnstileToken || null;
-}
-
-/**
- * Set the global Turnstile token (called internally by useTurnstile).
- */
-function setTurnstileToken(token: string | null): void {
-  if (typeof window !== "undefined") {
-    window.__turnstileToken = token;
   }
 }
 
@@ -43,6 +24,7 @@ interface TurnstileProps {
   onExpire?: () => void;
   action?: string;
   widgetIdRef?: RefObject<string | null>;
+  siteKey?: string;
 }
 
 export type { TurnstileProps };
@@ -74,11 +56,15 @@ export function Turnstile({
   onExpire,
   action,
   widgetIdRef: externalWidgetIdRef,
+  siteKey: siteKeyProp,
 }: TurnstileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const internalWidgetIdRef = useRef<string | null>(null);
 
-  const siteKey = clientEnv().VITE_TURNSTILE_SITE_KEY;
+  const siteKey =
+    siteKeyProp !== undefined
+      ? siteKeyProp
+      : clientEnv().VITE_TURNSTILE_SITE_KEY;
 
   useEffect(() => {
     if (!siteKey || !containerRef.current) return;
@@ -129,25 +115,23 @@ export function Turnstile({
  * Use `isPending` to disable submit buttons until verification completes.
  * Use `token` in API request headers as `X-Turnstile-Token`.
  */
-export function useTurnstile(action?: string) {
+export function useTurnstile(action?: string, siteKey?: string) {
   const [token, setToken] = useState<string | null>(null);
   const widgetIdRef = useRef<string | null>(null);
-  const siteKey = clientEnv().VITE_TURNSTILE_SITE_KEY;
+  const effectiveSiteKey =
+    siteKey !== undefined ? siteKey : clientEnv().VITE_TURNSTILE_SITE_KEY;
 
   const onVerify = useCallback((t: string) => {
     setToken(t);
-    setTurnstileToken(t); // Sync to global store for TanStack middleware
   }, []);
 
   const onExpire = useCallback(() => {
     setToken(null);
-    setTurnstileToken(null);
   }, []);
 
   /** Reset the Turnstile widget to obtain a fresh token (tokens are single-use). */
   const reset = useCallback(() => {
     setToken(null);
-    setTurnstileToken(null);
     if (widgetIdRef.current && window.turnstile) {
       window.turnstile.reset(widgetIdRef.current);
     }
@@ -155,7 +139,7 @@ export function useTurnstile(action?: string) {
 
   return {
     /** Turnstile is configured but challenge not yet completed */
-    isPending: !!siteKey && !token,
+    isPending: !!effectiveSiteKey && !token,
     /** The Turnstile token to send in X-Turnstile-Token header */
     token,
     /** Reset the widget to get a fresh token after each API call */
@@ -165,6 +149,7 @@ export function useTurnstile(action?: string) {
       onExpire,
       action,
       widgetIdRef,
+      siteKey: effectiveSiteKey,
     } satisfies TurnstileProps,
   };
 }

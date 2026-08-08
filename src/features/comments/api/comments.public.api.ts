@@ -11,7 +11,6 @@ import {
   authMiddleware,
   createRateLimitMiddleware,
   sessionMiddleware,
-  turnstileMiddleware,
 } from "@/lib/middlewares";
 
 // Public API - Get root comments by post ID (published + viewer's pending)
@@ -54,7 +53,6 @@ export const createCommentFn = createServerFn({
       interval: "1m",
       key: "comments:create",
     }),
-    turnstileMiddleware,
     authMiddleware,
   ])
   .inputValidator(CreateCommentInputSchema)

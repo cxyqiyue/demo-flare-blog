@@ -31,11 +31,13 @@ function UserLayout() {
   const navOptions = [
     { label: m.nav_home(), to: "/" as const, id: "home" },
     { label: m.nav_posts(), to: "/posts" as const, id: "posts" },
+    { label: m.nav_moments(), to: "/moments" as const, id: "moments" },
     {
       label: m.nav_friend_links(),
       to: "/friend-links" as const,
       id: "friend-links",
     },
+    { label: m.nav_about(), to: "/about" as const, id: "about" },
   ];
 
   const logout = async () => {

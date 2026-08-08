@@ -10,6 +10,7 @@ import type {
   FriendLinksPageProps,
   HomePageProps,
   LoginPageProps,
+  MomentsPageProps,
   PostPageProps,
   PostsPageProps,
   ProfilePageProps,
@@ -54,6 +55,11 @@ export interface ThemeComponents {
   FriendLinksPage: React.ComponentType<FriendLinksPageProps>;
   /** 友链列表页骨架屏 */
   FriendLinksPageSkeleton: React.ComponentType;
+
+  /** 动态列表页组件 */
+  MomentsPage: React.ComponentType<MomentsPageProps>;
+  /** 动态列表页骨架屏 */
+  MomentsPageSkeleton: React.ComponentType;
 
   /** 搜索页组件 */
   SearchPage: React.ComponentType<SearchPageProps>;

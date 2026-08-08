@@ -11,6 +11,10 @@ import {
   IMGBB_API_ENDPOINT,
   TEST_IMAGE_BASE64,
 } from "@/features/image-hosting/image-hosting.schema";
+import {
+  uploadToS3,
+  type S3UploadConfig,
+} from "@/features/image-hosting/s3/s3-upload";
 import { parseUploadMediaInput } from "@/features/media/media.schema";
 import { getImageDimensions } from "@/features/media/utils/image-dimensions";
 import { err, ok, type Result } from "@/lib/errors";
@@ -18,11 +22,25 @@ import { m } from "@/paraglide/messages";
 
 const ARTICLE_PROVIDER_ORDER: Array<ImageHostingProvider> = ["imgbb", "ffsky"];
 
+const MIME_EXTENSIONS: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "image/svg+xml": "svg",
+};
+
 interface ProviderRuntimeConfig {
   enabled: boolean;
   apiKey: string;
   apiEndpoint: string;
   fieldName: "image" | "source";
+}
+
+interface S3RuntimeConfig {
+  enabled: boolean;
+  config: S3UploadConfig;
 }
 
 function resolveProviderRuntimeConfig(
@@ -47,6 +65,67 @@ function resolveProviderRuntimeConfig(
       providerConfig?.apiEndpoint?.trim() || DEFAULT_FFSKY_API_ENDPOINT,
     fieldName: "source",
   };
+}
+
+/**
+ * 解析 S3 兼容存储运行时配置。未启用或缺少必需字段时返回 null。
+ */
+function resolveS3RuntimeConfig(
+  config: SystemConfig | undefined,
+  pathway: "article" | "comment",
+): S3RuntimeConfig | null {
+  const s3 = config?.imageHosting?.s3;
+  if (!s3) return null;
+
+  const endpoint = s3.endpoint?.trim();
+  const bucket = s3.bucket?.trim();
+  const accessKeyId = s3.accessKeyId?.trim();
+  const secretAccessKey = s3.secretAccessKey?.trim();
+  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
+
+  return {
+    enabled:
+      pathway === "article" ? !!s3.articleEnabled : !!s3.commentEnabled,
+    config: {
+      endpoint: endpoint.replace(/\/+$/, ""),
+      bucket,
+      region: s3.region?.trim() || "",
+      accessKeyId,
+      secretAccessKey,
+      pathPrefix: s3.pathPrefix?.trim() || "",
+      publicUrl: s3.publicUrl?.trim() || "",
+    },
+  };
+}
+
+function extensionFromMime(mime: string): string {
+  return MIME_EXTENSIONS[mime] ?? "png";
+}
+
+function buildObjectKey(pathPrefix: string, ext: string): string {
+  let uuid = "";
+  try {
+    uuid = crypto.randomUUID();
+  } catch {
+    uuid = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+  }
+  const baseName = `${Date.now()}-${uuid}.${ext}`;
+  return [pathPrefix.replace(/^\/+|\/+$/g, ""), baseName]
+    .filter(Boolean)
+    .join("/");
+}
+
+async function uploadToS3ForFile(
+  config: S3UploadConfig,
+  file: File,
+): Promise<
+  Result<{ url: string }, { reason: "PROVIDER_REQUEST_FAILED"; message: string }>
+> {
+  return await uploadToS3(config, {
+    key: buildObjectKey(config.pathPrefix, extensionFromMime(file.type)),
+    body: await file.arrayBuffer(),
+    contentType: file.type || "application/octet-stream",
+  });
 }
 
 function extractImageUrlFromResponse(parsed: unknown): string | null {
@@ -110,6 +189,15 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
 async function uploadToEndpoint(
   endpoint: string,
   apiKey: string,
@@ -162,11 +250,35 @@ export async function uploadForArticle(
   context: DbContext & { executionCtx: ExecutionContext },
   formData: FormData,
 ): Promise<
-  Result<ArticleUploadResult, { reason: "IMAGE_HOSTING_UPLOAD_FAILED"; message: string }>
+  Result<
+    ArticleUploadResult,
+    { reason: "IMAGE_HOSTING_UPLOAD_FAILED"; message: string }
+  >
 > {
   const { file } = parseUploadMediaInput(formData, m);
 
   const config = await ConfigService.getSystemConfig(context);
+
+  // S3 兼容存储优先（配置了 s3 文章通道则使用，不再尝试第三方图床）
+  const s3Runtime = resolveS3RuntimeConfig(config, "article");
+  if (s3Runtime?.enabled) {
+    const result = await uploadToS3ForFile(s3Runtime.config, file);
+    if (result.error) {
+      return err({
+        reason: "IMAGE_HOSTING_UPLOAD_FAILED",
+        message: result.error.message,
+      });
+    }
+
+    const dimensions = getImageDimensions(await file.arrayBuffer());
+    return ok({
+      mode: "image-hosting",
+      provider: "s3",
+      url: result.data.url,
+      width: dimensions?.width,
+      height: dimensions?.height,
+    });
+  }
 
   // 第三方图床已启用时，R2 不作为回退目标：逐个尝试已启用且配了 key 的
   // 图床，仅当全部失败才返回错误；只有「未启用或未配置 key」才回退到 R2。
@@ -208,11 +320,117 @@ export async function uploadForArticle(
   return ok({ mode: "none" });
 }
 
+export async function uploadCommentImage(
+  context: DbContext & { executionCtx: ExecutionContext },
+  formData: FormData,
+): Promise<
+  Result<
+    { url: string },
+    { reason: "COMMENT_IMAGE_UPLOAD_FAILED"; message: string }
+  >
+> {
+  const { file } = parseUploadMediaInput(formData, m);
+
+  const config = await ConfigService.getSystemConfig(context);
+
+  const s3Runtime = resolveS3RuntimeConfig(config, "comment");
+  if (s3Runtime?.enabled) {
+    const result = await uploadToS3ForFile(s3Runtime.config, file);
+    if (result.error) {
+      return err({
+        reason: "COMMENT_IMAGE_UPLOAD_FAILED",
+        message: result.error.message,
+      });
+    }
+    return ok({ url: result.data.url });
+  }
+
+  const imgbb = config?.imageHosting?.imgbb;
+  if (imgbb?.commentEnabled && imgbb.apiKey?.trim()) {
+    const base64 = arrayBufferToBase64(await file.arrayBuffer());
+    const result = await uploadToEndpoint(
+      IMGBB_API_ENDPOINT,
+      imgbb.apiKey.trim(),
+      base64,
+      "image",
+    );
+    if (result.error) {
+      return err({
+        reason: "COMMENT_IMAGE_UPLOAD_FAILED",
+        message: result.error.message,
+      });
+    }
+    return ok({ url: result.data.url });
+  }
+
+  return err({
+    reason: "COMMENT_IMAGE_UPLOAD_FAILED",
+    message: m.settings_image_hosting_comment_not_configured(),
+  });
+}
+
 export async function testConnection(
   input: TestImageHostingConnectionInput,
 ): Promise<
-  Result<{ success: true; url: string }, { reason: "IMAGE_HOSTING_TEST_FAILED"; message: string }>
+  Result<
+    { success: true; url: string },
+    { reason: "IMAGE_HOSTING_TEST_FAILED"; message: string }
+  >
 > {
+  if (input.provider === "s3") {
+    const s3 = input.s3;
+    if (!s3) {
+      return err({
+        reason: "IMAGE_HOSTING_TEST_FAILED",
+        message: m.settings_image_hosting_test_missing_s3_config(),
+      });
+    }
+
+    const accessKeyId = s3.accessKeyId?.trim() ?? "";
+    const secretAccessKey = s3.secretAccessKey?.trim() ?? "";
+    const bucket = s3.bucket?.trim() ?? "";
+    const endpoint = s3.endpoint?.trim() ?? "";
+
+    if (!accessKeyId || !secretAccessKey) {
+      return err({
+        reason: "IMAGE_HOSTING_TEST_FAILED",
+        message: m.settings_image_hosting_test_missing_key(),
+      });
+    }
+    if (!endpoint || !bucket) {
+      return err({
+        reason: "IMAGE_HOSTING_TEST_FAILED",
+        message: m.settings_image_hosting_test_missing_s3_config(),
+      });
+    }
+
+    const result = await uploadToS3(
+      {
+        endpoint: endpoint.replace(/\/+$/, ""),
+        bucket,
+        region: s3.region?.trim() || "",
+        accessKeyId,
+        secretAccessKey,
+        pathPrefix: s3.pathPrefix?.trim() || "",
+        publicUrl: s3.publicUrl?.trim() || "",
+      },
+      {
+        key: `test-${Date.now()}.png`,
+        body: base64ToArrayBuffer(TEST_IMAGE_BASE64),
+        contentType: "image/png",
+      },
+    );
+
+    if (result.error) {
+      return err({
+        reason: "IMAGE_HOSTING_TEST_FAILED",
+        message: result.error.message,
+      });
+    }
+
+    return ok({ success: true, url: result.data.url });
+  }
+
   const apiKey = input.apiKey?.trim() ?? "";
   if (!apiKey) {
     return err({
@@ -248,6 +466,10 @@ export async function getCommentImageHostingConfig(
 ): Promise<CommentImageHostingConfig> {
   const config = await ConfigService.getSystemConfig(context);
 
+  if (config?.imageHosting?.s3?.commentEnabled) {
+    return { enabled: true, provider: "s3" };
+  }
+
   if (config?.imageHosting?.imgbb?.commentEnabled) {
     return { enabled: true, provider: "imgbb" };
   }
@@ -262,7 +484,8 @@ export async function getArticleImageHostingConfig(
 
   const enabled =
     !!config?.imageHosting?.imgbb?.articleEnabled ||
-    !!config?.imageHosting?.ffsky?.articleEnabled;
+    !!config?.imageHosting?.ffsky?.articleEnabled ||
+    !!config?.imageHosting?.s3?.articleEnabled;
 
   return { enabled };
 }

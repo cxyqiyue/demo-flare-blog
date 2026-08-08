@@ -25,13 +25,18 @@ export const Route = createFileRoute("/_auth/register")({
 });
 
 function RouteComponent() {
-  const { isEmailConfigured } = useRouteContext({ from: "/_auth" });
+  const { isEmailConfigured, turnstileConfig } = useRouteContext({
+    from: "/_auth",
+  });
+  const turnstileSiteKey = turnstileConfig.enabled
+    ? turnstileConfig.siteKey
+    : "";
   const {
     isPending: turnstilePending,
     token: turnstileToken,
     reset: resetTurnstile,
     turnstileProps,
-  } = useTurnstile("register");
+  } = useTurnstile("register", turnstileSiteKey);
 
   const registerForm = useRegisterForm({
     turnstileToken,
@@ -40,11 +45,11 @@ function RouteComponent() {
     isEmailConfigured,
   });
 
-  const turnstileElement = (
+  const turnstileElement = turnstileConfig.enabled ? (
     <div className="flex justify-center">
       <Turnstile {...turnstileProps} />
     </div>
-  );
+  ) : null;
 
   return (
     <theme.RegisterPage
