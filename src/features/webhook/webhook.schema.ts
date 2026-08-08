@@ -20,9 +20,14 @@ export function isNotificationWebhookEventType(
   return NOTIFICATION_WEBHOOK_EVENTS.some((type) => type === event.type);
 }
 
+export const webhookTypeSchema = z.enum(["generic", "wecom"]);
+
+export type WebhookType = z.infer<typeof webhookTypeSchema>;
+
 export const webhookEndpointSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
+  type: webhookTypeSchema.optional(),
   url: z.url(),
   enabled: z.boolean(),
   secret: z.string().min(1),

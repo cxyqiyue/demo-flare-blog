@@ -13,6 +13,7 @@ interface WebhookEndpointCardProps<TFieldValues extends FieldValues> {
   endpoint: {
     id: string;
     name: string;
+    type?: string;
     url: string;
     enabled: boolean;
     secret: string;
@@ -134,6 +135,30 @@ export function WebhookEndpointCard<TFieldValues extends FieldValues>({
             />
             {fieldError?.url?.message && (
               <p className="text-xs text-red-500">! {fieldError.url.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-sm text-muted-foreground">
+              {m.settings_webhook_endpoint_field_type()}
+            </label>
+            <select
+              {...register(
+                `notification.webhooks.${index}.type` as FieldPath<TFieldValues>,
+              )}
+              className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm"
+            >
+              <option value="generic">
+                {m.settings_webhook_endpoint_type_generic()}
+              </option>
+              <option value="wecom">
+                {m.settings_webhook_endpoint_type_wecom()}
+              </option>
+            </select>
+            {endpoint.type === "wecom" && (
+              <p className="text-xs text-muted-foreground">
+                {m.settings_webhook_endpoint_type_wecom_hint()}
+              </p>
             )}
           </div>
         </div>

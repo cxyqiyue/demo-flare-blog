@@ -28,6 +28,31 @@ function getSmtpAuthTypes(): AuthType[] {
   return ["plain", "login", "cram-md5"];
 }
 
+function resolveEmailErrorMessage(error: unknown, locale: "zh" | "en"): string {
+  const raw = error instanceof Error ? error.message : "";
+
+  if (/Failed to connect to SMTP server/i.test(raw)) {
+    return m.settings_email_error_connect({}, { locale });
+  }
+  if (/Failed to start TLS/i.test(raw)) {
+    return m.settings_email_error_tls({}, { locale });
+  }
+  if (
+    /smtp server requires authentication|Invalid login|No supported auth method|Failed to (plain|login) authentication/i.test(
+      raw,
+    )
+  ) {
+    return m.settings_email_error_auth({}, { locale });
+  }
+  if (/Failed to (EHLO|HELO)/i.test(raw)) {
+    return m.settings_email_error_ehlo({}, { locale });
+  }
+
+  return raw
+    ? m.settings_email_error_send({ message: raw }, { locale })
+    : m.settings_email_unknown_error({}, { locale });
+}
+
 function isEmailConfigured(
   email:
     | {
@@ -84,10 +109,7 @@ export async function testEmailConnection(
     return ok({ success: true });
   } catch (error) {
     const locale = serverEnv(context.env).LOCALE;
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : m.settings_email_unknown_error({}, { locale });
+    const errorMessage = resolveEmailErrorMessage(error, locale);
     console.error(
       JSON.stringify({
         message: "email test connection failed",
@@ -237,10 +259,7 @@ export async function sendEmail(
     );
   } catch (error) {
     const locale = serverEnv(context.env).LOCALE;
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : m.settings_email_unknown_error({}, { locale });
+    const errorMessage = resolveEmailErrorMessage(error, locale);
     console.error(
       JSON.stringify({
         message: "email send failed",

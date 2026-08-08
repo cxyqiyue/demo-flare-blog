@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "bun scripts/generate-manifest.ts && vite build",
-    "deploy": "bun db:migrate && wrangler deploy",
+    "deploy": "bun db:migrate && wrangler deploy --config dist/server/wrangler.json",
     "serve": "vite preview",
     "test": "vitest run",
     "test:node": "vitest run --config vitest.node.config.ts",

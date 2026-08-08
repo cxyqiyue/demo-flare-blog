@@ -1,5 +1,5 @@
-import type { NotificationEventType } from "@/features/notification/notification.schema";
 import type { NotificationWebhookEventType } from "@/features/webhook/webhook.schema";
+import type { WebhookType } from "@/features/webhook/webhook.schema";
 import { NOTIFICATION_WEBHOOK_EVENTS } from "@/features/webhook/webhook.schema";
 import { m } from "@/paraglide/messages";
 
@@ -14,15 +14,24 @@ export const WEBHOOK_EVENT_LABELS: Record<
   "friend_link.submitted": m.settings_webhook_event_friend_link(),
 };
 
-export function createWebhookEndpoint() {
+export function createWebhookEndpoint(): {
+  id: string;
+  name: string;
+  type: WebhookType;
+  url: string;
+  enabled: boolean;
+  secret: string;
+  events: Array<NotificationWebhookEventType>;
+} {
   return {
     id: crypto.randomUUID(),
     name: "",
+    type: "generic",
     url: "",
     enabled: true,
     secret: crypto.randomUUID(),
     events: [
       ...NOTIFICATION_WEBHOOK_EVENTS,
-    ] satisfies Array<NotificationEventType>,
+    ] satisfies Array<NotificationWebhookEventType>,
   };
 }

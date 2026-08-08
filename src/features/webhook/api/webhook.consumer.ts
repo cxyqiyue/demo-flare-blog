@@ -95,6 +95,26 @@ function createRenderedEmail(event: NotificationEvent, locale: Locale) {
   };
 }
 
+function createWecomPayload(
+  event: NotificationEvent,
+  locale: Locale,
+  options?: {
+    isTest?: boolean;
+  },
+) {
+  const email = createRenderedEmail(event, locale);
+  const content = [
+    `**${email.subject}**`,
+    `> ${email.message}`,
+    ...(options?.isTest ? ["> `[Test]`"] : []),
+  ].join("\n");
+
+  return {
+    msgtype: "markdown",
+    markdown: { content },
+  };
+}
+
 export function createWebhookBody(
   messageId: string,
   event: NotificationEvent,
@@ -144,21 +164,31 @@ export async function sendWebhookRequest(
   },
 ): Promise<void> {
   const locale = serverEnv(context.env).LOCALE;
+  const isWecom = data.type === "wecom";
   const body = createWebhookBody(messageId, data.event, options, locale);
-  const payload = JSON.stringify(body);
   const timestamp = body.timestamp;
-  const signature = await signPayload(data.secret, payload, timestamp);
+  const payload = isWecom
+    ? JSON.stringify(createWecomPayload(data.event, locale, options))
+    : JSON.stringify(body);
+  const signature = isWecom
+    ? undefined
+    : await signPayload(data.secret, payload, timestamp);
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "User-Agent": "demo-flare-blog/webhook",
+  };
+
+  if (signature) {
+    headers["X-Flare-Event"] = data.event.type;
+    headers["X-Flare-Timestamp"] = timestamp;
+    headers["X-Flare-Signature"] = `sha256=${signature}`;
+  }
 
   const response = await fetch(data.url, {
     method: "POST",
     signal: AbortSignal.timeout(10_000),
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": "demo-flare-blog/webhook",
-      "X-Flare-Event": data.event.type,
-      "X-Flare-Timestamp": timestamp,
-      "X-Flare-Signature": `sha256=${signature}`,
-    },
+    headers,
     body: payload,
   });
 
@@ -180,6 +210,26 @@ export async function sendWebhookRequest(
     );
 
     throw new Error(errorMessage);
+  }
+
+  if (isWecom) {
+    let parsed: { errcode?: unknown; errmsg?: unknown } | null = null;
+    try {
+      parsed = await response.json();
+    } catch {
+      // WeCom returns 200 even for failures, body is expected to be JSON.
+    }
+
+    const errcode = parsed?.errcode;
+    if (typeof errcode === "number" && errcode !== 0) {
+      const errmsg = typeof parsed?.errmsg === "string" ? parsed.errmsg : "";
+      throw new Error(
+        m.settings_webhook_wecom_error(
+          { code: String(errcode), message: errmsg },
+          { locale },
+        ),
+      );
+    }
   }
 }
 

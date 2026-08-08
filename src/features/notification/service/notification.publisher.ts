@@ -66,6 +66,7 @@ async function enqueueWebhookNotification(
         type: "WEBHOOK",
         data: {
           endpointId: endpoint.id,
+          type: endpoint.type ?? "generic",
           url: endpoint.url,
           secret: endpoint.secret,
           event,
