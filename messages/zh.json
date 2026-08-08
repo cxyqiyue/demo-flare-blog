@@ -1395,6 +1395,7 @@
   "settings_webhook_endpoint_field_secret": "签名密钥",
   "settings_webhook_endpoint_field_secret_ph": "用于生成 X-Flare-Signature",
   "settings_webhook_endpoint_field_secret_hint": "如需校验来源，可使用该密钥验证 X-Flare-Signature 请求头。",
+  "settings_webhook_secret_required": "通用 Webhook 需要配置签名密钥。",
   "settings_webhook_events_title": "通知事件",
   "settings_webhook_events_desc": "勾选后，相关管理员通知会发送到这个端点。",
   "settings_webhook_event_comment_created": "读者发表新评论",

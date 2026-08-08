@@ -26,7 +26,7 @@ export const webhookMessageSchema = z.object({
     endpointId: z.string(),
     type: webhookTypeSchema.default("generic"),
     url: z.url(),
-    secret: z.string(),
+    secret: z.string().optional(),
     event: notificationEventSchema,
   }),
 });

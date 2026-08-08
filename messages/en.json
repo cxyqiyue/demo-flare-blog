@@ -1403,6 +1403,7 @@
   "settings_webhook_endpoint_field_secret": "Signing Secret",
   "settings_webhook_endpoint_field_secret_ph": "Used to generate X-Flare-Signature",
   "settings_webhook_endpoint_field_secret_hint": "Use this secret to verify the X-Flare-Signature header if verification is needed.",
+  "settings_webhook_secret_required": "A signing secret is required for generic webhooks.",
   "settings_webhook_events_title": "Notification Events",
   "settings_webhook_events_desc": "Select events to be forwarded to this endpoint.",
   "settings_webhook_event_comment_created": "New Comment",

@@ -5,7 +5,10 @@ import {
   type SiteConfigInput,
   SiteConfigInputSchema,
 } from "@/features/config/site-config.schema";
-import { webhookEndpointSchema } from "@/features/webhook/webhook.schema";
+import {
+  createWebhookEndpointFormSchema,
+  webhookEndpointSchema,
+} from "@/features/webhook/webhook.schema";
 import type { Messages } from "@/lib/i18n";
 
 export const SystemConfigSchema = z.object({
@@ -85,7 +88,15 @@ export const SystemConfigSchema = z.object({
 export const createSystemConfigFormSchema = (messages: Messages) =>
   z.object({
     email: SystemConfigSchema.shape.email,
-    notification: SystemConfigSchema.shape.notification,
+    notification: z
+      .object({
+        admin: SystemConfigSchema.shape.notification.unwrap().shape.admin,
+        user: SystemConfigSchema.shape.notification.unwrap().shape.user,
+        webhooks: z
+          .array(createWebhookEndpointFormSchema(messages))
+          .optional(),
+      })
+      .optional(),
     ai: SystemConfigSchema.shape.ai,
     imageHosting: SystemConfigSchema.shape.imageHosting,
     site: createSiteConfigInputFormSchema(messages).optional(),

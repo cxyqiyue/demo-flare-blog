@@ -170,9 +170,14 @@ export async function sendWebhookRequest(
   const payload = isWecom
     ? JSON.stringify(createWecomPayload(data.event, locale, options))
     : JSON.stringify(body);
-  const signature = isWecom
-    ? undefined
-    : await signPayload(data.secret, payload, timestamp);
+
+  let signature: string | undefined;
+  if (!isWecom) {
+    if (!data.secret) {
+      throw new Error(m.settings_webhook_secret_required({}, { locale }));
+    }
+    signature = await signPayload(data.secret, payload, timestamp);
+  }
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",

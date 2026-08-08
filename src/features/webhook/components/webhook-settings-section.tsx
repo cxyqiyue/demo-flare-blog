@@ -61,6 +61,28 @@ export function WebhookSettingsSection() {
     });
   };
 
+  const handleTypeChange = (endpointIndex: number, type: string) => {
+    const current = webhookFields[endpointIndex];
+
+    if (type === "wecom") {
+      setValue(`notification.webhooks.${endpointIndex}.secret`, "", {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    } else if (type === "generic" && !current?.secret?.trim()) {
+      setValue(
+        `notification.webhooks.${endpointIndex}.secret`,
+        crypto.randomUUID(),
+        {
+          shouldDirty: true,
+          shouldTouch: true,
+          shouldValidate: true,
+        },
+      );
+    }
+  };
+
   const handleTestWebhook = async (endpointIndex: number) => {
     const endpoint = getValues(`notification.webhooks.${endpointIndex}`);
 
@@ -183,6 +205,7 @@ export function WebhookSettingsSection() {
                     onToggleSecretVisibility={() =>
                       toggleSecretVisibility(index)
                     }
+                    onTypeChange={(type) => handleTypeChange(index, type)}
                     onToggleEvent={(eventType, checked) =>
                       toggleEvent(index, eventType, checked)
                     }
