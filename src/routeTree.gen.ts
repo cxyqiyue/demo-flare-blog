@@ -21,7 +21,9 @@ import { Route as UserProfileRouteImport } from './routes/_user/profile'
 import { Route as PublicUnsubscribeRouteImport } from './routes/_public/unsubscribe'
 import { Route as PublicSearchRouteImport } from './routes/_public/search'
 import { Route as PublicPostsRouteImport } from './routes/_public/posts'
+import { Route as PublicMomentsRouteImport } from './routes/_public/moments'
 import { Route as PublicFriendLinksRouteImport } from './routes/_public/friend-links'
+import { Route as PublicAboutRouteImport } from './routes/_public/about'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
 import { Route as AuthResetLinkRouteImport } from './routes/_auth/reset-link'
 import { Route as AuthRegisterRouteImport } from './routes/_auth/register'
@@ -94,9 +96,19 @@ const PublicPostsRoute = PublicPostsRouteImport.update({
   path: '/posts',
   getParentRoute: () => PublicRouteRoute,
 } as any)
+const PublicMomentsRoute = PublicMomentsRouteImport.update({
+  id: '/moments',
+  path: '/moments',
+  getParentRoute: () => PublicRouteRoute,
+} as any)
 const PublicFriendLinksRoute = PublicFriendLinksRouteImport.update({
   id: '/friend-links',
   path: '/friend-links',
+  getParentRoute: () => PublicRouteRoute,
+} as any)
+const PublicAboutRoute = PublicAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => PublicRouteRoute,
 } as any)
 const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
@@ -179,7 +191,9 @@ export interface FileRoutesByFullPath {
   '/register': typeof AuthRegisterRoute
   '/reset-link': typeof AuthResetLinkRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/about': typeof PublicAboutRoute
   '/friend-links': typeof PublicFriendLinksRoute
+  '/moments': typeof PublicMomentsRoute
   '/posts': typeof PublicPostsRoute
   '/search': typeof PublicSearchRoute
   '/unsubscribe': typeof PublicUnsubscribeRoute
@@ -203,7 +217,9 @@ export interface FileRoutesByTo {
   '/register': typeof AuthRegisterRoute
   '/reset-link': typeof AuthResetLinkRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/about': typeof PublicAboutRoute
   '/friend-links': typeof PublicFriendLinksRoute
+  '/moments': typeof PublicMomentsRoute
   '/posts': typeof PublicPostsRoute
   '/search': typeof PublicSearchRoute
   '/unsubscribe': typeof PublicUnsubscribeRoute
@@ -232,7 +248,9 @@ export interface FileRoutesById {
   '/_auth/register': typeof AuthRegisterRoute
   '/_auth/reset-link': typeof AuthResetLinkRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
+  '/_public/about': typeof PublicAboutRoute
   '/_public/friend-links': typeof PublicFriendLinksRoute
+  '/_public/moments': typeof PublicMomentsRoute
   '/_public/posts': typeof PublicPostsRoute
   '/_public/search': typeof PublicSearchRoute
   '/_public/unsubscribe': typeof PublicUnsubscribeRoute
@@ -261,7 +279,9 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-link'
     | '/verify-email'
+    | '/about'
     | '/friend-links'
+    | '/moments'
     | '/posts'
     | '/search'
     | '/unsubscribe'
@@ -285,7 +305,9 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-link'
     | '/verify-email'
+    | '/about'
     | '/friend-links'
+    | '/moments'
     | '/posts'
     | '/search'
     | '/unsubscribe'
@@ -313,7 +335,9 @@ export interface FileRouteTypes {
     | '/_auth/register'
     | '/_auth/reset-link'
     | '/_auth/verify-email'
+    | '/_public/about'
     | '/_public/friend-links'
+    | '/_public/moments'
     | '/_public/posts'
     | '/_public/search'
     | '/_public/unsubscribe'
@@ -426,11 +450,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicPostsRouteImport
       parentRoute: typeof PublicRouteRoute
     }
+    '/_public/moments': {
+      id: '/_public/moments'
+      path: '/moments'
+      fullPath: '/moments'
+      preLoaderRoute: typeof PublicMomentsRouteImport
+      parentRoute: typeof PublicRouteRoute
+    }
     '/_public/friend-links': {
       id: '/_public/friend-links'
       path: '/friend-links'
       fullPath: '/friend-links'
       preLoaderRoute: typeof PublicFriendLinksRouteImport
+      parentRoute: typeof PublicRouteRoute
+    }
+    '/_public/about': {
+      id: '/_public/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof PublicAboutRouteImport
       parentRoute: typeof PublicRouteRoute
     }
     '/_auth/verify-email': {
@@ -555,7 +593,9 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 )
 
 interface PublicRouteRouteChildren {
+  PublicAboutRoute: typeof PublicAboutRoute
   PublicFriendLinksRoute: typeof PublicFriendLinksRoute
+  PublicMomentsRoute: typeof PublicMomentsRoute
   PublicPostsRoute: typeof PublicPostsRoute
   PublicSearchRoute: typeof PublicSearchRoute
   PublicUnsubscribeRoute: typeof PublicUnsubscribeRoute
@@ -564,7 +604,9 @@ interface PublicRouteRouteChildren {
 }
 
 const PublicRouteRouteChildren: PublicRouteRouteChildren = {
+  PublicAboutRoute: PublicAboutRoute,
   PublicFriendLinksRoute: PublicFriendLinksRoute,
+  PublicMomentsRoute: PublicMomentsRoute,
   PublicPostsRoute: PublicPostsRoute,
   PublicSearchRoute: PublicSearchRoute,
   PublicUnsubscribeRoute: PublicUnsubscribeRoute,

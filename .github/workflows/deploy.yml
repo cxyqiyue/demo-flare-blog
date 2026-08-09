@@ -134,10 +134,17 @@ jobs:
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
           CLOUDFLARE_PURGE_API_TOKEN: ${{ secrets.CLOUDFLARE_PURGE_API_TOKEN }}
         run: |
-          PURGE_DOMAIN=${CDN_DOMAIN:-$DOMAIN}
-          echo "Purging CDN cache for $PURGE_DOMAIN"
+          # Purge both the blog domain and the standalone CDN domain.
+          # "hosts" accepts bare hostnames and clears every cached asset for them,
+          # unlike "prefixes" which requires a scheme-prefixed URL and only matches
+          # one prefix at a time.
+          HOSTS="\"$DOMAIN\""
+          if [ -n "$CDN_DOMAIN" ] && [ "$CDN_DOMAIN" != "$DOMAIN" ]; then
+            HOSTS="$HOSTS,\"$CDN_DOMAIN\""
+          fi
+          echo "Purging CDN cache for hosts: $HOSTS"
           curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/purge_cache" \
             -H "Authorization: Bearer $CLOUDFLARE_PURGE_API_TOKEN" \
             -H "Content-Type: application/json" \
-            --data '{"prefixes":["'$PURGE_DOMAIN'"]}'
+            --data "{\"hosts\":[$HOSTS]}"
           echo ""
