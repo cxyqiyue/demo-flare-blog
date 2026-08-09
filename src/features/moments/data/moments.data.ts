@@ -1,5 +1,4 @@
 import { and, count, desc, eq, inArray } from "drizzle-orm";
-import type { MomentCommentStatus } from "@/lib/db/schema";
 import {
   MomentCommentsTable,
   MomentLikesTable,
