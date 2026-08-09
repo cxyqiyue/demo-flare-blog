@@ -100,6 +100,9 @@ export function WebhookDocPanel() {
               <WebhookDocTip index="3">
                 {m.settings_webhook_doc_tip3()}
               </WebhookDocTip>
+              <WebhookDocTip index="4">
+                {m.settings_webhook_doc_tip4()}
+              </WebhookDocTip>
             </div>
           </div>
         </div>

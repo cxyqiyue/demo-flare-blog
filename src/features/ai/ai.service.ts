@@ -312,18 +312,7 @@ export async function generateArticle(
     targetLength?: number;
   },
 ) {
-  const [model, config] = await Promise.all([
-    getConfiguredTextModel(context),
-    ConfigService.getSystemConfig(context),
-  ]);
-
-  const writingInstructions = config?.ai?.writingInstructions?.trim();
-  const writingBlock = writingInstructions
-    ? `
-### 博主附加的写作要求（必须严格遵守，优先级高于上面的通用规则）
-${writingInstructions}
-`
-    : "";
+  const model = await getConfiguredTextModel(context);
 
   const result = await generateText({
     model,
@@ -332,7 +321,7 @@ ${writingInstructions}
       {
         role: "system",
         content: `你是一名专业的博客文章作者。你要根据博主提供的大纲，生成一篇**结构完整、格式规范**的 Markdown 文章。
-${writingBlock}
+
 ### 输出格式硬性要求（违反即不合格）
 1. 只输出**纯 Markdown**，禁止任何包装：不要输出"好的""以下是文章"等前言，不要用 \`\`\` 代码块包裹整篇文章，不要输出任何结尾说明。
 2. 第一行必须是标题，使用一个一级标题（\`# 标题\`）。

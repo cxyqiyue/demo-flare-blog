@@ -5,6 +5,7 @@ import { ForgotPasswordForm } from "./form";
 
 export function ForgotPasswordPage({
   forgotPasswordForm,
+  turnstileElement,
 }: ForgotPasswordPageProps) {
   if (forgotPasswordForm.isSent) {
     return (
@@ -45,6 +46,7 @@ export function ForgotPasswordPage({
 
       <div className="space-y-6">
         <ForgotPasswordForm form={forgotPasswordForm} />
+        {turnstileElement}
       </div>
     </div>
   );

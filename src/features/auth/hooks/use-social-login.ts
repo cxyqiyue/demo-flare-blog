@@ -43,6 +43,7 @@ export function useSocialLogin(options: UseSocialLoginOptions) {
 
   return {
     isLoading,
+    turnstilePending: false,
     handleGithubLogin,
   };
 }

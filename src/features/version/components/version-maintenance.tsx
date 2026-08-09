@@ -19,6 +19,12 @@ export function VersionMaintenance() {
         });
         return;
       }
+      if (result.data.noRelease) {
+        toast.info(m.settings_maintenance_version_toast_no_release(), {
+          description: m.settings_maintenance_version_toast_no_release_desc(),
+        });
+        return;
+      }
       if (result.data.hasUpdate) {
         toast.info(m.settings_maintenance_version_toast_new(), {
           description: m.settings_maintenance_version_toast_new_desc({

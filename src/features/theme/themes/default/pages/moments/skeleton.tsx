@@ -1,9 +1,9 @@
 import { m } from "@/paraglide/messages";
-import { MomentSkeleton } from "./moment-skeleton";
 
 export function MomentsPageSkeleton() {
   return (
     <div className="w-full max-w-3xl mx-auto pb-20 px-6 md:px-0">
+      {/* Header */}
       <header className="py-12 md:py-20 space-y-6">
         <h1 className="text-4xl md:text-5xl font-serif font-medium tracking-tight text-foreground">
           {m.moments_title()}
@@ -13,9 +13,13 @@ export function MomentsPageSkeleton() {
         </p>
       </header>
 
-      <div className="space-y-6">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <MomentSkeleton key={i} />
+      {/* Loading List */}
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="py-6 border-b border-border/20">
+            <div className="h-4 bg-muted/60 rounded-sm animate-pulse w-3/4" />
+            <div className="mt-2 h-4 bg-muted/40 rounded-sm animate-pulse w-1/2" />
+          </div>
         ))}
       </div>
     </div>

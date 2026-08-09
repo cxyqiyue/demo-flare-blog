@@ -13,10 +13,9 @@ interface WebhookEndpointCardProps<TFieldValues extends FieldValues> {
   endpoint: {
     id: string;
     name: string;
-    type?: string;
     url: string;
     enabled: boolean;
-    secret?: string;
+    secret: string;
     events: Array<NotificationWebhookEventType>;
   };
   register: UseFormRegister<TFieldValues>;
@@ -32,7 +31,6 @@ interface WebhookEndpointCardProps<TFieldValues extends FieldValues> {
   onRemove: () => void;
   onToggleEnabled: (checked: boolean) => void;
   onToggleSecretVisibility: () => void;
-  onTypeChange: (type: string) => void;
   onToggleEvent: (
     eventType: NotificationWebhookEventType,
     checked: boolean,
@@ -52,13 +50,8 @@ export function WebhookEndpointCard<TFieldValues extends FieldValues>({
   onToggleEnabled,
   onToggleEvent,
   onToggleSecretVisibility,
-  onTypeChange,
   onTest,
 }: WebhookEndpointCardProps<TFieldValues>) {
-  const typeField = register(
-    `notification.webhooks.${index}.type` as FieldPath<TFieldValues>,
-  );
-
   return (
     <div className="overflow-hidden border border-border/30 bg-muted/5">
       <div className="flex flex-col gap-4 border-b border-border/20 px-6 py-4 md:flex-row md:items-center md:justify-between">
@@ -143,71 +136,43 @@ export function WebhookEndpointCard<TFieldValues extends FieldValues>({
               <p className="text-xs text-red-500">! {fieldError.url.message}</p>
             )}
           </div>
-
-          <div className="space-y-3">
-            <label className="text-sm text-muted-foreground">
-              {m.settings_webhook_endpoint_field_type()}
-            </label>
-            <select
-              {...typeField}
-              onChange={(event) => {
-                typeField.onChange(event);
-                onTypeChange(event.target.value);
-              }}
-              className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm"
-            >
-              <option value="generic">
-                {m.settings_webhook_endpoint_type_generic()}
-              </option>
-              <option value="wecom">
-                {m.settings_webhook_endpoint_type_wecom()}
-              </option>
-            </select>
-            {endpoint.type === "wecom" && (
-              <p className="text-xs text-muted-foreground">
-                {m.settings_webhook_endpoint_type_wecom_hint()}
-              </p>
-            )}
-          </div>
         </div>
 
-        {endpoint.type !== "wecom" && (
-          <div className="max-w-2xl space-y-3">
-            <label className="text-sm text-muted-foreground">
-              {m.settings_webhook_endpoint_field_secret()}
-            </label>
-            <div className="relative">
-              <Input
-                type={visibleSecret ? "text" : "password"}
-                {...register(
-                  `notification.webhooks.${index}.secret` as FieldPath<TFieldValues>,
-                )}
-                placeholder={m.settings_webhook_endpoint_field_secret_ph()}
-                className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 pr-12 text-sm"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={onToggleSecretVisibility}
-                className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-none text-muted-foreground/40 hover:text-foreground"
-              >
-                {visibleSecret ? <EyeOff size={15} /> : <Eye size={15} />}
-              </Button>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <KeyRound size={12} className="shrink-0" />
-              <p className="leading-5">
-                {m.settings_webhook_endpoint_field_secret_hint()}
-              </p>
-            </div>
-            {fieldError?.secret?.message && (
-              <p className="text-xs text-red-500">
-                ! {fieldError.secret.message}
-              </p>
-            )}
+        <div className="max-w-2xl space-y-3">
+          <label className="text-sm text-muted-foreground">
+            {m.settings_webhook_endpoint_field_secret()}
+          </label>
+          <div className="relative">
+            <Input
+              type={visibleSecret ? "text" : "password"}
+              {...register(
+                `notification.webhooks.${index}.secret` as FieldPath<TFieldValues>,
+              )}
+              placeholder={m.settings_webhook_endpoint_field_secret_ph()}
+              className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 pr-12 text-sm"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onToggleSecretVisibility}
+              className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-none text-muted-foreground/40 hover:text-foreground"
+            >
+              {visibleSecret ? <EyeOff size={15} /> : <Eye size={15} />}
+            </Button>
           </div>
-        )}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <KeyRound size={12} className="shrink-0" />
+            <p className="leading-5">
+              {m.settings_webhook_endpoint_field_secret_hint()}
+            </p>
+          </div>
+          {fieldError?.secret?.message && (
+            <p className="text-xs text-red-500">
+              ! {fieldError.secret.message}
+            </p>
+          )}
+        </div>
 
         <div className="space-y-5">
           <div className="space-y-1">

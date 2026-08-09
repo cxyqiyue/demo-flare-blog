@@ -7,6 +7,7 @@ import {
   PlusCircle,
   XCircle,
 } from "lucide-react";
+import { Turnstile } from "@/components/common/turnstile";
 import type {
   MyFriendLink,
   SubmitFriendLinkPageProps,
@@ -166,6 +167,10 @@ export function SubmitFriendLinkPage({
                   {form.errors.contactEmail.message}
                 </p>
               )}
+            </div>
+
+            <div className="pt-2">
+              <Turnstile {...form.turnstileProps} />
             </div>
 
             <div className="pt-4">

@@ -6,6 +6,7 @@ import { verifyUnsubscribeToken } from "@/features/email/email.utils";
 import type { EmailUnsubscribeType } from "@/lib/db/schema";
 import { isNotInProduction, serverEnv } from "@/lib/env/server.env";
 import { err, ok } from "@/lib/errors";
+import type { Locale } from "@/lib/i18n";
 import { m } from "@/paraglide/messages";
 
 type ConfiguredEmailConfig = {
@@ -28,29 +29,28 @@ function getSmtpAuthTypes(): AuthType[] {
   return ["plain", "login", "cram-md5"];
 }
 
-function resolveEmailErrorMessage(error: unknown, locale: "zh" | "en"): string {
-  const raw = error instanceof Error ? error.message : "";
+function isQqMailHost(host: string): boolean {
+  const normalized = host.trim().toLowerCase();
+  return (
+    normalized === "smtp.qq.com" ||
+    normalized === "smtp.exmail.qq.com" ||
+    normalized.endsWith(".qq.com")
+  );
+}
 
-  if (/Failed to connect to SMTP server/i.test(raw)) {
-    return m.settings_email_error_connect({}, { locale });
-  }
-  if (/Failed to start TLS/i.test(raw)) {
-    return m.settings_email_error_tls({}, { locale });
-  }
-  if (
-    /smtp server requires authentication|Invalid login|No supported auth method|Failed to (plain|login) authentication/i.test(
-      raw,
-    )
-  ) {
-    return m.settings_email_error_auth({}, { locale });
-  }
-  if (/Failed to (EHLO|HELO)/i.test(raw)) {
-    return m.settings_email_error_ehlo({}, { locale });
-  }
+function isQqAuthError(message: string): boolean {
+  return /(?:^|\s)(535)(?:\s|$)/.test(message);
+}
 
-  return raw
-    ? m.settings_email_error_send({ message: raw }, { locale })
-    : m.settings_email_unknown_error({}, { locale });
+function enrichSmtpError(
+  host: string,
+  message: string,
+  locale: Locale,
+): string {
+  if (isQqMailHost(host) && isQqAuthError(message)) {
+    return `${message}\n${m.settings_email_qq_auth_hint({}, { locale })}`;
+  }
+  return message;
 }
 
 function isEmailConfigured(
@@ -109,7 +109,10 @@ export async function testEmailConnection(
     return ok({ success: true });
   } catch (error) {
     const locale = serverEnv(context.env).LOCALE;
-    const errorMessage = resolveEmailErrorMessage(error, locale);
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : m.settings_email_unknown_error({}, { locale });
     console.error(
       JSON.stringify({
         message: "email test connection failed",
@@ -120,7 +123,10 @@ export async function testEmailConnection(
         error: errorMessage,
       }),
     );
-    return err({ reason: "SEND_FAILED", message: errorMessage });
+    return err({
+      reason: "SEND_FAILED",
+      message: enrichSmtpError(data.host, errorMessage, locale),
+    });
   }
 }
 
@@ -259,7 +265,10 @@ export async function sendEmail(
     );
   } catch (error) {
     const locale = serverEnv(context.env).LOCALE;
-    const errorMessage = resolveEmailErrorMessage(error, locale);
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : m.settings_email_unknown_error({}, { locale });
     console.error(
       JSON.stringify({
         message: "email send failed",
@@ -272,7 +281,7 @@ export async function sendEmail(
     );
     return err({
       reason: "SEND_FAILED",
-      message: errorMessage,
+      message: enrichSmtpError(email.host, errorMessage, locale),
     });
   }
 

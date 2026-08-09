@@ -82,14 +82,6 @@ export function resolveSystemConfig(
         ...DEFAULT_CONFIG.imageHosting?.ffsky,
         ...config?.imageHosting?.ffsky,
       },
-      s3: {
-        ...DEFAULT_CONFIG.imageHosting?.s3,
-        ...config?.imageHosting?.s3,
-      },
-    },
-    turnstile: {
-      ...DEFAULT_CONFIG.turnstile,
-      ...config?.turnstile,
     },
     site: resolveSiteConfig(config),
   };

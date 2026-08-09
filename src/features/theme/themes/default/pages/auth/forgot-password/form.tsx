@@ -9,7 +9,8 @@ interface ForgotPasswordFormProps {
 }
 
 export function ForgotPasswordForm({ form }: ForgotPasswordFormProps) {
-  const { register, errors, handleSubmit, isSubmitting } = form;
+  const { register, errors, handleSubmit, isSubmitting, turnstilePending } =
+    form;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
@@ -43,7 +44,7 @@ export function ForgotPasswordForm({ form }: ForgotPasswordFormProps) {
       <div className="space-y-4">
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || turnstilePending}
           className="w-full py-4 bg-foreground text-background text-[10px] font-mono uppercase tracking-[0.3em] hover:opacity-80 transition-all disabled:opacity-30 flex items-center justify-center gap-3"
         >
           {isSubmitting ? (

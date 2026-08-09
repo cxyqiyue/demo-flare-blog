@@ -24,20 +24,15 @@ export const Route = createFileRoute("/_auth/login")({
 });
 
 function RouteComponent() {
-  const { isEmailConfigured, turnstileConfig } = useRouteContext({
-    from: "/_auth",
-  });
+  const { isEmailConfigured } = useRouteContext({ from: "/_auth" });
   const search = Route.useSearch();
   const location = useLocation();
-  const turnstileSiteKey = turnstileConfig.enabled
-    ? turnstileConfig.siteKey
-    : "";
   const {
     isPending: turnstilePending,
     token: turnstileToken,
     reset: resetTurnstile,
     turnstileProps,
-  } = useTurnstile("login", turnstileSiteKey);
+  } = useTurnstile("login");
 
   const currentSearchParams = new URLSearchParams(
     new URL(location.href, window.location.origin).search,
@@ -62,12 +57,11 @@ function RouteComponent() {
     redirectTo: resolvedRedirectTo,
   });
 
-  const turnstileElement =
-    isEmailConfigured && turnstileConfig.enabled ? (
-      <div className="flex justify-center">
-        <Turnstile {...turnstileProps} />
-      </div>
-    ) : null;
+  const turnstileElement = isEmailConfigured ? (
+    <div className="flex justify-center">
+      <Turnstile {...turnstileProps} />
+    </div>
+  ) : null;
 
   return (
     <theme.LoginPage

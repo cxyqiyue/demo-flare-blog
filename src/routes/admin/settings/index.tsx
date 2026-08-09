@@ -9,15 +9,14 @@ import {
   LayoutTemplate,
   Loader2,
   Mail,
-  ShieldCheck,
   Webhook,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { AiSettingsSection } from "@/features/ai/components/ai-settings-section";
 import { useAiConnection } from "@/features/ai/hooks/use-ai-connection";
 import { MaintenanceSection } from "@/features/config/components/maintenance-section";
@@ -34,7 +33,6 @@ import { useEmailConnection } from "@/features/email/hooks/use-email-connection"
 import { ImageHostingSettingsSection } from "@/features/image-hosting/components/image-hosting-settings-section";
 import { useImageHostingConnection } from "@/features/image-hosting/hooks/use-image-hosting-connection";
 import { OAuthClientsSection } from "@/features/oauth-clients/components/oauth-clients-section";
-import { TurnstileSettingsSection } from "@/features/turnstile/components/turnstile-settings-section";
 import { WebhookSettingsSection } from "@/features/webhook/components/webhook-settings-section";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -84,11 +82,6 @@ function RouteComponent() {
       label: m.settings_tab_image_hosting(),
     },
     {
-      value: "turnstile",
-      icon: ShieldCheck,
-      label: m.settings_tab_turnstile(),
-    },
-    {
       value: "webhook",
       icon: Webhook,
       label: m.settings_tab_webhook(),
@@ -117,11 +110,7 @@ function RouteComponent() {
   } = methods;
 
   // Block navigation when there are unsaved changes
-  const {
-    proceed,
-    reset: resetBlocker,
-    status: blockerStatus,
-  } = useBlocker({
+  const { proceed, reset: resetBlocker, status: blockerStatus } = useBlocker({
     shouldBlockFn: () => isDirty,
     withResolver: true,
   });
@@ -333,18 +322,6 @@ function RouteComponent() {
               <ImageHostingSettingsSection
                 testImageHostingConnection={testImageHostingConnection}
               />
-            </TabsContent>
-
-            <TabsContent value="turnstile" className="mt-0 space-y-10">
-              <div className="space-y-2 pb-6 border-b border-border/30">
-                <h2 className="text-2xl font-serif font-medium tracking-tight">
-                  {m.settings_turnstile_title()}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {m.settings_turnstile_desc()}
-                </p>
-              </div>
-              <TurnstileSettingsSection />
             </TabsContent>
 
             <TabsContent value="webhook" className="mt-0 space-y-10">

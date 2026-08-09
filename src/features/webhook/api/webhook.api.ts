@@ -30,7 +30,6 @@ export const testWebhookFn = createServerFn({
       { env: context.env },
       {
         endpointId: data.endpoint.id,
-        type: data.endpoint.type ?? "generic",
         url: data.endpoint.url,
         secret: data.endpoint.secret,
         event: createNotificationExampleEvent(resolvedEventType, (k) =>

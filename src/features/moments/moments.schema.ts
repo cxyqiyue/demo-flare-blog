@@ -1,14 +1,13 @@
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { MomentsTable } from "@/lib/db/schema";
+import type { Messages } from "@/lib/i18n";
 
 const coercedDate = z.union([z.date(), z.string().pipe(z.coerce.date())]);
 
 export const MomentSelectSchema = createSelectSchema(MomentsTable, {
   createdAt: coercedDate,
   updatedAt: coercedDate,
-  images: z.array(z.string()),
-  content: z.any().nullable(),
 });
 
 export const MomentAuthorSchema = z.object({
@@ -17,60 +16,67 @@ export const MomentAuthorSchema = z.object({
   image: z.string().nullable(),
 });
 
-export const MomentCommentSchema = z.object({
-  id: z.number(),
-  momentId: z.number(),
-  content: z.any().nullable(),
-  status: z.enum(["published", "deleted"]),
-  userId: z.string().nullable(),
-  createdAt: coercedDate,
-  updatedAt: coercedDate,
-  user: MomentAuthorSchema.nullable(),
+export const MomentWithAuthorSchema = MomentSelectSchema.extend({
+  author: MomentAuthorSchema.nullable(),
 });
 
-export const MomentWithStatsSchema = MomentSelectSchema.extend({
-  author: MomentAuthorSchema.nullable(),
-  likeCount: z.number(),
-  commentCount: z.number(),
-  isLiked: z.boolean(),
-  comments: z.array(MomentCommentSchema),
+// === Public list input ===
+export const GetMomentsInputSchema = z.object({
+  offset: z.number().optional(),
+  limit: z.number().optional(),
 });
 
 // === Admin inputs ===
+export const GetAllMomentsInputSchema = z.object({
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+});
 
 export const CreateMomentInputSchema = z.object({
-  content: z.any().optional(),
-  images: z.array(z.string().min(1).max(2000)).max(9).default([]),
+  content: z.string().min(1).max(2000),
 });
-export type CreateMomentInput = z.infer<typeof CreateMomentInputSchema>;
+
+export const createCreateMomentSchema = (m: Messages) =>
+  z.object({
+    content: z
+      .string()
+      .min(1, m.moments_validation_required())
+      .max(2000, m.moments_validation_too_long({ max: 2000 })),
+  });
+
+export const UpdateMomentInputSchema = z.object({
+  id: z.number(),
+  content: z.string().min(1).max(2000),
+});
+
+export const createUpdateMomentSchema = (m: Messages) =>
+  z.object({
+    id: z.number(),
+    content: z
+      .string()
+      .min(1, m.moments_validation_required())
+      .max(2000, m.moments_validation_too_long({ max: 2000 })),
+  });
 
 export const DeleteMomentInputSchema = z.object({
   id: z.number(),
 });
-export type DeleteMomentInput = z.infer<typeof DeleteMomentInputSchema>;
-
-// === User inputs ===
-
-export const ToggleMomentLikeInputSchema = z.object({
-  momentId: z.number(),
-});
-export type ToggleMomentLikeInput = z.infer<typeof ToggleMomentLikeInputSchema>;
-
-export const AddMomentCommentInputSchema = z.object({
-  momentId: z.number(),
-  text: z.string().trim().min(1).max(1000),
-});
-export type AddMomentCommentInput = z.infer<
-  typeof AddMomentCommentInputSchema
->;
 
 // === Cache ===
-export const MomentsResponseSchema = z.array(MomentWithStatsSchema);
+export const MomentListResponseSchema = z.object({
+  items: z.array(MomentWithAuthorSchema),
+  total: z.number(),
+  hasNext: z.boolean(),
+});
 
 export const MOMENTS_CACHE_KEYS = {
-  list: (version: string) => ["moments", "list", version] as const,
+  publicList: (version: string) => ["moments", "public", version] as const,
 } as const;
 
 // === Types ===
-export type MomentComment = z.infer<typeof MomentCommentSchema>;
-export type MomentWithStats = z.infer<typeof MomentWithStatsSchema>;
+export type GetMomentsInput = z.infer<typeof GetMomentsInputSchema>;
+export type GetAllMomentsInput = z.infer<typeof GetAllMomentsInputSchema>;
+export type CreateMomentInput = z.infer<typeof CreateMomentInputSchema>;
+export type UpdateMomentInput = z.infer<typeof UpdateMomentInputSchema>;
+export type DeleteMomentInput = z.infer<typeof DeleteMomentInputSchema>;
+export type MomentWithAuthor = z.infer<typeof MomentWithAuthorSchema>;

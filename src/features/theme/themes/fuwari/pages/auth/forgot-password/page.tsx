@@ -5,10 +5,12 @@ import { m } from "@/paraglide/messages";
 
 export function ForgotPasswordPage({
   forgotPasswordForm,
+  turnstileElement,
 }: ForgotPasswordPageProps) {
-  const { register, errors, handleSubmit, isSubmitting } = forgotPasswordForm;
+  const { register, errors, handleSubmit, isSubmitting, turnstilePending } =
+    forgotPasswordForm;
 
-  const isFormDisabled = isSubmitting;
+  const isFormDisabled = isSubmitting || turnstilePending;
 
   if (forgotPasswordForm.isSent) {
     return (
@@ -85,6 +87,8 @@ export function ForgotPasswordPage({
             )}
           </button>
         </form>
+
+        {turnstileElement}
 
         {/* Footer Link */}
         <div className="text-center pt-2">

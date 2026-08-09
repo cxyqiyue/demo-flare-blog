@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "deedb75f-2920-4687-ae42-4c4d1329690c",
+  "id": "2dde4d06-481b-471b-ac3a-32761b2fdedc",
   "prevId": "95aaafc8-43c4-47a9-a47a-96929607b0be",
   "tables": {
     "account": {
@@ -915,187 +915,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "moment_comments": {
-      "name": "moment_comments",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "moment_id": {
-          "name": "moment_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "content": {
-          "name": "content",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'published'"
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(unixepoch())"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(unixepoch())"
-        }
-      },
-      "indexes": {
-        "moment_comments_moment_created_idx": {
-          "name": "moment_comments_moment_created_idx",
-          "columns": [
-            "moment_id",
-            "created_at"
-          ],
-          "isUnique": false
-        },
-        "moment_comments_status_idx": {
-          "name": "moment_comments_status_idx",
-          "columns": [
-            "status"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "moment_comments_moment_id_moments_id_fk": {
-          "name": "moment_comments_moment_id_moments_id_fk",
-          "tableFrom": "moment_comments",
-          "tableTo": "moments",
-          "columnsFrom": [
-            "moment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "moment_comments_user_id_user_id_fk": {
-          "name": "moment_comments_user_id_user_id_fk",
-          "tableFrom": "moment_comments",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "moment_likes": {
-      "name": "moment_likes",
-      "columns": {
-        "moment_id": {
-          "name": "moment_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(unixepoch())"
-        }
-      },
-      "indexes": {
-        "moment_likes_moment_created_idx": {
-          "name": "moment_likes_moment_created_idx",
-          "columns": [
-            "moment_id",
-            "created_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "moment_likes_moment_id_moments_id_fk": {
-          "name": "moment_likes_moment_id_moments_id_fk",
-          "tableFrom": "moment_likes",
-          "tableTo": "moments",
-          "columnsFrom": [
-            "moment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "moment_likes_user_id_user_id_fk": {
-          "name": "moment_likes_user_id_user_id_fk",
-          "tableFrom": "moment_likes",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "moment_likes_moment_id_user_id_pk": {
-          "columns": [
-            "moment_id",
-            "user_id"
-          ],
-          "name": "moment_likes_moment_id_user_id_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "moments": {
       "name": "moments",
       "columns": {
@@ -1110,19 +929,11 @@
           "name": "content",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
-        "images": {
-          "name": "images",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'[]'"
-        },
-        "author_user_id": {
-          "name": "author_user_id",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -1146,26 +957,33 @@
         }
       },
       "indexes": {
-        "moments_created_idx": {
-          "name": "moments_created_idx",
+        "moments_created_at_idx": {
+          "name": "moments_created_at_idx",
           "columns": [
             "created_at"
+          ],
+          "isUnique": false
+        },
+        "moments_user_idx": {
+          "name": "moments_user_idx",
+          "columns": [
+            "user_id"
           ],
           "isUnique": false
         }
       },
       "foreignKeys": {
-        "moments_author_user_id_user_id_fk": {
-          "name": "moments_author_user_id_user_id_fk",
+        "moments_user_id_user_id_fk": {
+          "name": "moments_user_id_user_id_fk",
           "tableFrom": "moments",
           "tableTo": "user",
           "columnsFrom": [
-            "author_user_id"
+            "user_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },

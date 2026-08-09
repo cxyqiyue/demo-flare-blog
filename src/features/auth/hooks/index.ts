@@ -1,4 +1,5 @@
 export {
+  type UseForgotPasswordFormOptions,
   type UseForgotPasswordFormReturn,
   useForgotPasswordForm,
 } from "./use-forgot-password-form";

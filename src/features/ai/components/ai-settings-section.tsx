@@ -1,10 +1,9 @@
-import { Cpu, KeyRound, PenLine, PlugZap, Server } from "lucide-react";
+import { Cpu, KeyRound, PlugZap, Server } from "lucide-react";
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   AGNES_AI_ENDPOINTS,
   AI_PROVIDER_NAMES,
@@ -398,34 +397,6 @@ export function AiSettingsSection({
             </div>
           </div>
         )}
-
-        {/* Writing Instructions */}
-        <div className="space-y-8 p-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="rounded-sm bg-muted/40 p-2">
-                <PenLine size={16} className="text-muted-foreground" />
-              </div>
-              <div className="space-y-1">
-                <h5 className="text-sm font-medium text-foreground">
-                  {m.settings_ai_writing_instructions_title()}
-                </h5>
-                <p className="text-xs text-muted-foreground">
-                  {m.settings_ai_writing_instructions_desc()}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4 px-2">
-            <Textarea
-              rows={7}
-              placeholder={m.settings_ai_writing_instructions_ph()}
-              {...register("ai.writingInstructions")}
-              className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-3 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
-            />
-          </div>
-        </div>
 
         {/* Test Toolbar */}
         <div className="flex flex-col items-center justify-between gap-6 bg-muted/10 p-6 px-10 sm:flex-row">

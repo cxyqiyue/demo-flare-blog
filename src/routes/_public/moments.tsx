@@ -1,19 +1,8 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import theme from "@theme";
-import { toast } from "sonner";
-import { useCallback } from "react";
-import { MOMENTS_KEYS, publicMomentsQuery } from "@/features/moments/queries";
-import { textToJsonContent } from "@/features/moments/moments.service";
-import {
-  addMomentCommentFn,
-  toggleMomentLikeFn,
-} from "@/features/moments/api/moments.user.api";
-import {
-  createMomentFn,
-  deleteMomentFn,
-} from "@/features/moments/api/moments.admin.api";
-import { authClient } from "@/lib/auth/auth.client";
+import { useState } from "react";
+import { publicMomentsQuery } from "@/features/moments/queries";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_public/moments")({
@@ -40,101 +29,48 @@ export const Route = createFileRoute("/_public/moments")({
   pendingComponent: theme.MomentsPageSkeleton,
 });
 
+const INITIAL_LIMIT = 10;
+
 function MomentsPage() {
-  const { data: moments } = useSuspenseQuery(publicMomentsQuery());
-  const { data: session } = authClient.useSession();
   const queryClient = useQueryClient();
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const refresh = useCallback(() => {
-    return queryClient.invalidateQueries({ queryKey: MOMENTS_KEYS.list });
-  }, [queryClient]);
-
-  const onToggleLike = useCallback(
-    async (momentId: number): Promise<boolean> => {
-      try {
-        const result = await toggleMomentLikeFn({ data: { momentId } });
-        if (result.error) {
-          toast.error(m.moments_like_error());
-          return false;
-        }
-        await refresh();
-        return true;
-      } catch {
-        toast.error(m.moments_like_error());
-        return false;
-      }
-    },
-    [refresh],
+  const { data } = useQuery(
+    publicMomentsQuery({ offset: 0, limit: INITIAL_LIMIT }),
   );
 
-  const onAddComment = useCallback(
-    async (momentId: number, text: string): Promise<boolean> => {
-      try {
-        const result = await addMomentCommentFn({ data: { momentId, text } });
-        if (result.error) {
-          toast.error(m.moments_comment_error());
-          return false;
-        }
-        await refresh();
-        return true;
-      } catch {
-        toast.error(m.moments_comment_error());
-        return false;
-      }
-    },
-    [refresh],
-  );
+  const moments = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const hasMore = data?.hasNext ?? false;
 
-  const onCreateMoment = useCallback(
-    async (content: string, images: string[]): Promise<boolean> => {
-      try {
-        const result = await createMomentFn({
-          data: {
-            content: textToJsonContent(content),
-            images,
-          },
-        });
-        if (result.error) {
-          toast.error(m.moments_create_error());
-          return false;
-        }
-        await refresh();
-        return true;
-      } catch {
-        toast.error(m.moments_create_error());
-        return false;
-      }
-    },
-    [refresh],
-  );
-
-  const onDeleteMoment = useCallback(
-    async (id: number): Promise<boolean> => {
-      try {
-        const result = await deleteMomentFn({ data: { id } });
-        if (result.error) {
-          toast.error(m.moments_delete_error());
-          return false;
-        }
-        await refresh();
-        return true;
-      } catch {
-        toast.error(m.moments_delete_error());
-        return false;
-      }
-    },
-    [refresh],
-  );
+  const handleLoadMore = async () => {
+    if (isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      const next = await queryClient.ensureQueryData(
+        publicMomentsQuery({ offset: moments.length, limit: INITIAL_LIMIT }),
+      );
+      queryClient.setQueryData(
+        publicMomentsQuery({ offset: 0, limit: INITIAL_LIMIT }).queryKey,
+        {
+          items: [...moments, ...(next?.items ?? [])],
+          total: next?.total ?? total,
+          hasNext: next?.hasNext ?? false,
+        },
+      );
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   return (
     <theme.MomentsPage
       moments={moments}
-      isAdmin={session?.user.role === "admin"}
-      currentUserId={session?.user.id ?? null}
-      onToggleLike={onToggleLike}
-      onAddComment={onAddComment}
-      onCreateMoment={onCreateMoment}
-      onDeleteMoment={onDeleteMoment}
+      total={total}
+      hasNext={hasMore}
+      hasMore={hasMore}
+      onLoadMore={handleLoadMore}
+      isLoadingMore={isLoadingMore}
     />
   );
 }

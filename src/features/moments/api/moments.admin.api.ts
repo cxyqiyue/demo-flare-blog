@@ -3,8 +3,18 @@ import { adminMiddleware } from "@/lib/middlewares";
 import {
   CreateMomentInputSchema,
   DeleteMomentInputSchema,
+  GetAllMomentsInputSchema,
+  UpdateMomentInputSchema,
 } from "../moments.schema";
-import * as MomentService from "../moments.service";
+import * as MomentsService from "../moments.service";
+
+export const getAllMomentsFn = createServerFn()
+  .middleware([adminMiddleware])
+  .inputValidator(GetAllMomentsInputSchema)
+  .handler(
+    async ({ data, context }) =>
+      await MomentsService.getAllMoments(context, data),
+  );
 
 export const createMomentFn = createServerFn({
   method: "POST",
@@ -13,7 +23,17 @@ export const createMomentFn = createServerFn({
   .inputValidator(CreateMomentInputSchema)
   .handler(
     async ({ data, context }) =>
-      await MomentService.createMoment(context, data),
+      await MomentsService.createMoment(context, data),
+  );
+
+export const updateMomentFn = createServerFn({
+  method: "POST",
+})
+  .middleware([adminMiddleware])
+  .inputValidator(UpdateMomentInputSchema)
+  .handler(
+    async ({ data, context }) =>
+      await MomentsService.updateMoment(context, data),
   );
 
 export const deleteMomentFn = createServerFn({
@@ -23,5 +43,5 @@ export const deleteMomentFn = createServerFn({
   .inputValidator(DeleteMomentInputSchema)
   .handler(
     async ({ data, context }) =>
-      await MomentService.deleteMoment(context, data),
+      await MomentsService.deleteMoment(context, data),
   );

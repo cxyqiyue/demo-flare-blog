@@ -7,6 +7,16 @@ import type { WebhookMessage } from "@/lib/queue/queue.schema";
 import { m } from "@/paraglide/messages";
 import { baseLocale } from "@/paraglide/runtime";
 
+const WECOM_HOST = "qyapi.weixin.qq.com";
+
+export function isWeComUrl(url: string): boolean {
+  try {
+    return new URL(url).hostname === WECOM_HOST;
+  } catch {
+    return false;
+  }
+}
+
 function createPlainTextMessage(event: NotificationEvent, locale: Locale) {
   switch (event.type) {
     case "comment.admin_root_created":
@@ -95,24 +105,30 @@ function createRenderedEmail(event: NotificationEvent, locale: Locale) {
   };
 }
 
-function createWecomPayload(
+function createWeComMarkdownContent(
   event: NotificationEvent,
   locale: Locale,
-  options?: {
-    isTest?: boolean;
-  },
-) {
-  const email = createRenderedEmail(event, locale);
-  const content = [
-    `**${email.subject}**`,
-    `> ${email.message}`,
-    ...(options?.isTest ? ["> `[Test]`"] : []),
-  ].join("\n");
+): string {
+  const title = createRenderedEmail(event, locale).subject;
+  const message = createPlainTextMessage(event, locale);
 
-  return {
+  return [
+    `## ${title.replace(/[\r\n]/g, " ")}`,
+    "",
+    message.replace(/[\r\n]+/g, "\n"),
+  ].join("\n");
+}
+
+function createWeComMarkdownBody(
+  event: NotificationEvent,
+  locale: Locale,
+): string {
+  return JSON.stringify({
     msgtype: "markdown",
-    markdown: { content },
-  };
+    markdown: {
+      content: createWeComMarkdownContent(event, locale),
+    },
+  });
 }
 
 export function createWebhookBody(
@@ -164,36 +180,25 @@ export async function sendWebhookRequest(
   },
 ): Promise<void> {
   const locale = serverEnv(context.env).LOCALE;
-  const isWecom = data.type === "wecom";
   const body = createWebhookBody(messageId, data.event, options, locale);
-  const timestamp = body.timestamp;
-  const payload = isWecom
-    ? JSON.stringify(createWecomPayload(data.event, locale, options))
+  const isWeCom = isWeComUrl(data.url);
+
+  const payload = isWeCom
+    ? createWeComMarkdownBody(data.event, locale)
     : JSON.stringify(body);
-
-  let signature: string | undefined;
-  if (!isWecom) {
-    if (!data.secret) {
-      throw new Error(m.settings_webhook_secret_required({}, { locale }));
-    }
-    signature = await signPayload(data.secret, payload, timestamp);
-  }
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "User-Agent": "demo-flare-blog/webhook",
-  };
-
-  if (signature) {
-    headers["X-Flare-Event"] = data.event.type;
-    headers["X-Flare-Timestamp"] = timestamp;
-    headers["X-Flare-Signature"] = `sha256=${signature}`;
-  }
+  const timestamp = body.timestamp;
+  const signature = await signPayload(data.secret, payload, timestamp);
 
   const response = await fetch(data.url, {
     method: "POST",
     signal: AbortSignal.timeout(10_000),
-    headers,
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "demo-flare-blog/webhook",
+      "X-Flare-Event": data.event.type,
+      "X-Flare-Timestamp": timestamp,
+      "X-Flare-Signature": `sha256=${signature}`,
+    },
     body: payload,
   });
 
@@ -215,26 +220,6 @@ export async function sendWebhookRequest(
     );
 
     throw new Error(errorMessage);
-  }
-
-  if (isWecom) {
-    let parsed: { errcode?: unknown; errmsg?: unknown } | null = null;
-    try {
-      parsed = await response.json();
-    } catch {
-      // WeCom returns 200 even for failures, body is expected to be JSON.
-    }
-
-    const errcode = parsed?.errcode;
-    if (typeof errcode === "number" && errcode !== 0) {
-      const errmsg = typeof parsed?.errmsg === "string" ? parsed.errmsg : "";
-      throw new Error(
-        m.settings_webhook_wecom_error(
-          { code: String(errcode), message: errmsg },
-          { locale },
-        ),
-      );
-    }
   }
 }
 

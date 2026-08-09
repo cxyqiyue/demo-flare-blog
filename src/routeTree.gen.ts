@@ -21,6 +21,7 @@ import { Route as UserProfileRouteImport } from './routes/_user/profile'
 import { Route as PublicUnsubscribeRouteImport } from './routes/_public/unsubscribe'
 import { Route as PublicSearchRouteImport } from './routes/_public/search'
 import { Route as PublicPostsRouteImport } from './routes/_public/posts'
+import { Route as PublicMomentsRouteImport } from './routes/_public/moments'
 import { Route as PublicFriendLinksRouteImport } from './routes/_public/friend-links'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
 import { Route as AuthResetLinkRouteImport } from './routes/_auth/reset-link'
@@ -31,6 +32,7 @@ import { Route as AdminPostsRouteRouteImport } from './routes/admin/posts/route'
 import { Route as AdminTagsIndexRouteImport } from './routes/admin/tags/index'
 import { Route as AdminSettingsIndexRouteImport } from './routes/admin/settings/index'
 import { Route as AdminPostsIndexRouteImport } from './routes/admin/posts/index'
+import { Route as AdminMomentsIndexRouteImport } from './routes/admin/moments/index'
 import { Route as AdminMediaIndexRouteImport } from './routes/admin/media/index'
 import { Route as AdminFriendLinksIndexRouteImport } from './routes/admin/friend-links/index'
 import { Route as AdminCommentsIndexRouteImport } from './routes/admin/comments/index'
@@ -94,6 +96,11 @@ const PublicPostsRoute = PublicPostsRouteImport.update({
   path: '/posts',
   getParentRoute: () => PublicRouteRoute,
 } as any)
+const PublicMomentsRoute = PublicMomentsRouteImport.update({
+  id: '/moments',
+  path: '/moments',
+  getParentRoute: () => PublicRouteRoute,
+} as any)
 const PublicFriendLinksRoute = PublicFriendLinksRouteImport.update({
   id: '/friend-links',
   path: '/friend-links',
@@ -144,6 +151,11 @@ const AdminPostsIndexRoute = AdminPostsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminPostsRouteRoute,
 } as any)
+const AdminMomentsIndexRoute = AdminMomentsIndexRouteImport.update({
+  id: '/moments/',
+  path: '/moments/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminMediaIndexRoute = AdminMediaIndexRouteImport.update({
   id: '/media/',
   path: '/media/',
@@ -180,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/reset-link': typeof AuthResetLinkRoute
   '/verify-email': typeof AuthVerifyEmailRoute
   '/friend-links': typeof PublicFriendLinksRoute
+  '/moments': typeof PublicMomentsRoute
   '/posts': typeof PublicPostsRoute
   '/search': typeof PublicSearchRoute
   '/unsubscribe': typeof PublicUnsubscribeRoute
@@ -191,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/admin/comments/': typeof AdminCommentsIndexRoute
   '/admin/friend-links/': typeof AdminFriendLinksIndexRoute
   '/admin/media/': typeof AdminMediaIndexRoute
+  '/admin/moments/': typeof AdminMomentsIndexRoute
   '/admin/posts/': typeof AdminPostsIndexRoute
   '/admin/settings/': typeof AdminSettingsIndexRoute
   '/admin/tags/': typeof AdminTagsIndexRoute
@@ -204,6 +218,7 @@ export interface FileRoutesByTo {
   '/reset-link': typeof AuthResetLinkRoute
   '/verify-email': typeof AuthVerifyEmailRoute
   '/friend-links': typeof PublicFriendLinksRoute
+  '/moments': typeof PublicMomentsRoute
   '/posts': typeof PublicPostsRoute
   '/search': typeof PublicSearchRoute
   '/unsubscribe': typeof PublicUnsubscribeRoute
@@ -215,6 +230,7 @@ export interface FileRoutesByTo {
   '/admin/comments': typeof AdminCommentsIndexRoute
   '/admin/friend-links': typeof AdminFriendLinksIndexRoute
   '/admin/media': typeof AdminMediaIndexRoute
+  '/admin/moments': typeof AdminMomentsIndexRoute
   '/admin/posts': typeof AdminPostsIndexRoute
   '/admin/settings': typeof AdminSettingsIndexRoute
   '/admin/tags': typeof AdminTagsIndexRoute
@@ -233,6 +249,7 @@ export interface FileRoutesById {
   '/_auth/reset-link': typeof AuthResetLinkRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
   '/_public/friend-links': typeof PublicFriendLinksRoute
+  '/_public/moments': typeof PublicMomentsRoute
   '/_public/posts': typeof PublicPostsRoute
   '/_public/search': typeof PublicSearchRoute
   '/_public/unsubscribe': typeof PublicUnsubscribeRoute
@@ -245,6 +262,7 @@ export interface FileRoutesById {
   '/admin/comments/': typeof AdminCommentsIndexRoute
   '/admin/friend-links/': typeof AdminFriendLinksIndexRoute
   '/admin/media/': typeof AdminMediaIndexRoute
+  '/admin/moments/': typeof AdminMomentsIndexRoute
   '/admin/posts/': typeof AdminPostsIndexRoute
   '/admin/settings/': typeof AdminSettingsIndexRoute
   '/admin/tags/': typeof AdminTagsIndexRoute
@@ -262,6 +280,7 @@ export interface FileRouteTypes {
     | '/reset-link'
     | '/verify-email'
     | '/friend-links'
+    | '/moments'
     | '/posts'
     | '/search'
     | '/unsubscribe'
@@ -273,6 +292,7 @@ export interface FileRouteTypes {
     | '/admin/comments/'
     | '/admin/friend-links/'
     | '/admin/media/'
+    | '/admin/moments/'
     | '/admin/posts/'
     | '/admin/settings/'
     | '/admin/tags/'
@@ -286,6 +306,7 @@ export interface FileRouteTypes {
     | '/reset-link'
     | '/verify-email'
     | '/friend-links'
+    | '/moments'
     | '/posts'
     | '/search'
     | '/unsubscribe'
@@ -297,6 +318,7 @@ export interface FileRouteTypes {
     | '/admin/comments'
     | '/admin/friend-links'
     | '/admin/media'
+    | '/admin/moments'
     | '/admin/posts'
     | '/admin/settings'
     | '/admin/tags'
@@ -314,6 +336,7 @@ export interface FileRouteTypes {
     | '/_auth/reset-link'
     | '/_auth/verify-email'
     | '/_public/friend-links'
+    | '/_public/moments'
     | '/_public/posts'
     | '/_public/search'
     | '/_public/unsubscribe'
@@ -326,6 +349,7 @@ export interface FileRouteTypes {
     | '/admin/comments/'
     | '/admin/friend-links/'
     | '/admin/media/'
+    | '/admin/moments/'
     | '/admin/posts/'
     | '/admin/settings/'
     | '/admin/tags/'
@@ -426,6 +450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicPostsRouteImport
       parentRoute: typeof PublicRouteRoute
     }
+    '/_public/moments': {
+      id: '/_public/moments'
+      path: '/moments'
+      fullPath: '/moments'
+      preLoaderRoute: typeof PublicMomentsRouteImport
+      parentRoute: typeof PublicRouteRoute
+    }
     '/_public/friend-links': {
       id: '/_public/friend-links'
       path: '/friend-links'
@@ -496,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPostsIndexRouteImport
       parentRoute: typeof AdminPostsRouteRoute
     }
+    '/admin/moments/': {
+      id: '/admin/moments/'
+      path: '/moments'
+      fullPath: '/admin/moments/'
+      preLoaderRoute: typeof AdminMomentsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/media/': {
       id: '/admin/media/'
       path: '/media'
@@ -556,6 +594,7 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 
 interface PublicRouteRouteChildren {
   PublicFriendLinksRoute: typeof PublicFriendLinksRoute
+  PublicMomentsRoute: typeof PublicMomentsRoute
   PublicPostsRoute: typeof PublicPostsRoute
   PublicSearchRoute: typeof PublicSearchRoute
   PublicUnsubscribeRoute: typeof PublicUnsubscribeRoute
@@ -565,6 +604,7 @@ interface PublicRouteRouteChildren {
 
 const PublicRouteRouteChildren: PublicRouteRouteChildren = {
   PublicFriendLinksRoute: PublicFriendLinksRoute,
+  PublicMomentsRoute: PublicMomentsRoute,
   PublicPostsRoute: PublicPostsRoute,
   PublicSearchRoute: PublicSearchRoute,
   PublicUnsubscribeRoute: PublicUnsubscribeRoute,
@@ -610,6 +650,7 @@ interface AdminRouteRouteChildren {
   AdminCommentsIndexRoute: typeof AdminCommentsIndexRoute
   AdminFriendLinksIndexRoute: typeof AdminFriendLinksIndexRoute
   AdminMediaIndexRoute: typeof AdminMediaIndexRoute
+  AdminMomentsIndexRoute: typeof AdminMomentsIndexRoute
   AdminSettingsIndexRoute: typeof AdminSettingsIndexRoute
   AdminTagsIndexRoute: typeof AdminTagsIndexRoute
 }
@@ -620,6 +661,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminCommentsIndexRoute: AdminCommentsIndexRoute,
   AdminFriendLinksIndexRoute: AdminFriendLinksIndexRoute,
   AdminMediaIndexRoute: AdminMediaIndexRoute,
+  AdminMomentsIndexRoute: AdminMomentsIndexRoute,
   AdminSettingsIndexRoute: AdminSettingsIndexRoute,
   AdminTagsIndexRoute: AdminTagsIndexRoute,
 }

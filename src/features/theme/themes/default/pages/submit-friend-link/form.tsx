@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { Turnstile } from "@/components/common/turnstile";
 import { Input } from "@/components/ui/input";
 import type { FriendLinkSubmitFormData } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
@@ -8,7 +9,7 @@ interface FriendLinkSubmitFormProps {
 }
 
 export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
-  const { register, errors, handleSubmit, isSubmitting } = form;
+  const { register, errors, handleSubmit, isSubmitting, turnstileProps } = form;
 
   const inputClassName =
     "bg-transparent border-0 border-b border-border text-foreground font-serif text-lg px-0 rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all placeholder:text-muted-foreground/30 shadow-none h-auto py-2";
@@ -17,6 +18,7 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      <Turnstile {...turnstileProps} />
       <div className="space-y-6">
         <div className="space-y-2 group">
           <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider group-focus-within:text-foreground transition-colors">

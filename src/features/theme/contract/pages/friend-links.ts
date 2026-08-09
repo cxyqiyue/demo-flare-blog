@@ -1,4 +1,5 @@
 import type { FieldErrors, UseFormRegister } from "react-hook-form";
+import type { TurnstileProps } from "@/components/common/turnstile";
 import type {
   FriendLinkWithUser,
   SubmitFriendLinkInput,
@@ -22,6 +23,7 @@ export interface FriendLinkSubmitFormData {
   errors: FieldErrors<SubmitFriendLinkInput>;
   handleSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   isSubmitting: boolean;
+  turnstileProps: TurnstileProps;
 }
 
 export interface SubmitFriendLinkPageProps {

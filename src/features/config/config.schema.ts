@@ -5,11 +5,7 @@ import {
   type SiteConfigInput,
   SiteConfigInputSchema,
 } from "@/features/config/site-config.schema";
-import { S3_PROVIDERS } from "@/features/image-hosting/image-hosting.schema";
-import {
-  createWebhookEndpointFormSchema,
-  webhookEndpointSchema,
-} from "@/features/webhook/webhook.schema";
+import { webhookEndpointSchema } from "@/features/webhook/webhook.schema";
 import type { Messages } from "@/lib/i18n";
 
 export const SystemConfigSchema = z.object({
@@ -63,7 +59,6 @@ export const SystemConfigSchema = z.object({
           model: z.string().optional(),
         })
         .optional(),
-      writingInstructions: z.string().optional(),
     })
     .optional(),
   imageHosting: z
@@ -82,27 +77,6 @@ export const SystemConfigSchema = z.object({
           apiEndpoint: z.string().optional(),
         })
         .optional(),
-      s3: z
-        .object({
-          commentEnabled: z.boolean().optional(),
-          articleEnabled: z.boolean().optional(),
-          provider: z.enum(S3_PROVIDERS).optional(),
-          endpoint: z.string().optional(),
-          bucket: z.string().optional(),
-          region: z.string().optional(),
-          accessKeyId: z.string().optional(),
-          secretAccessKey: z.string().optional(),
-          pathPrefix: z.string().optional(),
-          publicUrl: z.string().optional(),
-        })
-        .optional(),
-    })
-    .optional(),
-  turnstile: z
-    .object({
-      enabled: z.boolean().optional(),
-      siteKey: z.string().optional(),
-      secretKey: z.string().optional(),
     })
     .optional(),
   site: SiteConfigInputSchema.optional(),
@@ -111,16 +85,9 @@ export const SystemConfigSchema = z.object({
 export const createSystemConfigFormSchema = (messages: Messages) =>
   z.object({
     email: SystemConfigSchema.shape.email,
-    notification: z
-      .object({
-        admin: SystemConfigSchema.shape.notification.unwrap().shape.admin,
-        user: SystemConfigSchema.shape.notification.unwrap().shape.user,
-        webhooks: z.array(createWebhookEndpointFormSchema(messages)).optional(),
-      })
-      .optional(),
+    notification: SystemConfigSchema.shape.notification,
     ai: SystemConfigSchema.shape.ai,
     imageHosting: SystemConfigSchema.shape.imageHosting,
-    turnstile: SystemConfigSchema.shape.turnstile,
     site: createSiteConfigInputFormSchema(messages).optional(),
   });
 
@@ -163,7 +130,6 @@ export const DEFAULT_CONFIG: SystemConfig = {
       apiKey: "",
       model: "",
     },
-    writingInstructions: "",
   },
   imageHosting: {
     imgbb: {
@@ -176,23 +142,6 @@ export const DEFAULT_CONFIG: SystemConfig = {
       apiKey: "",
       apiEndpoint: "https://pic.ffsky.net/api/1/upload",
     },
-    s3: {
-      commentEnabled: false,
-      articleEnabled: false,
-      provider: "cloudflare-r2",
-      endpoint: "",
-      bucket: "",
-      region: "",
-      accessKeyId: "",
-      secretAccessKey: "",
-      pathPrefix: "",
-      publicUrl: "",
-    },
-  },
-  turnstile: {
-    enabled: false,
-    siteKey: "",
-    secretKey: "",
   },
   site: blogConfig satisfies SiteConfigInput,
 };

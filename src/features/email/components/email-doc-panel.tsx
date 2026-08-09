@@ -18,7 +18,6 @@ export function EmailDocPanel() {
             <EmailDocTip index="3">{m.settings_email_doc_tip3()}</EmailDocTip>
             <EmailDocTip index="4">{m.settings_email_doc_tip4()}</EmailDocTip>
             <EmailDocTip index="5">{m.settings_email_doc_tip5()}</EmailDocTip>
-            <EmailDocTip index="6">{m.settings_email_doc_tip6()}</EmailDocTip>
           </div>
         </div>
       </div>

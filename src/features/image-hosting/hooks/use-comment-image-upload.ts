@@ -1,10 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { toast } from "sonner";
-import {
-  getCommentImageHostingConfigFn,
-  uploadCommentImageFn,
-} from "@/features/image-hosting/api/image-hosting.api";
+import { getCommentImageHostingConfigFn } from "@/features/image-hosting/api/image-hosting.api";
 import { IMGBB_UPLOAD_PAGE } from "@/features/image-hosting/image-hosting.schema";
 import { extractImageUrlFromMarkdown } from "@/features/image-hosting/utils/extract-image-url";
 import { m } from "@/paraglide/messages";
@@ -19,51 +16,6 @@ interface UploadPluginWindow extends Window {
 }
 
 const POPUP_TIMEOUT_MS = 5 * 60 * 1000;
-
-const ALLOWED_IMAGE_MIME_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/gif",
-  "image/webp",
-];
-
-/**
- * 服务端上传（S3 兼容存储 / 图床代理）：文件选择器上传，返回图片 URL。
- */
-function uploadViaFileInput(): Promise<string | null> {
-  return new Promise((resolve) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ALLOWED_IMAGE_MIME_TYPES.join(",");
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) {
-        resolve(null);
-        return;
-      }
-      try {
-        const formData = new FormData();
-        formData.append("image", file);
-        const result = await uploadCommentImageFn({ data: formData });
-        if (result.error) {
-          toast.error(m.comments_editor_upload_failed(), {
-            description: result.error.message,
-          });
-          resolve(null);
-          return;
-        }
-        toast.success(m.comments_editor_upload_success());
-        resolve(result.data.url);
-      } catch {
-        toast.error(m.comments_editor_upload_failed());
-        resolve(null);
-      }
-    };
-    input.oncancel = () => resolve(null);
-    input.click();
-  });
-}
 
 function generateWindowName(): string {
   let randomPart = "";
@@ -88,13 +40,8 @@ export function useCommentImageUploader() {
   });
 
   const enabled = data?.enabled ?? false;
-  const provider = data?.provider ?? null;
 
   const openUpload = useCallback(async (): Promise<string | null> => {
-    if (provider === "s3") {
-      return await uploadViaFileInput();
-    }
-
     const winName = generateWindowName();
 
     // Chevereto Upload Plugin (PUP) protocol: register the auto-insert target
@@ -155,7 +102,7 @@ export function useCommentImageUploader() {
 
       window.addEventListener("message", onMessage);
     });
-  }, [provider]);
+  }, []);
 
-  return { enabled, provider, openUpload };
+  return { enabled, openUpload };
 }

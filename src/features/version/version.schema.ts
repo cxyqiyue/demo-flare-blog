@@ -6,6 +6,7 @@ export const UpdateCheckResultSchema = z.object({
   hasUpdate: z.boolean(),
   releaseUrl: z.string(),
   publishedAt: z.string().optional(),
+  noRelease: z.boolean().optional(),
   checkedAt: z.number(),
 });
 
