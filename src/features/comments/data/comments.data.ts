@@ -2,9 +2,19 @@ import { and, count, desc, eq, like, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { buildCommentWhereClause } from "@/features/comments/data/helper";
 import type { CommentStatus } from "@/lib/db/schema";
-import { CommentsTable, PostsTable, user } from "@/lib/db/schema";
+import {
+  CommentsTable,
+  MomentsTable,
+  PostsTable,
+  user,
+} from "@/lib/db/schema";
 
 const DEFAULT_PAGE_SIZE = 20;
+
+export type CommentTarget =
+  | { postId: number }
+  | { momentId: number }
+  | { postId: number; momentId?: undefined };
 
 export async function insertComment(
   db: DB,
@@ -20,9 +30,9 @@ export async function findCommentById(db: DB, id: number) {
   });
 }
 
-export async function getRootCommentsByPostId(
+export async function getRootCommentsByTarget(
   db: DB,
-  postId: number,
+  target: CommentTarget,
   options: {
     offset?: number;
     limit?: number;
@@ -33,7 +43,7 @@ export async function getRootCommentsByPostId(
   const { offset = 0, limit = DEFAULT_PAGE_SIZE, status, viewerId } = options;
 
   const conditions = buildCommentWhereClause({
-    postId,
+    ...target,
     status,
     viewerId,
     rootOnly: true,
@@ -46,6 +56,7 @@ export async function getRootCommentsByPostId(
       rootId: CommentsTable.rootId,
       replyToCommentId: CommentsTable.replyToCommentId,
       postId: CommentsTable.postId,
+      momentId: CommentsTable.momentId,
       userId: CommentsTable.userId,
       status: CommentsTable.status,
       aiReason: CommentsTable.aiReason,
@@ -68,9 +79,9 @@ export async function getRootCommentsByPostId(
   return comments;
 }
 
-export async function getRootCommentsByPostIdCount(
+export async function getRootCommentsByTargetCount(
   db: DB,
-  postId: number,
+  target: CommentTarget,
   options: {
     status?: CommentStatus | Array<CommentStatus>;
     viewerId?: string;
@@ -79,7 +90,7 @@ export async function getRootCommentsByPostIdCount(
   const { status, viewerId } = options;
 
   const conditions = buildCommentWhereClause({
-    postId,
+    ...target,
     status,
     viewerId,
     rootOnly: true,
@@ -95,7 +106,7 @@ export async function getRootCommentsByPostIdCount(
 
 export async function getReplyCountByRootId(
   db: DB,
-  postId: number,
+  target: CommentTarget,
   rootId: number,
   options: {
     status?: CommentStatus | Array<CommentStatus>;
@@ -105,7 +116,7 @@ export async function getReplyCountByRootId(
   const { status, viewerId } = options;
 
   const conditions = buildCommentWhereClause({
-    postId,
+    ...target,
     rootId,
     status,
     viewerId,
@@ -121,7 +132,7 @@ export async function getReplyCountByRootId(
 
 export async function getRepliesByRootId(
   db: DB,
-  postId: number,
+  target: CommentTarget,
   rootId: number,
   options: {
     offset?: number;
@@ -133,7 +144,7 @@ export async function getRepliesByRootId(
   const { offset = 0, limit = DEFAULT_PAGE_SIZE, status, viewerId } = options;
 
   const conditions = buildCommentWhereClause({
-    postId,
+    ...target,
     rootId,
     status,
     viewerId,
@@ -146,6 +157,7 @@ export async function getRepliesByRootId(
       rootId: CommentsTable.rootId,
       replyToCommentId: CommentsTable.replyToCommentId,
       postId: CommentsTable.postId,
+      momentId: CommentsTable.momentId,
       userId: CommentsTable.userId,
       status: CommentsTable.status,
       aiReason: CommentsTable.aiReason,
@@ -203,7 +215,7 @@ export async function getRepliesByRootId(
 
 export async function getRepliesByRootIdCount(
   db: DB,
-  postId: number,
+  target: CommentTarget,
   rootId: number,
   options: {
     status?: CommentStatus | Array<CommentStatus>;
@@ -213,7 +225,7 @@ export async function getRepliesByRootIdCount(
   const { status, viewerId } = options;
 
   const conditions = buildCommentWhereClause({
-    postId,
+    ...target,
     rootId,
     status,
     viewerId,
@@ -258,6 +270,7 @@ export async function getAllComments(
     limit?: number;
     status?: CommentStatus | Array<CommentStatus>;
     postId?: number;
+    momentId?: number;
     userId?: string;
     userName?: string;
   } = {},
@@ -267,11 +280,17 @@ export async function getAllComments(
     limit = DEFAULT_PAGE_SIZE,
     status,
     postId,
+    momentId,
     userId,
     userName,
   } = options;
 
-  const conditions = buildCommentWhereClause({ status, postId, userId });
+  const conditions = buildCommentWhereClause({
+    status,
+    postId,
+    momentId,
+    userId,
+  });
   const finalConditions = userName
     ? and(conditions, like(user.name, `%${userName}%`))
     : conditions;
@@ -286,6 +305,7 @@ export async function getAllComments(
       rootId: CommentsTable.rootId,
       replyToCommentId: CommentsTable.replyToCommentId,
       postId: CommentsTable.postId,
+      momentId: CommentsTable.momentId,
       userId: CommentsTable.userId,
       status: CommentsTable.status,
       aiReason: CommentsTable.aiReason,
@@ -301,6 +321,9 @@ export async function getAllComments(
         title: PostsTable.title,
         slug: PostsTable.slug,
       },
+      moment: {
+        id: MomentsTable.id,
+      },
       replyToUser: {
         id: parentUser.id,
         name: parentUser.name,
@@ -309,6 +332,7 @@ export async function getAllComments(
     .from(CommentsTable)
     .leftJoin(user, eq(CommentsTable.userId, user.id))
     .leftJoin(PostsTable, eq(CommentsTable.postId, PostsTable.id))
+    .leftJoin(MomentsTable, eq(CommentsTable.momentId, MomentsTable.id))
     .leftJoin(
       parentComment,
       eq(CommentsTable.replyToCommentId, parentComment.id),
@@ -327,13 +351,19 @@ export async function getAllCommentsCount(
   options: {
     status?: CommentStatus | Array<CommentStatus>;
     postId?: number;
+    momentId?: number;
     userId?: string;
     userName?: string;
   } = {},
 ) {
-  const { status, postId, userId, userName } = options;
+  const { status, postId, momentId, userId, userName } = options;
 
-  const conditions = buildCommentWhereClause({ status, postId, userId });
+  const conditions = buildCommentWhereClause({
+    status,
+    postId,
+    momentId,
+    userId,
+  });
   const finalConditions = userName
     ? and(conditions, like(user.name, `%${userName}%`))
     : conditions;

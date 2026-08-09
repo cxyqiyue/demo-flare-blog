@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import {
   CreateCommentInputSchema,
   DeleteCommentInputSchema,
-  GetCommentsByPostIdInputSchema,
+  GetCommentsByTargetInputSchema,
   GetMyCommentsInputSchema,
   GetRepliesByRootIdInputSchema,
 } from "@/features/comments/comments.schema";
@@ -13,14 +13,14 @@ import {
   sessionMiddleware,
 } from "@/lib/middlewares";
 
-// Public API - Get root comments by post ID (published + viewer's pending)
-export const getRootCommentsByPostIdFn = createServerFn()
+// Public API - Get root comments by target (post or moment)
+export const getRootCommentsByTargetFn = createServerFn()
   .middleware([sessionMiddleware])
-  .inputValidator(GetCommentsByPostIdInputSchema)
+  .inputValidator(GetCommentsByTargetInputSchema)
   .handler(async ({ data, context }) => {
     const session = context.session;
 
-    const result = await CommentService.getRootCommentsByPostId(context, {
+    const result = await CommentService.getRootCommentsByTarget(context, {
       ...data,
       viewerId: session?.user.id,
     });

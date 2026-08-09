@@ -1,36 +1,48 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { getRouteApi, Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import type { JSONContent } from "@tiptap/react";
 import { LogIn } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useComments } from "@/features/comments/hooks/use-comments";
-import { rootCommentsByPostIdInfiniteQuery } from "@/features/comments/queries";
+import {
+  rootCommentsByTargetInfiniteQuery,
+  type CommentTargetInput,
+} from "@/features/comments/queries";
 import { authClient } from "@/lib/auth/auth.client";
 import { m } from "@/paraglide/messages";
 import { FuwariCommentEditor } from "../editor/comment-editor";
 import { FuwariCommentList } from "./comment-list";
 import FuwariConfirmationModal from "./confirmation-modal";
 
-const routeApi = getRouteApi("/_public/post/$slug");
-
 interface FuwariCommentSectionProps {
-  postId: number;
+  postId?: number;
+  momentId?: number;
 }
 
-export function FuwariCommentSection({ postId }: FuwariCommentSectionProps) {
+export function FuwariCommentSection({
+  postId,
+  momentId,
+}: FuwariCommentSectionProps) {
   const { data: session } = authClient.useSession();
-  const { rootId, highlightCommentId } = routeApi.useSearch();
+  const target: CommentTargetInput = momentId != null ? { momentId } : { postId };
+  const { rootId, highlightCommentId } = useRouterState({
+    select: (state) =>
+      (state.location.search as {
+        rootId?: number;
+        highlightCommentId?: number;
+      }) ?? {},
+  });
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery(
-      rootCommentsByPostIdInfiniteQuery(postId, session?.user.id),
+      rootCommentsByTargetInfiniteQuery(target, session?.user.id),
     );
 
   const rootComments = data?.pages.flatMap((page) => page.items) ?? [];
   const totalCount = data?.pages[0]?.total ?? 0;
 
   const { createComment, deleteComment, isCreating, isDeleting } =
-    useComments(postId);
+    useComments(target);
 
   const [replyTarget, setReplyTarget] = useState<{
     rootId: number;
@@ -43,7 +55,7 @@ export function FuwariCommentSection({ postId }: FuwariCommentSectionProps) {
   const handleCreateComment = async (content: JSONContent) => {
     await createComment({
       data: {
-        postId,
+        ...target,
         content,
       },
     });
@@ -53,7 +65,7 @@ export function FuwariCommentSection({ postId }: FuwariCommentSectionProps) {
     if (!replyTarget) return;
     await createComment({
       data: {
-        postId,
+        ...target,
         content,
         rootId: replyTarget.rootId,
         replyToCommentId: replyTarget.commentId,
@@ -137,7 +149,7 @@ export function FuwariCommentSection({ postId }: FuwariCommentSectionProps) {
       {/* Comments List */}
       <FuwariCommentList
         rootComments={rootComments}
-        postId={postId}
+        target={target}
         onReply={(rootIdArg, commentId, userName) =>
           setReplyTarget({ rootId: rootIdArg, commentId, userName })
         }

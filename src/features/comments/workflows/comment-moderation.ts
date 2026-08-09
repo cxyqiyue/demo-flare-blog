@@ -4,6 +4,7 @@ import * as AiService from "@/features/ai/ai.service";
 import * as CommentService from "@/features/comments/comments.service";
 import * as CommentRepo from "@/features/comments/data/comments.data";
 import { sendReplyNotification } from "@/features/comments/workflows/helpers";
+import * as MomentRepo from "@/features/moments/data/moments.data";
 import { publishNotificationEvent } from "@/features/notification/service/notification.publisher";
 import * as PostService from "@/features/posts/services/posts.service";
 import {
@@ -54,23 +55,73 @@ export class CommentModerationWorkflow extends WorkflowEntrypoint<Env, Params> {
       return;
     }
 
-    const post = await step.do("fetch post", async () => {
+    // Fetch the target (post or moment) for context
+    const target = await step.do<
+      | {
+          kind: "post";
+          title: string;
+          summary: string;
+          contentPreview: string;
+          notificationTarget: { kind: "post"; slug: string; title: string };
+        }
+      | {
+          kind: "moment";
+          title: string;
+          summary: string;
+          contentPreview: string;
+          notificationTarget: { kind: "moment"; title: string };
+        }
+      | null
+    >("fetch target context", async () => {
       const db = getDb(this.env);
-      return await PostService.findPostById(
-        { db, env: this.env },
-        { id: comment.postId },
-      );
+      if (comment.postId != null) {
+        const post = await PostService.findPostById(
+          { db, env: this.env },
+          { id: comment.postId },
+        );
+        if (!post) {
+          console.log(
+            JSON.stringify({
+              message: "post not found, skipping moderation",
+              postId: comment.postId,
+            }),
+          );
+          return null;
+        }
+        return {
+          kind: "post",
+          title: post.title,
+          summary: post.summary ?? "",
+          contentPreview: buildContentPreview(post.contentJson),
+          notificationTarget: { kind: "post", slug: post.slug, title: post.title },
+        };
+      }
+      if (comment.momentId != null) {
+        const moment = await MomentRepo.findMomentById(
+          db,
+          comment.momentId,
+        );
+        if (!moment) {
+          console.log(
+            JSON.stringify({
+              message: "moment not found, skipping moderation",
+              momentId: comment.momentId,
+            }),
+          );
+          return null;
+        }
+        return {
+          kind: "moment",
+          title: m.comments_moment_notification_title(),
+          summary: "",
+          contentPreview: "",
+          notificationTarget: { kind: "moment", title: m.comments_moment_notification_title() },
+        };
+      }
+      return null;
     });
 
-    if (!post) {
-      console.log(
-        JSON.stringify({
-          message: "post not found, skipping moderation",
-          postId: comment.postId,
-        }),
-      );
-      return;
-    }
+    if (!target) return;
 
     const threadContext = await step.do("fetch thread context", async () => {
       const db = getDb(this.env);
@@ -101,8 +152,7 @@ export class CommentModerationWorkflow extends WorkflowEntrypoint<Env, Params> {
 
     // Extract plain text from JSONContent
     const plainText = convertToPlainText(comment.content);
-    const postContentPreview = buildContentPreview(post.contentJson);
-
+    const targetContentPreview = target.contentPreview;
     if (!plainText || plainText.trim().length === 0) {
       // Empty comment, mark as pending for manual review
       await step.do("mark empty comment as pending", async () => {
@@ -140,9 +190,9 @@ export class CommentModerationWorkflow extends WorkflowEntrypoint<Env, Params> {
             {
               comment: plainText,
               post: {
-                title: post.title,
-                summary: post.summary ?? "",
-                contentPreview: postContentPreview,
+                title: target.title,
+                summary: target.summary,
+                contentPreview: targetContentPreview,
               },
               thread: {
                 isReply: Boolean(comment.replyToCommentId),
@@ -220,7 +270,7 @@ export class CommentModerationWorkflow extends WorkflowEntrypoint<Env, Params> {
               type: "comment.admin_blocked",
               data: {
                 to: ADMIN_EMAIL,
-                postTitle: post.title,
+                postTitle: target.title,
                 commenterName: commenter?.name ?? "匿名用户",
                 commentPreview: `${commentPreview}${commentPreview.length >= 100 ? "..." : ""}`,
                 reason: moderationResult.reason,
@@ -235,7 +285,7 @@ export class CommentModerationWorkflow extends WorkflowEntrypoint<Env, Params> {
               type: "comment.admin_pending_review",
               data: {
                 to: ADMIN_EMAIL,
-                postTitle: post.title,
+                postTitle: target.title,
                 commenterName: commenter?.name ?? "匿名用户",
                 commentPreview: `${commentPreview}${commentPreview.length >= 100 ? "..." : ""}`,
                 reviewUrl,
@@ -260,7 +310,7 @@ export class CommentModerationWorkflow extends WorkflowEntrypoint<Env, Params> {
               userId: comment.userId,
               content: comment.content,
             },
-            post: { slug: post.slug, title: post.title },
+            target: target.notificationTarget,
           },
         );
       });

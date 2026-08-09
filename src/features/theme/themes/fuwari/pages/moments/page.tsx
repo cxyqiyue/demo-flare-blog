@@ -6,9 +6,7 @@ import { MomentComposer } from "./moment-composer";
 export function MomentsPage({
   moments,
   isAdmin,
-  currentUserId,
   onToggleLike,
-  onAddComment,
   onCreateMoment,
   onDeleteMoment,
 }: MomentsPageProps) {
@@ -47,10 +45,8 @@ export function MomentsPage({
           >
             <MomentCard
               moment={moment}
-              currentUserId={currentUserId}
               isAdmin={isAdmin}
               onToggleLike={onToggleLike}
-              onAddComment={onAddComment}
               onDelete={onDeleteMoment}
             />
           </div>

@@ -4,29 +4,11 @@ import { purgeCDNCache } from "@/lib/invalidate";
 import { err, ok, type Result } from "@/lib/errors";
 import * as MomentRepo from "./data/moments.data";
 import type {
-  AddMomentCommentInput,
   CreateMomentInput,
   DeleteMomentInput,
   ToggleMomentLikeInput,
 } from "./moments.schema";
 import { MOMENTS_CACHE_KEYS, MomentsResponseSchema } from "./moments.schema";
-
-export function textToJsonContent(text: string): JSONContent {
-  return {
-    type: "doc",
-    content: [
-      {
-        type: "paragraph",
-        content: [
-          {
-            type: "text",
-            text,
-          },
-        ],
-      },
-    ],
-  };
-}
 
 // ============ Public Methods ============
 
@@ -37,20 +19,13 @@ export async function getPublicMoments(
     const moments = await MomentRepo.getAllMoments(context.db, { limit: 50 });
 
     const momentIds = moments.map((m) => m.id);
-    const [likeCounts, commentCounts, commentsByMoment] = await Promise.all([
+    const [likeCounts, commentCounts] = await Promise.all([
       MomentRepo.countMomentLikesForIds(context.db, momentIds),
       MomentRepo.countMomentCommentsForIds(context.db, momentIds),
-      MomentRepo.getMomentCommentsForIds(context.db, momentIds),
     ]);
 
-    const commentUserIds = Object.values(commentsByMoment)
-      .flat()
-      .map((c) => c.userId);
     const authorUserIds = moments.map((m) => m.authorUserId);
-    const authorMap = await MomentRepo.getAuthorMap(context.db, [
-      ...authorUserIds,
-      ...commentUserIds,
-    ]);
+    const authorMap = await MomentRepo.getAuthorMap(context.db, authorUserIds);
 
     return moments.map((moment) => ({
       ...moment,
@@ -60,10 +35,6 @@ export async function getPublicMoments(
       likeCount: likeCounts[moment.id] ?? 0,
       commentCount: commentCounts[moment.id] ?? 0,
       isLiked: false,
-      comments: (commentsByMoment[moment.id] ?? []).map((comment) => ({
-        ...comment,
-        user: comment.userId ? authorMap[comment.userId] ?? null : null,
-      })),
     }));
   };
 
@@ -96,10 +67,7 @@ export async function createMoment(
   context: DbContext & { executionCtx: ExecutionContext } & AuthContext,
   data: CreateMomentInput,
 ) {
-  const content =
-    data.content && typeof data.content === "object"
-      ? (data.content as JSONContent)
-      : textToJsonContent("");
+  const content = data.content as JSONContent | null;
 
   const moment = await MomentRepo.insertMoment(context.db, {
     content,
@@ -159,31 +127,5 @@ export async function toggleMomentLike(
   return ok({
     liked: !existing,
     likeCount: likeCounts[data.momentId] ?? 0,
-  });
-}
-
-export async function addMomentComment(
-  context: DbContext & { executionCtx: ExecutionContext } & AuthContext,
-  data: AddMomentCommentInput,
-) {
-  const moment = await MomentRepo.findMomentById(context.db, data.momentId);
-  if (!moment) {
-    return err({ reason: "NOT_FOUND" });
-  }
-
-  const comment = await MomentRepo.insertMomentComment(context.db, {
-    momentId: data.momentId,
-    content: textToJsonContent(data.text),
-    status: "published",
-    userId: context.session.user.id,
-  });
-
-  invalidateCache(context);
-
-  const authorMap = await MomentRepo.getAuthorMap(context.db, [comment.userId]);
-
-  return ok({
-    ...comment,
-    user: comment.userId ? authorMap[comment.userId] ?? null : null,
   });
 }

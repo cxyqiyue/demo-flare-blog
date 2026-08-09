@@ -2,6 +2,7 @@ import "./styles/index.css";
 import type { ThemeComponents } from "@/features/theme/contract/components";
 import { Toaster } from "./components/toaster";
 import { config } from "./config";
+import { AboutPage, AboutPageSkeleton } from "./pages/about";
 import { AuthLayout } from "./layouts/auth-layout";
 import { PublicLayout } from "./layouts/public-layout";
 import { UserLayout } from "./layouts/user-layout";
@@ -33,6 +34,8 @@ export default {
   PostsPageSkeleton,
   PostPage,
   PostPageSkeleton,
+  AboutPage,
+  AboutPageSkeleton,
   PublicLayout,
   AuthLayout,
   UserLayout,

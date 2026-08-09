@@ -264,7 +264,7 @@ describe("Comments Integration", () => {
           status: "published",
         });
 
-        const result = await CommentService.getRootCommentsByPostId(
+        const result = await CommentService.getRootCommentsByTarget(
           userContext,
           {
             postId,
@@ -335,21 +335,21 @@ describe("Comments Integration", () => {
 
         // Without viewerId - should not see verifying comments
         const resultWithoutViewer =
-          await CommentService.getRootCommentsByPostId(adminContext, {
+          await CommentService.getRootCommentsByTarget(adminContext, {
             postId,
           });
         const foundWithoutViewer = resultWithoutViewer.items.find(
-          (c) => c.id === comment.id,
+          (c: { id: number }) => c.id === comment.id,
         );
         expect(foundWithoutViewer).toBeUndefined();
 
         // With viewerId - should see own verifying comments
-        const resultWithViewer = await CommentService.getRootCommentsByPostId(
+        const resultWithViewer = await CommentService.getRootCommentsByTarget(
           userContext,
           { postId, viewerId: "user-1" },
         );
         const foundWithViewer = resultWithViewer.items.find(
-          (c) => c.id === comment.id,
+          (c: { id: number }) => c.id === comment.id,
         );
         expect(foundWithViewer).toBeDefined();
       });

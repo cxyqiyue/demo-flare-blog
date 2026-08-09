@@ -7,6 +7,7 @@
  * 每个页面的类型定义位于 ./pages/ 目录下的对应文件中。
  */
 
+export type * from "./pages/about";
 export type * from "./pages/forgot-password";
 export type * from "./pages/friend-links";
 export type * from "./pages/home";

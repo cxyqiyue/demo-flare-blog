@@ -1,6 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { COMMENTS_KEYS } from "@/features/comments/queries";
+import {
+  COMMENTS_KEYS,
+  type CommentTargetInput,
+} from "@/features/comments/queries";
 import { m } from "@/paraglide/messages";
 import {
   adminDeleteCommentFn,
@@ -8,7 +11,7 @@ import {
 } from "../api/comments.admin.api";
 import { createCommentFn, deleteCommentFn } from "../api/comments.public.api";
 
-export function useComments(postId?: number) {
+export function useComments(target?: CommentTargetInput) {
   const queryClient = useQueryClient();
 
   const createCommentMutation = useMutation({
@@ -27,6 +30,7 @@ export function useComments(postId?: number) {
           case "ROOT_COMMENT_POST_MISMATCH":
           case "REPLY_TO_COMMENT_ROOT_MISMATCH":
           case "ROOT_COMMENT_CANNOT_HAVE_REPLY_TO":
+          case "INVALID_TARGET":
             toast.error(m.comments_toast_structure_error());
             return;
           default: {
@@ -37,14 +41,14 @@ export function useComments(postId?: number) {
         }
       }
 
-      // Invalidate both root comments and all replies queries for this post
-      if (postId) {
+      // Invalidate both root comments and all replies queries for this target
+      if (target) {
         queryClient.invalidateQueries({
-          queryKey: COMMENTS_KEYS.roots(postId),
+          queryKey: COMMENTS_KEYS.roots(target),
           exact: false,
         });
         queryClient.invalidateQueries({
-          queryKey: COMMENTS_KEYS.repliesLists(postId),
+          queryKey: COMMENTS_KEYS.repliesLists(target),
           exact: false,
         });
       }
@@ -83,14 +87,14 @@ export function useComments(postId?: number) {
         }
       }
 
-      // Invalidate both root comments and all replies queries for this post
-      if (postId) {
+      // Invalidate both root comments and all replies queries for this target
+      if (target) {
         queryClient.invalidateQueries({
-          queryKey: COMMENTS_KEYS.roots(postId),
+          queryKey: COMMENTS_KEYS.roots(target),
           exact: false,
         });
         queryClient.invalidateQueries({
-          queryKey: COMMENTS_KEYS.repliesLists(postId),
+          queryKey: COMMENTS_KEYS.repliesLists(target),
           exact: false,
         });
       }

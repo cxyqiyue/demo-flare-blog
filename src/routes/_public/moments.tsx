@@ -1,14 +1,11 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import type { JSONContent } from "@tiptap/react";
 import theme from "@theme";
 import { toast } from "sonner";
 import { useCallback } from "react";
 import { MOMENTS_KEYS, publicMomentsQuery } from "@/features/moments/queries";
-import { textToJsonContent } from "@/features/moments/moments.service";
-import {
-  addMomentCommentFn,
-  toggleMomentLikeFn,
-} from "@/features/moments/api/moments.user.api";
+import { toggleMomentLikeFn } from "@/features/moments/api/moments.user.api";
 import {
   createMomentFn,
   deleteMomentFn,
@@ -67,30 +64,12 @@ function MomentsPage() {
     [refresh],
   );
 
-  const onAddComment = useCallback(
-    async (momentId: number, text: string): Promise<boolean> => {
-      try {
-        const result = await addMomentCommentFn({ data: { momentId, text } });
-        if (result.error) {
-          toast.error(m.moments_comment_error());
-          return false;
-        }
-        await refresh();
-        return true;
-      } catch {
-        toast.error(m.moments_comment_error());
-        return false;
-      }
-    },
-    [refresh],
-  );
-
   const onCreateMoment = useCallback(
-    async (content: string, images: string[]): Promise<boolean> => {
+    async (content: JSONContent, images: string[]): Promise<boolean> => {
       try {
         const result = await createMomentFn({
           data: {
-            content: textToJsonContent(content),
+            content,
             images,
           },
         });
@@ -130,9 +109,7 @@ function MomentsPage() {
     <theme.MomentsPage
       moments={moments}
       isAdmin={session?.user.role === "admin"}
-      currentUserId={session?.user.id ?? null}
       onToggleLike={onToggleLike}
-      onAddComment={onAddComment}
       onCreateMoment={onCreateMoment}
       onDeleteMoment={onDeleteMoment}
     />

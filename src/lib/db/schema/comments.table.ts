@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { user } from "./auth.table";
 import { createdAt, id, updatedAt } from "./helper";
+import { MomentsTable } from "./moments.table";
 import { PostsTable } from "./posts.table";
 
 export const COMMENT_STATUSES = [
@@ -39,9 +40,12 @@ export const CommentsTable = sqliteTable(
       .default("verifying"),
     aiReason: text("ai_reason"),
 
-    postId: integer("post_id")
-      .notNull()
-      .references(() => PostsTable.id, { onDelete: "cascade" }),
+    postId: integer("post_id").references(() => PostsTable.id, {
+      onDelete: "cascade",
+    }),
+    momentId: integer("moment_id").references(() => MomentsTable.id, {
+      onDelete: "cascade",
+    }),
     userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
 
     createdAt,
@@ -50,6 +54,11 @@ export const CommentsTable = sqliteTable(
   (table) => [
     index("comments_post_root_created_idx").on(
       table.postId,
+      table.rootId,
+      table.createdAt,
+    ),
+    index("comments_moment_created_idx").on(
+      table.momentId,
       table.rootId,
       table.createdAt,
     ),

@@ -6,6 +6,7 @@ import type {
   UserLayoutProps,
 } from "./layouts";
 import type {
+  AboutPageProps,
   ForgotPasswordPageProps,
   FriendLinksPageProps,
   HomePageProps,
@@ -50,6 +51,11 @@ export interface ThemeComponents {
   PostPage: React.ComponentType<PostPageProps>;
   /** 文章详情页骨架屏 */
   PostPageSkeleton: React.ComponentType;
+
+  /** 关于页组件 */
+  AboutPage: React.ComponentType<AboutPageProps>;
+  /** 关于页骨架屏 */
+  AboutPageSkeleton: React.ComponentType;
 
   /** 友链列表页组件 */
   FriendLinksPage: React.ComponentType<FriendLinksPageProps>;

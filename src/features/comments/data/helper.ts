@@ -5,17 +5,30 @@ import { CommentsTable } from "@/lib/db/schema";
 export function buildCommentWhereClause(options: {
   status?: CommentStatus | Array<CommentStatus>;
   postId?: number;
+  momentId?: number;
   userId?: string;
   viewerId?: string;
   rootId?: number | null;
   rootOnly?: boolean;
 }) {
-  const { status, postId, userId, viewerId, rootId, rootOnly } = options;
+  const {
+    status,
+    postId,
+    momentId,
+    userId,
+    viewerId,
+    rootId,
+    rootOnly,
+  } = options;
 
   const whereClauses = [];
 
   if (postId) {
     whereClauses.push(eq(CommentsTable.postId, postId));
+  }
+
+  if (momentId) {
+    whereClauses.push(eq(CommentsTable.momentId, momentId));
   }
 
   if (userId) {

@@ -1,6 +1,6 @@
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import {
-  MomentCommentsTable,
+  CommentsTable,
   MomentLikesTable,
   MomentsTable,
   user,
@@ -111,65 +111,6 @@ export async function getLikedMomentIdsByUser(
   return rows.map((r) => r.momentId);
 }
 
-export async function getMomentCommentsForIds(
-  db: DB,
-  momentIds: number[],
-): Promise<Record<number, Array<typeof MomentCommentsTable.$inferSelect>>> {
-  if (momentIds.length === 0) return {};
-  const rows = await db
-    .select({
-      id: MomentCommentsTable.id,
-      momentId: MomentCommentsTable.momentId,
-      content: MomentCommentsTable.content,
-      status: MomentCommentsTable.status,
-      userId: MomentCommentsTable.userId,
-      createdAt: MomentCommentsTable.createdAt,
-      updatedAt: MomentCommentsTable.updatedAt,
-    })
-    .from(MomentCommentsTable)
-    .where(
-      and(
-        inArray(MomentCommentsTable.momentId, momentIds),
-        eq(MomentCommentsTable.status, "published"),
-      ),
-    )
-    .orderBy(desc(MomentCommentsTable.createdAt));
-  const grouped: Record<number, Array<typeof MomentCommentsTable.$inferSelect>> =
-    {};
-  for (const row of rows) {
-    (grouped[row.momentId] ??= []).push(row);
-  }
-  return grouped;
-}
-
-export async function insertMomentComment(
-  db: DB,
-  data: typeof MomentCommentsTable.$inferInsert,
-) {
-  const [comment] = await db
-    .insert(MomentCommentsTable)
-    .values(data)
-    .returning();
-  return comment;
-}
-
-export async function findMomentCommentById(db: DB, id: number) {
-  return await db.query.MomentCommentsTable.findFirst({
-    where: eq(MomentCommentsTable.id, id),
-  });
-}
-
-export async function updateMomentComment(
-  db: DB,
-  id: number,
-  data: Partial<typeof MomentCommentsTable.$inferInsert>,
-) {
-  await db
-    .update(MomentCommentsTable)
-    .set(data)
-    .where(eq(MomentCommentsTable.id, id));
-}
-
 export async function countMomentCommentsForIds(
   db: DB,
   momentIds: number[],
@@ -177,17 +118,17 @@ export async function countMomentCommentsForIds(
   if (momentIds.length === 0) return {};
   const rows = await db
     .select({
-      momentId: MomentCommentsTable.momentId,
+      momentId: CommentsTable.momentId,
       count: count(),
     })
-    .from(MomentCommentsTable)
+    .from(CommentsTable)
     .where(
       and(
-        inArray(MomentCommentsTable.momentId, momentIds),
-        eq(MomentCommentsTable.status, "published"),
+        inArray(CommentsTable.momentId, momentIds),
+        eq(CommentsTable.status, "published"),
       ),
     )
-    .groupBy(MomentCommentsTable.momentId);
+    .groupBy(CommentsTable.momentId);
   return Object.fromEntries(rows.map((r) => [r.momentId, r.count]));
 }
 

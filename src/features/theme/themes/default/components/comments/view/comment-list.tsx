@@ -4,7 +4,10 @@ import type { JSONContent } from "@tiptap/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { RootCommentWithReplyCount } from "@/features/comments/comments.schema";
-import { repliesByRootIdInfiniteQuery } from "@/features/comments/queries";
+import {
+  repliesByRootIdInfiniteQuery,
+  type CommentTargetInput,
+} from "@/features/comments/queries";
 import { authClient } from "@/lib/auth/auth.client";
 import { m } from "@/paraglide/messages";
 import { CommentItem } from "./comment-item";
@@ -15,7 +18,7 @@ type RootCommentWithUser = RootCommentWithReplyCount;
 
 interface CommentListProps {
   rootComments: Array<RootCommentWithUser>;
-  postId: number;
+  target: CommentTargetInput;
   onReply?: (rootId: number, commentId: number, userName: string) => void;
   onDelete?: (commentId: number) => void;
   replyTarget?: { rootId: number; commentId: number; userName: string } | null;
@@ -28,7 +31,7 @@ interface CommentListProps {
 
 export const CommentList = ({
   rootComments,
-  postId,
+  target,
   onReply,
   onDelete,
   replyTarget,
@@ -75,7 +78,7 @@ export const CommentList = ({
         <RootCommentWithReplies
           key={root.id}
           root={root}
-          postId={postId}
+          target={target}
           isExpanded={expandedRoots.has(root.id)}
           onToggleExpand={() => toggleExpand(root.id)}
           onReply={onReply}
@@ -94,7 +97,7 @@ export const CommentList = ({
 
 interface RootCommentWithRepliesProps {
   root: RootCommentWithUser;
-  postId: number;
+  target: CommentTargetInput;
   isExpanded: boolean;
   onToggleExpand: () => void;
   onReply?: (rootId: number, commentId: number, userName: string) => void;
@@ -109,7 +112,7 @@ interface RootCommentWithRepliesProps {
 
 function RootCommentWithReplies({
   root,
-  postId,
+  target,
   isExpanded,
   onToggleExpand,
   onReply,
@@ -127,7 +130,7 @@ function RootCommentWithReplies({
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery(
-    repliesByRootIdInfiniteQuery(postId, root.id, session?.user.id),
+    repliesByRootIdInfiniteQuery(target, root.id, session?.user.id),
   );
 
   const allReplies = repliesData?.pages.flatMap((page) => page.items) ?? [];

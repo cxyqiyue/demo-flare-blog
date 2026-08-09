@@ -3,6 +3,7 @@ import Toaster from "@/components/ui/toaster";
 import type { SiteConfig } from "@/features/config/site-config.schema";
 import type { ThemeComponents } from "@/features/theme/contract/components";
 import { config } from "./config";
+import { AboutPage, AboutPageSkeleton } from "./pages/about";
 import { AuthLayout } from "./layouts/auth-layout";
 import { PublicLayout } from "./layouts/public-layout";
 import { UserLayout } from "./layouts/user-layout";
@@ -33,6 +34,8 @@ export default {
   PostsPageSkeleton,
   PostPage,
   PostPageSkeleton,
+  AboutPage,
+  AboutPageSkeleton,
   PublicLayout,
   AuthLayout,
   UserLayout,

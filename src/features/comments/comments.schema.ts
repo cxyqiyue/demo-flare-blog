@@ -35,6 +35,12 @@ export const CommentWithUserSchema = CommentSelectSchema.extend({
     })
     .nullable()
     .optional(),
+  moment: z
+    .object({
+      id: z.number().optional().nullable(),
+    })
+    .nullable()
+    .optional(),
   replyToUser: z
     .object({
       id: z.string().optional().nullable(),
@@ -55,23 +61,33 @@ export const GetUserStatsInputSchema = z.object({
 });
 
 // Public API Schemas
-export const GetCommentsByPostIdInputSchema = z.object({
-  postId: z.number(),
-  offset: z.number().optional(),
-  limit: z.number().optional(),
-});
+export const GetCommentsByTargetInputSchema = z
+  .object({
+    postId: z.number().optional(),
+    momentId: z.number().optional(),
+    offset: z.number().optional(),
+    limit: z.number().optional(),
+  })
+  .refine((data) => !!data.postId !== !!data.momentId, {
+    message: "Exactly one of postId or momentId is required",
+  });
 
 export const GetCommentsResponseSchema = z.object({
   items: z.array(CommentWithUserSchema),
   total: z.number(),
 });
 
-export const GetRepliesByRootIdInputSchema = z.object({
-  postId: z.number(),
-  rootId: z.number(),
-  offset: z.number().optional(),
-  limit: z.number().optional(),
-});
+export const GetRepliesByRootIdInputSchema = z
+  .object({
+    postId: z.number().optional(),
+    momentId: z.number().optional(),
+    rootId: z.number(),
+    offset: z.number().optional(),
+    limit: z.number().optional(),
+  })
+  .refine((data) => !!data.postId !== !!data.momentId, {
+    message: "Exactly one of postId or momentId is required",
+  });
 
 export const ReplyWithUserAndReplyToSchema = CommentWithUserSchema.extend({
   replyTo: z
@@ -97,12 +113,17 @@ export const GetRootCommentsResponseSchema = z.object({
 });
 
 // Authed User API Schemas
-export const CreateCommentInputSchema = z.object({
-  postId: z.number(),
-  content: JsonContentSchema,
-  rootId: z.number().optional(),
-  replyToCommentId: z.number().optional(),
-});
+export const CreateCommentInputSchema = z
+  .object({
+    postId: z.number().optional(),
+    momentId: z.number().optional(),
+    content: JsonContentSchema,
+    rootId: z.number().optional(),
+    replyToCommentId: z.number().optional(),
+  })
+  .refine((data) => !!data.postId !== !!data.momentId, {
+    message: "Exactly one of postId or momentId is required",
+  });
 
 export const UpdateCommentInputSchema = z.object({
   id: z.number(),
@@ -125,6 +146,7 @@ export const GetAllCommentsInputSchema = z.object({
   limit: z.number().optional(),
   status: z.custom<CommentStatus>().optional(),
   postId: z.number().optional(),
+  momentId: z.number().optional(),
   userId: z.string().optional(),
   userName: z.string().optional(),
 });
@@ -139,8 +161,8 @@ export const StartCommentModerationInputSchema = z.object({
 });
 
 // Types
-export type GetCommentsByPostIdInput = z.infer<
-  typeof GetCommentsByPostIdInputSchema
+export type GetCommentsByTargetInput = z.infer<
+  typeof GetCommentsByTargetInputSchema
 >;
 export type CreateCommentInput = z.infer<typeof CreateCommentInputSchema>;
 export type UpdateCommentInput = z.infer<typeof UpdateCommentInputSchema>;

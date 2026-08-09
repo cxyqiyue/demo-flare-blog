@@ -13,10 +13,16 @@ interface SendReplyNotificationParams {
     userId: string | null;
     content: JSONContent | null;
   };
-  post: {
-    slug: string;
-    title: string;
-  };
+  target:
+    | {
+        kind: "post";
+        slug: string;
+        title: string;
+      }
+    | {
+        kind: "moment";
+        title: string;
+      };
   skipNotifyUserId?: string;
 }
 
@@ -24,7 +30,7 @@ export async function sendReplyNotification(
   context: DbContext & { executionCtx: ExecutionContext },
   params: SendReplyNotificationParams,
 ): Promise<void> {
-  const { comment, post } = params;
+  const { comment, target } = params;
 
   if (!comment.replyToCommentId) return;
 
@@ -81,7 +87,10 @@ export async function sendReplyNotification(
 
   // Build URL with comment anchor and query params for direct navigation
   const rootId = comment.rootId ?? comment.id;
-  const commentUrl = `https://${DOMAIN}/post/${post.slug}?highlightCommentId=${comment.id}&rootId=${rootId}#comment-${comment.id}`;
+  const commentUrl =
+    target.kind === "post"
+      ? `https://${DOMAIN}/post/${target.slug}?highlightCommentId=${comment.id}&rootId=${rootId}#comment-${comment.id}`
+      : `https://${DOMAIN}/moments?highlightCommentId=${comment.id}&rootId=${rootId}#comment-${comment.id}`;
 
   try {
     await publishNotificationEvent(
@@ -93,7 +102,7 @@ export async function sendReplyNotification(
             : "comment.reply_to_user_published",
         data: {
           to: replyToAuthor.email,
-          postTitle: post.title,
+          postTitle: target.title,
           replierName,
           replyPreview: `${replyPreview}${replyPreview.length >= 100 ? "..." : ""}`,
           commentUrl,

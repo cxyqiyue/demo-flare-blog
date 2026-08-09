@@ -2,33 +2,170 @@ import type {
   CreateCommentInput,
   DeleteCommentInput,
   GetAllCommentsInput,
-  GetCommentsByPostIdInput,
+  GetCommentsByTargetInput,
   GetMyCommentsInput,
   ModerateCommentInput,
   StartCommentModerationInput,
 } from "@/features/comments/comments.schema";
 import * as CommentRepo from "@/features/comments/data/comments.data";
+import type { CommentTarget } from "@/features/comments/data/comments.data";
 import { sendReplyNotification } from "@/features/comments/workflows/helpers";
+import * as MomentRepo from "@/features/moments/data/moments.data";
 import { publishNotificationEvent } from "@/features/notification/service/notification.publisher";
 import * as PostService from "@/features/posts/services/posts.service";
 import { convertToPlainText } from "@/features/posts/utils/content";
 import { serverEnv } from "@/lib/env/server.env";
 import { err, ok } from "@/lib/errors";
+import { m } from "@/paraglide/messages";
+
+function resolveTarget(
+  data: { postId?: number; momentId?: number },
+): CommentTarget {
+  if (data.momentId) {
+    return { momentId: data.momentId };
+  }
+  return { postId: data.postId ?? 0 };
+}
+
+async function getTargetContext(
+  context: DbContext & { executionCtx: ExecutionContext },
+  comment: {
+    id: number;
+    rootId: number | null;
+    postId: number | null;
+    momentId: number | null;
+  },
+) {
+  if (comment.postId != null) {
+    const post = await PostService.findPostById(context, {
+      id: comment.postId,
+    });
+    if (post) {
+      return {
+        kind: "post" as const,
+        title: post.title,
+        commentUrl: `https://${serverEnv(context.env).DOMAIN}/post/${post.slug}?highlightCommentId=${comment.id}&rootId=${comment.rootId ?? comment.id}#comment-${comment.id}`,
+        post: { slug: post.slug, title: post.title },
+      };
+    }
+  }
+  if (comment.momentId != null) {
+    const moment = await MomentRepo.findMomentById(context.db, comment.momentId);
+    if (moment) {
+      return {
+        kind: "moment" as const,
+        title: m.comments_moment_notification_title(),
+        commentUrl: `https://${serverEnv(context.env).DOMAIN}/moments?highlightCommentId=${comment.id}&rootId=${comment.rootId ?? comment.id}#comment-${comment.id}`,
+      };
+    }
+  }
+  return null;
+}
+
+async function sendCommentTargetNotification(
+  context: AuthContext & { executionCtx: ExecutionContext },
+  comment: {
+    id: number;
+    rootId: number | null;
+    replyToCommentId: number | null;
+    userId: string | null;
+    content: unknown;
+    postId: number | null;
+    momentId: number | null;
+  },
+) {
+  if (!comment.replyToCommentId) return;
+  await sendReplyNotificationForTarget(context, comment);
+}
+
+async function sendReplyNotificationForTarget(
+  context: DbContext & { executionCtx: ExecutionContext },
+  comment: {
+    id: number;
+    rootId: number | null;
+    replyToCommentId: number | null;
+    userId: string | null;
+    content: unknown;
+    postId: number | null;
+    momentId: number | null;
+  },
+  moderatorUserId?: string,
+) {
+  const target = await getTargetContext(context, comment);
+  if (!target) return;
+  if (target.kind === "post") {
+    await sendReplyNotification(context, {
+      comment: {
+        id: comment.id,
+        rootId: comment.rootId,
+        replyToCommentId: comment.replyToCommentId,
+        userId: comment.userId,
+        content: comment.content as Parameters<typeof sendReplyNotification>[1]["comment"]["content"],
+      },
+      target: { kind: "post", slug: target.post.slug, title: target.post.title },
+      skipNotifyUserId: moderatorUserId,
+    });
+  } else if (target.kind === "moment") {
+    await sendReplyNotification(context, {
+      comment: {
+        id: comment.id,
+        rootId: comment.rootId,
+        replyToCommentId: comment.replyToCommentId,
+        userId: comment.userId,
+        content: comment.content as Parameters<typeof sendReplyNotification>[1]["comment"]["content"],
+      },
+      target: { kind: "moment", title: target.title },
+      skipNotifyUserId: moderatorUserId,
+    });
+  }
+}
+
+async function notifyAdminRootComment(
+  context: AuthContext & { executionCtx: ExecutionContext },
+  comment: {
+    id: number;
+    rootId: number | null;
+    replyToCommentId: number | null;
+    userId: string | null;
+    content: unknown;
+    postId: number | null;
+    momentId: number | null;
+  },
+  content: unknown,
+) {
+  const target = await getTargetContext(context, comment);
+  if (!target) return;
+  const { ADMIN_EMAIL } = serverEnv(context.env);
+  const commentPreview = convertToPlainText(content as never).slice(0, 100);
+  const commenterName = context.session.user.name;
+  await publishNotificationEvent(context, {
+    type: "comment.admin_root_created",
+    data: {
+      to: ADMIN_EMAIL,
+      postTitle: target.title,
+      commenterName,
+      commentPreview: `${commentPreview}${commentPreview.length >= 100 ? "..." : ""}`,
+      commentUrl: target.commentUrl,
+    },
+  });
+}
 
 // ============ Public Service Methods ============
 
-export async function getRootCommentsByPostId(
+export async function getRootCommentsByTarget(
   context: DbContext,
-  data: GetCommentsByPostIdInput & { viewerId?: string },
+  data: GetCommentsByTargetInput & { viewerId?: string },
 ) {
+  const target = resolveTarget(data);
+
   const [items, total] = await Promise.all([
-    CommentRepo.getRootCommentsByPostId(context.db, data.postId, {
+    CommentRepo.getRootCommentsByTarget(context.db, target, {
       offset: data.offset,
       limit: data.limit,
       viewerId: data.viewerId,
       status: data.viewerId ? undefined : ["published", "deleted"],
     }),
-    CommentRepo.getRootCommentsByPostIdCount(context.db, data.postId, {
+    CommentRepo.getRootCommentsByTargetCount(context.db, target, {
       viewerId: data.viewerId,
       status: data.viewerId ? undefined : ["published", "deleted"],
     }),
@@ -39,7 +176,7 @@ export async function getRootCommentsByPostId(
     items.map(async (item) => {
       const replyCount = await CommentRepo.getReplyCountByRootId(
         context.db,
-        data.postId,
+        target,
         item.id,
         {
           viewerId: data.viewerId,
@@ -55,18 +192,21 @@ export async function getRootCommentsByPostId(
 
 export async function getRepliesByRootId(
   context: DbContext,
-  data: { postId: number; rootId: number; offset?: number; limit?: number } & {
+  data: GetCommentsByTargetInput & {
+    rootId: number;
     viewerId?: string;
   },
 ) {
+  const target = resolveTarget(data);
+
   const [items, total] = await Promise.all([
-    CommentRepo.getRepliesByRootId(context.db, data.postId, data.rootId, {
+    CommentRepo.getRepliesByRootId(context.db, target, data.rootId, {
       offset: data.offset,
       limit: data.limit,
       viewerId: data.viewerId,
       status: data.viewerId ? undefined : ["published", "deleted"],
     }),
-    CommentRepo.getRepliesByRootIdCount(context.db, data.postId, data.rootId, {
+    CommentRepo.getRepliesByRootIdCount(context.db, target, data.rootId, {
       viewerId: data.viewerId,
       status: data.viewerId ? undefined : ["published", "deleted"],
     }),
@@ -81,6 +221,18 @@ export async function createComment(
   context: AuthContext & { executionCtx: ExecutionContext },
   data: CreateCommentInput,
 ) {
+  // Validation: ensure exactly one target is provided
+  const hasPost = typeof data.postId === "number";
+  const hasMoment = typeof data.momentId === "number";
+  if (hasPost === hasMoment) {
+    return err({ reason: "INVALID_TARGET" });
+  }
+  const target: CommentTarget = hasMoment
+    ? { momentId: data.momentId! }
+    : { postId: data.postId! };
+  const targetPostId = hasPost ? data.postId! : null;
+  const targetMomentId = hasMoment ? data.momentId! : null;
+
   // Validation: ensure 2-level structure
   let rootId: number | null = null;
   let replyToCommentId: number | null = null;
@@ -97,7 +249,10 @@ export async function createComment(
     if (rootComment.rootId !== null) {
       return err({ reason: "INVALID_ROOT_ID" });
     }
-    if (rootComment.postId !== data.postId) {
+    if (
+      rootComment.postId !== targetPostId ||
+      rootComment.momentId !== targetMomentId
+    ) {
       return err({ reason: "ROOT_COMMENT_POST_MISMATCH" });
     }
     rootId = data.rootId;
@@ -131,7 +286,7 @@ export async function createComment(
   const isAdmin = context.session.user.role === "admin";
 
   const comment = await CommentRepo.insertComment(context.db, {
-    postId: data.postId,
+    ...target,
     content: data.content,
     rootId,
     replyToCommentId,
@@ -147,21 +302,7 @@ export async function createComment(
 
   // Send reply notification for admin replies (non-admin replies get notified via moderation workflow)
   if (isAdmin && replyToCommentId) {
-    const post = await PostService.findPostById(context, {
-      id: data.postId,
-    });
-    if (post) {
-      await sendReplyNotification(context, {
-        comment: {
-          id: comment.id,
-          rootId: comment.rootId,
-          replyToCommentId: comment.replyToCommentId,
-          userId: comment.userId,
-          content: data.content,
-        },
-        post: { slug: post.slug, title: post.title },
-      });
-    }
+    await sendCommentTargetNotification(context, comment);
   }
 
   // Notify admin about new root comments from non-admin users only
@@ -169,22 +310,7 @@ export async function createComment(
   // - Skip if it's a reply (only root comments trigger admin notification)
   const isRootComment = rootId === null;
   if (!isAdmin && isRootComment) {
-    const post = await PostService.findPostById(context, { id: data.postId });
-    if (post) {
-      const { ADMIN_EMAIL, DOMAIN } = serverEnv(context.env);
-      const commentPreview = convertToPlainText(data.content).slice(0, 100);
-      const commenterName = context.session.user.name;
-      await publishNotificationEvent(context, {
-        type: "comment.admin_root_created",
-        data: {
-          to: ADMIN_EMAIL,
-          postTitle: post.title,
-          commenterName,
-          commentPreview: `${commentPreview}${commentPreview.length >= 100 ? "..." : ""}`,
-          commentUrl: `https://${DOMAIN}/post/${post.slug}?highlightCommentId=${comment.id}&rootId=${comment.id}#comment-${comment.id}`,
-        },
-      });
-    }
+    await notifyAdminRootComment(context, comment, data.content);
   }
 
   return ok(comment);
@@ -241,12 +367,14 @@ export async function getAllComments(
       limit: data.limit,
       status: data.status,
       postId: data.postId,
+      momentId: data.momentId,
       userId: data.userId,
       userName: data.userName,
     }),
     CommentRepo.getAllCommentsCount(context.db, {
       status: data.status,
       postId: data.postId,
+      momentId: data.momentId,
       userId: data.userId,
       userName: data.userName,
     }),
@@ -277,22 +405,7 @@ export async function moderateComment(
     comment.status !== "published" &&
     comment.replyToCommentId
   ) {
-    const post = await PostService.findPostById(context, {
-      id: comment.postId,
-    });
-    if (post) {
-      await sendReplyNotification(context, {
-        comment: {
-          id: comment.id,
-          rootId: comment.rootId,
-          replyToCommentId: comment.replyToCommentId,
-          userId: comment.userId,
-          content: comment.content,
-        },
-        post: { slug: post.slug, title: post.title },
-        skipNotifyUserId: moderatorUserId,
-      });
-    }
+    await sendReplyNotificationForTarget(context, comment, moderatorUserId);
   }
 
   return ok(updatedComment);

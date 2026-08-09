@@ -4,8 +4,13 @@ import { getAllCommentsFn } from "../api/comments.admin.api";
 import {
   getMyCommentsFn,
   getRepliesByRootIdFn,
-  getRootCommentsByPostIdFn,
+  getRootCommentsByTargetFn,
 } from "../api/comments.public.api";
+
+export type CommentTargetInput = {
+  postId?: number;
+  momentId?: number;
+};
 
 export const COMMENTS_KEYS = {
   all: ["comments"] as const,
@@ -15,30 +20,46 @@ export const COMMENTS_KEYS = {
   admin: ["comments", "admin"] as const,
 
   // Child keys (functions for specific queries)
-  roots: (postId: number) => ["comments", "roots", postId] as const,
-  replies: (postId: number, rootId: number) =>
-    ["comments", "replies", postId, rootId] as const,
-  repliesLists: (postId: number) => ["comments", "replies", postId] as const,
+  roots: (target: CommentTargetInput) =>
+    ["comments", "roots", target.postId ?? "m", target.momentId ?? "p"] as const,
+  replies: (target: CommentTargetInput, rootId: number) =>
+    [
+      "comments",
+      "replies",
+      target.postId ?? "m",
+      target.momentId ?? "p",
+      rootId,
+    ] as const,
+  repliesLists: (target: CommentTargetInput) =>
+    [
+      "comments",
+      "replies",
+      target.postId ?? "m",
+      target.momentId ?? "p",
+    ] as const,
   userStats: (userId: string) =>
     ["comments", "admin", "user-stats", userId] as const,
 };
 
-export function rootCommentsByPostIdQuery(postId: number, userId?: string) {
+export function rootCommentsByTargetQuery(
+  target: CommentTargetInput,
+  userId?: string,
+) {
   return queryOptions({
-    queryKey: [...COMMENTS_KEYS.roots(postId), { userId }],
-    queryFn: () => getRootCommentsByPostIdFn({ data: { postId } }),
+    queryKey: [...COMMENTS_KEYS.roots(target), { userId }],
+    queryFn: () => getRootCommentsByTargetFn({ data: { ...target } }),
   });
 }
 
-export function rootCommentsByPostIdInfiniteQuery(
-  postId: number,
+export function rootCommentsByTargetInfiniteQuery(
+  target: CommentTargetInput,
   userId?: string,
 ) {
   return infiniteQueryOptions({
-    queryKey: [...COMMENTS_KEYS.roots(postId), "infinite", { userId }],
+    queryKey: [...COMMENTS_KEYS.roots(target), "infinite", { userId }],
     queryFn: ({ pageParam = 0 }) =>
-      getRootCommentsByPostIdFn({
-        data: { postId, offset: pageParam, limit: 20 },
+      getRootCommentsByTargetFn({
+        data: { ...target, offset: pageParam, limit: 20 },
       }),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
@@ -52,15 +73,15 @@ export function rootCommentsByPostIdInfiniteQuery(
 }
 
 export function repliesByRootIdInfiniteQuery(
-  postId: number,
+  target: CommentTargetInput,
   rootId: number,
   userId?: string,
 ) {
   return infiniteQueryOptions({
-    queryKey: [...COMMENTS_KEYS.replies(postId, rootId), { userId }],
+    queryKey: [...COMMENTS_KEYS.replies(target, rootId), { userId }],
     queryFn: ({ pageParam = 0 }) =>
       getRepliesByRootIdFn({
-        data: { postId, rootId, offset: pageParam, limit: 20 },
+        data: { ...target, rootId, offset: pageParam, limit: 20 },
       }),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
@@ -88,6 +109,7 @@ export function allCommentsQuery(
     limit?: number;
     status?: CommentStatus;
     postId?: number;
+    momentId?: number;
     userId?: string;
     userName?: string;
   } = {},
