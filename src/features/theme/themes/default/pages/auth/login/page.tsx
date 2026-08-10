@@ -8,7 +8,7 @@ export function LoginPage({
   isEmailConfigured,
   loginForm,
   socialLogin,
-  turnstileElement,
+  challengeElement,
 }: LoginPageProps) {
   return (
     <div className="space-y-12">
@@ -37,7 +37,7 @@ export function LoginPage({
           showDivider={isEmailConfigured}
         />
 
-        {turnstileElement}
+        {challengeElement}
 
         {isEmailConfigured && (
           <div className="text-center pt-8">

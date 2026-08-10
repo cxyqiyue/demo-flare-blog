@@ -1,5 +1,4 @@
 import type { FieldErrors, UseFormRegister } from "react-hook-form";
-import type { TurnstileProps } from "@/components/common/turnstile";
 
 export interface LoginSchema {
   email: string;
@@ -12,8 +11,7 @@ export interface LoginFormData {
   handleSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   loginStep: "IDLE" | "VERIFYING" | "SUCCESS";
   isSubmitting: boolean;
-  turnstileProps: TurnstileProps;
-  turnstilePending: boolean;
+  challengePending: boolean;
 }
 
 export interface SocialLoginData {
@@ -25,5 +23,5 @@ export interface LoginPageProps {
   isEmailConfigured: boolean;
   loginForm: LoginFormData;
   socialLogin: SocialLoginData;
-  turnstileElement: React.ReactNode;
+  challengeElement: React.ReactNode;
 }

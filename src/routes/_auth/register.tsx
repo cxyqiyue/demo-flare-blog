@@ -4,7 +4,8 @@ import {
   useRouteContext,
 } from "@tanstack/react-router";
 import theme from "@theme";
-import { Turnstile, useTurnstile } from "@/components/common/turnstile";
+import { ChallengeWidget } from "@/features/challenge/components/challenge-widget";
+import { useChallenge } from "@/features/challenge/hooks/use-challenge";
 import { useRegisterForm } from "@/features/auth/hooks";
 import { m } from "@/paraglide/messages";
 
@@ -25,37 +26,29 @@ export const Route = createFileRoute("/_auth/register")({
 });
 
 function RouteComponent() {
-  const { isEmailConfigured, turnstileConfig } = useRouteContext({
+  const { isEmailConfigured, challengeConfig } = useRouteContext({
     from: "/_auth",
   });
-  const turnstileSiteKey = turnstileConfig.enabled
-    ? turnstileConfig.siteKey
-    : "";
-  const {
-    isPending: turnstilePending,
-    token: turnstileToken,
-    reset: resetTurnstile,
-    turnstileProps,
-  } = useTurnstile("register", turnstileSiteKey);
+  const challenge = useChallenge({ action: "register", config: challengeConfig });
 
   const registerForm = useRegisterForm({
-    turnstileToken,
-    turnstilePending,
-    resetTurnstile,
+    challenge,
     isEmailConfigured,
   });
 
-  const turnstileElement = turnstileConfig.enabled ? (
-    <div className="flex justify-center">
-      <Turnstile {...turnstileProps} />
-    </div>
-  ) : null;
+  const challengeElement =
+    isEmailConfigured && challengeConfig.provider !== "none" ? (
+      <ChallengeWidget action="register" challenge={challengeConfig} />
+    ) : null;
 
   return (
     <theme.RegisterPage
       isEmailConfigured={isEmailConfigured}
-      registerForm={{ ...registerForm, turnstileProps }}
-      turnstileElement={turnstileElement}
+      registerForm={{
+        ...registerForm,
+        challengePending: challenge.isPending,
+      }}
+      challengeElement={challengeElement}
     />
   );
 }

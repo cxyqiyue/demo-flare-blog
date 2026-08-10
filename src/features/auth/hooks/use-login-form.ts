@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { AUTH_KEYS } from "@/features/auth/queries";
+import type { UseChallengeReturn } from "@/features/challenge/hooks/use-challenge";
 import { usePreviousLocation } from "@/hooks/use-previous-location";
 import { authClient } from "@/lib/auth/auth.client";
 import {
@@ -25,15 +26,12 @@ const createLoginSchema = (messages: Messages) =>
 type LoginSchema = z.infer<ReturnType<typeof createLoginSchema>>;
 
 export interface UseLoginFormOptions {
-  turnstileToken: string | null;
-  turnstilePending: boolean;
-  resetTurnstile: () => void;
+  challenge: UseChallengeReturn;
   redirectTo?: string;
 }
 
 export function useLoginForm(options: UseLoginFormOptions) {
-  const { turnstileToken, turnstilePending, resetTurnstile, redirectTo } =
-    options;
+  const { challenge, redirectTo } = options;
 
   const [loginStep, setLoginStep] = useState<"IDLE" | "VERIFYING" | "SUCCESS">(
     "IDLE",
@@ -70,15 +68,13 @@ export function useLoginForm(options: UseLoginFormOptions) {
 
   const emailValue = form.watch("email");
   const latestResendStateRef = useRef({
-    emailValue: "",
-    turnstilePending,
-    turnstileToken,
+    emailValue,
+    challenge,
   });
 
   latestResendStateRef.current = {
     emailValue,
-    turnstilePending,
-    turnstileToken,
+    challenge,
   };
 
   const onSubmit = async (data: LoginSchema) => {
@@ -88,11 +84,14 @@ export function useLoginForm(options: UseLoginFormOptions) {
       email: data.email,
       password: data.password,
       fetchOptions: {
-        headers: { "X-Turnstile-Token": turnstileToken || "" },
+        headers: {
+          "X-Turnstile-Token": challenge.token || "",
+          "X-Altcha-Solution": challenge.altchaSolution || "",
+        },
       },
     });
 
-    resetTurnstile();
+    challenge.reset();
 
     if (error) {
       setLoginStep("IDLE");
@@ -123,14 +122,11 @@ export function useLoginForm(options: UseLoginFormOptions) {
   };
 
   const handleResendVerification = async () => {
-    const {
-      emailValue: currentEmailValue,
-      turnstilePending: isTurnstilePending,
-      turnstileToken: currentTurnstileToken,
-    } = latestResendStateRef.current;
+    const { emailValue: currentEmailValue, challenge: currentChallenge } =
+      latestResendStateRef.current;
 
     if (!currentEmailValue) return;
-    if (isTurnstilePending) {
+    if (currentChallenge.isPending) {
       toast.error(m.login_toast_wait_turnstile());
       return;
     }
@@ -141,11 +137,14 @@ export function useLoginForm(options: UseLoginFormOptions) {
       email: currentEmailValue,
       callbackURL: `${window.location.origin}/verify-email`,
       fetchOptions: {
-        headers: { "X-Turnstile-Token": currentTurnstileToken || "" },
+        headers: {
+          "X-Turnstile-Token": currentChallenge.token || "",
+          "X-Altcha-Solution": currentChallenge.altchaSolution || "",
+        },
       },
     });
 
-    resetTurnstile();
+    currentChallenge.reset();
     toast.dismiss(loadingToast);
 
     if (error) {

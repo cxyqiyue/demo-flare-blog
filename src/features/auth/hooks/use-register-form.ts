@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { AUTH_KEYS } from "@/features/auth/queries";
+import type { UseChallengeReturn } from "@/features/challenge/hooks/use-challenge";
 import { usePreviousLocation } from "@/hooks/use-previous-location";
 import { authClient } from "@/lib/auth/auth.client";
 import { getRegisterAuthErrorMessage } from "@/lib/auth/auth-errors";
@@ -31,19 +32,12 @@ const createRegisterSchema = (messages: Messages) =>
 type RegisterSchema = z.infer<ReturnType<typeof createRegisterSchema>>;
 
 export interface UseRegisterFormOptions {
-  turnstileToken: string | null;
-  turnstilePending: boolean;
-  resetTurnstile: () => void;
+  challenge: UseChallengeReturn;
   isEmailConfigured: boolean;
 }
 
 export function useRegisterForm(options: UseRegisterFormOptions) {
-  const {
-    turnstileToken,
-    turnstilePending,
-    resetTurnstile,
-    isEmailConfigured,
-  } = options;
+  const { challenge, isEmailConfigured } = options;
 
   const [isSuccess, setIsSuccess] = useState(false);
   const navigate = useNavigate();
@@ -62,11 +56,14 @@ export function useRegisterForm(options: UseRegisterFormOptions) {
       name: data.name,
       callbackURL: `${window.location.origin}/verify-email`,
       fetchOptions: {
-        headers: { "X-Turnstile-Token": turnstileToken || "" },
+        headers: {
+          "X-Turnstile-Token": challenge.token || "",
+          "X-Altcha-Solution": challenge.altchaSolution || "",
+        },
       },
     });
 
-    resetTurnstile();
+    challenge.reset();
 
     if (error) {
       toast.error(m.register_toast_failed(), {
@@ -97,7 +94,6 @@ export function useRegisterForm(options: UseRegisterFormOptions) {
     handleSubmit: form.handleSubmit(onSubmit),
     isSubmitting: form.formState.isSubmitting,
     isSuccess,
-    turnstilePending,
   };
 }
 

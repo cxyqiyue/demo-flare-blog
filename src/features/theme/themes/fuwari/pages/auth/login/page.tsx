@@ -8,7 +8,7 @@ export function LoginPage({
   isEmailConfigured,
   loginForm,
   socialLogin,
-  turnstileElement,
+  challengeElement,
 }: LoginPageProps) {
   const {
     register,
@@ -16,13 +16,13 @@ export function LoginPage({
     handleSubmit,
     loginStep,
     isSubmitting,
-    turnstilePending: formTurnstilePending,
+    challengePending: formChallengePending,
   } = loginForm;
 
   const { isLoading: socialIsLoading, handleGithubLogin } = socialLogin;
 
   const isFormDisabled =
-    isSubmitting || loginStep !== "IDLE" || formTurnstilePending;
+    isSubmitting || loginStep !== "IDLE" || formChallengePending;
   const isSocialDisabled = socialIsLoading;
 
   return (
@@ -142,7 +142,7 @@ export function LoginPage({
           </span>
         </button>
 
-        {turnstileElement}
+        {challengeElement}
 
         {/* Footer Link */}
         {isEmailConfigured && (

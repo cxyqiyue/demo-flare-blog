@@ -95,20 +95,48 @@ export const ImageHostingConfigSchema = z.object({
     .optional(),
 });
 
+export const CHALLENGE_PROVIDERS = ["none", "altcha", "turnstile"] as const;
+export const ChallengeProviderSchema = z.enum(CHALLENGE_PROVIDERS);
+export type ChallengeProvider = z.infer<typeof ChallengeProviderSchema>;
+
+export const TurnstileFallbackConfigSchema = z.object({
+  /** 连续失败多少次后切换到 ALTCHA PoW 兜底 */
+  maxFailures: z.number().int().min(1).max(20).optional(),
+  /** 超过多少毫秒未通过 Turnstile 则切换到 ALTCHA PoW 兜底 */
+  timeoutMs: z.number().int().min(5000).max(120000).optional(),
+});
+
 export const TurnstileConfigSchema = z.object({
   enabled: z.boolean().optional(),
   siteKey: z.string().optional(),
   secretKey: z.string().optional(),
+  fallback: TurnstileFallbackConfigSchema.optional(),
 });
 
-export const PowConfigSchema = z.object({
+export const AltchaConfigSchema = z.object({
   enabled: z.boolean().optional(),
+  /** ALTCHA PoW 难度（maxNumber），越大越难，默认 100000 */
   difficulty: z.number().int().min(10000).max(1000000).optional(),
 });
 
+/** @deprecated 旧键名，保留兼容；优先使用 AltchaConfigSchema */
+export const PowConfigSchema = AltchaConfigSchema;
+
 export const ChallengeConfigSchema = z.object({
+  /** 人机验证方案："none" | "altcha" | "turnstile"，默认 "none" */
+  provider: ChallengeProviderSchema.optional(),
   pow: PowConfigSchema.optional(),
+  altcha: AltchaConfigSchema.optional(),
   turnstile: TurnstileConfigSchema.optional(),
+});
+
+export const UsageConfigSchema = z.object({
+  /** 是否启用资源用量后台模块（含路由与侧边栏入口） */
+  enabled: z.boolean().optional(),
+  /** 是否启用自报用量采集（D1 持久化，不依赖 GraphQL） */
+  selfReported: z.boolean().optional(),
+  /** 是否启用 Cloudflare GraphQL Analytics 用量数据（开启时默认顺带开启自报兜底） */
+  graphql: z.boolean().optional(),
 });
 
 export const CONFIG_SECTIONS = [
@@ -117,6 +145,7 @@ export const CONFIG_SECTIONS = [
   "ai",
   "imageHosting",
   "challenge",
+  "usage",
   "site",
 ] as const;
 export type ConfigSection = (typeof CONFIG_SECTIONS)[number];
@@ -132,6 +161,7 @@ export const UpdateSystemConfigSectionInputSchema = z.discriminatedUnion(
       data: ImageHostingConfigSchema,
     }),
     z.object({ section: z.literal("challenge"), data: ChallengeConfigSchema }),
+    z.object({ section: z.literal("usage"), data: UsageConfigSchema }),
     z.object({ section: z.literal("site"), data: SiteConfigInputSchema }),
   ],
 );
@@ -145,6 +175,7 @@ export const SystemConfigSchema = z.object({
   ai: AiConfigSchema.optional(),
   imageHosting: ImageHostingConfigSchema.optional(),
   challenge: ChallengeConfigSchema.optional(),
+  usage: UsageConfigSchema.optional(),
   site: SiteConfigInputSchema.optional(),
 });
 
@@ -161,6 +192,7 @@ export const createSystemConfigFormSchema = (messages: Messages) =>
     ai: SystemConfigSchema.shape.ai,
     imageHosting: SystemConfigSchema.shape.imageHosting,
     challenge: SystemConfigSchema.shape.challenge,
+    usage: SystemConfigSchema.shape.usage,
     site: createSiteConfigInputFormSchema(messages).optional(),
   });
 
@@ -231,15 +263,29 @@ export const DEFAULT_CONFIG: SystemConfig = {
     },
   },
   challenge: {
+    provider: "none",
     pow: {
       enabled: false,
-      difficulty: 10000,
+      difficulty: 100000,
+    },
+    altcha: {
+      enabled: false,
+      difficulty: 100000,
     },
     turnstile: {
       enabled: false,
       siteKey: "",
       secretKey: "",
+      fallback: {
+        maxFailures: 3,
+        timeoutMs: 30000,
+      },
     },
+  },
+  usage: {
+    enabled: false,
+    selfReported: false,
+    graphql: false,
   },
   site: blogConfig satisfies SiteConfigInput,
 };

@@ -5,7 +5,8 @@ import {
 } from "@tanstack/react-router";
 import theme from "@theme";
 import { z } from "zod";
-import { Turnstile, useTurnstile } from "@/components/common/turnstile";
+import { ChallengeWidget } from "@/features/challenge/components/challenge-widget";
+import { useChallenge } from "@/features/challenge/hooks/use-challenge";
 import { useLoginForm, useSocialLogin } from "@/features/auth/hooks";
 import { m } from "@/paraglide/messages";
 
@@ -24,20 +25,12 @@ export const Route = createFileRoute("/_auth/login")({
 });
 
 function RouteComponent() {
-  const { isEmailConfigured, turnstileConfig } = useRouteContext({
+  const { isEmailConfigured, challengeConfig } = useRouteContext({
     from: "/_auth",
   });
   const search = Route.useSearch();
   const location = useLocation();
-  const turnstileSiteKey = turnstileConfig.enabled
-    ? turnstileConfig.siteKey
-    : "";
-  const {
-    isPending: turnstilePending,
-    token: turnstileToken,
-    reset: resetTurnstile,
-    turnstileProps,
-  } = useTurnstile("login", turnstileSiteKey);
+  const challenge = useChallenge({ action: "login", config: challengeConfig });
 
   const currentSearchParams = new URLSearchParams(
     new URL(location.href, window.location.origin).search,
@@ -52,9 +45,7 @@ function RouteComponent() {
   }
 
   const loginForm = useLoginForm({
-    turnstileToken,
-    turnstilePending,
-    resetTurnstile,
+    challenge,
     redirectTo: resolvedRedirectTo,
   });
 
@@ -62,11 +53,9 @@ function RouteComponent() {
     redirectTo: resolvedRedirectTo,
   });
 
-  const turnstileElement =
-    isEmailConfigured && turnstileConfig.enabled ? (
-      <div className="flex justify-center">
-        <Turnstile {...turnstileProps} />
-      </div>
+  const challengeElement =
+    isEmailConfigured && challengeConfig.provider !== "none" ? (
+      <ChallengeWidget action="login" challenge={challengeConfig} />
     ) : null;
 
   return (
@@ -74,11 +63,10 @@ function RouteComponent() {
       isEmailConfigured={isEmailConfigured}
       loginForm={{
         ...loginForm,
-        turnstileProps,
-        turnstilePending,
+        challengePending: challenge.isPending,
       }}
       socialLogin={socialLogin}
-      turnstileElement={turnstileElement}
+      challengeElement={challengeElement}
     />
   );
 }

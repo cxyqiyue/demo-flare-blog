@@ -191,7 +191,7 @@ src/
 | `CDN_DOMAIN` | 独立 CDN 域名，purge 时优先使用 |
 | `GH_TOKEN` | GitHub API Token，用于版本更新检查；建议创建 [Fine-grained PAT](https://github.com/settings/personal-access-tokens/new) 避免限流 |
 | `PAGEVIEW_SALT` | 浏览量匿名化 salt，`openssl rand -hex 16` 生成 |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile Secret Key |
+| `TURNSTILE_SECRET_KEY` | （旧版，可留空）Turnstile Secret Key 已改为在后台「人机验证」设置中配置 |
 | `UMAMI_SRC` | Umami 埋点代理 URL |
 | `LOCALE` | 默认语言 `zh` / `en`，默认 `zh` |
 
@@ -201,7 +201,7 @@ src/
 | :--- | :--- |
 | `THEME` | 主题名，默认 `default`，可填 `fuwari` |
 | `VITE_UMAMI_WEBSITE_ID` | Umami Website ID |
-| `VITE_TURNSTILE_SITE_KEY` | Turnstile Site Key |
+| `VITE_TURNSTILE_SITE_KEY` | （旧版，可留空）Turnstile Site Key 兜底；推荐在后台「人机验证」设置中配置 |
 | `ROUTE` | 设为 `custom_domain` 时改用官方 custom_domain 模式；缺省为 routes 模式 |
 | `CUSTOM_DOMAIN` | 设为 `1` 同样切换到 custom_domain 模式 |
 | `ZONE_NAME` | 可选，routes 模式下 Zone 与 `DOMAIN` 推导结果不一致时覆盖 |
@@ -241,7 +241,7 @@ src/
 - [ ] （可选）配置第三方图床：后台设置 → 图床，启用 ImgBB（文章 + 评论）或幻域图床 ffsky（文章），填入 API Key 后点「测试连接」；文章图床启用后 R2 上传入口会自动关闭，未启用或未配置 Key 时才回退 R2
 - [ ] （可选）配置 SMTP 邮件：后台设置 → 邮箱，即可使用验证码登录与评论回复通知
 - [ ] （可选）配置 Webhook 通知：后台设置 → 通知，按事件订阅
-- [ ] （可选）开启 Turnstile 人机验证、Umami 统计
+- [ ] （可选）开启人机验证：后台设置 → 人机验证，选择验证方案（不启用 / **ALTCHA PoW** / **Cloudflare Turnstile**）。Turnstile 可在超时或连续失败后自动回退到 ALTCHA PoW 兜底；再配合 Umami 统计
 - [ ] （可选）后台设置 → AI 配置 AI 服务：默认 Workers AI，也可切换到 **Agnes AI**（无限期免费，一键选择国际站/国内站端点）或 OpenAI 兼容接口（填写 Base URL / 模型 / API Key 后点「测试连接」）
 - [ ] 若页面样式异常，在后台设置页手动 **清除 CDN 缓存** 或到 Cloudflare Dashboard 清理
 

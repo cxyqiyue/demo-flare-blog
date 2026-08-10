@@ -187,7 +187,7 @@ Open **Settings → Secrets and variables → Actions** in your repository and c
 | `CDN_DOMAIN` | Standalone CDN domain, preferred during purge |
 | `GH_TOKEN` | GitHub API Token for version-update checks; create a [Fine-grained PAT](https://github.com/settings/personal-access-tokens/new) to avoid rate limits |
 | `PAGEVIEW_SALT` | Salt for anonymizing pageview hashes, generated with `openssl rand -hex 16` |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile Secret Key |
+| `TURNSTILE_SECRET_KEY` | (legacy, can be empty) Turnstile Secret Key is now configured in admin Settings → Challenge |
 | `UMAMI_SRC` | Umami tracking proxy URL |
 | `LOCALE` | Default language `zh` / `en`, default `zh` |
 
@@ -197,7 +197,7 @@ Open **Settings → Secrets and variables → Actions** in your repository and c
 | :--- | :--- |
 | `THEME` | Theme name, default `default`, can be `fuwari` |
 | `VITE_UMAMI_WEBSITE_ID` | Umami Website ID |
-| `VITE_TURNSTILE_SITE_KEY` | Turnstile Site Key |
+| `VITE_TURNSTILE_SITE_KEY` | (legacy, can be empty) Turnstile Site Key fallback; prefer configuring it in admin Settings → Challenge |
 | `ROUTE` | Set to `custom_domain` to use the official custom_domain binding; default is routes mode |
 | `CUSTOM_DOMAIN` | Set to `1` to also switch to custom_domain mode |
 | `ZONE_NAME` | Optional; overrides the zone inferred from `DOMAIN` in routes mode |
@@ -236,7 +236,7 @@ Run through the following after deployment:
 - [ ] Upload an image to verify the media library (R2) works
 - [ ] (Optional) Configure SMTP email in admin Settings → Email for code login and comment-reply notifications
 - [ ] (Optional) Configure webhook notifications in admin Settings → Webhook with per-event subscriptions
-- [ ] (Optional) Enable Turnstile CAPTCHA and Umami analytics
+- [ ] (Optional) Enable human verification in admin Settings → Challenge: pick a provider (None / **ALTCHA PoW** / **Cloudflare Turnstile**). Turnstile can auto-fall back to ALTCHA PoW on timeout or repeated failures. Also enable Umami analytics
 - [ ] (Optional) Configure AI in admin Settings → AI: Workers AI by default, or switch to an OpenAI-compatible endpoint (fill in Base URL / model / API key and hit "Test connection")
 - [ ] If styles look broken, manually **Clear CDN Cache** from the admin Settings page or the Cloudflare Dashboard
 

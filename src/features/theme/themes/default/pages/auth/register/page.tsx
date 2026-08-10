@@ -5,7 +5,7 @@ import { RegisterForm } from "./form";
 
 export function RegisterPage({
   registerForm,
-  turnstileElement,
+  challengeElement,
 }: RegisterPageProps) {
   if (registerForm.isSuccess) {
     return (
@@ -45,7 +45,7 @@ export function RegisterPage({
       <div className="space-y-10">
         <RegisterForm form={registerForm} />
 
-        {turnstileElement}
+        {challengeElement}
 
         <div className="text-center pt-4">
           <p className="text-[10px] font-mono text-muted-foreground/50 tracking-wider">

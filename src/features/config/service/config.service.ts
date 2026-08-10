@@ -1,6 +1,7 @@
 import { blogConfig } from "@/blog.config";
 import * as CacheService from "@/features/cache/cache.service";
 import type {
+  ChallengeProvider,
   SiteConfig,
   SystemConfig,
   UpdateSystemConfigSectionInput,
@@ -19,6 +20,50 @@ import { purgeSiteCDNCache } from "@/lib/invalidate";
 const DEFAULT_SMTP_PORT = 465;
 const RESEND_SMTP_HOST = "smtp.resend.com";
 const RESEND_SMTP_USERNAME = "resend";
+
+/**
+ * 解析人机验证 provider。
+ * provider 字段优先；兼容旧的 pow/turnstile.enabled 开关（仅当 provider 缺失时生效）。
+ */
+export function resolveChallengeProvider(
+  config: SystemConfig | null | undefined,
+): ChallengeProvider {
+  const challenge = config?.challenge;
+  if (challenge?.provider) return challenge.provider;
+  if (challenge?.turnstile?.enabled) return "turnstile";
+  if (challenge?.pow?.enabled || challenge?.altcha?.enabled) return "altcha";
+  return "none";
+}
+
+export function resolveChallengeConfig(config: SystemConfig | null | undefined) {
+  const challenge = config?.challenge;
+  const altchaEnabled =
+    challenge?.altcha?.enabled ?? challenge?.pow?.enabled ?? false;
+  return {
+    provider: resolveChallengeProvider(config),
+    altcha: {
+      enabled: altchaEnabled,
+      difficulty: challenge?.altcha?.difficulty ?? DEFAULT_CONFIG.challenge?.altcha?.difficulty,
+    },
+    pow: {
+      enabled: altchaEnabled,
+      difficulty: challenge?.altcha?.difficulty ?? challenge?.pow?.difficulty ?? DEFAULT_CONFIG.challenge?.pow?.difficulty,
+    },
+    turnstile: {
+      enabled: challenge?.turnstile?.enabled ?? false,
+      siteKey: challenge?.turnstile?.siteKey ?? "",
+      secretKey: challenge?.turnstile?.secretKey ?? "",
+      fallback: {
+        maxFailures:
+          challenge?.turnstile?.fallback?.maxFailures ??
+          DEFAULT_CONFIG.challenge?.turnstile?.fallback?.maxFailures,
+        timeoutMs:
+          challenge?.turnstile?.fallback?.timeoutMs ??
+          DEFAULT_CONFIG.challenge?.turnstile?.fallback?.timeoutMs,
+      },
+    },
+  };
+}
 
 function resolveEmailConfig(config: SystemConfig | null | undefined) {
   const email = config?.email;
@@ -91,15 +136,10 @@ export function resolveSystemConfig(
         ...config?.imageHosting?.s3,
       },
     },
-    challenge: {
-      pow: {
-        ...DEFAULT_CONFIG.challenge?.pow,
-        ...config?.challenge?.pow,
-      },
-      turnstile: {
-        ...DEFAULT_CONFIG.challenge?.turnstile,
-        ...config?.challenge?.turnstile,
-      },
+    challenge: resolveChallengeConfig(config),
+    usage: {
+      ...DEFAULT_CONFIG.usage,
+      ...config?.usage,
     },
     site: resolveSiteConfig(config),
   };

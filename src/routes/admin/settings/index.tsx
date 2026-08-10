@@ -20,6 +20,7 @@ import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AiSettingsSection } from "@/features/ai/components/ai-settings-section";
 import { useAiConnection } from "@/features/ai/hooks/use-ai-connection";
+import { ChallengeSettingsSection } from "@/features/challenge/components/challenge-settings-section";
 import { MaintenanceSection } from "@/features/config/components/maintenance-section";
 import { SectionSkeleton } from "@/features/config/components/settings-skeleton";
 import { SiteSettingsSection } from "@/features/config/components/site-settings-section";
@@ -38,7 +39,6 @@ import { useEmailConnection } from "@/features/email/hooks/use-email-connection"
 import { ImageHostingSettingsSection } from "@/features/image-hosting/components/image-hosting-settings-section";
 import { useImageHostingConnection } from "@/features/image-hosting/hooks/use-image-hosting-connection";
 import { OAuthClientsSection } from "@/features/oauth-clients/components/oauth-clients-section";
-import { TurnstileSettingsSection } from "@/features/turnstile/components/turnstile-settings-section";
 import { WebhookSettingsSection } from "@/features/webhook/components/webhook-settings-section";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -87,7 +87,7 @@ function RouteComponent() {
     {
       value: "challenge",
       icon: ShieldCheck,
-      label: m.settings_tab_turnstile(),
+      label: m.settings_tab_challenge(),
     },
     {
       value: "webhook",
@@ -372,13 +372,13 @@ function RouteComponent() {
             <TabsContent value="challenge" className="mt-0 space-y-10">
               <div className="space-y-2 pb-6 border-b border-border/30">
                 <h2 className="text-2xl font-serif font-medium tracking-tight">
-                  {m.settings_turnstile_title()}
+                  {m.settings_challenge_title()}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {m.settings_turnstile_desc()}
+                  {m.settings_challenge_desc()}
                 </p>
               </div>
-              <TurnstileSettingsSection />
+              <ChallengeSettingsSection />
             </TabsContent>
 
             <TabsContent value="webhook" className="mt-0 space-y-10">

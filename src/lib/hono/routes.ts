@@ -15,9 +15,9 @@ import { createRateLimiterIdentifier, getExecutionContext } from "./helper";
 import {
   baseMiddleware,
   cacheMiddleware,
+  challengeMiddleware,
   rateLimitMiddleware,
   shieldMiddleware,
-  turnstileMiddleware,
 } from "./middlewares";
 
 export const app = new Hono<{ Bindings: Env }>();
@@ -103,7 +103,7 @@ protectedAuthPaths.forEach((path) => {
   app.post(
     path,
     baseMiddleware,
-    turnstileMiddleware,
+    challengeMiddleware,
     rateLimitMiddleware({
       capacity: 5,
       interval: "1m",

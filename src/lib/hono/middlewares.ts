@@ -1,9 +1,10 @@
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import {
-  getTurnstileConfig,
-  isTurnstileReady,
-} from "@/features/turnstile/service/turnstile.service";
+  getChallengeServerConfig,
+  isChallengeReady,
+  verifyAltchaSolutionPayload,
+} from "@/features/challenge/service/challenge.service";
 import { getAuth } from "@/lib/auth/auth.server";
 import { CACHE_CONTROL } from "@/lib/constants";
 import { getDb } from "@/lib/db";
@@ -166,18 +167,49 @@ export const shieldMiddleware = createMiddleware(async (c, next) => {
   return response;
 });
 
-/* ======================= Turnstile ====================== */
-export const turnstileMiddleware = createMiddleware<{ Bindings: Env }>(
+/* ======================= Challenge (Turnstile / ALTCHA PoW) ====================== */
+/**
+ * 人机验证中间件：
+ * - provider = "none" 或未就绪：跳过。
+ * - provider = "turnstile"：Turnstile token 通过即短路；失败/缺失时接受 ALTCHA PoW 兜底。
+ * - provider = "altcha"：只校验 X-Altcha-Solution。
+ */
+export const challengeMiddleware = createMiddleware<{ Bindings: Env }>(
   async (c, next) => {
-    const config = await getTurnstileConfig({
+    const config = await getChallengeServerConfig({
       db: c.get("db"),
       env: c.env,
       executionCtx: c.executionCtx,
     });
-    if (!isTurnstileReady(config)) return next(); // 未配置则跳过验证
+    if (!isChallengeReady(config)) return next();
 
-    const token = c.req.header("X-Turnstile-Token");
-    if (!token) {
+    const turnstileToken = c.req.header("X-Turnstile-Token");
+    const altchaSolution = c.req.header("X-Altcha-Solution");
+
+    if (config.provider === "turnstile") {
+      if (turnstileToken) {
+        const result = await verifyTurnstileToken({
+          secretKey: config.turnstile.secretKey,
+          token: turnstileToken,
+        });
+        if (result.success) return next(); // Turnstile 短路，跳过 PoW
+      }
+
+      if (altchaSolution) {
+        const verification = await verifyAltchaSolutionPayload(
+          c.env,
+          altchaSolution,
+        );
+        if (verification.ok) return next();
+        return c.json(
+          {
+            code: "CHALLENGE_VERIFICATION_FAILED",
+            message: "Challenge verification failed",
+          },
+          403,
+        );
+      }
+
       return c.json(
         {
           code: "TURNSTILE_MISSING_TOKEN",
@@ -187,21 +219,27 @@ export const turnstileMiddleware = createMiddleware<{ Bindings: Env }>(
       );
     }
 
-    const result = await verifyTurnstileToken({
-      secretKey: config.secretKey,
-      token,
-    });
-
-    if (!result.success) {
+    if (altchaSolution) {
+      const verification = await verifyAltchaSolutionPayload(
+        c.env,
+        altchaSolution,
+      );
+      if (verification.ok) return next();
       return c.json(
         {
-          code: "TURNSTILE_VERIFICATION_FAILED",
-          message: "Turnstile verification failed",
+          code: "CHALLENGE_VERIFICATION_FAILED",
+          message: "Challenge verification failed",
         },
         403,
       );
     }
 
-    return next();
+    return c.json(
+      {
+        code: "CHALLENGE_MISSING_TOKEN",
+        message: "Missing challenge token",
+      },
+      400,
+    );
   },
 );

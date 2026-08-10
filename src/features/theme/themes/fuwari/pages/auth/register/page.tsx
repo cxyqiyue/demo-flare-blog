@@ -5,12 +5,12 @@ import { m } from "@/paraglide/messages";
 
 export function RegisterPage({
   registerForm,
-  turnstileElement,
+  challengeElement,
 }: RegisterPageProps) {
-  const { register, errors, handleSubmit, isSubmitting, turnstilePending } =
+  const { register, errors, handleSubmit, isSubmitting, challengePending } =
     registerForm;
 
-  const isFormDisabled = isSubmitting || turnstilePending;
+  const isFormDisabled = isSubmitting || challengePending;
 
   if (registerForm.isSuccess) {
     return (
@@ -151,7 +151,7 @@ export function RegisterPage({
           </button>
         </form>
 
-        {turnstileElement}
+        {challengeElement}
 
         {/* Footer Link */}
         <div className="text-center pt-2">
