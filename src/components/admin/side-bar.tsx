@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Tag,
   User,
+  Users,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -95,6 +96,12 @@ export function SideBar({
       path: "/admin/comments",
       icon: MessageSquare,
       label: m.admin_sidebar_comments(),
+      exact: false,
+    },
+    {
+      path: "/admin/users",
+      icon: Users,
+      label: m.admin_sidebar_users(),
       exact: false,
     },
     {

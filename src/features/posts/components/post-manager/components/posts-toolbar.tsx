@@ -89,6 +89,7 @@ export function PostsToolbar({
                     ALL: m.admin_posts_filter_status(),
                     PUBLISHED: m.admin_posts_filter_published(),
                     DRAFT: m.admin_posts_filter_draft(),
+                    IN_PROGRESS: m.admin_posts_filter_in_progress(),
                   }[status]
                 }
               </span>
@@ -99,6 +100,7 @@ export function PostsToolbar({
               ALL: m.admin_posts_filter_all(),
               PUBLISHED: m.admin_posts_filter_published(),
               DRAFT: m.admin_posts_filter_draft(),
+              IN_PROGRESS: m.admin_posts_filter_in_progress(),
             }[s],
             onClick: () => onStatusChange(s),
             isActive: status === s,

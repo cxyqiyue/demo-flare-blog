@@ -75,6 +75,8 @@ declare global {
     session: Session;
   };
 
+  type AdminContext = AuthContext;
+
   const __APP_VERSION__: string;
   const __THEME_NAME__: ThemeName;
   const __THEME_CONFIG__: ThemeRouterConfig;

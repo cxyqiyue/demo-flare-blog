@@ -12,99 +12,129 @@ import {
 } from "@/features/webhook/webhook.schema";
 import type { Messages } from "@/lib/i18n";
 
-export const SystemConfigSchema = z.object({
-  email: z
+export const AI_BLOG_SKILL_TYPES = ["blog", "docs", "newsletter"] as const;
+export type AiBlogSkillType = (typeof AI_BLOG_SKILL_TYPES)[number];
+
+export const EmailConfigSchema = z.object({
+  apiKey: z.string().optional(),
+  host: z.string().optional(),
+  port: z.number().int().positive().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  senderName: z.string().optional(),
+  senderAddress: z.union([z.email(), z.literal("")]).optional(),
+});
+
+export const NotificationConfigSchema = z.object({
+  admin: z
     .object({
+      channels: z
+        .object({
+          email: z.boolean().optional(),
+          webhook: z.boolean().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  user: z
+    .object({
+      emailEnabled: z.boolean().optional(),
+    })
+    .optional(),
+  webhooks: z.array(webhookEndpointSchema).optional(),
+});
+
+export const AiConfigSchema = z.object({
+  provider: z.enum(["workers-ai", "openai-compatible", "agnes-ai"]).optional(),
+  blogSkillType: z.enum(AI_BLOG_SKILL_TYPES).optional(),
+  openaiCompatible: z
+    .object({
+      baseUrl: z.string().optional(),
       apiKey: z.string().optional(),
-      host: z.string().optional(),
-      port: z.number().int().positive().optional(),
-      username: z.string().optional(),
-      password: z.string().optional(),
-      senderName: z.string().optional(),
-      senderAddress: z.union([z.email(), z.literal("")]).optional(),
+      model: z.string().optional(),
     })
     .optional(),
-  notification: z
+  agnesAi: z
     .object({
-      admin: z
-        .object({
-          channels: z
-            .object({
-              email: z.boolean().optional(),
-              webhook: z.boolean().optional(),
-            })
-            .optional(),
-        })
-        .optional(),
-      user: z
-        .object({
-          emailEnabled: z.boolean().optional(),
-        })
-        .optional(),
-      webhooks: z.array(webhookEndpointSchema).optional(),
+      baseUrl: z.string().optional(),
+      apiKey: z.string().optional(),
+      model: z.string().optional(),
     })
     .optional(),
-  ai: z
+  writingInstructions: z.string().optional(),
+});
+
+export const ImageHostingConfigSchema = z.object({
+  imgbb: z
     .object({
-      provider: z
-        .enum(["workers-ai", "openai-compatible", "agnes-ai"])
-        .optional(),
-      openaiCompatible: z
-        .object({
-          baseUrl: z.string().optional(),
-          apiKey: z.string().optional(),
-          model: z.string().optional(),
-        })
-        .optional(),
-      agnesAi: z
-        .object({
-          baseUrl: z.string().optional(),
-          apiKey: z.string().optional(),
-          model: z.string().optional(),
-        })
-        .optional(),
-      writingInstructions: z.string().optional(),
+      commentEnabled: z.boolean().optional(),
+      articleEnabled: z.boolean().optional(),
+      apiKey: z.string().optional(),
     })
     .optional(),
-  imageHosting: z
+  ffsky: z
     .object({
-      imgbb: z
-        .object({
-          commentEnabled: z.boolean().optional(),
-          articleEnabled: z.boolean().optional(),
-          apiKey: z.string().optional(),
-        })
-        .optional(),
-      ffsky: z
-        .object({
-          articleEnabled: z.boolean().optional(),
-          apiKey: z.string().optional(),
-          apiEndpoint: z.string().optional(),
-        })
-        .optional(),
-      s3: z
-        .object({
-          commentEnabled: z.boolean().optional(),
-          articleEnabled: z.boolean().optional(),
-          provider: z.enum(S3_PROVIDERS).optional(),
-          endpoint: z.string().optional(),
-          bucket: z.string().optional(),
-          region: z.string().optional(),
-          accessKeyId: z.string().optional(),
-          secretAccessKey: z.string().optional(),
-          pathPrefix: z.string().optional(),
-          publicUrl: z.string().optional(),
-        })
-        .optional(),
+      articleEnabled: z.boolean().optional(),
+      apiKey: z.string().optional(),
+      apiEndpoint: z.string().optional(),
     })
     .optional(),
-  turnstile: z
+  s3: z
     .object({
-      enabled: z.boolean().optional(),
-      siteKey: z.string().optional(),
-      secretKey: z.string().optional(),
+      commentEnabled: z.boolean().optional(),
+      articleEnabled: z.boolean().optional(),
+      provider: z.enum(S3_PROVIDERS).optional(),
+      endpoint: z.string().optional(),
+      bucket: z.string().optional(),
+      region: z.string().optional(),
+      accessKeyId: z.string().optional(),
+      secretAccessKey: z.string().optional(),
+      pathPrefix: z.string().optional(),
+      publicUrl: z.string().optional(),
     })
     .optional(),
+});
+
+export const TurnstileConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  siteKey: z.string().optional(),
+  secretKey: z.string().optional(),
+});
+
+export const CONFIG_SECTIONS = [
+  "email",
+  "notification",
+  "ai",
+  "imageHosting",
+  "turnstile",
+  "site",
+] as const;
+export type ConfigSection = (typeof CONFIG_SECTIONS)[number];
+
+export const UpdateSystemConfigSectionInputSchema = z.discriminatedUnion(
+  "section",
+  [
+    z.object({ section: z.literal("email"), data: EmailConfigSchema }),
+    z.object({ section: z.literal("notification"), data: NotificationConfigSchema }),
+    z.object({ section: z.literal("ai"), data: AiConfigSchema }),
+    z.object({
+      section: z.literal("imageHosting"),
+      data: ImageHostingConfigSchema,
+    }),
+    z.object({ section: z.literal("turnstile"), data: TurnstileConfigSchema }),
+    z.object({ section: z.literal("site"), data: SiteConfigInputSchema }),
+  ],
+);
+export type UpdateSystemConfigSectionInput = z.infer<
+  typeof UpdateSystemConfigSectionInputSchema
+>;
+
+export const SystemConfigSchema = z.object({
+  email: EmailConfigSchema.optional(),
+  notification: NotificationConfigSchema.optional(),
+  ai: AiConfigSchema.optional(),
+  imageHosting: ImageHostingConfigSchema.optional(),
+  turnstile: TurnstileConfigSchema.optional(),
   site: SiteConfigInputSchema.optional(),
 });
 
@@ -153,6 +183,7 @@ export const DEFAULT_CONFIG: SystemConfig = {
   },
   ai: {
     provider: "workers-ai",
+    blogSkillType: "blog",
     openaiCompatible: {
       baseUrl: "",
       apiKey: "",

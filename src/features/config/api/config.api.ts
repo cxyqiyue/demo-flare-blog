@@ -1,7 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { parseSiteAssetUploadInput } from "@/features/config/config.asset.schema";
-import { SystemConfigSchema } from "@/features/config/config.schema";
+import {
+  SystemConfigSchema,
+  UpdateSystemConfigSectionInputSchema,
+} from "@/features/config/config.schema";
 import * as ConfigService from "@/features/config/service/config.service";
 import { adminMiddleware } from "@/lib/middlewares";
 import { m } from "@/paraglide/messages";
@@ -17,6 +20,15 @@ export const updateSystemConfigFn = createServerFn({
   .inputValidator(SystemConfigSchema)
   .handler(({ context, data }) =>
     ConfigService.updateSystemConfig(context, data),
+  );
+
+export const updateSystemConfigSectionFn = createServerFn({
+  method: "POST",
+})
+  .middleware([adminMiddleware])
+  .inputValidator(UpdateSystemConfigSectionInputSchema)
+  .handler(({ context, data }) =>
+    ConfigService.updateSystemConfigSection(context, data),
   );
 
 const SiteAssetUploadInputSchema = z.instanceof(FormData);

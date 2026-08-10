@@ -1,6 +1,10 @@
 import { blogConfig } from "@/blog.config";
 import * as CacheService from "@/features/cache/cache.service";
-import type { SiteConfig, SystemConfig } from "@/features/config/config.schema";
+import type {
+  SiteConfig,
+  SystemConfig,
+  UpdateSystemConfigSectionInput,
+} from "@/features/config/config.schema";
 import {
   CONFIG_CACHE_KEYS,
   DEFAULT_CONFIG,
@@ -223,6 +227,31 @@ export async function updateSystemConfig(
   await CacheService.deleteKey(context, CONFIG_CACHE_KEYS.system);
 
   if (hasSiteConfigChanged(currentConfig, nextConfig)) {
+    await purgeSiteCDNCache(context.env);
+  }
+
+  return { success: true };
+}
+
+export async function updateSystemConfigSection(
+  context: DbContext & { executionCtx: ExecutionContext },
+  input: UpdateSystemConfigSectionInput,
+) {
+  const currentConfig = resolveSystemConfig(
+    await ConfigRepo.getSystemConfig(context.db),
+  );
+  const nextConfig = resolveSystemConfig({
+    ...currentConfig,
+    [input.section]: input.data,
+  });
+
+  await ConfigRepo.upsertSystemConfig(context.db, nextConfig);
+  await CacheService.deleteKey(context, CONFIG_CACHE_KEYS.system);
+
+  if (
+    input.section === "site" &&
+    hasSiteConfigChanged(currentConfig, nextConfig)
+  ) {
     await purgeSiteCDNCache(context.env);
   }
 

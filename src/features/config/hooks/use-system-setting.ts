@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { updateSystemConfigFn } from "@/features/config/api/config.api";
+import {
+  updateSystemConfigFn,
+  updateSystemConfigSectionFn,
+} from "@/features/config/api/config.api";
 import { CONFIG_KEYS, systemConfigQuery } from "@/features/config/queries";
 
 export function useSystemSetting() {
@@ -17,9 +20,20 @@ export function useSystemSetting() {
     },
   });
 
+  const saveSectionMutation = useMutation({
+    mutationFn: updateSystemConfigSectionFn,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: CONFIG_KEYS.system }),
+        queryClient.invalidateQueries({ queryKey: CONFIG_KEYS.site }),
+      ]);
+    },
+  });
+
   return {
     settings: data,
     isLoading,
     saveSettings: saveMutation.mutateAsync,
+    saveSettingsSection: saveSectionMutation.mutateAsync,
   };
 }

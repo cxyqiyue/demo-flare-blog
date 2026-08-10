@@ -2,7 +2,10 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateText, Output, type LanguageModel } from "ai";
 import { createWorkersAI } from "workers-ai-provider";
 import { z } from "zod";
-import type { SystemConfig } from "@/features/config/config.schema";
+import type {
+  AiBlogSkillType,
+  SystemConfig,
+} from "@/features/config/config.schema";
 import * as ConfigService from "@/features/config/service/config.service";
 import { markdownToJsonContent } from "@/features/import-export/utils/markdown-parser";
 import { err, ok } from "@/lib/errors";
@@ -96,6 +99,24 @@ function buildSameLanguageDirective(options: {
 - ${options.outputDescription}必须与${options.sourceDescription}的主要语言保持一致。
 - 如果${options.sourceDescription}混合多种语言，优先使用占比最高、最主要的叙述语言；
 - 不要把${options.sourceDescription}翻译成另一种语言，也不要额外说明你选择了什么语言。`;
+}
+
+function buildSkillDirective(skill: AiBlogSkillType | undefined): string {
+  switch (skill) {
+    case "docs":
+      return `### 写作技能：技术文档
+- 以准确、严谨、面向说明的风格写作，术语保持一致。
+- 多用列表、表格与分步说明，突出可操作性。`;
+    case "newsletter":
+      return `### 写作技能：Newsletter
+- 以亲切、对话式的风格写作，像写给一位固定读者。
+- 使用短段落与直接称呼，开头点明主题，结尾自然收束。`;
+    case "blog":
+    default:
+      return `### 写作技能：博客文章
+- 以清晰、结构化、可读性强的风格写作，适合博客阅读。
+- 使用自然的小标题划分章节，段落短小，避免冗长从句。`;
+  }
 }
 
 export async function testAiConnection(
@@ -325,6 +346,8 @@ ${writingInstructions}
 `
     : "";
 
+  const skillBlock = buildSkillDirective(config?.ai?.blogSkillType);
+
   const result = await generateText({
     model,
     temperature: 0.5,
@@ -332,6 +355,7 @@ ${writingInstructions}
       {
         role: "system",
         content: `你是一名专业的博客文章作者。你要根据博主提供的大纲，生成一篇**结构完整、格式规范**的 Markdown 文章。
+${skillBlock}
 ${writingBlock}
 ### 输出格式硬性要求（违反即不合格）
 1. 只输出**纯 Markdown**，禁止任何包装：不要输出"好的""以下是文章"等前言，不要用 \`\`\` 代码块包裹整篇文章，不要输出任何结尾说明。

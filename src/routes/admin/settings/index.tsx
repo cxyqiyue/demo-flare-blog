@@ -23,7 +23,11 @@ import { useAiConnection } from "@/features/ai/hooks/use-ai-connection";
 import { MaintenanceSection } from "@/features/config/components/maintenance-section";
 import { SectionSkeleton } from "@/features/config/components/settings-skeleton";
 import { SiteSettingsSection } from "@/features/config/components/site-settings-section";
-import type { SystemConfig } from "@/features/config/config.schema";
+import type {
+  ConfigSection,
+  SystemConfig,
+  UpdateSystemConfigSectionInput,
+} from "@/features/config/config.schema";
 import {
   createSystemConfigFormSchema,
   DEFAULT_CONFIG,
@@ -55,13 +59,10 @@ export const Route = createFileRoute("/admin/settings/")({
 });
 
 function RouteComponent() {
-  const { settings, saveSettings, isLoading } = useSystemSetting();
+  const { settings, saveSettingsSection, isLoading } = useSystemSetting();
   const { testEmailConnection } = useEmailConnection();
   const { testAiConnection } = useAiConnection();
   const { testImageHostingConnection } = useImageHostingConnection();
-  const [activeTab, setActiveTab] = useState("site");
-  const formRef = useRef<HTMLFormElement>(null);
-  const hasMountedRef = useRef(false);
   const tabItems = [
     {
       value: "site",
@@ -104,6 +105,23 @@ function RouteComponent() {
       label: m.settings_tab_mcp(),
     },
   ] as const;
+  const [activeTab, setActiveTab] =
+    useState<(typeof tabItems)[number]["value"]>("site");
+  const formRef = useRef<HTMLFormElement>(null);
+  const hasMountedRef = useRef(false);
+
+  // Tabs that edit a config section are saved per-section. Tabs without a
+  // mapped section (maintenance, integrations) have no form to submit.
+  const TAB_SECTION: Partial<
+    Record<(typeof tabItems)[number]["value"], ConfigSection>
+  > = {
+    site: "site",
+    email: "email",
+    ai: "ai",
+    "image-hosting": "imageHosting",
+    turnstile: "turnstile",
+    webhook: "notification",
+  };
 
   const methods = useForm<SystemConfig>({
     resolver: zodResolver(createSystemConfigFormSchema(m)),
@@ -155,8 +173,20 @@ function RouteComponent() {
   const saveSucceededRef = useRef(false);
 
   const onSubmit = async (data: SystemConfig) => {
+    const section = TAB_SECTION[activeTab];
+    if (!section) {
+      reset(data);
+      saveSucceededRef.current = true;
+      return;
+    }
+
     try {
-      await saveSettings({ data });
+      await saveSettingsSection({
+        data: {
+          section,
+          data: data[section],
+        } as UpdateSystemConfigSectionInput,
+      });
       toast.success(m.settings_toast_save_success());
       // Reset dirty state with new values
       reset(data);
@@ -211,24 +241,28 @@ function RouteComponent() {
             </p>
           </div>
 
-          <Button
-            type="submit"
-            disabled={isSubmitting || !isDirty}
-            className="hidden sm:flex h-11 px-8 rounded-none bg-foreground text-background hover:bg-foreground/90 transition-all font-mono text-[11px] uppercase tracking-[0.2em] font-medium disabled:opacity-50 shadow-lg shadow-foreground/5"
-          >
-            {isSubmitting ? (
-              <Loader2 size={14} className="animate-spin mr-3" />
-            ) : (
-              <Check size={14} className="mr-3" />
-            )}
-            {isSubmitting ? m.settings_btn_saving() : m.settings_btn_save()}
-          </Button>
+          {TAB_SECTION[activeTab] && (
+            <Button
+              type="submit"
+              disabled={isSubmitting || !isDirty}
+              className="hidden sm:flex h-11 px-8 rounded-none bg-foreground text-background hover:bg-foreground/90 transition-all font-mono text-[11px] uppercase tracking-[0.2em] font-medium disabled:opacity-50 shadow-lg shadow-foreground/5"
+            >
+              {isSubmitting ? (
+                <Loader2 size={14} className="animate-spin mr-3" />
+              ) : (
+                <Check size={14} className="mr-3" />
+              )}
+              {isSubmitting ? m.settings_btn_saving() : m.settings_btn_save()}
+            </Button>
+          )}
         </div>
 
         {/* Main Content with Tabs */}
         <Tabs
           value={activeTab}
-          onValueChange={setActiveTab}
+          onValueChange={(value) =>
+            setActiveTab(value as (typeof tabItems)[number]["value"])
+          }
           className="flex flex-col lg:grid lg:grid-cols-[220px_1fr] gap-8 lg:gap-16 items-start"
         >
           <div className="sticky top-0 z-40 w-full self-start border-b border-border/20 bg-background/96 pt-0.5 pb-2 backdrop-blur-md shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)] lg:border-b-0 lg:bg-transparent lg:pt-0 lg:pb-0 lg:backdrop-blur-none lg:shadow-none">
@@ -374,7 +408,7 @@ function RouteComponent() {
         </Tabs>
 
         {/* Floating Action Button for Mobile */}
-        {isDirty && (
+        {isDirty && TAB_SECTION[activeTab] && (
           <div className="fixed bottom-8 right-6 z-50 sm:hidden animate-in fade-in zoom-in slide-in-from-bottom-10 duration-500">
             <Button
               type="submit"

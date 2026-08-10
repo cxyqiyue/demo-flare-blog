@@ -1,19 +1,12 @@
-import type { JSONContent } from "@tiptap/react";
-import type { Editor as TiptapEditor } from "@tiptap/react";
-import {
-  Check,
-  Loader2,
-  Sparkles,
-  Wand2,
-  X,
-  XCircle,
-} from "lucide-react";
+import type { JSONContent, Editor as TiptapEditor } from "@tiptap/react";
+import { Check, Loader2, Sparkles, Wand2, X, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { generateArticleFn } from "@/features/posts/api/posts.admin.api";
+import { ContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -36,6 +29,7 @@ export function AiArticlePanel({
   const [tone, setTone] = useState("");
   const [fillTitle, setFillTitle] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [viewMode, setViewMode] = useState<"preview" | "markdown">("preview");
   const [generated, setGenerated] = useState<{
     markdown: string;
     content: JSONContent;
@@ -63,12 +57,11 @@ export function AiArticlePanel({
       });
 
       setGenerated(result);
+      setViewMode("preview");
     } catch (error) {
       toast.error(m.editor_ai_generate_error(), {
         description:
-          error instanceof Error
-            ? error.message
-            : m.editor_ai_unknown_error(),
+          error instanceof Error ? error.message : m.editor_ai_unknown_error(),
       });
     } finally {
       setIsGenerating(false);
@@ -188,7 +181,10 @@ export function AiArticlePanel({
             </div>
 
             <div className="space-y-3 md:col-span-2">
-              <label htmlFor="ai-tone" className="text-sm text-muted-foreground">
+              <label
+                htmlFor="ai-tone"
+                className="text-sm text-muted-foreground"
+              >
                 {m.editor_ai_tone_label()}
               </label>
               <Input
@@ -228,20 +224,53 @@ export function AiArticlePanel({
           {generated && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
               <div className="flex items-center justify-between border-b border-border/30 pb-3">
-                <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
-                  {m.editor_ai_result_label()}
-                </p>
+                <div className="flex items-center gap-4">
+                  <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
+                    {m.editor_ai_result_label()}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("preview")}
+                      className={cn(
+                        "px-2 py-1 text-[9px] font-mono uppercase tracking-widest transition-colors",
+                        viewMode === "preview"
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {m.editor_ai_view_preview()}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("markdown")}
+                      className={cn(
+                        "px-2 py-1 text-[9px] font-mono uppercase tracking-widest transition-colors",
+                        viewMode === "markdown"
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {m.editor_ai_view_markdown()}
+                    </button>
+                  </div>
+                </div>
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-[10px] text-muted-foreground">
-                    {generated.markdown.length}{" "}
-                    {m.editor_ai_result_chars()}
+                    {generated.markdown.length} {m.editor_ai_result_chars()}
                   </span>
                 </div>
               </div>
 
-              <pre className="max-h-80 overflow-y-auto custom-scrollbar whitespace-pre-wrap break-words border border-border/20 bg-muted/10 p-4 text-xs leading-6 text-foreground/80">
-                {generated.markdown}
-              </pre>
+              {viewMode === "markdown" ? (
+                <pre className="max-h-80 overflow-y-auto custom-scrollbar whitespace-pre-wrap break-words border border-border/20 bg-muted/10 p-4 text-xs leading-6 text-foreground/80">
+                  {generated.markdown}
+                </pre>
+              ) : (
+                <div className="max-h-96 overflow-y-auto custom-scrollbar border border-border/20 bg-muted/5 px-6 py-6">
+                  <ContentRenderer content={generated.content} />
+                </div>
+              )}
 
               <label className="flex cursor-pointer items-center gap-3 py-2">
                 <input

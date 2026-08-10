@@ -17,7 +17,9 @@ import {
   makeExportImageRewriter,
 } from "@/features/import-export/utils/markdown-serializer";
 import { buildZip } from "@/features/import-export/utils/zip";
+import * as CommentRepo from "@/features/comments/data/comments.data";
 import { getFromR2 } from "@/features/media/data/media.storage";
+import * as PageviewRepo from "@/features/pageview/data/pageview.data";
 import * as PostRepo from "@/features/posts/data/posts.data";
 import { extractAllImageKeys } from "@/features/posts/utils/content";
 import { getDb } from "@/lib/db";
@@ -74,6 +76,15 @@ export class ExportWorkflow extends WorkflowEntrypoint<
       await step.do("build and upload export", async () => {
         const zipFiles: Record<string, Uint8Array | string> = {};
         const warnings: Array<string> = [];
+        const db = getDb(this.env);
+        const postIds = posts.map((p) => p.id);
+
+        // Fetch comments and view stats for the exported posts
+        const comments = await CommentRepo.getCommentsByPostIds(db, postIds);
+        const viewCounts = await PageviewRepo.getViewCountsBySlugs(
+          db,
+          posts.map((p) => p.slug),
+        );
 
         for (let i = 0; i < posts.length; i++) {
           const post = posts[i];
@@ -171,6 +182,42 @@ export class ExportWorkflow extends WorkflowEntrypoint<
             }),
           );
         }
+
+        // Add comments.json
+        zipFiles["comments.json"] = JSON.stringify(
+          comments.map((comment) => ({
+            id: comment.id,
+            postId: comment.postId,
+            rootId: comment.rootId,
+            replyToCommentId: comment.replyToCommentId,
+            status: comment.status,
+            aiReason: comment.aiReason,
+            userId: comment.userId,
+            user: comment.user
+              ? {
+                  id: comment.user.id,
+                  name: comment.user.name,
+                  email: comment.user.email,
+                }
+              : null,
+            content: comment.content,
+            createdAt: comment.createdAt.toISOString(),
+            updatedAt: comment.updatedAt.toISOString(),
+          })),
+          null,
+          2,
+        );
+
+        // Add stats.json (page view counts per post slug)
+        zipFiles["stats.json"] = JSON.stringify(
+          {
+            pageViews: Object.fromEntries(
+              posts.map((p) => [p.slug, viewCounts[p.slug] ?? 0]),
+            ),
+          },
+          null,
+          2,
+        );
 
         // Add tags.json
         const uniqueTagsMap = new Map<string, (typeof posts)[0]["tags"][0]>();

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, like, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, like, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { buildCommentWhereClause } from "@/features/comments/data/helper";
 import type { CommentStatus } from "@/lib/db/schema";
@@ -259,6 +259,39 @@ export async function getCommentsByUserId(
     .orderBy(desc(CommentsTable.createdAt))
     .limit(Math.min(limit, 100))
     .offset(offset);
+
+  return comments;
+}
+
+export async function getCommentsByPostIds(
+  db: DB,
+  postIds: number[],
+) {
+  if (postIds.length === 0) return [];
+
+  const comments = await db
+    .select({
+      id: CommentsTable.id,
+      content: CommentsTable.content,
+      rootId: CommentsTable.rootId,
+      replyToCommentId: CommentsTable.replyToCommentId,
+      status: CommentsTable.status,
+      aiReason: CommentsTable.aiReason,
+      postId: CommentsTable.postId,
+      momentId: CommentsTable.momentId,
+      userId: CommentsTable.userId,
+      createdAt: CommentsTable.createdAt,
+      updatedAt: CommentsTable.updatedAt,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+    })
+    .from(CommentsTable)
+    .leftJoin(user, eq(CommentsTable.userId, user.id))
+    .where(inArray(CommentsTable.postId, postIds))
+    .orderBy(asc(CommentsTable.createdAt), asc(CommentsTable.id));
 
   return comments;
 }

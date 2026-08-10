@@ -5,13 +5,17 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { TestAiConnectionInput } from "@/features/ai/ai.schema";
 import {
   AGNES_AI_ENDPOINTS,
   AI_PROVIDER_NAMES,
   type AiProviderName,
 } from "@/features/ai/ai.service";
-import type { TestAiConnectionInput } from "@/features/ai/ai.schema";
 import type { SystemConfig } from "@/features/config/config.schema";
+import {
+  AI_BLOG_SKILL_TYPES,
+  type AiBlogSkillType,
+} from "@/features/config/config.schema";
 import type { Result } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -19,7 +23,9 @@ import { m } from "@/paraglide/messages";
 type ConnectionStatus = "IDLE" | "TESTING" | "SUCCESS" | "ERROR";
 
 interface AiSettingsSectionProps {
-  testAiConnection: (options: { data: TestAiConnectionInput }) => Promise<
+  testAiConnection: (options: {
+    data: TestAiConnectionInput;
+  }) => Promise<
     Result<
       { success: boolean; echo: string },
       { reason: "AI_CONNECTION_FAILED"; message: string }
@@ -34,14 +40,14 @@ function providerLabel(name: AiProviderName): string {
 }
 
 function providerDescription(name: AiProviderName): string {
-  if (name === "workers-ai")
-    return m.settings_ai_provider_workers_ai_desc();
-  if (name === "agnes-ai")
-    return m.settings_ai_provider_agnes_ai_desc();
+  if (name === "workers-ai") return m.settings_ai_provider_workers_ai_desc();
+  if (name === "agnes-ai") return m.settings_ai_provider_agnes_ai_desc();
   return m.settings_ai_provider_openai_compatible_desc();
 }
 
-function agnesEndpointLabel(region: (typeof AGNES_AI_ENDPOINTS)[number]["region"]): string {
+function agnesEndpointLabel(
+  region: (typeof AGNES_AI_ENDPOINTS)[number]["region"],
+): string {
   if (region === "international") {
     return m.settings_ai_agnes_endpoint_international();
   }
@@ -49,6 +55,18 @@ function agnesEndpointLabel(region: (typeof AGNES_AI_ENDPOINTS)[number]["region"
     return m.settings_ai_agnes_endpoint_international_cn();
   }
   return m.settings_ai_agnes_endpoint_china();
+}
+
+function skillLabel(name: AiBlogSkillType): string {
+  if (name === "docs") return m.settings_ai_skill_docs();
+  if (name === "newsletter") return m.settings_ai_skill_newsletter();
+  return m.settings_ai_skill_blog();
+}
+
+function skillDescription(name: AiBlogSkillType): string {
+  if (name === "docs") return m.settings_ai_skill_docs_desc();
+  if (name === "newsletter") return m.settings_ai_skill_newsletter_desc();
+  return m.settings_ai_skill_blog_desc();
 }
 
 export function AiSettingsSection({
@@ -71,7 +89,8 @@ export function AiSettingsSection({
   const openai = aiConfig?.openaiCompatible;
   const agnes = aiConfig?.agnesAi;
 
-  const isOpenAiConfigured = !!openai?.baseUrl?.trim() && !!openai?.model?.trim();
+  const isOpenAiConfigured =
+    !!openai?.baseUrl?.trim() && !!openai?.model?.trim();
   const isAgnesConfigured = !!agnes?.baseUrl?.trim() && !!agnes?.model?.trim();
   const canTest = isOpenAiCompatible
     ? isOpenAiConfigured
@@ -175,6 +194,67 @@ export function AiSettingsSection({
                 </div>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Blog Writing Skill */}
+        <div className="space-y-8 p-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="rounded-sm bg-muted/40 p-2">
+                <PenLine size={16} className="text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <h5 className="text-sm font-medium text-foreground">
+                  {m.settings_ai_skill_title()}
+                </h5>
+                <p className="text-xs text-muted-foreground">
+                  {m.settings_ai_skill_desc()}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 px-2 md:grid-cols-3">
+            {AI_BLOG_SKILL_TYPES.map((name) => {
+              const isActive = aiConfig?.blogSkillType === name;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => {
+                    setValue("ai.blogSkillType", name, {
+                      shouldDirty: true,
+                      shouldTouch: true,
+                      shouldValidate: true,
+                    });
+                  }}
+                  className={cn(
+                    "flex items-start gap-3 border p-4 text-left transition-all",
+                    isActive
+                      ? "border-foreground bg-muted/20"
+                      : "border-border/30 hover:border-border/60",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "mt-1 h-3 w-3 shrink-0 rounded-full border",
+                      isActive
+                        ? "border-foreground bg-foreground"
+                        : "border-border/60",
+                    )}
+                  />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {skillLabel(name)}
+                    </p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {skillDescription(name)}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -293,15 +373,11 @@ export function AiSettingsSection({
                     key={endpoint.value}
                     type="button"
                     onClick={() => {
-                      setValue(
-                        "ai.agnesAi.baseUrl",
-                        endpoint.value,
-                        {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                          shouldValidate: true,
-                        },
-                      );
+                      setValue("ai.agnesAi.baseUrl", endpoint.value, {
+                        shouldDirty: true,
+                        shouldTouch: true,
+                        shouldValidate: true,
+                      });
                       setStatus("IDLE");
                     }}
                     className={cn(
