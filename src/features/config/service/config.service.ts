@@ -91,9 +91,15 @@ export function resolveSystemConfig(
         ...config?.imageHosting?.s3,
       },
     },
-    turnstile: {
-      ...DEFAULT_CONFIG.turnstile,
-      ...config?.turnstile,
+    challenge: {
+      pow: {
+        ...DEFAULT_CONFIG.challenge?.pow,
+        ...config?.challenge?.pow,
+      },
+      turnstile: {
+        ...DEFAULT_CONFIG.challenge?.turnstile,
+        ...config?.challenge?.turnstile,
+      },
     },
     site: resolveSiteConfig(config),
   };

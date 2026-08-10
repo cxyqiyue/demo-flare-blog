@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
+  BookOpenCheck,
   FileText,
   Image as ImageIcon,
   LayoutDashboard,
@@ -84,6 +85,12 @@ export function SideBar({
       path: "/admin/tags",
       icon: Tag,
       label: m.admin_sidebar_tags(),
+      exact: false,
+    },
+    {
+      path: "/admin/skills",
+      icon: BookOpenCheck,
+      label: m.admin_sidebar_skills(),
       exact: false,
     },
     {

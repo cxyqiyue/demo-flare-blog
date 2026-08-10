@@ -410,7 +410,10 @@ export const FriendLinkModerationTable = ({
           currentPageItemCount={response.items.length}
           onPageChange={(newPage) =>
             navigate({
-              search: (prev) => ({ ...prev, page: newPage }),
+              search: ((prev: Record<string, unknown>) => ({
+                ...prev,
+                page: newPage,
+              })) as never,
             })
           }
         />

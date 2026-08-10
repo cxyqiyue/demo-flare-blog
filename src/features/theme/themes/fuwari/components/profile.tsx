@@ -3,6 +3,7 @@ import {
   resolveSocialHref,
   SOCIAL_PLATFORMS,
 } from "@/features/config/utils/social-platforms";
+import type { SiteConfig } from "@/features/config/site-config.schema";
 import { m } from "@/paraglide/messages";
 
 export function Profile() {
@@ -35,8 +36,8 @@ export function Profile() {
         </div>
         <div className="flex flex-wrap gap-2 justify-center">
           {siteConfig.social
-            .filter((link) => link.url)
-            .map((link, i) => {
+            .filter((link: SiteConfig["social"][number]) => link.url)
+            .map((link: SiteConfig["social"][number], i: number) => {
               const preset =
                 link.platform !== "custom"
                   ? SOCIAL_PLATFORMS[link.platform]

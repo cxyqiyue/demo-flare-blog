@@ -45,7 +45,7 @@ function CommentAdminPage() {
     const timer = setTimeout(() => {
       if (searchInput !== userName) {
         navigate({
-          search: (prev) => ({
+          search: (prev: ReturnType<typeof Route.useSearch>) => ({
             ...prev,
             userName: searchInput || undefined,
             page: 1, // Reset page on search
@@ -59,7 +59,7 @@ function CommentAdminPage() {
 
   const handleStatusChange = (newStatus: string) => {
     navigate({
-      search: (prev) => ({
+      search: (prev: ReturnType<typeof Route.useSearch>) => ({
         ...prev,
         status: newStatus as CommentStatus | "ALL",
         page: 1,

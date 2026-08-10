@@ -32,6 +32,7 @@ import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-pa
 import { Route as AdminPostsRouteRouteImport } from './routes/admin/posts/route'
 import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
 import { Route as AdminTagsIndexRouteImport } from './routes/admin/tags/index'
+import { Route as AdminSkillsIndexRouteImport } from './routes/admin/skills/index'
 import { Route as AdminSettingsIndexRouteImport } from './routes/admin/settings/index'
 import { Route as AdminPostsIndexRouteImport } from './routes/admin/posts/index'
 import { Route as AdminMediaIndexRouteImport } from './routes/admin/media/index'
@@ -152,6 +153,11 @@ const AdminTagsIndexRoute = AdminTagsIndexRouteImport.update({
   path: '/tags/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminSkillsIndexRoute = AdminSkillsIndexRouteImport.update({
+  id: '/skills/',
+  path: '/skills/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminSettingsIndexRoute = AdminSettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/admin/media/': typeof AdminMediaIndexRoute
   '/admin/posts/': typeof AdminPostsIndexRoute
   '/admin/settings/': typeof AdminSettingsIndexRoute
+  '/admin/skills/': typeof AdminSkillsIndexRoute
   '/admin/tags/': typeof AdminTagsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
   '/admin/posts/edit/$id': typeof AdminPostsEditIdRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByTo {
   '/admin/media': typeof AdminMediaIndexRoute
   '/admin/posts': typeof AdminPostsIndexRoute
   '/admin/settings': typeof AdminSettingsIndexRoute
+  '/admin/skills': typeof AdminSkillsIndexRoute
   '/admin/tags': typeof AdminTagsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
   '/admin/posts/edit/$id': typeof AdminPostsEditIdRoute
@@ -273,6 +281,7 @@ export interface FileRoutesById {
   '/admin/media/': typeof AdminMediaIndexRoute
   '/admin/posts/': typeof AdminPostsIndexRoute
   '/admin/settings/': typeof AdminSettingsIndexRoute
+  '/admin/skills/': typeof AdminSkillsIndexRoute
   '/admin/tags/': typeof AdminTagsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
   '/admin/posts/edit/$id': typeof AdminPostsEditIdRoute
@@ -304,6 +313,7 @@ export interface FileRouteTypes {
     | '/admin/media/'
     | '/admin/posts/'
     | '/admin/settings/'
+    | '/admin/skills/'
     | '/admin/tags/'
     | '/admin/users/'
     | '/admin/posts/edit/$id'
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/admin/media'
     | '/admin/posts'
     | '/admin/settings'
+    | '/admin/skills'
     | '/admin/tags'
     | '/admin/users'
     | '/admin/posts/edit/$id'
@@ -363,6 +374,7 @@ export interface FileRouteTypes {
     | '/admin/media/'
     | '/admin/posts/'
     | '/admin/settings/'
+    | '/admin/skills/'
     | '/admin/tags/'
     | '/admin/users/'
     | '/admin/posts/edit/$id'
@@ -539,6 +551,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTagsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/skills/': {
+      id: '/admin/skills/'
+      path: '/skills'
+      fullPath: '/admin/skills/'
+      preLoaderRoute: typeof AdminSkillsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/settings/': {
       id: '/admin/settings/'
       path: '/settings'
@@ -672,6 +691,7 @@ interface AdminRouteRouteChildren {
   AdminFriendLinksIndexRoute: typeof AdminFriendLinksIndexRoute
   AdminMediaIndexRoute: typeof AdminMediaIndexRoute
   AdminSettingsIndexRoute: typeof AdminSettingsIndexRoute
+  AdminSkillsIndexRoute: typeof AdminSkillsIndexRoute
   AdminTagsIndexRoute: typeof AdminTagsIndexRoute
   AdminUsersIndexRoute: typeof AdminUsersIndexRoute
 }
@@ -683,6 +703,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminFriendLinksIndexRoute: AdminFriendLinksIndexRoute,
   AdminMediaIndexRoute: AdminMediaIndexRoute,
   AdminSettingsIndexRoute: AdminSettingsIndexRoute,
+  AdminSkillsIndexRoute: AdminSkillsIndexRoute,
   AdminTagsIndexRoute: AdminTagsIndexRoute,
   AdminUsersIndexRoute: AdminUsersIndexRoute,
 }

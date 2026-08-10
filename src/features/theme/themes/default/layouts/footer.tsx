@@ -3,6 +3,7 @@ import {
   resolveSocialHref,
   SOCIAL_PLATFORMS,
 } from "@/features/config/utils/social-platforms";
+import type { SiteConfig } from "@/features/config/site-config.schema";
 import type { NavOption } from "@/features/theme/contract/layouts";
 import { m } from "@/paraglide/messages";
 
@@ -43,8 +44,8 @@ export function Footer({ navOptions }: FooterProps) {
             </Link>
           ))}
           {siteConfig.social
-            .filter((link) => link.url)
-            .map((link, i) => {
+            .filter((link: SiteConfig["social"][number]) => link.url)
+            .map((link: SiteConfig["social"][number], i: number) => {
               const href = resolveSocialHref(link.platform, link.url);
               const label =
                 link.platform !== "custom"

@@ -101,12 +101,22 @@ export const TurnstileConfigSchema = z.object({
   secretKey: z.string().optional(),
 });
 
+export const PowConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  difficulty: z.number().int().min(10000).max(1000000).optional(),
+});
+
+export const ChallengeConfigSchema = z.object({
+  pow: PowConfigSchema.optional(),
+  turnstile: TurnstileConfigSchema.optional(),
+});
+
 export const CONFIG_SECTIONS = [
   "email",
   "notification",
   "ai",
   "imageHosting",
-  "turnstile",
+  "challenge",
   "site",
 ] as const;
 export type ConfigSection = (typeof CONFIG_SECTIONS)[number];
@@ -121,7 +131,7 @@ export const UpdateSystemConfigSectionInputSchema = z.discriminatedUnion(
       section: z.literal("imageHosting"),
       data: ImageHostingConfigSchema,
     }),
-    z.object({ section: z.literal("turnstile"), data: TurnstileConfigSchema }),
+    z.object({ section: z.literal("challenge"), data: ChallengeConfigSchema }),
     z.object({ section: z.literal("site"), data: SiteConfigInputSchema }),
   ],
 );
@@ -134,7 +144,7 @@ export const SystemConfigSchema = z.object({
   notification: NotificationConfigSchema.optional(),
   ai: AiConfigSchema.optional(),
   imageHosting: ImageHostingConfigSchema.optional(),
-  turnstile: TurnstileConfigSchema.optional(),
+  challenge: ChallengeConfigSchema.optional(),
   site: SiteConfigInputSchema.optional(),
 });
 
@@ -150,7 +160,7 @@ export const createSystemConfigFormSchema = (messages: Messages) =>
       .optional(),
     ai: SystemConfigSchema.shape.ai,
     imageHosting: SystemConfigSchema.shape.imageHosting,
-    turnstile: SystemConfigSchema.shape.turnstile,
+    challenge: SystemConfigSchema.shape.challenge,
     site: createSiteConfigInputFormSchema(messages).optional(),
   });
 
@@ -220,10 +230,16 @@ export const DEFAULT_CONFIG: SystemConfig = {
       publicUrl: "",
     },
   },
-  turnstile: {
-    enabled: false,
-    siteKey: "",
-    secretKey: "",
+  challenge: {
+    pow: {
+      enabled: false,
+      difficulty: 10000,
+    },
+    turnstile: {
+      enabled: false,
+      siteKey: "",
+      secretKey: "",
+    },
   },
   site: blogConfig satisfies SiteConfigInput,
 };

@@ -5,6 +5,7 @@ import {
   resolveSocialHref,
   SOCIAL_PLATFORMS,
 } from "@/features/config/utils/social-platforms";
+import type { SiteConfig } from "@/features/config/site-config.schema";
 import { useViewCounts } from "@/features/pageview/queries";
 import type { HomePageProps } from "@/features/theme/contract/pages";
 import { PostItem } from "@/features/theme/themes/default/components/post-item";
@@ -58,8 +59,8 @@ export function HomePage({ posts, pinnedPosts }: HomePageProps) {
 
         <div className="flex items-center gap-6 text-muted-foreground">
           {siteConfig.social
-            .filter((link) => link.url)
-            .map((link, i) => {
+            .filter((link: SiteConfig["social"][number]) => link.url)
+            .map((link: SiteConfig["social"][number], i: number) => {
               const preset =
                 link.platform !== "custom"
                   ? SOCIAL_PLATFORMS[link.platform]

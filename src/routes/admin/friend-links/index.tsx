@@ -42,7 +42,7 @@ function FriendLinksAdminPage() {
 
   const handleStatusChange = (newStatus: string) => {
     navigate({
-      search: (prev) => ({
+      search: (prev: ReturnType<typeof Route.useSearch>) => ({
         ...prev,
         status: newStatus as FriendLinkStatus | "ALL",
         page: 1,

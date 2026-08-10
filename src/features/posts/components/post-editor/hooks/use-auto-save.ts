@@ -41,6 +41,7 @@ export function useAutoSave({
     publishedAt: number | null;
     pinnedAt: number | null;
     tagIds: string; // Serialize for easy comparison
+    skillId: number | null;
     contentRef: PostEditorData["contentJson"];
   } | null>(null);
   // Store onSave in ref to avoid effect re-running when onSave reference changes
@@ -56,6 +57,7 @@ export function useAutoSave({
     publishedAt: p.publishedAt ? p.publishedAt.valueOf() : null,
     pinnedAt: p.pinnedAt ? p.pinnedAt.valueOf() : null,
     tagIds: [...p.tagIds].sort().join(","),
+    skillId: p.skillId,
     contentRef: p.contentJson,
   });
 
@@ -71,6 +73,7 @@ export function useAutoSave({
       prev.publishedAt !== curr.publishedAt ||
       prev.pinnedAt !== curr.pinnedAt ||
       prev.tagIds !== curr.tagIds ||
+      prev.skillId !== curr.skillId ||
       prev.contentRef !== curr.contentRef
     );
   };

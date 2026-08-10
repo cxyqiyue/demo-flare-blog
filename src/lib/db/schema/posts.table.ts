@@ -8,6 +8,7 @@ import {
   text,
 } from "drizzle-orm/sqlite-core";
 import { createdAt, id, updatedAt } from "./helper";
+import { SkillsTable } from "./skills.table";
 
 export const POST_STATUSES = ["draft", "published"] as const;
 
@@ -27,6 +28,9 @@ export const PostsTable = sqliteTable(
     status: text("status", { enum: POST_STATUSES }).notNull().default("draft"),
     publishedAt: integer("published_at", { mode: "timestamp" }),
     pinnedAt: integer("pinned_at", { mode: "timestamp" }),
+    skillId: integer("skill_id").references(() => SkillsTable.id, {
+      onDelete: "set null",
+    }),
     createdAt,
     updatedAt,
   },
@@ -59,8 +63,12 @@ export const PostTagsTable = sqliteTable(
 );
 
 // ==================== relations ====================
-export const postsRelations = relations(PostsTable, ({ many }) => ({
+export const postsRelations = relations(PostsTable, ({ many, one }) => ({
   postTags: many(PostTagsTable),
+  skill: one(SkillsTable, {
+    fields: [PostsTable.skillId],
+    references: [SkillsTable.id],
+  }),
 }));
 
 export const tagsRelations = relations(TagsTable, ({ many }) => ({

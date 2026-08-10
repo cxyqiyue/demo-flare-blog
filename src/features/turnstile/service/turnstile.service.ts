@@ -15,7 +15,7 @@ export async function getTurnstileConfig(
   context: DbContext & { executionCtx: ExecutionContext },
 ): Promise<TurnstileServerConfig> {
   const config = await ConfigService.getSystemConfig(context);
-  const turnstile = config.turnstile;
+  const turnstile = config.challenge?.turnstile;
   return {
     enabled: !!turnstile?.enabled,
     siteKey: turnstile?.siteKey?.trim() ?? "",

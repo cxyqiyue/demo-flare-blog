@@ -39,7 +39,7 @@ function UsersAdminPage() {
     const timer = setTimeout(() => {
       if (searchInput !== search) {
         navigate({
-          search: (prev) => ({
+          search: (prev: ReturnType<typeof Route.useSearch>) => ({
             ...prev,
             search: searchInput || undefined,
             page: 1, // Reset page on search

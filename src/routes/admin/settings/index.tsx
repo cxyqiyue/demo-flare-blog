@@ -85,7 +85,7 @@ function RouteComponent() {
       label: m.settings_tab_image_hosting(),
     },
     {
-      value: "turnstile",
+      value: "challenge",
       icon: ShieldCheck,
       label: m.settings_tab_turnstile(),
     },
@@ -119,7 +119,7 @@ function RouteComponent() {
     email: "email",
     ai: "ai",
     "image-hosting": "imageHosting",
-    turnstile: "turnstile",
+    challenge: "challenge",
     webhook: "notification",
   };
 
@@ -369,7 +369,7 @@ function RouteComponent() {
               />
             </TabsContent>
 
-            <TabsContent value="turnstile" className="mt-0 space-y-10">
+            <TabsContent value="challenge" className="mt-0 space-y-10">
               <div className="space-y-2 pb-6 border-b border-border/30">
                 <h2 className="text-2xl font-serif font-medium tracking-tight">
                   {m.settings_turnstile_title()}

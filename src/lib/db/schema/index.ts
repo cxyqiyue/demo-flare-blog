@@ -7,3 +7,4 @@ export * from "./moments.table";
 export * from "./page-views.table";
 export * from "./post-revisions.table";
 export * from "./posts.table";
+export * from "./skills.table";

@@ -44,7 +44,7 @@ export const Route = createFileRoute("/admin/")({
   ssr: "data-only",
   component: DashboardOverview,
   pendingComponent: DashboardSkeleton,
-  validateSearch: (search) => SearchSchema.parse(search),
+  validateSearch: SearchSchema,
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(dashboardStatsQuery);
     return { title: m.admin_overview_title() };
@@ -59,7 +59,7 @@ export const Route = createFileRoute("/admin/")({
 });
 
 function DashboardOverview() {
-  const { range = "24h" } = Route.useSearch();
+  const { range = "24h" }: { range?: DashboardRange } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const queryClient = useQueryClient();
   const { data, isFetching } = useSuspenseQuery(dashboardStatsQuery);
@@ -111,7 +111,7 @@ function DashboardOverview() {
             value={range}
             onValueChange={(val) =>
               navigate({
-                search: (prev) => ({
+                search: (prev: ReturnType<typeof Route.useSearch>) => ({
                   ...prev,
                   range: val as DashboardRange,
                 }),

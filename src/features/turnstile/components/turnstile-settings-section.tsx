@@ -8,7 +8,7 @@ import { m } from "@/paraglide/messages";
 export function TurnstileSettingsSection() {
   const { register, setValue, watch } = useFormContext<SystemConfig>();
 
-  const enabled = watch("turnstile.enabled") ?? false;
+  const enabled = watch("challenge.turnstile.enabled") ?? false;
 
   const inputClassName =
     "w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10";
@@ -22,7 +22,7 @@ export function TurnstileSettingsSection() {
             <Checkbox
               checked={enabled}
               onCheckedChange={(checked) =>
-                setValue("turnstile.enabled", !!checked, {
+                setValue("challenge.turnstile.enabled", !!checked, {
                   shouldDirty: true,
                   shouldTouch: true,
                   shouldValidate: true,
@@ -77,7 +77,7 @@ export function TurnstileSettingsSection() {
               <Input
                 id="turnstile-site-key"
                 placeholder={m.settings_turnstile_field_site_key_ph()}
-                {...register("turnstile.siteKey")}
+                {...register("challenge.turnstile.siteKey")}
                 className={inputClassName}
               />
             </div>
@@ -95,7 +95,7 @@ export function TurnstileSettingsSection() {
                 id="turnstile-secret-key"
                 type="password"
                 placeholder={m.settings_turnstile_field_secret_key_ph()}
-                {...register("turnstile.secretKey")}
+                {...register("challenge.turnstile.secretKey")}
                 className={inputClassName}
               />
               <KeyRound

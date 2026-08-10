@@ -40,7 +40,7 @@ const consentSearchSchema = z.object({
 });
 
 export const Route = createFileRoute("/oauth/consent")({
-  validateSearch: (search) => consentSearchSchema.parse(search),
+  validateSearch: consentSearchSchema,
   beforeLoad: async ({ context, location }) => {
     const session = await context.queryClient.ensureQueryData(sessionQuery);
 
@@ -70,7 +70,11 @@ export const Route = createFileRoute("/oauth/consent")({
 });
 
 function RouteComponent() {
-  const search = Route.useSearch();
+  const search: {
+    client_id?: string;
+    redirect_uri?: string;
+    scope?: string;
+  } = Route.useSearch();
   const [isPending, setIsPending] = useState(false);
   const [completedRedirectUrl, setCompletedRedirectUrl] = useState<
     string | null

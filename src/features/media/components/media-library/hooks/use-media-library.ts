@@ -28,14 +28,14 @@ export function useMediaLibrary() {
   // Search Param Handlers
   const setSearchQuery = (term: string) => {
     navigate({
-      search: (prev) => ({ ...prev, search: term }),
+      search: { search: term, unused },
       replace: true,
     });
   };
 
   const setUnusedOnly = (val: boolean) => {
     navigate({
-      search: (prev) => ({ ...prev, unused: val }),
+      search: { search, unused: val },
     });
   };
 

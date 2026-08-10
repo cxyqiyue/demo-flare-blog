@@ -11,6 +11,7 @@ export interface PostEditorData {
   publishedAt: Date | null;
   pinnedAt: Date | null;
   tagIds: Array<number>;
+  skillId: number | null;
   isSynced: boolean;
   hasPublicCache: boolean;
 }
@@ -32,6 +33,7 @@ export const defaultPostData: PostEditorData = {
   publishedAt: null,
   pinnedAt: null,
   tagIds: [],
+  skillId: null,
   isSynced: true,
   hasPublicCache: false,
 };

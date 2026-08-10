@@ -15,7 +15,7 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/_public/search")({
-  validateSearch: (search) => searchSchema.parse(search),
+  validateSearch: searchSchema,
   component: SearchRoute,
   loader: () => {
     return {
@@ -50,10 +50,7 @@ function SearchRoute() {
   useEffect(() => {
     if (debouncedQuery !== (search.q || "")) {
       navigate({
-        search: (prev) => ({
-          ...prev,
-          q: debouncedQuery || undefined,
-        }),
+        search: { q: debouncedQuery || undefined },
         replace: true,
       });
     }
