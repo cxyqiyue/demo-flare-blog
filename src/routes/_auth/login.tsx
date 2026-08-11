@@ -32,9 +32,7 @@ function RouteComponent() {
   const location = useLocation();
   const challenge = useChallenge({ action: "login", config: challengeConfig });
 
-  const currentSearchParams = new URLSearchParams(
-    new URL(location.href, window.location.origin).search,
-  );
+  const currentSearchParams = new URLSearchParams(location.searchStr);
   const isOAuthAuthorizationRequest =
     !!currentSearchParams.get("client_id") &&
     !!currentSearchParams.get("response_type");

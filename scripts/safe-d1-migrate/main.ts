@@ -182,11 +182,15 @@ function formatCommand(args: Array<string>) {
 function runWrangler(args: Array<string>) {
   console.log(`$ ${formatCommand(args)}`);
 
-  const result = spawnSync("bunx", ["wrangler", ...args], {
-    cwd,
-    env: wranglerEnv(),
-    encoding: "utf8",
-  });
+  const result = spawnSync(
+    process.platform === "win32" ? "bunx.cmd" : "bunx",
+    ["wrangler", ...args],
+    {
+      cwd,
+      env: wranglerEnv(),
+      encoding: "utf8",
+    },
+  );
 
   const stdout = result.stdout.trim();
   const stderr = result.stderr.trim();
