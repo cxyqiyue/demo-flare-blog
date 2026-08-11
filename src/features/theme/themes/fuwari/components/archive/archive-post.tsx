@@ -40,7 +40,7 @@ export function ArchivePost({ post }: ArchivePostProps) {
         <div
           className="w-[70%] md:max-w-[65%] md:w-[65%] text-left font-bold
             group-hover:translate-x-1 transition-all group-hover:text-(--fuwari-primary)
-            fuwari-text-75 pr-8 whitespace-nowrap overflow-ellipsis overflow-hidden"
+            fuwari-text-75 pr-0 md:pr-8 whitespace-nowrap overflow-ellipsis overflow-hidden"
         >
           {post.title}
         </div>

@@ -51,7 +51,7 @@ export function PostMeta({ post, className }: PostMetaProps) {
         <div className="fuwari-meta-icon">
           <Tag strokeWidth={1.5} size={20} />
         </div>
-        <div className="flex flex-row flex-nowrap items-center gap-x-1.5">
+        <div className="flex flex-row flex-wrap items-center gap-x-1.5">
           {post.tags && post.tags.length > 0 ? (
             post.tags.map((tag, i) => (
               <span key={tag.name} className="flex items-center">

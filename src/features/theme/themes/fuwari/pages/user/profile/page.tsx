@@ -43,8 +43,8 @@ export function ProfilePage({
         <h1 className="text-2xl font-bold fuwari-text-90 mb-2 transition-colors">
           {user.name}
         </h1>
-        <div className="flex items-center gap-2 text-(--fuwari-btn-content) text-sm font-medium transition-colors">
-          <span>{user.email}</span>
+        <div className="flex flex-wrap items-center justify-center gap-2 text-(--fuwari-btn-content) text-sm font-medium transition-colors">
+          <span className="break-all">{user.email}</span>
           <span className="w-1 h-1 rounded-full bg-(--fuwari-meta-divider)" />
           <span className="uppercase tracking-wider text-xs px-2 py-0.5 rounded-md bg-(--fuwari-btn-regular-bg)">
             {user.role === "admin"

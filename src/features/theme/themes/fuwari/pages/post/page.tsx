@@ -22,8 +22,8 @@ export function PostPage({ post }: PostPageProps) {
       <div
         className="hidden 2xl:block absolute top-0 h-full pl-4"
         style={{
-          right: "calc(var(--fuwari-toc-width) * -1)",
-          width: "var(--fuwari-toc-width)",
+          right: "max(calc(var(--fuwari-toc-width) * -1), 1rem)",
+          width: "max(var(--fuwari-toc-width), 0px)",
         }}
       >
         <TableOfContents headers={post.toc} />

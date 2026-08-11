@@ -37,7 +37,7 @@ export function MobileMenu({
 
       {/* Content Container */}
       <div
-        className={`relative h-full w-full flex flex-col p-8 md:p-20 transition-all duration-500 delay-75 ${
+        className={`relative h-full w-full flex flex-col p-8 md:p-20 overflow-y-auto transition-all duration-500 delay-75 ${
           isOpen ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
         }`}
       >

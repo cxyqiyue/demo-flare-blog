@@ -56,6 +56,13 @@ export function renderReact(content: JSONContent) {
             />
           );
         },
+        table: ({ children }) => (
+          <div className="overflow-x-auto">
+            <table className="w-max min-w-full" style={{ tableLayout: "auto" }}>
+              {children}
+            </table>
+          </div>
+        ),
         tableCell: ({ node, children }) => {
           const attrs = node.attrs as {
             colspan?: number;

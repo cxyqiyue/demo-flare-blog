@@ -33,7 +33,7 @@ export function Footer({ navOptions }: FooterProps) {
         </div>
 
         {/* Minimalist Links */}
-        <nav className="flex items-center gap-8 text-[11px] font-medium uppercase tracking-widest text-muted-foreground/60">
+        <nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[11px] font-medium uppercase tracking-widest text-muted-foreground/60">
           {navOptions.map((option) => (
             <Link
               key={option.id}

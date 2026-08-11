@@ -82,7 +82,8 @@
   }
 
   :not(pre) > code {
-    @apply bg-(--fuwari-inline-code-bg) text-(--fuwari-inline-code-color) px-1 py-0.5 rounded-md overflow-hidden;
+    @apply bg-(--fuwari-inline-code-bg) text-(--fuwari-inline-code-color) px-1 py-0.5 rounded-md;
+    overflow-wrap: anywhere;
   }
 
   code {

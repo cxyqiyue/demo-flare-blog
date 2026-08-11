@@ -44,7 +44,7 @@ export function PostEditorHeader({
         <Breadcrumbs />
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-6 shrink-0">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"

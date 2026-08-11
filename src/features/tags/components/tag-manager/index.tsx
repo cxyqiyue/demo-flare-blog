@@ -135,7 +135,7 @@ export function TagManager() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="relative group w-full md:w-64">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors"

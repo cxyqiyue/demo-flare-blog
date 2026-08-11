@@ -141,7 +141,7 @@ export function SkillManager() {
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="relative group w-full md:w-64">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-foreground transition-colors"
@@ -187,7 +187,7 @@ export function SkillManager() {
       {/* Create Row */}
       {isCreating && (
         <div className="space-y-3 border border-border/30 bg-muted/5 p-4 animate-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <span className="text-sm font-mono text-emerald-500 font-bold">
               {">"}
             </span>

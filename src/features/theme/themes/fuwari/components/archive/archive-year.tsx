@@ -8,7 +8,7 @@ interface ArchiveYearProps {
 export function ArchiveYear({ year, count }: ArchiveYearProps) {
   return (
     <div className="flex flex-row w-full items-center h-15">
-      <div className="w-[15%] md:w-[10%] transition text-2xl font-bold text-right fuwari-text-75">
+      <div className="w-[15%] md:w-[10%] transition text-xl md:text-2xl font-bold text-right fuwari-text-75 whitespace-nowrap">
         {year}
       </div>
       <div className="w-[15%] md:w-[10%]">

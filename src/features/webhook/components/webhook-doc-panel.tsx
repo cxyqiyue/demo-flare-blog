@@ -186,7 +186,7 @@ X-Flare-Signature: sha256=...`}
                   </summary>
 
                   <div className="space-y-4 border-t border-border/20 px-4 py-4">
-                    <div className="overflow-hidden border border-border/20">
+                    <div className="overflow-x-auto border border-border/20">
                       <table className="w-full border-collapse text-left text-xs">
                         <thead className="bg-muted/20 text-muted-foreground">
                           <tr>

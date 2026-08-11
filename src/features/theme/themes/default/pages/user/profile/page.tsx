@@ -17,7 +17,7 @@ export function ProfilePage({
     <div className="flex flex-col w-full max-w-3xl mx-auto px-6 md:px-0 py-12 md:py-20 space-y-20">
       {/* Header Section */}
       <header className="space-y-8">
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
           <div className="space-y-6">
             <h1 className="text-4xl md:text-5xl font-serif font-medium tracking-tight text-foreground flex items-center gap-4">
               {m.profile_settings()}
@@ -42,7 +42,7 @@ export function ProfilePage({
       <div className="w-full h-px bg-border/40" />
 
       {/* Identity Section */}
-      <section className="flex items-center gap-8">
+      <section className="flex items-center gap-4 sm:gap-8">
         <div
           className="w-24 h-24 rounded-full overflow-hidden border border-border bg-muted/30 relative"
           style={{ viewTransitionName: "user-avatar" }}
@@ -70,7 +70,7 @@ export function ProfilePage({
                 ? m.profile_role_admin()
                 : m.profile_role_reader()}
             </span>
-            <span>{user.email}</span>
+            <span className="break-all">{user.email}</span>
           </div>
         </div>
       </section>

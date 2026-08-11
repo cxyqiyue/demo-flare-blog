@@ -146,7 +146,7 @@ export const FriendLinkModerationTable = ({
     <div className="space-y-6">
       {/* Batch Actions Toolbar */}
       {selectedIds.size > 0 && (
-        <div className="sticky top-4 z-40 flex items-center justify-between p-4 bg-background border border-border/30 shadow-none animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="sticky top-4 z-40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-background border border-border/30 shadow-none animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex items-center gap-6">
             <span className="text-[10px] font-mono font-medium uppercase tracking-[0.2em]">
               {m.friend_links_batch_selected({ count: selectedIds.size })}

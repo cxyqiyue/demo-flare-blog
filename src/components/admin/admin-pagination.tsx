@@ -71,20 +71,20 @@ export function AdminPagination({
         })}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 max-w-full overflow-x-auto overscroll-x-contain">
         {/* Previous Button */}
         <Button
           variant="outline"
           size="icon"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="h-8 w-8 rounded-none border-border/30 hover:bg-foreground hover:text-background hover:border-foreground transition-all disabled:opacity-20"
+          className="h-8 w-8 shrink-0 rounded-none border-border/30 hover:bg-foreground hover:text-background hover:border-foreground transition-all disabled:opacity-20"
         >
           <span className="font-mono text-xs font-bold">{"<"}</span>
         </Button>
 
         {/* Page Numbers */}
-        <div className="flex items-center gap-1 px-2">
+        <div className="flex items-center gap-1 px-2 shrink-0">
           {pageNumbers.map((pageNumber, index) => (
             <React.Fragment key={index}>
               {pageNumber === "..." ? (
@@ -115,7 +115,7 @@ export function AdminPagination({
           size="icon"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="h-8 w-8 rounded-none border-border/30 hover:bg-foreground hover:text-background hover:border-foreground transition-all disabled:opacity-20"
+          className="h-8 w-8 shrink-0 rounded-none border-border/30 hover:bg-foreground hover:text-background hover:border-foreground transition-all disabled:opacity-20"
         >
           <span className="font-mono text-xs font-bold">{">"}</span>
         </Button>

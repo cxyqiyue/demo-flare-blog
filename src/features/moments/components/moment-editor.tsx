@@ -32,7 +32,7 @@ const ToolbarButton = ({
     onClick={onClick}
     title={label}
     className={clsx(
-      "p-1.5 rounded-sm transition-all duration-200 flex items-center justify-center",
+      "p-1.5 shrink-0 rounded-sm transition-all duration-200 flex items-center justify-center",
       isActive
         ? "bg-foreground text-background"
         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -121,7 +121,7 @@ export function MomentEditor({
         onChange={handleFileChange}
       />
 
-      <div className="flex items-center gap-1 p-1.5 border-b border-border/10 bg-background/50">
+      <div className="flex flex-wrap items-center gap-1 p-1.5 border-b border-border/10 bg-background/50">
         <ToolbarButton
           onClick={() => editor?.chain().focus().toggleBold().run()}
           isActive={isBold}

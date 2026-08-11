@@ -39,7 +39,7 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
   <button
     onClick={onClick}
     className={clsx(
-      "p-1.5 rounded-sm transition-all duration-200 flex items-center justify-center gap-2 group relative",
+      "p-1.5 shrink-0 rounded-sm transition-all duration-200 flex items-center justify-center gap-2 group relative",
       isActive
         ? "bg-foreground text-background"
         : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -70,7 +70,7 @@ const CommentEditorToolbar: React.FC<CommentEditorToolbarProps> = ({
     });
 
   return (
-    <div className="flex items-center gap-1 p-1 border border-border/20 rounded-sm bg-background/50 backdrop-blur-sm">
+    <div className="flex flex-wrap items-center gap-1 p-1 border border-border/20 rounded-sm bg-background/50 backdrop-blur-sm">
       {/* Formatting */}
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBold().run()}
@@ -103,7 +103,7 @@ const CommentEditorToolbar: React.FC<CommentEditorToolbarProps> = ({
         label={m.comments_editor_toolbar_code()}
       />
 
-      <div className="h-4 w-px bg-border/20 mx-1"></div>
+      <div className="h-4 w-px shrink-0 bg-border/20 mx-1"></div>
 
       {/* Inserts */}
       <ToolbarButton

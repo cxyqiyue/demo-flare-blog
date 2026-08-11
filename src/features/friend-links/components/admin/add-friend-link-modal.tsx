@@ -74,7 +74,7 @@ const AddFriendLinkModalInternal = ({
         className="fixed inset-0 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={handleClose}
       />
-      <div className="relative bg-background border border-border/30 p-8 max-w-md w-full mx-4 animate-in fade-in zoom-in-95 duration-200 shadow-lg">
+      <div className="relative bg-background border border-border/30 p-6 md:p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200 shadow-lg">
         <button
           onClick={handleClose}
           className="absolute right-4 top-4 text-muted-foreground/50 hover:text-foreground transition-colors"

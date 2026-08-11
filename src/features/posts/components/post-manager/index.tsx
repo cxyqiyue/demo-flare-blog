@@ -119,7 +119,7 @@ export function PostManager({
   return (
     <div className="space-y-8 pb-20">
       {/* Header */}
-      <div className="flex justify-between items-end animate-in fade-in slide-in-from-bottom-4 duration-1000 fill-mode-both border-b border-border/30 pb-6">
+      <div className="flex flex-wrap justify-between items-end gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000 fill-mode-both border-b border-border/30 pb-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-serif font-medium tracking-tight">
             {m.admin_posts_title()}

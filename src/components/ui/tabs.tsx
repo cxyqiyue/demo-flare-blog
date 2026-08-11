@@ -55,7 +55,7 @@ const TabsList = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "inline-flex items-center gap-4 border-b border-border/30",
+      "inline-flex items-center gap-4 border-b border-border/30 overflow-x-auto overscroll-x-contain",
       className,
     )}
     {...props}
@@ -80,7 +80,7 @@ const TabsTrigger = React.forwardRef<
       aria-selected={isActive}
       data-state={isActive ? "active" : "inactive"}
       className={cn(
-        "pb-3 text-[10px] font-mono uppercase tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 border-b-2 -mb-px",
+        "pb-3 shrink-0 whitespace-nowrap text-[10px] font-mono uppercase tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 border-b-2 -mb-px",
         isActive
           ? "text-foreground border-foreground"
           : "text-muted-foreground/50 border-transparent hover:text-foreground",

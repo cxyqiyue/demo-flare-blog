@@ -36,7 +36,7 @@ export function UserHoverCard({ user, children }: UserHoverCardProps) {
     <HoverCard>
       <HoverCardTrigger asChild>{children}</HoverCardTrigger>
       <HoverCardContent
-        className="w-80 p-0 overflow-hidden border border-border shadow-2xl bg-background rounded-none animate-in fade-in zoom-in-95 duration-500"
+        className="w-80 max-w-[calc(100vw-2rem)] p-0 overflow-hidden border border-border shadow-2xl bg-background rounded-none animate-in fade-in zoom-in-95 duration-500"
         align="start"
       >
         <div className="p-8 space-y-8">

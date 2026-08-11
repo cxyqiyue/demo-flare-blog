@@ -72,7 +72,7 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
             }
        `}
       >
-        <div className="flex justify-between items-center px-8 py-6 border-b border-border/10">
+        <div className="flex justify-between items-center px-4 sm:px-8 py-6 border-b border-border/10">
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono text-foreground tracking-widest uppercase">
               {activeType === "LINK"
@@ -89,7 +89,7 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
           </button>
         </div>
 
-        <div className="p-8 space-y-8">
+        <div className="p-4 sm:p-8 space-y-8">
           {/* URL Input */}
           <div className="space-y-3 group">
             <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest group-focus-within:text-foreground transition-colors">
@@ -112,7 +112,7 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="px-8 pb-8 flex items-center justify-end gap-6">
+        <div className="px-4 sm:px-8 pb-4 sm:pb-8 flex items-center justify-end gap-6">
           <button
             type="button"
             onClick={onClose}

@@ -158,7 +158,7 @@ function RootCommentWithReplies({
       />
 
       {isReplyingToRoot && (
-        <div className="py-6 ml-12 px-0 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="py-6 ml-6 md:ml-12 px-0 animate-in fade-in slide-in-from-top-2 duration-300">
           {session ? (
             onSubmitReply && onCancelReply ? (
               <CommentReplyForm
@@ -170,7 +170,7 @@ function RootCommentWithReplies({
               />
             ) : null
           ) : (
-            <div className="flex items-center gap-4 py-4 bg-muted/5 rounded-sm px-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-4 bg-muted/5 rounded-sm px-4">
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex-1">
                 {m.comments_list_login_to_reply({
                   userName: replyTarget.userName,
@@ -197,7 +197,7 @@ function RootCommentWithReplies({
       )}
 
       {root.replyCount > 0 && (
-        <div className="ml-12 mt-2">
+        <div className="ml-6 md:ml-12 mt-2">
           <button
             onClick={onToggleExpand}
             className="flex items-center gap-3 group mt-1 mb-1"
@@ -250,7 +250,7 @@ function RootCommentWithReplies({
                             className="mt-0"
                           />
                         ) : (
-                          <div className="flex items-center gap-4 py-4 bg-muted/5 rounded-sm px-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-4 bg-muted/5 rounded-sm px-4">
                             <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex-1">
                               {m.comments_list_login_to_reply({
                                 userName: replyTarget.userName,

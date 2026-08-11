@@ -38,7 +38,7 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
   <button
     onClick={onClick}
     className={cn(
-      "p-1.5 rounded-md transition-all duration-200 flex items-center justify-center",
+      "p-1.5 shrink-0 rounded-md transition-all duration-200 flex items-center justify-center",
       isActive
         ? "bg-(--fuwari-primary) text-white dark:text-black/75"
         : "fuwari-text-50 hover:bg-black/5 dark:hover:bg-white/10 hover:fuwari-text-75",
@@ -69,7 +69,7 @@ const FuwariCommentEditorToolbar: React.FC<CommentEditorToolbarProps> = ({
     });
 
   return (
-    <div className="flex items-center gap-0.5 p-1">
+    <div className="flex flex-wrap items-center gap-0.5 p-1">
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBold().run()}
         isActive={isBold}
@@ -101,7 +101,7 @@ const FuwariCommentEditorToolbar: React.FC<CommentEditorToolbarProps> = ({
         label={m.comments_editor_toolbar_code()}
       />
 
-      <div className="h-4 w-px bg-black/10 dark:bg-white/10 mx-1" />
+      <div className="h-4 w-px shrink-0 bg-black/10 dark:bg-white/10 mx-1" />
 
       <ToolbarButton
         onClick={onLinkClick}

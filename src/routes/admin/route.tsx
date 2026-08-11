@@ -50,7 +50,7 @@ function AdminLayout() {
   const closeMobileSidebar = () => setIsMobileSidebarOpen(false);
 
   return (
-    <div className="h-screen overflow-hidden bg-background text-foreground flex relative font-sans admin-layout">
+    <div className="h-dvh overflow-hidden bg-background text-foreground flex relative font-sans admin-layout">
       <SideBar
         isMobileSidebarOpen={isMobileSidebarOpen}
         closeMobileSidebar={closeMobileSidebar}

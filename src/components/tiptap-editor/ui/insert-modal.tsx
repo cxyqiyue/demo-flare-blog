@@ -250,7 +250,7 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
                   {/* Media Grid */}
                   <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-muted/5">
                     {isPending ? (
-                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                         {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                           <div
                             key={i}
@@ -266,7 +266,7 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
                         </span>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 content-start pb-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 content-start pb-4">
                         {mediaItems.map((media) => (
                           <MediaItem
                             key={media.key}

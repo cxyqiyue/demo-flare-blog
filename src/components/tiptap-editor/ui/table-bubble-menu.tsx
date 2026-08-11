@@ -40,7 +40,7 @@ const MenuButton: React.FC<MenuButtonProps> = ({
     onClick={onClick}
     disabled={disabled}
     className={cn(
-      "h-7 w-7 flex items-center justify-center rounded-sm transition-all duration-200",
+      "h-7 w-7 shrink-0 flex items-center justify-center rounded-sm transition-all duration-200",
       disabled && "opacity-30 cursor-not-allowed",
       !disabled &&
         !isActive &&
@@ -57,7 +57,7 @@ const MenuButton: React.FC<MenuButtonProps> = ({
   </button>
 );
 
-const Separator = () => <div className="h-3.5 w-px bg-border/40 mx-1" />;
+const Separator = () => <div className="h-3.5 w-px shrink-0 bg-border/40 mx-1" />;
 
 export const TableBubbleMenu: React.FC<TableBubbleMenuProps> = ({ editor }) => {
   if (!editor) return null;
@@ -73,7 +73,7 @@ export const TableBubbleMenu: React.FC<TableBubbleMenuProps> = ({ editor }) => {
         placement: "top",
         offset: 8,
       }}
-      className="flex items-center p-1 rounded-md border border-border/60 bg-background/95 backdrop-blur-md shadow-lg gap-0.5"
+      className="flex items-center p-1 rounded-md border border-border/60 bg-background/95 backdrop-blur-md shadow-lg gap-0.5 max-w-[calc(100vw-1rem)] overflow-x-auto overscroll-x-contain"
     >
       {/* Column Operations */}
       <div className="flex items-center gap-0.5">

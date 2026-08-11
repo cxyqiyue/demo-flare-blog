@@ -10,7 +10,7 @@ export function SubmitFriendLinkPage(props: SubmitFriendLinkPageProps) {
   return (
     <div className="flex flex-col w-full max-w-3xl mx-auto px-6 md:px-0 py-12 md:py-20 space-y-20">
       <header className="space-y-8">
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
           <div className="space-y-6">
             <h1 className="text-4xl md:text-5xl font-serif font-medium tracking-tight text-foreground">
               {m.friend_links_title()}

@@ -154,7 +154,7 @@ function RootCommentWithReplies({
       />
 
       {isReplyingToRoot && (
-        <div className="py-4 ml-12 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="py-4 ml-8 md:ml-12 animate-in fade-in slide-in-from-top-2 duration-300">
           {session ? (
             onSubmitReply && onCancelReply ? (
               <ReplyForm
@@ -174,7 +174,7 @@ function RootCommentWithReplies({
       )}
 
       {root.replyCount > 0 && (
-        <div className="ml-12 mt-1">
+        <div className="ml-8 md:ml-12 mt-1">
           <button
             onClick={onToggleExpand}
             className="flex items-center gap-3 group py-1"

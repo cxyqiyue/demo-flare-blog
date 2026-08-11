@@ -41,8 +41,8 @@ export function Navbar({
       >
         <div className="max-w-3xl mx-auto w-full px-6 md:px-0 flex items-center justify-between">
           {/* Left: Brand */}
-          <Link to="/" className="group select-none">
-            <span className="font-serif text-xl font-bold tracking-tighter text-foreground transition-colors group-hover:text-muted-foreground">
+          <Link to="/" className="group select-none min-w-0">
+            <span className="block font-serif text-lg sm:text-xl font-bold tracking-tighter text-foreground truncate transition-colors group-hover:text-muted-foreground">
               [ {siteConfig.theme.default.navBarName} ]
             </span>
           </Link>
@@ -64,7 +64,7 @@ export function Navbar({
           </nav>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <div className="flex items-center gap-1">
               <ThemeToggle />
               <LanguageSwitcher className="text-muted-foreground hover:text-foreground h-8 w-8" />

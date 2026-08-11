@@ -57,8 +57,8 @@ export function PostEditorStatusBar({
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 flex h-8 select-none items-center justify-between border-t border-border/40 bg-background/80 px-6 text-[10px] font-mono backdrop-blur-md">
-      <div className="flex items-center gap-6 text-muted-foreground">
+    <div className="fixed inset-x-0 bottom-0 z-50 flex h-8 select-none items-center justify-between border-t border-border/40 bg-background/80 px-3 sm:px-6 text-[10px] font-mono backdrop-blur-md">
+      <div className="flex items-center gap-3 sm:gap-6 text-muted-foreground">
         <div className="flex items-center gap-2">
           <span>{m.editor_status_chars()}</span>
           <span className="text-foreground">{chars}</span>

@@ -67,14 +67,14 @@ export function Navbar({
         <div className="fuwari-card-base overflow-visible! rounded-t-none! mx-auto flex items-center justify-between px-4 h-18 max-w-(--fuwari-page-width)">
           <Link
             to="/"
-            className="fuwari-expand-animation rounded-lg h-13 px-5 font-bold active:scale-95 flex items-center"
+            className="fuwari-expand-animation rounded-lg h-13 px-3 sm:px-5 font-bold active:scale-95 flex items-center min-w-0"
           >
             <Home
               size={28}
               strokeWidth={1.5}
               className="text-(--fuwari-primary) mr-2 shrink-0"
             />
-            <span className="text-(--fuwari-primary) text-base">
+            <span className="text-(--fuwari-primary) text-base truncate max-w-35 sm:max-w-40">
               {siteConfig.title}
             </span>
           </Link>
@@ -84,7 +84,7 @@ export function Navbar({
               <Link
                 key={option.id}
                 to={option.to}
-                className="fuwari-expand-animation rounded-lg h-11 font-bold px-5 active:scale-95 flex items-center fuwari-text-75 hover:text-(--fuwari-primary)"
+                className="fuwari-expand-animation rounded-lg h-11 font-bold px-3 xl:px-5 active:scale-95 flex items-center fuwari-text-75 hover:text-(--fuwari-primary)"
                 activeProps={{
                   className: "!text-[var(--fuwari-primary)]",
                 }}
@@ -94,10 +94,10 @@ export function Navbar({
             ))}
           </nav>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <Link
               to="/search"
-              className="hidden lg:flex items-center h-11 mr-2 rounded-lg bg-black/4 hover:bg-black/6 dark:bg-white/5 dark:hover:bg-white/10 transition-all active:scale-95 group w-52"
+              className="hidden lg:flex items-center h-11 mr-2 rounded-lg bg-black/4 hover:bg-black/6 dark:bg-white/5 dark:hover:bg-white/10 transition-all active:scale-95 group w-44 xl:w-52"
               aria-label={m.nav_search()}
             >
               <Search

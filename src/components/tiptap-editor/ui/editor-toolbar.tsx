@@ -50,7 +50,7 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
   <button
     onClick={onClick}
     className={clsx(
-      "h-8 w-8 flex items-center justify-center transition-colors duration-200 group relative rounded-none",
+      "h-8 w-8 shrink-0 flex items-center justify-center transition-colors duration-200 group relative rounded-none",
       isActive
         ? "bg-foreground text-background"
         : "text-muted-foreground hover:text-foreground hover:bg-muted/20",
@@ -139,7 +139,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
   };
 
   return (
-    <div className="sticky top-0 z-30 mb-8 py-2 bg-background border-b border-border/50 flex flex-wrap items-center gap-1 px-4">
+    <div className="sticky top-0 z-30 mb-8 py-2 bg-background border-b border-border/50 flex items-center gap-1 px-4 overflow-x-auto overscroll-x-contain [scrollbar-width:thin]">
       {/* Headings */}
       <ToolbarButton
         onClick={() =>
@@ -158,7 +158,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         label={m.editor_toolbar_heading3()}
       />
 
-      <div className="h-4 w-px bg-border/50 mx-2"></div>
+      <div className="h-4 w-px shrink-0 bg-border/50 mx-2"></div>
 
       {/* Formatting */}
       <ToolbarButton
@@ -210,7 +210,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         label={m.editor_toolbar_formula_block()}
       />
 
-      <div className="h-4 w-px bg-border/50 mx-2"></div>
+      <div className="h-4 w-px shrink-0 bg-border/50 mx-2"></div>
 
       {/* Lists & Blocks */}
       <ToolbarButton
@@ -244,7 +244,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         label={m.editor_toolbar_table()}
       />
 
-      <div className="h-4 w-px bg-border/50 mx-2"></div>
+      <div className="h-4 w-px shrink-0 bg-border/50 mx-2"></div>
 
       {/* Inserts */}
       <ToolbarButton
@@ -260,7 +260,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         label={m.editor_toolbar_image()}
       />
 
-      <div className="ml-auto flex gap-1">
+      <div className="ml-auto flex gap-1 shrink-0">
         <ToolbarButton
           onClick={() => editor?.chain().focus().undo().run()}
           icon={Undo}
