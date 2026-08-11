@@ -39,12 +39,12 @@ export function PostEditorHeader({
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/30 bg-background px-6">
+    <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-border/30 bg-background px-4 sm:px-6 overflow-x-auto overscroll-x-contain">
       <div className="min-w-0 flex-1 overflow-hidden">
         <Breadcrumbs />
       </div>
 
-      <div className="flex items-center gap-6 shrink-0">
+      <div className="flex items-center gap-4 sm:gap-6 shrink-0">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"

@@ -55,7 +55,7 @@ const TabsList = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "inline-flex items-center gap-4 border-b border-border/30 overflow-x-auto overscroll-x-contain",
+      "inline-flex max-w-full items-center gap-4 border-b border-border/30 overflow-x-auto overscroll-x-contain",
       className,
     )}
     {...props}

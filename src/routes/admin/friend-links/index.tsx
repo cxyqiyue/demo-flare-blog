@@ -87,13 +87,13 @@ function FriendLinksAdminPage() {
       <div className="space-y-8">
         {/* Navigation & Tabs */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <nav className="flex items-center gap-8 overflow-x-auto no-scrollbar">
+          <nav className="flex items-center gap-8 overflow-x-auto overscroll-x-contain no-scrollbar max-w-full">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => handleStatusChange(tab.key)}
                 className={`
-                  relative text-[10px] uppercase tracking-[0.2em] transition-all whitespace-nowrap font-mono
+                  relative shrink-0 text-[10px] uppercase tracking-[0.2em] transition-all whitespace-nowrap font-mono
                   ${
                     status === tab.key
                       ? "text-foreground font-bold"
