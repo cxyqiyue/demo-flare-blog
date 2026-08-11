@@ -50,6 +50,11 @@ export async function deleteMoment(db: DB, id: number) {
   await db.delete(MomentsTable).where(eq(MomentsTable.id, id));
 }
 
+export async function countAllMoments(db: DB): Promise<number> {
+  const [row] = await db.select({ total: count() }).from(MomentsTable);
+  return row?.total ?? 0;
+}
+
 export async function findMomentLike(db: DB, momentId: number, userId: string) {
   return await db.query.MomentLikesTable.findFirst({
     where: and(
@@ -59,14 +64,22 @@ export async function findMomentLike(db: DB, momentId: number, userId: string) {
   });
 }
 
-export async function insertMomentLike(db: DB, momentId: number, userId: string) {
+export async function insertMomentLike(
+  db: DB,
+  momentId: number,
+  userId: string,
+) {
   await db
     .insert(MomentLikesTable)
     .values({ momentId, userId })
     .onConflictDoNothing();
 }
 
-export async function deleteMomentLike(db: DB, momentId: number, userId: string) {
+export async function deleteMomentLike(
+  db: DB,
+  momentId: number,
+  userId: string,
+) {
   await db
     .delete(MomentLikesTable)
     .where(

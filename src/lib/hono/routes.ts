@@ -4,8 +4,10 @@ import { Hono } from "hono";
 import { proxy } from "hono/proxy";
 import { exportDownloadRoute } from "@/features/import-export/api/hono/download.route";
 import { handleImageRequest } from "@/features/media/service/media.service";
+import postsAdjacentRoute from "@/features/posts/api/hono/posts.adjacent.route";
 import postsDetailRoute from "@/features/posts/api/hono/posts.detail.route";
 import postsListRoute from "@/features/posts/api/hono/posts.list.route";
+import postsPageRoute from "@/features/posts/api/hono/posts.page.route";
 import postsRelatedRoute from "@/features/posts/api/hono/posts.related.route";
 import searchRoute from "@/features/search/api/hono/search.route";
 import siteDocumentsRoute from "@/features/site-documents/api/hono/site-documents.route";
@@ -34,7 +36,9 @@ async function forwardAuthRequest(c: Context<{ Bindings: Env }>) {
 // Public API routes with RPC support - 链式调用保留类型推断
 const publicApi = new Hono<{ Bindings: Env }>()
   .route("/posts", postsListRoute)
+  .route("/posts", postsPageRoute)
   .route("/post", postsDetailRoute)
+  .route("/post", postsAdjacentRoute)
   .route("/post", postsRelatedRoute)
   .route("/tags", tagsRoute)
   .route("/search", searchRoute);

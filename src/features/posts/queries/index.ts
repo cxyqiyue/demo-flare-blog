@@ -4,10 +4,12 @@ import type {
   GetPostsInput,
 } from "@/features/posts/schema/posts.schema";
 import {
+  AdjacentPostsResponseSchema,
   normalizePostTagName,
   PostItemSchema,
   PostListResponseSchema,
   PostWithTocSchema,
+  PublicPostsPageResponseSchema,
 } from "@/features/posts/schema/posts.schema";
 import { apiClient } from "@/lib/api-client";
 import { isSSR } from "@/lib/utils";
@@ -17,10 +19,12 @@ import {
 } from "../api/post-revisions.admin.api";
 import { findPostByIdFn } from "../api/posts.admin.api";
 import {
+  findAdjacentPostsFn,
   findPostBySlugFn,
   getPinnedPostsFn,
   getPopularPostsFn,
   getPostsCursorFn,
+  getPublicPostsPageFn,
   getRelatedPostsFn,
 } from "../api/posts.public.api";
 
@@ -31,8 +35,8 @@ export const POSTS_KEYS = {
   pinned: ["posts", "pinned"] as const,
   lists: ["posts", "list"] as const,
   details: ["posts", "detail"] as const,
-  recent: ["posts", "recent"] as const,
   popular: ["posts", "popular"] as const,
+  publicPage: ["posts", "public-page"] as const,
   adminLists: ["posts", "admin-list"] as const,
   counts: ["posts", "count"] as const,
   revisions: ["posts", "revisions"] as const,
@@ -48,6 +52,7 @@ export const POSTS_KEYS = {
         tagName: normalizePostTagName(filters.tagName),
       },
     ] as const,
+  adjacent: (slug: string) => ["posts", "adjacent", slug] as const,
   detail: (idOrSlug: number | string) => ["posts", "detail", idOrSlug] as const,
   related: (slug: string, limit?: number) =>
     ["posts", "related", slug, limit] as const,
@@ -59,19 +64,22 @@ export const POSTS_KEYS = {
     ["posts", "revision-detail", postId, revisionId] as const,
 };
 
-export function recentPostsQuery(limit: number) {
+export function publicPostsPageQuery(
+  filters: { offset?: number; limit?: number } = {},
+) {
+  const offset = filters.offset ?? 0;
+  const limit = filters.limit ?? 10;
   return queryOptions({
-    queryKey: [...POSTS_KEYS.recent, limit],
+    queryKey: [...POSTS_KEYS.publicPage, offset, limit],
     queryFn: async () => {
       if (isSSR) {
-        const result = await getPostsCursorFn({ data: { limit } });
-        return result.items;
+        return await getPublicPostsPageFn({ data: { offset, limit } });
       }
-      const res = await apiClient.posts.$get({
-        query: { limit: String(limit) },
+      const res = await apiClient.posts.page.$get({
+        query: { offset: String(offset), limit: String(limit) },
       });
-      if (!res.ok) throw new Error("Failed to fetch posts");
-      return PostListResponseSchema.parse(await res.json()).items;
+      if (!res.ok) throw new Error("Failed to fetch posts page");
+      return PublicPostsPageResponseSchema.parse(await res.json());
     },
   });
 }
@@ -118,6 +126,22 @@ export function postBySlugQuery(slug: string) {
       const res = await apiClient.post[":slug"].$get({ param: { slug } });
       if (!res.ok) throw new Error("Failed to fetch post");
       return PostWithTocSchema.parse(await res.json());
+    },
+  });
+}
+
+export function adjacentPostsQuery(slug: string) {
+  return queryOptions({
+    queryKey: POSTS_KEYS.adjacent(slug),
+    queryFn: async () => {
+      if (isSSR) {
+        return await findAdjacentPostsFn({ data: { slug } });
+      }
+      const res = await apiClient.post[":slug"].adjacent.$get({
+        param: { slug },
+      });
+      if (!res.ok) throw new Error("Failed to fetch adjacent posts");
+      return AdjacentPostsResponseSchema.parse(await res.json());
     },
   });
 }

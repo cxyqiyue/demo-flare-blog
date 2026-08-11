@@ -76,9 +76,51 @@ export const FindRelatedPostsInputSchema = z.object({
   limit: z.number().optional(),
 });
 
+/** Offset-based pagination for public post lists (e.g. home page). */
+export const GetPublicPostsPageInputSchema = z.object({
+  offset: z.number().int().min(0).optional(),
+  limit: z.number().int().min(1).max(50).optional(),
+});
+
+export const PublicPostsPageResponseSchema = z.object({
+  items: z.array(PostItemSchema),
+  total: z.number(),
+  offset: z.number(),
+  limit: z.number(),
+  hasNextPage: z.boolean(),
+  hasPrevPage: z.boolean(),
+});
+
+export const AdjacentPostSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  slug: z.string(),
+  publishedAt: coercedDateNullable,
+});
+
+export const AdjacentPostsResponseSchema = z.object({
+  previous: AdjacentPostSchema.nullable(),
+  next: AdjacentPostSchema.nullable(),
+});
+
+export const FindAdjacentPostsInputSchema = z.object({
+  slug: z.string(),
+});
+
 export type GetPostsCursorInput = z.infer<typeof GetPostsCursorInputSchema>;
 export type FindPostBySlugInput = z.infer<typeof FindPostBySlugInputSchema>;
 export type FindRelatedPostsInput = z.infer<typeof FindRelatedPostsInputSchema>;
+export type GetPublicPostsPageInput = z.infer<
+  typeof GetPublicPostsPageInputSchema
+>;
+export type PublicPostsPageResponse = z.infer<
+  typeof PublicPostsPageResponseSchema
+>;
+export type AdjacentPostsResponse = z.infer<typeof AdjacentPostsResponseSchema>;
+export type FindAdjacentPostsInput = z.infer<
+  typeof FindAdjacentPostsInputSchema
+>;
+export type AdjacentPost = z.infer<typeof AdjacentPostSchema>;
 
 // Admin API Schemas
 export const GenerateSlugInputSchema = z.object({
@@ -156,4 +198,8 @@ export const POSTS_CACHE_KEYS = {
     ["posts", "related-ids", slug, limit] as const,
   syncHash: (id: number) => `post_hash:${id}` as const,
   pinned: (version: string) => [version, "posts", "pinned"] as const,
+  publicPage: (version: string, offset: number, limit: number) =>
+    [version, "posts", "page", offset, limit] as const,
+  adjacent: (version: string, slug: string) =>
+    [version, "post", slug, "adjacent"] as const,
 } as const;

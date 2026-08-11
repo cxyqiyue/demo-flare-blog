@@ -1,8 +1,10 @@
 import {
   and,
+  asc,
   count,
   desc,
   eq,
+  gt,
   inArray,
   isNotNull,
   like,
@@ -28,6 +30,13 @@ export type SitemapPostRow = {
   slug: string;
   createdAt: Date | null;
   updatedAt: Date | null;
+  publishedAt: Date | null;
+};
+
+export type AdjacentPostRow = {
+  id: number;
+  title: string;
+  slug: string;
   publishedAt: Date | null;
 };
 
@@ -534,6 +543,158 @@ export async function getPublicPostsByIds(db: DB, ids: Array<number>) {
     .where(and(inArray(PostsTable.id, ids), whereClause));
 
   return posts;
+}
+
+const PUBLIC_PAGE_COLUMNS = {
+  id: PostsTable.id,
+  title: PostsTable.title,
+  summary: PostsTable.summary,
+  readTimeInMinutes: PostsTable.readTimeInMinutes,
+  slug: PostsTable.slug,
+  status: PostsTable.status,
+  publishedAt: PostsTable.publishedAt,
+  pinnedAt: PostsTable.pinnedAt,
+  skillId: PostsTable.skillId,
+  createdAt: PostsTable.createdAt,
+  updatedAt: PostsTable.updatedAt,
+} as const;
+
+/**
+ * Offset-based pagination for public posts (home page).
+ * Pinned posts are excluded so they can be rendered separately on top.
+ */
+export async function getPublicPostsPage(
+  db: DB,
+  options: { offset?: number; limit?: number } = {},
+): Promise<{
+  items: Array<PostListItem>;
+  total: number;
+}> {
+  const offset = options.offset ?? 0;
+  const limit = Math.min(options.limit ?? 10, 50);
+
+  const whereClause = and(
+    buildPostWhereClause({ publicOnly: true }),
+    sql`${PostsTable.pinnedAt} IS NULL`,
+  );
+
+  const [posts, totalRows] = await Promise.all([
+    db
+      .select(PUBLIC_PAGE_COLUMNS)
+      .from(PostsTable)
+      .where(whereClause)
+      .orderBy(desc(PostsTable.publishedAt), desc(PostsTable.id))
+      .limit(limit)
+      .offset(offset),
+    db.select({ count: count() }).from(PostsTable).where(whereClause),
+  ]);
+
+  const items = posts as Array<PostListItem>;
+  const total = totalRows[0]?.count ?? 0;
+
+  if (items.length > 0) {
+    const postIds = items.map((p) => p.id);
+    const tagsResults = await db
+      .select({
+        postId: PostTagsTable.postId,
+        tag: {
+          id: TagsTable.id,
+          name: TagsTable.name,
+          createdAt: TagsTable.createdAt,
+        },
+      })
+      .from(PostTagsTable)
+      .innerJoin(TagsTable, eq(PostTagsTable.tagId, TagsTable.id))
+      .where(inArray(PostTagsTable.postId, postIds));
+
+    const tagsByPostId = new Map<number, Array<Tag>>();
+    for (const result of tagsResults) {
+      const existing = tagsByPostId.get(result.postId) ?? [];
+      existing.push(result.tag);
+      tagsByPostId.set(result.postId, existing);
+    }
+
+    items.forEach((item) => {
+      item.tags = tagsByPostId.get(item.id) ?? [];
+    });
+  }
+
+  return { items, total };
+}
+
+/**
+ * Find the immediately previous and next published posts relative to a post,
+ * ordered by (publishedAt DESC, id DESC) which matches public list ordering.
+ */
+export async function findAdjacentPosts(
+  db: DB,
+  slug: string,
+): Promise<{
+  previous: AdjacentPostRow | null;
+  next: AdjacentPostRow | null;
+}> {
+  const current = await db.query.PostsTable.findFirst({
+    where: eq(PostsTable.slug, slug),
+    columns: { id: true, publishedAt: true },
+  });
+
+  if (!current?.publishedAt) {
+    return { previous: null, next: null };
+  }
+
+  const currentPublishedAt = current.publishedAt;
+  const currentId = current.id;
+  const baseConditions = buildPostWhereClause({ publicOnly: true });
+
+  const adjacentQuery = (pinnedDir: "prev" | "next") => {
+    const bounds =
+      pinnedDir === "prev"
+        ? or(
+            lt(PostsTable.publishedAt, currentPublishedAt),
+            and(
+              eq(PostsTable.publishedAt, currentPublishedAt),
+              lt(PostsTable.id, currentId),
+            ),
+          )
+        : or(
+            gt(PostsTable.publishedAt, currentPublishedAt),
+            and(
+              eq(PostsTable.publishedAt, currentPublishedAt),
+              gt(PostsTable.id, currentId),
+            ),
+          );
+
+    const order =
+      pinnedDir === "prev"
+        ? [desc(PostsTable.publishedAt), desc(PostsTable.id)]
+        : [asc(PostsTable.publishedAt), asc(PostsTable.id)];
+
+    return db
+      .select({
+        id: PostsTable.id,
+        title: PostsTable.title,
+        slug: PostsTable.slug,
+        publishedAt: PostsTable.publishedAt,
+      })
+      .from(PostsTable)
+      .where(and(baseConditions, bounds))
+      .orderBy(...order)
+      .limit(1);
+  };
+
+  const [previous, next] = await Promise.all([
+    adjacentQuery("prev").then((rows) => rows[0] ?? null),
+    adjacentQuery("next").then((rows) => rows[0] ?? null),
+  ]);
+
+  // Exclude the current post itself from either side (safety for same-id edge case)
+  const isCurrent = (row: AdjacentPostRow | null) =>
+    row !== null && row.id === current.id;
+
+  return {
+    previous: isCurrent(previous) ? null : previous,
+    next: isCurrent(next) ? null : next,
+  };
 }
 
 /**

@@ -7,6 +7,10 @@ import { ContentRenderer } from "@/features/theme/themes/fuwari/components/conte
 import { authClient } from "@/lib/auth/auth.client";
 import { m } from "@/paraglide/messages";
 import { PostMeta } from "./components/post-meta";
+import {
+  PostNavigation,
+  PostNavigationSkeleton,
+} from "./components/post-navigation";
 import { PostSummary } from "./components/post-summary";
 import { RelatedPosts, RelatedPostsSkeleton } from "./components/related-posts";
 import TableOfContents from "./components/table-of-contents";
@@ -100,13 +104,10 @@ export function PostPage({ post }: PostPageProps) {
         </div>
       </div>
 
-      {/* Prev/Next buttons (Mock implementation for layout, actual data would come from the server in an ideal setup) */}
-      <div
-        className="hidden flex-col md:flex-row justify-between gap-4 overflow-hidden w-full fuwari-onload-animation"
-        style={{ animationDelay: "150ms" }}
-      >
-        {/* Note: the backend schema doesn't currently provide prev/next slugs in PostWithToc. Using placeholder layouts to match Fuwari exactly. */}
-      </div>
+      {/* Prev/Next buttons */}
+      <Suspense fallback={<PostNavigationSkeleton />}>
+        <PostNavigation slug={post.slug} />
+      </Suspense>
 
       {/* Related Posts */}
       <Suspense fallback={<RelatedPostsSkeleton />}>

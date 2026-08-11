@@ -1,4 +1,5 @@
 import type { MomentsPageProps } from "@/features/theme/contract/pages";
+import { Pagination } from "@/features/theme/themes/default/components/pagination";
 import { m } from "@/paraglide/messages";
 import { MomentCard } from "./moment-card";
 import { MomentComposer } from "./moment-composer";
@@ -9,6 +10,12 @@ export function MomentsPage({
   onToggleLike,
   onCreateMoment,
   onDeleteMoment,
+  page,
+  pageSize,
+  total,
+  hasPrevPage,
+  hasNextPage,
+  onPageChange,
 }: MomentsPageProps) {
   return (
     <div className="w-full max-w-3xl mx-auto pb-20 px-6 md:px-0">
@@ -37,15 +44,26 @@ export function MomentsPage({
             </p>
           </div>
         ) : (
-          moments.map((moment) => (
-            <MomentCard
-              key={moment.id}
-              moment={moment}
-              isAdmin={isAdmin}
-              onToggleLike={onToggleLike}
-              onDelete={onDeleteMoment}
+          <>
+            {moments.map((moment) => (
+              <MomentCard
+                key={moment.id}
+                moment={moment}
+                isAdmin={isAdmin}
+                onToggleLike={onToggleLike}
+                onDelete={onDeleteMoment}
+              />
+            ))}
+
+            <Pagination
+              page={page}
+              total={total}
+              pageSize={pageSize}
+              hasPrevPage={hasPrevPage}
+              hasNextPage={hasNextPage}
+              onPageChange={onPageChange}
             />
-          ))
+          </>
         )}
       </div>
     </div>

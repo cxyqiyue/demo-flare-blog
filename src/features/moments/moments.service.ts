@@ -1,22 +1,32 @@
 import type { JSONContent } from "@tiptap/react";
 import * as CacheService from "@/features/cache/cache.service";
-import { purgeCDNCache } from "@/lib/invalidate";
 import { err, ok, type Result } from "@/lib/errors";
+import { purgeCDNCache } from "@/lib/invalidate";
 import * as MomentRepo from "./data/moments.data";
 import type {
   CreateMomentInput,
   DeleteMomentInput,
+  GetPublicMomentsPageInput,
   ToggleMomentLikeInput,
 } from "./moments.schema";
-import { MOMENTS_CACHE_KEYS, MomentsResponseSchema } from "./moments.schema";
+import {
+  MOMENTS_CACHE_KEYS,
+  MomentsPageResponseSchema,
+} from "./moments.schema";
 
 // ============ Public Methods ============
 
-export async function getPublicMoments(
+export async function getPublicMomentsPage(
   context: DbContext & { executionCtx: ExecutionContext },
+  input: GetPublicMomentsPageInput,
 ) {
+  const { offset, limit } = input;
+
   const fetcher = async () => {
-    const moments = await MomentRepo.getAllMoments(context.db, { limit: 50 });
+    const [moments, total] = await Promise.all([
+      MomentRepo.getAllMoments(context.db, { offset, limit }),
+      MomentRepo.countAllMoments(context.db),
+    ]);
 
     const momentIds = moments.map((m) => m.id);
     const [likeCounts, commentCounts] = await Promise.all([
@@ -27,22 +37,31 @@ export async function getPublicMoments(
     const authorUserIds = moments.map((m) => m.authorUserId);
     const authorMap = await MomentRepo.getAuthorMap(context.db, authorUserIds);
 
-    return moments.map((moment) => ({
+    const items = moments.map((moment) => ({
       ...moment,
       author: moment.authorUserId
-        ? authorMap[moment.authorUserId] ?? null
+        ? (authorMap[moment.authorUserId] ?? null)
         : null,
       likeCount: likeCounts[moment.id] ?? 0,
       commentCount: commentCounts[moment.id] ?? 0,
       isLiked: false,
     }));
+
+    return {
+      items,
+      total,
+      offset,
+      limit,
+      hasNextPage: offset + items.length < total,
+      hasPrevPage: offset > 0,
+    };
   };
 
   return await CacheService.getVersioned(
     context,
-    "moments:list",
-    MOMENTS_CACHE_KEYS.list,
-    MomentsResponseSchema,
+    "moments:page",
+    (version) => MOMENTS_CACHE_KEYS.publicPage(version, offset, limit),
+    MomentsPageResponseSchema,
     fetcher,
     { ttl: "5m" },
   );
@@ -53,7 +72,7 @@ function invalidateCache(
 ) {
   context.executionCtx.waitUntil(
     Promise.all([
-      CacheService.bumpVersion(context, "moments:list"),
+      CacheService.bumpVersion(context, "moments:page"),
       purgeCDNCache(context.env, {
         urls: ["/moments"],
       }),
@@ -101,10 +120,7 @@ export async function toggleMomentLike(
   context: DbContext & { executionCtx: ExecutionContext } & AuthContext,
   data: ToggleMomentLikeInput,
 ): Promise<
-  Result<
-    { liked: boolean; likeCount: number },
-    { reason: "NOT_FOUND" }
-  >
+  Result<{ liked: boolean; likeCount: number }, { reason: "NOT_FOUND" }>
 > {
   const moment = await MomentRepo.findMomentById(context.db, data.momentId);
   if (!moment) {
@@ -112,7 +128,11 @@ export async function toggleMomentLike(
   }
 
   const userId = context.session.user.id;
-  const existing = await MomentRepo.findMomentLike(context.db, data.momentId, userId);
+  const existing = await MomentRepo.findMomentLike(
+    context.db,
+    data.momentId,
+    userId,
+  );
 
   if (existing) {
     await MomentRepo.deleteMomentLike(context.db, data.momentId, userId);
@@ -120,7 +140,9 @@ export async function toggleMomentLike(
     await MomentRepo.insertMomentLike(context.db, data.momentId, userId);
   }
 
-  const likeCounts = await MomentRepo.countMomentLikesForIds(context.db, [data.momentId]);
+  const likeCounts = await MomentRepo.countMomentLikesForIds(context.db, [
+    data.momentId,
+  ]);
 
   invalidateCache(context);
 

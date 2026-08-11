@@ -4,6 +4,7 @@ import { useViewCounts } from "@/features/pageview/queries";
 import type { PostItem } from "@/features/posts/schema/posts.schema";
 import type { HomePageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
+import { Pagination } from "../../components/pagination";
 import { PostCard } from "../../components/post-card";
 
 interface MergedPost {
@@ -12,7 +13,17 @@ interface MergedPost {
   popular: boolean;
 }
 
-export function HomePage({ posts, pinnedPosts, popularPosts }: HomePageProps) {
+export function HomePage({
+  posts,
+  pinnedPosts,
+  popularPosts,
+  page,
+  pageSize,
+  total,
+  hasPrevPage,
+  hasNextPage,
+  onPageChange,
+}: HomePageProps) {
   const delayOffset = 50;
 
   const mergedPosts = useMemo(() => {
@@ -84,6 +95,17 @@ export function HomePage({ posts, pinnedPosts, popularPosts }: HomePageProps) {
           >
             {m.home_view_all_posts()}
           </Link>
+        </div>
+
+        <div className="mx-6 md:mx-0">
+          <Pagination
+            page={page}
+            total={total}
+            pageSize={pageSize}
+            hasPrevPage={hasPrevPage}
+            hasNextPage={hasNextPage}
+            onPageChange={onPageChange}
+          />
         </div>
       </div>
     </div>

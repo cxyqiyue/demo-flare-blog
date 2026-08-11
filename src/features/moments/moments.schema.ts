@@ -45,11 +45,31 @@ export const ToggleMomentLikeInputSchema = z.object({
 });
 export type ToggleMomentLikeInput = z.infer<typeof ToggleMomentLikeInputSchema>;
 
+export const GetPublicMomentsPageInputSchema = z.object({
+  offset: z.number().int().min(0).default(0),
+  limit: z.number().int().min(1).max(100).default(50),
+});
+export type GetPublicMomentsPageInput = z.infer<
+  typeof GetPublicMomentsPageInputSchema
+>;
+
 // === Cache ===
 export const MomentsResponseSchema = z.array(MomentWithStatsSchema);
 
+export const MomentsPageResponseSchema = z.object({
+  items: MomentsResponseSchema,
+  total: z.number(),
+  offset: z.number(),
+  limit: z.number(),
+  hasNextPage: z.boolean(),
+  hasPrevPage: z.boolean(),
+});
+export type MomentsPageResponse = z.infer<typeof MomentsPageResponseSchema>;
+
 export const MOMENTS_CACHE_KEYS = {
   list: (version: string) => ["moments", "list", version] as const,
+  publicPage: (version: string, offset: number, limit: number) =>
+    ["moments", "public-page", version, offset, limit] as const,
 } as const;
 
 // === Types ===

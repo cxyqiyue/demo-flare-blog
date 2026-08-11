@@ -2,9 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import * as PageviewService from "@/features/pageview/service/pageview.service";
 import {
+  FindAdjacentPostsInputSchema,
   FindPostBySlugInputSchema,
   FindRelatedPostsInputSchema,
   GetPostsCursorInputSchema,
+  GetPublicPostsPageInputSchema,
 } from "@/features/posts/schema/posts.schema";
 import * as PostService from "@/features/posts/services/posts.service";
 import { dbMiddleware } from "@/lib/middlewares";
@@ -16,11 +18,25 @@ export const getPostsCursorFn = createServerFn()
     return await PostService.getPostsCursor(context, data);
   });
 
+export const getPublicPostsPageFn = createServerFn()
+  .middleware([dbMiddleware])
+  .inputValidator(GetPublicPostsPageInputSchema)
+  .handler(async ({ data, context }) => {
+    return await PostService.getPublicPostsPage(context, data);
+  });
+
 export const findPostBySlugFn = createServerFn()
   .middleware([dbMiddleware])
   .inputValidator(FindPostBySlugInputSchema)
   .handler(async ({ data, context }) => {
     return await PostService.findPostBySlug(context, data);
+  });
+
+export const findAdjacentPostsFn = createServerFn()
+  .middleware([dbMiddleware])
+  .inputValidator(FindAdjacentPostsInputSchema)
+  .handler(async ({ data, context }) => {
+    return await PostService.findAdjacentPosts(context, data);
   });
 
 export const getRelatedPostsFn = createServerFn()

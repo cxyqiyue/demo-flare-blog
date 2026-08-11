@@ -14,4 +14,13 @@ export interface MomentsPageProps {
   onCreateMoment: (content: JSONContent, images: string[]) => Promise<boolean>;
   /** 删除动态（管理员），返回是否成功 */
   onDeleteMoment: (id: number) => Promise<boolean>;
+  /** 当前页码（从 1 开始） */
+  page: number;
+  /** 每页数量 */
+  pageSize: number;
+  /** 动态总数 */
+  total: number;
+  hasPrevPage: boolean;
+  hasNextPage: boolean;
+  onPageChange: (page: number) => void;
 }

@@ -9,6 +9,10 @@ import { authClient } from "@/lib/auth/auth.client";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { CommentSection } from "../../components/comments/view/comment-section";
+import {
+  PostNavigation,
+  PostNavigationSkeleton,
+} from "./components/post-navigation";
 import { RelatedPosts, RelatedPostsSkeleton } from "./components/related-posts";
 import TableOfContents from "./components/table-of-contents";
 
@@ -153,6 +157,13 @@ export function PostPage({ post }: PostPageProps) {
               </Button>
             </footer>
           </main>
+        </div>
+
+        {/* Prev/Next Navigation */}
+        <div className="pt-16 border-t border-border/40">
+          <Suspense fallback={<PostNavigationSkeleton />}>
+            <PostNavigation slug={post.slug} />
+          </Suspense>
         </div>
 
         {/* Related Posts */}

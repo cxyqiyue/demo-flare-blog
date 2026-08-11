@@ -4,13 +4,17 @@ import {
   createRateLimitMiddleware,
   dbMiddleware,
 } from "@/lib/middlewares";
-import { ToggleMomentLikeInputSchema } from "../moments.schema";
+import {
+  GetPublicMomentsPageInputSchema,
+  ToggleMomentLikeInputSchema,
+} from "../moments.schema";
 import * as MomentService from "../moments.service";
 
-export const getPublicMomentsFn = createServerFn()
+export const getPublicMomentsPageFn = createServerFn()
   .middleware([dbMiddleware])
-  .handler(async ({ context }) => {
-    return await MomentService.getPublicMoments(context);
+  .inputValidator(GetPublicMomentsPageInputSchema)
+  .handler(async ({ data, context }) => {
+    return await MomentService.getPublicMomentsPage(context, data);
   });
 
 export const toggleMomentLikeFn = createServerFn({

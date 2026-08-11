@@ -5,25 +5,31 @@ import { syncPostMedia } from "@/features/posts/data/post-media.data";
 import * as PostRevisionRepo from "@/features/posts/data/post-revisions.data";
 import * as PostRepo from "@/features/posts/data/posts.data";
 import type {
+  AdjacentPostsResponse,
   DeletePostInput,
+  FindAdjacentPostsInput,
   FindPostByIdInput,
   FindPostBySlugInput,
   FindRelatedPostsInput,
+  GenerateArticleInput,
   GenerateSlugInput,
   GetPostsCountInput,
   GetPostsCursorInput,
   GetPostsInput,
+  GetPublicPostsPageInput,
   PreviewSummaryInput,
-  GenerateArticleInput,
+  PublicPostsPageResponse,
   StartPostProcessInput,
   UpdatePostInput,
 } from "@/features/posts/schema/posts.schema";
 import {
+  AdjacentPostsResponseSchema,
   normalizePostTagName,
   POSTS_CACHE_KEYS,
   PostItemSchema,
   PostListResponseSchema,
   PostWithTocSchema,
+  PublicPostsPageResponseSchema,
 } from "@/features/posts/schema/posts.schema";
 import { logPostAutoSnapshot } from "@/features/posts/services/post-auto-snapshot.logging";
 import * as PostAutoSnapshotService from "@/features/posts/services/post-auto-snapshot.service";
@@ -169,6 +175,58 @@ export async function getRelatedPosts(
     .filter((p): p is NonNullable<typeof p> => !!p);
 
   return orderedPosts;
+}
+
+export async function getPublicPostsPage(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: GetPublicPostsPageInput,
+): Promise<PublicPostsPageResponse> {
+  const offset = data.offset ?? 0;
+  const limit = Math.min(data.limit ?? 10, 50);
+
+  const result = await CacheService.getVersioned(
+    context,
+    "posts:list",
+    (version) => POSTS_CACHE_KEYS.publicPage(version, offset, limit),
+    PublicPostsPageResponseSchema,
+    async () => {
+      const { items, total } = await PostRepo.getPublicPostsPage(context.db, {
+        offset,
+        limit,
+      });
+      return {
+        items,
+        total,
+        offset,
+        limit,
+        hasNextPage: offset + items.length < total,
+        hasPrevPage: offset > 0,
+      };
+    },
+    { ttl: "7d" },
+  );
+
+  return result;
+}
+
+export async function findAdjacentPosts(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: FindAdjacentPostsInput,
+): Promise<AdjacentPostsResponse> {
+  return await CacheService.getVersioned(
+    context,
+    "posts:detail",
+    (version) => POSTS_CACHE_KEYS.adjacent(version, data.slug),
+    AdjacentPostsResponseSchema,
+    async () => {
+      const { previous, next } = await PostRepo.findAdjacentPosts(
+        context.db,
+        data.slug,
+      );
+      return { previous, next };
+    },
+    { ttl: "7d" },
+  );
 }
 
 export async function generateSummaryByPostId({

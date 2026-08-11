@@ -1,17 +1,27 @@
 import { Link, useRouteContext } from "@tanstack/react-router";
 import { Terminal } from "lucide-react";
 import { useMemo } from "react";
+import type { SiteConfig } from "@/features/config/site-config.schema";
 import {
   resolveSocialHref,
   SOCIAL_PLATFORMS,
 } from "@/features/config/utils/social-platforms";
-import type { SiteConfig } from "@/features/config/site-config.schema";
 import { useViewCounts } from "@/features/pageview/queries";
 import type { HomePageProps } from "@/features/theme/contract/pages";
+import { Pagination } from "@/features/theme/themes/default/components/pagination";
 import { PostItem } from "@/features/theme/themes/default/components/post-item";
 import { m } from "@/paraglide/messages";
 
-export function HomePage({ posts, pinnedPosts }: HomePageProps) {
+export function HomePage({
+  posts,
+  pinnedPosts,
+  page,
+  pageSize,
+  total,
+  hasPrevPage,
+  hasNextPage,
+  onPageChange,
+}: HomePageProps) {
   const { siteConfig } = useRouteContext({ from: "__root__" });
 
   const displayPosts = useMemo(() => {
@@ -116,6 +126,15 @@ export function HomePage({ posts, pinnedPosts }: HomePageProps) {
             cd /posts
           </Link>
         </div>
+
+        <Pagination
+          page={page}
+          total={total}
+          pageSize={pageSize}
+          hasPrevPage={hasPrevPage}
+          hasNextPage={hasNextPage}
+          onPageChange={onPageChange}
+        />
       </section>
     </div>
   );

@@ -1,20 +1,30 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import theme from "@theme";
+import { z } from "zod";
 import { siteDomainQuery } from "@/features/config/queries";
 import {
   pinnedPostsQuery,
   popularPostsQuery,
-  recentPostsQuery,
+  publicPostsPageQuery,
 } from "@/features/posts/queries";
 import { buildCanonicalUrl, canonicalLink } from "@/lib/seo";
 
-const { recentPostsLimit, popularPostsLimit } = theme.config.home;
+const { postsPerPage, popularPostsLimit } = theme.config.home;
+
+const searchSchema = z.object({
+  page: z.coerce.number().int().min(1).optional().catch(undefined),
+});
 
 export const Route = createFileRoute("/_public/")({
-  loader: async ({ context }) => {
+  validateSearch: searchSchema,
+  loaderDeps: ({ search }) => ({ page: search.page ?? 1 }),
+  loader: async ({ context, deps }) => {
+    const offset = (deps.page - 1) * postsPerPage;
     const [, domain] = await Promise.all([
-      context.queryClient.ensureQueryData(recentPostsQuery(recentPostsLimit)),
+      context.queryClient.ensureQueryData(
+        publicPostsPageQuery({ offset, limit: postsPerPage }),
+      ),
       context.queryClient.ensureQueryData(siteDomainQuery),
       context.queryClient.ensureQueryData(pinnedPostsQuery),
       context.queryClient.ensureQueryData(popularPostsQuery(popularPostsLimit)),
@@ -32,17 +42,36 @@ export const Route = createFileRoute("/_public/")({
 });
 
 function HomeRoute() {
-  const { data: posts } = useSuspenseQuery(recentPostsQuery(recentPostsLimit));
+  const navigate = useNavigate({ from: Route.fullPath });
+  const { page } = Route.useSearch();
+  const currentPage = page ?? 1;
+  const offset = (currentPage - 1) * postsPerPage;
+
+  const { data: pageData } = useSuspenseQuery(
+    publicPostsPageQuery({ offset, limit: postsPerPage }),
+  );
   const { data: pinnedPosts } = useSuspenseQuery(pinnedPostsQuery);
   const { data: popularPosts } = useSuspenseQuery(
     popularPostsQuery(popularPostsLimit),
   );
 
+  const handlePageChange = (nextPage: number) => {
+    navigate({
+      search: { page: nextPage > 1 ? nextPage : undefined },
+    });
+  };
+
   return (
     <theme.HomePage
-      posts={posts}
+      posts={pageData.items}
       pinnedPosts={pinnedPosts}
       popularPosts={popularPosts}
+      page={currentPage}
+      pageSize={postsPerPage}
+      total={pageData.total}
+      hasPrevPage={pageData.hasPrevPage}
+      hasNextPage={pageData.hasNextPage}
+      onPageChange={handlePageChange}
     />
   );
 }
