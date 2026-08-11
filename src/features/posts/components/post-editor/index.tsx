@@ -2,13 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
 import type { JSONContent, Editor as TiptapEditor } from "@tiptap/react";
 import { History, Loader2 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Editor } from "@/components/tiptap-editor";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
+import { markdownToJsonContent } from "@/features/import-export/utils/markdown-parser";
+import { jsonContentToMarkdown } from "@/features/import-export/utils/markdown-serializer";
 import { extensions } from "@/features/posts/editor/config";
 import type { PostRevisionSnapshot } from "@/features/posts/schema/post-revisions.schema";
 import { tagsAdminQueryOptions } from "@/features/tags/queries";
+import { ContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { AiArticlePanel } from "./ai-article-panel";
 import { EditorTableOfContents } from "./editor-table-of-contents";
@@ -18,6 +22,8 @@ import { PostEditorHistoryPanel } from "./post-editor-history-panel";
 import { PostEditorMetadata } from "./post-editor-metadata";
 import { PostEditorStatusBar } from "./post-editor-status-bar";
 import type { PostEditorData, PostEditorProps } from "./types";
+
+type EditorMode = "wysiwyg" | "markdown" | "preview";
 
 export function PostEditor({ initialData, onSave }: PostEditorProps) {
   // Initialize post state from initialData (always provided)
@@ -62,6 +68,13 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
   );
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
+
+  const [editorMode, setEditorMode] = useState<EditorMode>("wysiwyg");
+  const [markdownSource, setMarkdownSource] = useState("");
+  const [isConverting, setIsConverting] = useState(false);
+  const markdownSourceRef = useRef("");
+  const convertedSourceRef = useRef("");
+  const markdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch all tags for AI context and matching
   const { data: allTags = [] } = useQuery(tagsAdminQueryOptions());
@@ -110,6 +123,129 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
     setPost((prev) => ({ ...prev, ...updates }));
   }, []);
 
+  const scheduleMarkdownConversion = useCallback(
+    (source: string) => {
+      if (markdownTimerRef.current) {
+        clearTimeout(markdownTimerRef.current);
+      }
+      setIsConverting(true);
+      markdownTimerRef.current = setTimeout(() => {
+        void markdownToJsonContent(source)
+          .then((json) => {
+            if (markdownSourceRef.current !== source) return;
+            convertedSourceRef.current = source;
+            handleContentChange(json);
+          })
+          .catch(() => {})
+          .finally(() => {
+            if (markdownSourceRef.current === source) {
+              setIsConverting(false);
+            }
+          });
+      }, 500);
+    },
+    [handleContentChange],
+  );
+
+  const handleMarkdownChange = useCallback(
+    (source: string) => {
+      markdownSourceRef.current = source;
+      setMarkdownSource(source);
+      scheduleMarkdownConversion(source);
+    },
+    [scheduleMarkdownConversion],
+  );
+
+  const flushMarkdown = useCallback(async () => {
+    if (markdownTimerRef.current) {
+      clearTimeout(markdownTimerRef.current);
+      markdownTimerRef.current = null;
+    }
+    const source = markdownSourceRef.current;
+    if (source === convertedSourceRef.current) {
+      setIsConverting(false);
+      return;
+    }
+    try {
+      const json = await markdownToJsonContent(source);
+      if (markdownSourceRef.current !== source) return;
+      convertedSourceRef.current = source;
+      handleContentChange(json);
+    } finally {
+      setIsConverting(false);
+    }
+  }, [handleContentChange]);
+
+  const handleModeChange = useCallback(
+    async (mode: EditorMode) => {
+      if (mode === editorMode) return;
+
+      if (editorMode === "markdown") {
+        await flushMarkdown();
+        if (mode === "wysiwyg") {
+          setEditorRenderKey(`editor:${initialData.id}:${Date.now()}`);
+        }
+      } else if (mode === "markdown") {
+        const source = jsonContentToMarkdown(
+          post.contentJson ?? { type: "doc" },
+        );
+        markdownSourceRef.current = source;
+        convertedSourceRef.current = source;
+        setMarkdownSource(source);
+      }
+
+      setEditorMode(mode);
+    },
+    [editorMode, flushMarkdown, initialData.id, post.contentJson],
+  );
+
+  const handleAiInsertFallback = useCallback(
+    (generated: { markdown: string; content: JSONContent }) => {
+      if (editorMode === "markdown") {
+        const base = markdownSourceRef.current.trimEnd();
+        const inserted = base
+          ? `${base}\n\n${generated.markdown.trim()}`
+          : generated.markdown.trim();
+        markdownSourceRef.current = inserted;
+        setMarkdownSource(inserted);
+        scheduleMarkdownConversion(inserted);
+        return;
+      }
+      handleContentChange(generated.content);
+      setEditorRenderKey(`editor:${initialData.id}:${Date.now()}`);
+      setEditorMode("wysiwyg");
+    },
+    [
+      editorMode,
+      handleContentChange,
+      initialData.id,
+      scheduleMarkdownConversion,
+    ],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (markdownTimerRef.current) {
+        clearTimeout(markdownTimerRef.current);
+      }
+    };
+  }, []);
+
+  const resetMarkdownSource = useCallback(
+    (contentJson: PostEditorData["contentJson"]) => {
+      if (markdownTimerRef.current) {
+        clearTimeout(markdownTimerRef.current);
+        markdownTimerRef.current = null;
+      }
+      const source = jsonContentToMarkdown(contentJson ?? { type: "doc" });
+      markdownSourceRef.current = source;
+      convertedSourceRef.current = source;
+      setMarkdownSource(source);
+      setIsConverting(false);
+    },
+    [],
+  );
+
   const handleRestoreApplied = useCallback(
     ({
       snapshot,
@@ -144,10 +280,19 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
       };
 
       setPost(restoredPost);
+      if (editorMode === "markdown") {
+        resetMarkdownSource(restoredPost.contentJson);
+      }
       setEditorRenderKey(`editor:${initialData.id}:${Date.now()}`);
       markSaved(restoredPost);
     },
-    [initialData.id, markSaved, post.hasPublicCache],
+    [
+      editorMode,
+      initialData.id,
+      markSaved,
+      post.hasPublicCache,
+      resetMarkdownSource,
+    ],
   );
 
   const currentSnapshot = useMemo<PostRevisionSnapshot>(
@@ -197,10 +342,11 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
       />
 
       <AiArticlePanel
-        editor={editorInstance}
+        editor={editorMode === "wysiwyg" ? editorInstance : null}
         open={isAiOpen}
         onClose={() => setIsAiOpen(false)}
         onApplyTitle={(title) => handlePostChange({ title })}
+        onInsertFallback={handleAiInsertFallback}
       />
 
       <PostEditorHistoryPanel
@@ -245,15 +391,64 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
               onGenerateTags={handleGenerateTags}
             />
 
+            {/* Mode switcher */}
+            <div className="mb-4 flex items-center gap-1 border-b border-border/20 pb-4">
+              {(
+                [
+                  { key: "wysiwyg", label: m.editor_mode_wysiwyg() },
+                  { key: "markdown", label: m.editor_mode_markdown() },
+                  { key: "preview", label: m.editor_mode_preview() },
+                ] as const
+              ).map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => void handleModeChange(key)}
+                  className={cn(
+                    "px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.18em] transition-colors",
+                    editorMode === key
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:bg-muted/30 hover:text-foreground",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+              {isConverting && (
+                <span className="ml-auto flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                  <Loader2 size={12} className="animate-spin" />
+                  {m.editor_markdown_converting()}
+                </span>
+              )}
+            </div>
+
             {/* Editor Area */}
             <div className="min-h-[60vh] pb-32">
-              <Editor
-                key={editorRenderKey}
-                extensions={extensions}
-                content={post.contentJson ?? ""}
-                onChange={handleContentChange}
-                onCreated={setEditorInstance}
-              />
+              {editorMode === "wysiwyg" && (
+                <Editor
+                  key={editorRenderKey}
+                  extensions={extensions}
+                  content={post.contentJson ?? ""}
+                  onChange={handleContentChange}
+                  onCreated={setEditorInstance}
+                />
+              )}
+
+              {editorMode === "markdown" && (
+                <textarea
+                  value={markdownSource}
+                  onChange={(e) => handleMarkdownChange(e.target.value)}
+                  placeholder={m.editor_markdown_placeholder()}
+                  spellCheck={false}
+                  className="w-full min-h-[60vh] resize-y whitespace-pre-wrap border border-border/30 bg-muted/5 px-4 py-4 font-mono text-sm leading-6 text-foreground/90 transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10 focus-visible:outline-none"
+                />
+              )}
+
+              {editorMode === "preview" && (
+                <div className="min-h-[60vh] border border-border/20 bg-muted/5 px-6 py-6">
+                  <ContentRenderer content={post.contentJson} />
+                </div>
+              )}
             </div>
           </div>
 
@@ -283,7 +478,7 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
                 )}
               </button>
 
-              {editorInstance && (
+              {editorMode === "wysiwyg" && editorInstance && (
                 <EditorTableOfContents editor={editorInstance} />
               )}
             </div>

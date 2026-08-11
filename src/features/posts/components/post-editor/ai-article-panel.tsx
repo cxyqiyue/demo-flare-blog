@@ -15,6 +15,10 @@ interface AiArticlePanelProps {
   open: boolean;
   onClose: () => void;
   onApplyTitle: (title: string) => void;
+  onInsertFallback?: (generated: {
+    markdown: string;
+    content: JSONContent;
+  }) => void;
 }
 
 export function AiArticlePanel({
@@ -22,6 +26,7 @@ export function AiArticlePanel({
   open,
   onClose,
   onApplyTitle,
+  onInsertFallback,
 }: AiArticlePanelProps) {
   const [outline, setOutline] = useState("");
   const [title, setTitle] = useState("");
@@ -69,8 +74,12 @@ export function AiArticlePanel({
   };
 
   const handleInsert = () => {
-    if (!generated || !editor) return;
-    editor.commands.setContent(generated.content);
+    if (!generated) return;
+    if (editor) {
+      editor.commands.setContent(generated.content);
+    } else {
+      onInsertFallback?.(generated);
+    }
     if (fillTitle && title.trim()) {
       onApplyTitle(title.trim());
     }
