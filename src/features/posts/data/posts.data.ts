@@ -561,7 +561,8 @@ const PUBLIC_PAGE_COLUMNS = {
 
 /**
  * Offset-based pagination for public posts (home page).
- * Pinned posts are excluded so they can be rendered separately on top.
+ * All published posts are paginated purely by publish time (newest first),
+ * including pinned ones (pinned is just a badge on the card).
  */
 export async function getPublicPostsPage(
   db: DB,
@@ -573,10 +574,7 @@ export async function getPublicPostsPage(
   const offset = options.offset ?? 0;
   const limit = Math.min(options.limit ?? 10, 50);
 
-  const whereClause = and(
-    buildPostWhereClause({ publicOnly: true }),
-    sql`${PostsTable.pinnedAt} IS NULL`,
-  );
+  const whereClause = buildPostWhereClause({ publicOnly: true });
 
   const [posts, totalRows] = await Promise.all([
     db

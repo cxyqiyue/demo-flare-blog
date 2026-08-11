@@ -128,6 +128,13 @@ jobs:
           bun run build
           bun run deploy
 
+      - name: Bump KV cache versions
+        # 部署后使 posts 列表/详情等 KV 缓存失效，避免旧数据形状缓存继续命中
+        run: |
+          TS=$(date +%s)
+          bunx wrangler kv key put --binding=KV "ver:posts:list" "$TS" --remote
+          bunx wrangler kv key put --binding=KV "ver:posts:detail" "$TS" --remote
+
       - name: Purge Cloudflare CDN Cache
         if: env.CLOUDFLARE_ZONE_ID != '' && env.CLOUDFLARE_PURGE_API_TOKEN != ''
         env:

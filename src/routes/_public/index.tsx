@@ -3,14 +3,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import theme from "@theme";
 import { z } from "zod";
 import { siteDomainQuery } from "@/features/config/queries";
-import {
-  pinnedPostsQuery,
-  popularPostsQuery,
-  publicPostsPageQuery,
-} from "@/features/posts/queries";
+import { publicPostsPageQuery } from "@/features/posts/queries";
 import { buildCanonicalUrl, canonicalLink } from "@/lib/seo";
 
-const { postsPerPage, popularPostsLimit } = theme.config.home;
+const { postsPerPage } = theme.config.home;
 
 const searchSchema = z.object({
   page: z.coerce.number().int().min(1).optional().catch(undefined),
@@ -26,8 +22,6 @@ export const Route = createFileRoute("/_public/")({
         publicPostsPageQuery({ offset, limit: postsPerPage }),
       ),
       context.queryClient.ensureQueryData(siteDomainQuery),
-      context.queryClient.ensureQueryData(pinnedPostsQuery),
-      context.queryClient.ensureQueryData(popularPostsQuery(popularPostsLimit)),
     ]);
 
     return {
@@ -50,10 +44,6 @@ function HomeRoute() {
   const { data: pageData } = useSuspenseQuery(
     publicPostsPageQuery({ offset, limit: postsPerPage }),
   );
-  const { data: pinnedPosts } = useSuspenseQuery(pinnedPostsQuery);
-  const { data: popularPosts } = useSuspenseQuery(
-    popularPostsQuery(popularPostsLimit),
-  );
 
   const handlePageChange = (nextPage: number) => {
     navigate({
@@ -64,8 +54,6 @@ function HomeRoute() {
   return (
     <theme.HomePage
       posts={pageData.items}
-      pinnedPosts={pinnedPosts}
-      popularPosts={popularPosts}
       page={currentPage}
       pageSize={postsPerPage}
       total={pageData.total}

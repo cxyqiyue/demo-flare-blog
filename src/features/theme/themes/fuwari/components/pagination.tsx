@@ -31,13 +31,13 @@ export function Pagination({
         type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={!hasPrevPage}
-        className="fuwari-btn-regular rounded-lg h-9 px-3 md:px-4 text-sm flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none"
+        className="fuwari-btn-regular rounded-lg h-9 px-3 md:px-4 text-sm flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
       >
         <ChevronLeft size={16} />
         {m.pagination_prev()}
       </button>
 
-      <span className="text-sm fuwari-text-50 tabular-nums">
+      <span className="text-sm fuwari-text-50 tabular-nums whitespace-nowrap">
         {m.pagination_page({ page, pages: totalPages })}
       </span>
 
@@ -45,7 +45,7 @@ export function Pagination({
         type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={!hasNextPage}
-        className="fuwari-btn-regular rounded-lg h-9 px-3 md:px-4 text-sm flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none"
+        className="fuwari-btn-regular rounded-lg h-9 px-3 md:px-4 text-sm flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap"
       >
         {m.pagination_next()}
         <ChevronRight size={16} />

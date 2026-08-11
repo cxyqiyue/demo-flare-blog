@@ -24,20 +24,20 @@ export function Pagination({
 
   return (
     <nav
-      className="flex items-center justify-between pt-8 border-t border-border/40"
+      className="flex items-center justify-between gap-3 pt-8 border-t border-border/40"
       aria-label={m.pagination_page({ page, pages: totalPages })}
     >
       <button
         type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={!hasPrevPage}
-        className="inline-flex items-center gap-1.5 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:hover:text-muted-foreground disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-1.5 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:hover:text-muted-foreground disabled:cursor-not-allowed whitespace-nowrap"
       >
         <ChevronLeft size={16} />
         {m.pagination_prev()}
       </button>
 
-      <span className="text-xs font-mono text-muted-foreground tabular-nums">
+      <span className="text-xs font-mono text-muted-foreground tabular-nums whitespace-nowrap">
         {m.pagination_page({ page, pages: totalPages })}
       </span>
 
@@ -45,7 +45,7 @@ export function Pagination({
         type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={!hasNextPage}
-        className="inline-flex items-center gap-1.5 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:hover:text-muted-foreground disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-1.5 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:hover:text-muted-foreground disabled:cursor-not-allowed whitespace-nowrap"
       >
         {m.pagination_next()}
         <ChevronRight size={16} />

@@ -14,7 +14,6 @@ import { m } from "@/paraglide/messages";
 
 export function HomePage({
   posts,
-  pinnedPosts,
   page,
   pageSize,
   total,
@@ -24,24 +23,7 @@ export function HomePage({
 }: HomePageProps) {
   const { siteConfig } = useRouteContext({ from: "__root__" });
 
-  const displayPosts = useMemo(() => {
-    const pinned = (pinnedPosts ?? []).map((p) => ({ ...p, isPinned: true }));
-    const regular = posts.map((p) => ({ ...p, isPinned: false }));
-    const seen = new Set<number>();
-    const merged = [];
-    for (const p of [...pinned, ...regular]) {
-      if (!seen.has(p.id)) {
-        seen.add(p.id);
-        merged.push(p);
-      }
-    }
-    return merged;
-  }, [posts, pinnedPosts]);
-
-  const allSlugs = useMemo(
-    () => displayPosts.map((p) => p.slug),
-    [displayPosts],
-  );
+  const allSlugs = useMemo(() => posts.map((p) => p.slug), [posts]);
   const { data: viewCounts, isPending: isPendingViewCounts } =
     useViewCounts(allSlugs);
 
@@ -106,11 +88,11 @@ export function HomePage({
         </h2>
 
         <div className="space-y-8">
-          {displayPosts.map((post) => (
+          {posts.map((post) => (
             <PostItem
               key={post.id}
               post={post}
-              pinned={post.isPinned}
+              pinned={post.pinnedAt != null}
               views={viewCounts?.[post.slug]}
               isLoadingViews={isPendingViewCounts}
             />
