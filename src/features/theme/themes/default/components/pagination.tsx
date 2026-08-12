@@ -54,37 +54,47 @@ export function Pagination({
         {m.pagination_prev()}
       </button>
 
-      {isEditing ? (
-        <input
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={totalPages}
-          value={draft}
-          autoFocus
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              commit();
-            } else if (e.key === "Escape") {
-              setIsEditing(false);
-            }
-          }}
-          onBlur={() => setIsEditing(false)}
-          className="w-16 h-8 rounded border border-border bg-background text-center text-xs font-mono text-foreground tabular-nums outline-none focus:border-foreground/50 focus:ring-1 focus:ring-foreground/10"
-          aria-label={m.pagination_page_input()}
-        />
-      ) : (
-        <button
-          type="button"
-          onClick={startEditing}
-          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap cursor-pointer"
-          title={m.pagination_page_input_hint({ pages: totalPages })}
-        >
-          {m.pagination_page({ page, pages: totalPages })}
-        </button>
-      )}
+      <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground tabular-nums whitespace-nowrap select-none">
+        <span className="shrink-0">{m.pagination_page_prefix()}</span>
+
+        {isEditing ? (
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={totalPages}
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commit();
+              } else if (e.key === "Escape") {
+                setIsEditing(false);
+              }
+            }}
+            onBlur={() => setIsEditing(false)}
+            className="w-14 h-8 rounded border border-border bg-background text-center text-xs font-mono text-foreground tabular-nums outline-none focus:border-foreground/50 focus:ring-1 focus:ring-foreground/10"
+            aria-label={m.pagination_page_input()}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={startEditing}
+            className="min-w-8 h-8 px-1.5 rounded text-xs font-mono font-semibold text-foreground hover:text-primary hover:bg-muted active:bg-muted/60 cursor-pointer transition-colors"
+            title={m.pagination_page_input_hint({ pages: totalPages })}
+          >
+            {page}
+          </button>
+        )}
+
+        <span className="shrink-0">
+          <span className="opacity-50">/</span>
+          &nbsp;{totalPages}
+          {m.pagination_page_suffix() && <>&nbsp;{m.pagination_page_suffix()}</>}
+        </span>
+      </div>
 
       <button
         type="button"

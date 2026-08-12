@@ -19,6 +19,18 @@
   --tw-prose-td-borders: var(--fuwari-meta-divider);
 
   color: var(--tw-prose-body);
+  overflow-wrap: break-word;
+  overflow-x: clip;
+  min-width: 0;
+  max-width: 100%;
+
+  img,
+  video,
+  iframe,
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
 
   h1 {
     @apply text-3xl font-bold font-sans tracking-normal mt-10 mb-6;
@@ -71,6 +83,9 @@
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
     display: inline-block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 
     &:hover,
     &:active {

@@ -1731,6 +1731,8 @@
   "post_next": "下一篇",
   "post_home": "首页",
   "pagination_page": "第 {page} / {pages} 页",
+  "pagination_page_prefix": "第",
+  "pagination_page_suffix": "页",
   "pagination_page_input": "输入页码跳转",
   "pagination_page_input_hint": "点击输入页码，回车跳转（1 - {pages}）",
   "pagination_prev": "上一页",

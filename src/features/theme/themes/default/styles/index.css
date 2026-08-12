@@ -149,6 +149,21 @@ mark {
 
   /* Typography Defaults */
   .default-theme {
+    overflow-wrap: break-word;
+
+    img,
+    video,
+    iframe,
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    a {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
     h1 {
       @apply scroll-m-20 text-4xl font-serif font-medium tracking-tight lg:text-5xl;
     }

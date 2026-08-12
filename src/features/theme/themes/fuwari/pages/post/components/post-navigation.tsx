@@ -20,7 +20,7 @@ export function PostNavigation({ slug }: PostNavigationProps) {
             params={{ slug: previous.slug }}
             className="group min-w-0 flex-1 flex flex-col gap-1 rounded-lg px-3 py-2 transition-colors hover:bg-(--fuwari-btn-plain-bg-hover) active:bg-(--fuwari-btn-plain-bg-active)"
           >
-            <span className="text-xs fuwari-text-50 flex items-center gap-1 transition-transform group-hover:-translate-x-0.5">
+            <span className="text-xl font-bold fuwari-text-90 flex items-center gap-1.5 transition-transform group-hover:-translate-x-0.5">
               <span>←</span>
               {m.post_prev()}
             </span>
@@ -38,7 +38,7 @@ export function PostNavigation({ slug }: PostNavigationProps) {
             params={{ slug: next.slug }}
             className="group min-w-0 flex-1 flex flex-col gap-1 rounded-lg px-3 py-2 transition-colors hover:bg-(--fuwari-btn-plain-bg-hover) active:bg-(--fuwari-btn-plain-bg-active)"
           >
-            <span className="text-xs fuwari-text-50 flex items-center justify-end gap-1 transition-transform group-hover:translate-x-0.5">
+            <span className="text-xl font-bold fuwari-text-90 flex items-center justify-end gap-1.5 transition-transform group-hover:translate-x-0.5">
               {m.post_next()}
               <span>→</span>
             </span>

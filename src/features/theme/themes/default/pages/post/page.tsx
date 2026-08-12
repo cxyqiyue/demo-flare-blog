@@ -123,7 +123,7 @@ export function PostPage({ post }: PostPageProps) {
             </div>
           </aside>
 
-          <main className="max-w-none text-foreground leading-relaxed font-serif">
+          <main className="max-w-none min-w-0 overflow-x-clip text-foreground leading-relaxed font-serif">
             <ContentRenderer content={post.contentJson} />
 
             <footer className="mt-24 pt-8 border-t border-border/20 flex flex-col md:flex-row justify-between items-center gap-6">

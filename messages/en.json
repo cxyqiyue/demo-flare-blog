@@ -1739,6 +1739,8 @@
   "post_next": "Next",
   "post_home": "Home",
   "pagination_page": "Page {page} / {pages}",
+  "pagination_page_prefix": "Page",
+  "pagination_page_suffix": "",
   "pagination_page_input": "Enter page number",
   "pagination_page_input_hint": "Click to type a page number (1 - {pages}), press Enter to jump",
   "pagination_prev": "Prev",

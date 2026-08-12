@@ -54,37 +54,47 @@ export function Pagination({
         {m.pagination_prev()}
       </button>
 
-      {isEditing ? (
-        <input
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={totalPages}
-          value={draft}
-          autoFocus
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              commit();
-            } else if (e.key === "Escape") {
-              setIsEditing(false);
-            }
-          }}
-          onBlur={() => setIsEditing(false)}
-          className="w-16 h-9 rounded-lg text-center text-sm fuwari-text-90 tabular-nums bg-(--fuwari-input-bg) border border-(--fuwari-input-border) outline-none transition-colors focus:border-(--fuwari-primary)"
-          aria-label={m.pagination_page_input()}
-        />
-      ) : (
-        <button
-          type="button"
-          onClick={startEditing}
-          className="fuwari-btn-regular rounded-lg h-9 px-3 md:px-4 text-sm fuwari-text-50 tabular-nums whitespace-nowrap active:scale-95 transition-all hover:text-(--fuwari-primary) cursor-pointer"
-          title={m.pagination_page_input_hint({ pages: totalPages })}
-        >
-          {m.pagination_page({ page, pages: totalPages })}
-        </button>
-      )}
+      <div className="flex items-center gap-1.5 text-sm fuwari-text-50 tabular-nums whitespace-nowrap select-none">
+        <span className="shrink-0">{m.pagination_page_prefix()}</span>
+
+        {isEditing ? (
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={totalPages}
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commit();
+              } else if (e.key === "Escape") {
+                setIsEditing(false);
+              }
+            }}
+            onBlur={() => setIsEditing(false)}
+            className="w-14 h-9 rounded-lg text-center text-sm fuwari-text-90 tabular-nums bg-(--fuwari-input-bg) border border-(--fuwari-input-border) outline-none transition-colors focus:border-(--fuwari-primary)"
+            aria-label={m.pagination_page_input()}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={startEditing}
+            className="min-w-10 h-9 px-1.5 rounded-lg text-sm font-semibold fuwari-text-90 hover:text-(--fuwari-primary) hover:bg-(--fuwari-btn-plain-bg-hover) active:bg-(--fuwari-btn-plain-bg-active) cursor-pointer transition-all"
+            title={m.pagination_page_input_hint({ pages: totalPages })}
+          >
+            {page}
+          </button>
+        )}
+
+        <span className="shrink-0">
+          <span className="opacity-60">/</span>
+          &nbsp;{totalPages}
+          {m.pagination_page_suffix() && <>&nbsp;{m.pagination_page_suffix()}</>}
+        </span>
+      </div>
 
       <button
         type="button"

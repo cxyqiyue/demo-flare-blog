@@ -25,7 +25,7 @@ export function PostNavigation({ slug }: PostNavigationProps) {
             className="shrink-0 group-hover:-translate-x-0.5 transition-transform"
           />
           <span className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[10px] uppercase tracking-widest opacity-50">
+            <span className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground/80">
               {m.post_prev()}
             </span>
             <span className="truncate text-sm">{previous.title}</span>
@@ -42,7 +42,7 @@ export function PostNavigation({ slug }: PostNavigationProps) {
           className="group flex items-center justify-end gap-2 min-w-0 rounded-lg border border-border/30 px-4 py-3 hover:border-foreground/20 hover:text-foreground transition-colors"
         >
           <span className="flex flex-col gap-0.5 min-w-0 text-right">
-            <span className="text-[10px] uppercase tracking-widest opacity-50">
+            <span className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground/80">
               {m.post_next()}
             </span>
             <span className="truncate text-sm">{next.title}</span>
