@@ -453,14 +453,30 @@ export async function batchUpdatePostsStatus(
     }
 
     context.executionCtx.waitUntil(
-      context.env.POST_PROCESS_WORKFLOW.create({
-        params: {
-          postId: post.id,
-          isPublished,
-          publishedAt: publishedAtISO,
-          isFuturePost: false,
-        },
-      }),
+      (async () => {
+        try {
+          await context.env.POST_PROCESS_WORKFLOW.create({
+            params: {
+              postId: post.id,
+              isPublished,
+              publishedAt: publishedAtISO,
+              isFuturePost: false,
+            },
+          });
+        } catch (error) {
+          // DB status is already committed; never let a workflow-scheduling
+          // failure turn the batch request into an error. Cache/index cleanup
+          // degradation is logged for later investigation.
+          console.error(
+            JSON.stringify({
+              message:
+                "post process workflow create failed for batch status update",
+              postId: post.id,
+              error: String(error),
+            }),
+          );
+        }
+      })(),
     );
   }
 

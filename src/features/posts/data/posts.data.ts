@@ -430,7 +430,9 @@ export async function batchUpdatePostsStatus(
   if (ids.length === 0) return;
 
   if (status === "published") {
-    const now = new Date();
+    // publishedAt is stored as a unix-timestamp integer (seconds); the D1
+    // driver rejects Date objects inside raw SQL templates, so bind seconds.
+    const now = Math.floor(Date.now() / 1000);
     await db
       .update(PostsTable)
       .set({

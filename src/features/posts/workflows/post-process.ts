@@ -96,7 +96,11 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
         return result.data;
       },
     );
-    if (!updatedPost) return;
+    // Summary generation failure must NOT abort the publish flow: the public
+    // snapshot, search index and cache invalidation still need to run so the
+    // newly published post becomes visible. Fall back to the initial snapshot.
+    const postForSideEffects = updatedPost ?? initialPost;
+    if (!postForSideEffects) return;
 
     // 3. Persist the highlighted public snapshot used by SSR/read paths.
     await step.do("build public content", async () => {
@@ -116,13 +120,13 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
 
     if (!isFuturePost) {
       await step.do("update search index", async () => {
-        return await upsertPostSearchIndex(this.env, updatedPost);
+        return await upsertPostSearchIndex(this.env, postForSideEffects);
       });
     }
 
     // 5. Invalidate caches
     await step.do("invalidate caches", async () => {
-      await invalidatePostCaches(this.env, updatedPost.slug);
+      await invalidatePostCaches(this.env, postForSideEffects.slug);
     });
 
     // 6. Update sync hash in KV

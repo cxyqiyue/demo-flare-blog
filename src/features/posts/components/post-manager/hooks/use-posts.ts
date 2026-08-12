@@ -117,7 +117,24 @@ export function useBatchUpdatePostsStatus({
   return useMutation({
     mutationFn: (data: { ids: Array<number>; status: "published" | "draft" }) =>
       batchUpdatePostsStatusFn({ data }),
-    onSuccess: (result, variables) => {
+    onMutate: (variables) => {
+      const id =
+        variables.status === "published"
+          ? toast.loading(
+              m.admin_posts_batch_toast_pending_published({
+                count: String(variables.ids.length),
+              }),
+            )
+          : toast.loading(
+              m.admin_posts_batch_toast_pending_drafted({
+                count: String(variables.ids.length),
+              }),
+            );
+      return { toastId: id };
+    },
+    onSuccess: (result, variables, context) => {
+      if (context?.toastId) toast.dismiss(context.toastId);
+
       if (result.error) {
         toast.error(m.admin_posts_batch_toast_error(), {
           description: m.admin_posts_batch_toast_error_desc(),
@@ -146,6 +163,12 @@ export function useBatchUpdatePostsStatus({
         });
       }
       onSuccess?.();
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.toastId) toast.dismiss(context.toastId);
+      toast.error(m.admin_posts_batch_toast_retry(), {
+        description: m.admin_posts_batch_toast_retry_desc(),
+      });
     },
   });
 }
