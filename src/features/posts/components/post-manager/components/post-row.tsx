@@ -2,6 +2,7 @@ import { ClientOnly, useNavigate } from "@tanstack/react-router";
 import { Edit3, MoreVertical, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import Dropdown from "@/components/ui/dropdown";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -9,10 +10,17 @@ import type { PostListItem } from "../types";
 
 interface PostRowProps {
   post: PostListItem;
+  selected: boolean;
+  onSelectChange: (checked: boolean) => void;
   onDelete: (post: PostListItem) => void;
 }
 
-export function PostRow({ post, onDelete }: PostRowProps) {
+export function PostRow({
+  post,
+  selected,
+  onSelectChange,
+  onDelete,
+}: PostRowProps) {
   const navigate = useNavigate();
 
   const handleEdit = () => {
@@ -24,13 +32,29 @@ export function PostRow({ post, onDelete }: PostRowProps) {
 
   return (
     <div className="group px-4 py-4 flex flex-col md:grid md:grid-cols-12 gap-4 items-center hover:bg-muted/30 transition-all duration-200 relative border-b border-border/30 last:border-0">
+      {/* Select Column (desktop) */}
+      <div className="hidden md:flex md:col-span-1 items-center justify-start">
+        <Checkbox
+          checked={selected}
+          onCheckedChange={onSelectChange}
+          aria-label={m.admin_posts_select_post()}
+        />
+      </div>
+
       {/* Main Content: Info Block */}
       <div
-        className="md:col-span-6 min-w-0 cursor-pointer group/title w-full flex flex-col gap-1"
+        className="md:col-span-5 min-w-0 cursor-pointer group/title w-full flex flex-col gap-1"
         onClick={handleEdit}
       >
         {/* Metadata Header: ID */}
         <div className="flex items-center gap-3">
+          <Checkbox
+            className="md:hidden"
+            checked={selected}
+            onCheckedChange={onSelectChange}
+            aria-label={m.admin_posts_select_post()}
+            onClick={(e) => e.stopPropagation()}
+          />
           <span className="font-mono text-muted-foreground text-[10px] tracking-widest">
             #{post.id.toString().padStart(3, "0")}
           </span>

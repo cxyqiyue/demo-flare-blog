@@ -5,14 +5,15 @@ import { useEffect, useState } from "react";
 import { AdminPagination } from "@/components/admin/admin-pagination";
 import { ErrorPage } from "@/components/common/error-page";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { createEmptyPostFn } from "@/features/posts/api/posts.admin.api";
 import { POSTS_KEYS } from "@/features/posts/queries";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ADMIN_ITEMS_PER_PAGE } from "@/lib/constants";
 import { m } from "@/paraglide/messages";
-import { PostRow, PostsToolbar } from "./components";
-import { useDeletePost, usePosts } from "./hooks";
+import { BatchActionBar, PostRow, PostsToolbar } from "./components";
+import { useBatchUpdatePostsStatus, useDeletePost, usePosts } from "./hooks";
 import { PostManagerSkeleton } from "./post-manager-skeleton";
 import type {
   PostListItem,
@@ -60,9 +61,20 @@ export function PostManager({
   const queryClient = useQueryClient();
   const [postToDelete, setPostToDelete] = useState<PostListItem | null>(null);
 
+  // Batch selection state
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+  const [batchTarget, setBatchTarget] = useState<"published" | "draft" | null>(
+    null,
+  );
+
   // Local search input state for debouncing
   const [searchInput, setSearchInput] = useState(search);
   const debouncedSearch = useDebounce(searchInput, 300);
+
+  // Clear selection whenever list filters change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, status, sortDir, sortBy, debouncedSearch]);
 
   // Sync URL when debounced search changes
   useEffect(() => {
@@ -106,6 +118,11 @@ export function PostManager({
     onSuccess: () => setPostToDelete(null),
   });
 
+  // Batch status mutation
+  const batchMutation = useBatchUpdatePostsStatus({
+    onSuccess: () => setSelectedIds(new Set()),
+  });
+
   const handleDelete = (post: PostListItem) => {
     setPostToDelete(post);
   };
@@ -114,6 +131,44 @@ export function PostManager({
     if (postToDelete) {
       deleteMutation.mutate(postToDelete);
     }
+  };
+
+  // --- Batch selection handlers ---
+  const toggleSelected = (id: number, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  };
+
+  const pageIds = posts.map((post) => post.id);
+  const allSelected =
+    posts.length > 0 && posts.every((post) => selectedIds.has(post.id));
+
+  const toggleSelectAll = (checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        for (const id of pageIds) next.add(id);
+      } else {
+        for (const id of pageIds) next.delete(id);
+      }
+      return next;
+    });
+  };
+
+  const confirmBatch = () => {
+    if (!batchTarget || selectedIds.size === 0) return;
+    batchMutation.mutate({
+      ids: [...selectedIds],
+      status: batchTarget,
+    });
+    setBatchTarget(null);
   };
 
   return (
@@ -182,9 +237,24 @@ export function PostManager({
               </div>
             ) : (
               <>
+                <BatchActionBar
+                  selectedCount={selectedIds.size}
+                  isPending={batchMutation.isPending}
+                  onPublish={() => setBatchTarget("published")}
+                  onDraft={() => setBatchTarget("draft")}
+                  onClear={() => setSelectedIds(new Set())}
+                />
+
                 {/* Desktop Header */}
                 <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 text-[9px] uppercase tracking-[0.3em] text-muted-foreground font-mono border-b border-border/30 bg-muted/10">
-                  <div className="col-span-6">{m.admin_posts_col_info()}</div>
+                  <div className="col-span-1">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label={m.admin_posts_select_all()}
+                    />
+                  </div>
+                  <div className="col-span-5">{m.admin_posts_col_info()}</div>
                   <div className="col-span-3">{m.admin_posts_col_status()}</div>
                   <div className="col-span-2">{m.admin_posts_col_time()}</div>
                   <div className="col-span-1"></div>
@@ -195,6 +265,10 @@ export function PostManager({
                     <PostRow
                       key={post.id}
                       post={post}
+                      selected={selectedIds.has(post.id)}
+                      onSelectChange={(checked) =>
+                        toggleSelected(post.id, checked)
+                      }
                       onDelete={handleDelete}
                     />
                   ))}
@@ -227,6 +301,29 @@ export function PostManager({
         confirmLabel={m.admin_posts_delete_confirm_btn()}
         isDanger={true}
         isLoading={deleteMutation.isPending}
+      />
+
+      {/* --- Batch Status Confirmation Modal --- */}
+      <ConfirmationModal
+        isOpen={batchTarget !== null}
+        onClose={() => !batchMutation.isPending && setBatchTarget(null)}
+        onConfirm={confirmBatch}
+        title={
+          batchTarget === "published"
+            ? m.admin_posts_batch_publish_confirm_title()
+            : m.admin_posts_batch_draft_confirm_title()
+        }
+        message={
+          batchTarget === "published"
+            ? m.admin_posts_batch_publish_confirm_desc({
+                count: String(selectedIds.size),
+              })
+            : m.admin_posts_batch_draft_confirm_desc({
+                count: String(selectedIds.size),
+              })
+        }
+        confirmLabel={m.admin_posts_batch_confirm_btn()}
+        isLoading={batchMutation.isPending}
       />
     </div>
   );

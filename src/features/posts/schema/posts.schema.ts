@@ -153,6 +153,11 @@ export const UpdatePostInputSchema = z.object({
 
 export const DeletePostInputSchema = z.object({ id: z.number() });
 
+export const BatchUpdatePostsStatusInputSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1).max(200),
+  status: z.enum(POST_STATUSES),
+});
+
 export const PreviewSummaryInputSchema = PostSelectSchema.pick({
   contentJson: true,
 });
@@ -177,6 +182,9 @@ export type GetPostsCountInput = z.infer<typeof GetPostsCountInputSchema>;
 export type FindPostByIdInput = z.infer<typeof FindPostByIdInputSchema>;
 export type UpdatePostInput = z.infer<typeof UpdatePostInputSchema>;
 export type DeletePostInput = z.infer<typeof DeletePostInputSchema>;
+export type BatchUpdatePostsStatusInput = z.infer<
+  typeof BatchUpdatePostsStatusInputSchema
+>;
 export type PreviewSummaryInput = z.infer<typeof PreviewSummaryInputSchema>;
 export type StartPostProcessInput = z.infer<typeof StartPostProcessInputSchema>;
 export type GenerateArticleInput = z.infer<typeof GenerateArticleInputSchema>;

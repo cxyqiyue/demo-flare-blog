@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  batchUpdatePostsStatusFn,
   deletePostFn,
   getPostsCountFn,
   getPostsFn,
@@ -99,6 +100,51 @@ export function useDeletePost({ onSuccess }: UseDeletePostOptions = {}) {
           title: post.title,
         }),
       });
+      onSuccess?.();
+    },
+  });
+}
+
+interface UseBatchUpdatePostsStatusOptions {
+  onSuccess?: () => void;
+}
+
+export function useBatchUpdatePostsStatus({
+  onSuccess,
+}: UseBatchUpdatePostsStatusOptions = {}) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { ids: Array<number>; status: "published" | "draft" }) =>
+      batchUpdatePostsStatusFn({ data }),
+    onSuccess: (result, variables) => {
+      if (result.error) {
+        toast.error(m.admin_posts_batch_toast_error(), {
+          description: m.admin_posts_batch_toast_error_desc(),
+        });
+        return;
+      }
+
+      const { updated, skipped } = result.data;
+
+      queryClient.invalidateQueries({ queryKey: POSTS_KEYS.adminLists });
+      queryClient.invalidateQueries({ queryKey: POSTS_KEYS.counts });
+
+      if (variables.status === "published") {
+        toast.success(m.admin_posts_batch_toast_published(), {
+          description: m.admin_posts_batch_toast_published_desc({
+            updated: String(updated),
+            skipped: String(skipped),
+          }),
+        });
+      } else {
+        toast.success(m.admin_posts_batch_toast_drafted(), {
+          description: m.admin_posts_batch_toast_drafted_desc({
+            updated: String(updated),
+            skipped: String(skipped),
+          }),
+        });
+      }
       onSuccess?.();
     },
   });

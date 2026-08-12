@@ -1,1 +1,5 @@
-export { useDeletePost, usePosts } from "./use-posts";
+export {
+  useBatchUpdatePostsStatus,
+  useDeletePost,
+  usePosts,
+} from "./use-posts";

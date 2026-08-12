@@ -4,7 +4,12 @@ import type { Post } from "@/lib/db/schema";
 export type PostListItem = Omit<Post, "contentJson" | "publicContentJson">;
 
 /** Status filter options for posts list */
-export const STATUS_FILTERS = ["ALL", "PUBLISHED", "DRAFT", "IN_PROGRESS"] as const;
+export const STATUS_FILTERS = [
+  "ALL",
+  "PUBLISHED",
+  "DRAFT",
+  "IN_PROGRESS",
+] as const;
 export type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 /** Sort fields options */

@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
+  BatchUpdatePostsStatusInputSchema,
   DeletePostInputSchema,
   FindPostByIdInputSchema,
   FindPostBySlugInputSchema,
@@ -60,6 +61,15 @@ export const deletePostFn = createServerFn({
   .middleware([adminMiddleware])
   .inputValidator(DeletePostInputSchema)
   .handler(({ data, context }) => PostService.deletePost(context, data));
+
+export const batchUpdatePostsStatusFn = createServerFn({
+  method: "POST",
+})
+  .middleware([adminMiddleware])
+  .inputValidator(BatchUpdatePostsStatusInputSchema)
+  .handler(({ data, context }) =>
+    PostService.batchUpdatePostsStatus(context, data),
+  );
 
 export const previewSummaryFn = createServerFn({
   method: "POST",

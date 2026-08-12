@@ -297,6 +297,21 @@ export async function findPostById(db: DB, id: number) {
   return { ...rest, tags };
 }
 
+export async function findPostsByIds(db: DB, ids: Array<number>) {
+  if (ids.length === 0) return [];
+
+  return await db
+    .select({
+      id: PostsTable.id,
+      title: PostsTable.title,
+      slug: PostsTable.slug,
+      status: PostsTable.status,
+      publishedAt: PostsTable.publishedAt,
+    })
+    .from(PostsTable)
+    .where(inArray(PostsTable.id, ids));
+}
+
 export async function findPinnedPosts(db: DB) {
   const posts = await db.query.PostsTable.findMany({
     where: and(
@@ -398,6 +413,42 @@ export async function updatePost(
 ) {
   await db.update(PostsTable).set(data).where(eq(PostsTable.id, id));
   return await findPostById(db, id);
+}
+
+/**
+ * Batch-update the status of multiple posts.
+ * - `publishedAt` is kept unchanged for already-published posts; posts without
+ *   one get a single shared timestamp so their relative order is preserved.
+ * - `updatedAt` is explicitly kept unchanged so admin list ordering (default
+ *   sort: updatedAt DESC) is not disturbed by a batch operation.
+ */
+export async function batchUpdatePostsStatus(
+  db: DB,
+  ids: Array<number>,
+  status: PostStatus,
+) {
+  if (ids.length === 0) return;
+
+  if (status === "published") {
+    const now = new Date();
+    await db
+      .update(PostsTable)
+      .set({
+        status,
+        publishedAt: sql`COALESCE(${PostsTable.publishedAt}, ${now})`,
+        updatedAt: sql`${PostsTable.updatedAt}`,
+      })
+      .where(inArray(PostsTable.id, ids));
+  } else {
+    await db
+      .update(PostsTable)
+      .set({
+        status,
+        publishedAt: sql`${PostsTable.publishedAt}`,
+        updatedAt: sql`${PostsTable.updatedAt}`,
+      })
+      .where(inArray(PostsTable.id, ids));
+  }
 }
 
 export async function touchPostUpdatedAt(db: DB, id: number) {

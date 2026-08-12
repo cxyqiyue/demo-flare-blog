@@ -6,6 +6,7 @@ import * as PostRevisionRepo from "@/features/posts/data/post-revisions.data";
 import * as PostRepo from "@/features/posts/data/posts.data";
 import type {
   AdjacentPostsResponse,
+  BatchUpdatePostsStatusInput,
   DeletePostInput,
   FindAdjacentPostsInput,
   FindPostByIdInput,
@@ -414,6 +415,56 @@ export async function updatePost(
   );
 
   return ok(updatedPost);
+}
+
+/**
+ * Batch-publish or batch-move-to-draft a set of posts.
+ * Order is preserved: `updatedAt` and existing `publishedAt` are untouched,
+ * and previously unpublished posts share one timestamp within the batch.
+ */
+export async function batchUpdatePostsStatus(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: BatchUpdatePostsStatusInput,
+) {
+  const existing = await PostRepo.findPostsByIds(context.db, data.ids);
+  if (existing.length === 0) {
+    return ok({ updated: 0, skipped: data.ids.length });
+  }
+
+  const affected = existing.filter((post) => post.status !== data.status);
+  const skipped = data.ids.length - affected.length;
+
+  if (affected.length > 0) {
+    await PostRepo.batchUpdatePostsStatus(
+      context.db,
+      affected.map((post) => post.id),
+      data.status,
+    );
+  }
+
+  const isPublished = data.status === "published";
+
+  // Trigger content snapshot / search index / cache invalidation per post
+  for (const post of affected) {
+    let publishedAtISO: string | undefined;
+    if (isPublished) {
+      const latest = await PostRepo.findPostById(context.db, post.id);
+      publishedAtISO = (latest?.publishedAt ?? new Date()).toISOString();
+    }
+
+    context.executionCtx.waitUntil(
+      context.env.POST_PROCESS_WORKFLOW.create({
+        params: {
+          postId: post.id,
+          isPublished,
+          publishedAt: publishedAtISO,
+          isFuturePost: false,
+        },
+      }),
+    );
+  }
+
+  return ok({ updated: affected.length, skipped });
 }
 
 export async function deletePost(
