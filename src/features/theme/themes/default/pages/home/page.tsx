@@ -1,5 +1,4 @@
-import { Link, useRouteContext } from "@tanstack/react-router";
-import { Terminal } from "lucide-react";
+import { useRouteContext } from "@tanstack/react-router";
 import { useMemo } from "react";
 import type { SiteConfig } from "@/features/config/site-config.schema";
 import {
@@ -97,16 +96,6 @@ export function HomePage({
               isLoadingViews={isPendingViewCounts}
             />
           ))}
-        </div>
-
-        <div className="pt-8">
-          <Link
-            to="/posts"
-            className="text-sm font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
-          >
-            <Terminal size={14} />
-            cd /posts
-          </Link>
         </div>
 
         <Pagination

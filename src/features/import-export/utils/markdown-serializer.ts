@@ -76,6 +76,19 @@ function serializeNode(
         .join("")}`;
     }
 
+    case "taskList":
+      return `\n${(node.content ?? [])
+        .map((item) =>
+          serializeListItem(
+            item,
+            item.attrs?.checked ? "- [x]" : "- [ ]",
+            0,
+            options,
+            listDepth,
+          ),
+        )
+        .join("")}`;
+
     case "image": {
       const src = node.attrs?.src ?? "";
       const alt = node.attrs?.alt ?? "";

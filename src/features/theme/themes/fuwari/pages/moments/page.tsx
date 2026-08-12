@@ -60,14 +60,16 @@ export function MomentsPage({
             </div>
           ))}
 
-          <Pagination
-            page={page}
-            total={total}
-            pageSize={pageSize}
-            hasPrevPage={hasPrevPage}
-            hasNextPage={hasNextPage}
-            onPageChange={onPageChange}
-          />
+          <div className="fuwari-card-base fuwari-onload-animation px-5 py-4 md:px-6 md:py-5">
+            <Pagination
+              page={page}
+              total={total}
+              pageSize={pageSize}
+              hasPrevPage={hasPrevPage}
+              hasNextPage={hasNextPage}
+              onPageChange={onPageChange}
+            />
+          </div>
         </>
       ) : (
         <div className="fuwari-card-base p-6 md:p-8 fuwari-onload-animation flex-1">

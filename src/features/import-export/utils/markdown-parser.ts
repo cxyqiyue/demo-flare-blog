@@ -69,6 +69,29 @@ function preprocessMathInMarkdown(markdown: string): string {
 }
 
 /**
+ * Convert marked's GFM checkbox output (`<li><input disabled="" type="checkbox"> ...`)
+ * into tiptap taskList/taskItem compatible markup.
+ */
+function transformTaskLists(html: string): string {
+  return html
+    .replace(
+      /<li><input\s+([^>]*type="checkbox"[^>]*)>\s*/g,
+      (_match, attrs: string) => {
+        const checked = /checked=""/.test(attrs);
+        return `<li data-type="taskItem" data-checked="${
+          checked ? "true" : "false"
+        }">`;
+      },
+    )
+    .replace(/<ul>([\s\S]*?)<\/ul>/g, (full, inner: string) => {
+      if (inner.includes('data-type="taskItem"')) {
+        return `<ul data-type="taskList">${inner}</ul>`;
+      }
+      return full;
+    });
+}
+
+/**
  * Markdown → JSONContent 转换
  *
  * NOTE: @tiptap/html checks for browser (window) or Node (process.versions.node)
@@ -81,7 +104,8 @@ export async function markdownToJsonContent(
   const preprocessed = preprocessMathInMarkdown(markdown);
 
   const { marked } = await import("marked");
-  const html = await marked(preprocessed);
+  let html = await marked(preprocessed);
+  html = transformTaskLists(html);
 
   const { getSchema } = await import("@tiptap/core");
   const { DOMParser: PMDOMParser } = await import("@tiptap/pm/model");
@@ -98,6 +122,8 @@ export async function markdownToJsonContent(
     "@tiptap/extension-table-header"
   );
   const { default: TableCell } = await import("@tiptap/extension-table-cell");
+  const { default: TaskList } = await import("@tiptap/extension-task-list");
+  const { default: TaskItem } = await import("@tiptap/extension-task-item");
 
   const schema = getSchema([
     StarterKit,
@@ -107,6 +133,8 @@ export async function markdownToJsonContent(
     TableRow,
     TableHeader,
     TableCell,
+    TaskList,
+    TaskItem,
   ]);
 
   const { document } = parseHTML(

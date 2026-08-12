@@ -5,13 +5,17 @@ import type { LucideIcon } from "lucide-react";
 import {
   Bold,
   Code,
+  Heading1,
   Heading2,
   Heading3,
+  Heading4,
   Image as ImageIcon,
   Italic,
   Link as LinkIcon,
   List,
+  ListChecks,
   ListOrdered,
+  Minus,
   Quote,
   Redo,
   Sigma,
@@ -71,8 +75,10 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
 }) => {
   const {
     isBold,
+    isHeading1,
     isHeading2,
     isHeading3,
+    isHeading4,
     isItalic,
     isUnderline,
     isStrike,
@@ -82,6 +88,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
     isBlockMath,
     isBulletList,
     isOrderedList,
+    isTaskList,
     isBlockquote,
     isLink,
   } = useEditorState({
@@ -90,14 +97,17 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
       if (!ctx.editor) {
         return {
           isBold: false,
+          isHeading1: false,
           isHeading2: false,
           isHeading3: false,
+          isHeading4: false,
           isItalic: false,
           isUnderline: false,
           isStrike: false,
           isCode: false,
           isBulletList: false,
           isOrderedList: false,
+          isTaskList: false,
           isBlockquote: false,
           isLink: false,
           isInlineMath: false,
@@ -106,8 +116,10 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
       }
       return {
         isBold: ctx.editor.isActive("bold"),
+        isHeading1: ctx.editor.isActive("heading", { level: 1 }),
         isHeading2: ctx.editor.isActive("heading", { level: 2 }),
         isHeading3: ctx.editor.isActive("heading", { level: 3 }),
+        isHeading4: ctx.editor.isActive("heading", { level: 4 }),
         isItalic: ctx.editor.isActive("italic"),
         isUnderline: ctx.editor.isActive("underline"),
         isStrike: ctx.editor.isActive("strike"),
@@ -117,14 +129,17 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         isBlockMath: ctx.editor.isActive("blockMath"),
         isBulletList: ctx.editor.isActive("bulletList"),
         isOrderedList: ctx.editor.isActive("orderedList"),
+        isTaskList: ctx.editor.isActive("taskList"),
         isBlockquote: ctx.editor.isActive("blockquote"),
         isLink: ctx.editor.isActive("link"),
       };
     },
   }) || {
     isBold: false,
+    isHeading1: false,
     isHeading2: false,
     isHeading3: false,
+    isHeading4: false,
     isItalic: false,
     isUnderline: false,
     isStrike: false,
@@ -134,6 +149,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
     isBlockMath: false,
     isBulletList: false,
     isOrderedList: false,
+    isTaskList: false,
     isBlockquote: false,
     isLink: false,
   };
@@ -141,6 +157,14 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
   return (
     <div className="sticky top-0 z-30 mb-8 py-2 bg-background border-b border-border/50 flex items-center gap-1 px-4 overflow-x-auto overscroll-x-contain [scrollbar-width:thin]">
       {/* Headings */}
+      <ToolbarButton
+        onClick={() =>
+          editor?.chain().focus().toggleHeading({ level: 1 }).run()
+        }
+        isActive={isHeading1}
+        icon={Heading1}
+        label={m.editor_toolbar_heading1()}
+      />
       <ToolbarButton
         onClick={() =>
           editor?.chain().focus().toggleHeading({ level: 2 }).run()
@@ -156,6 +180,14 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         isActive={isHeading3}
         icon={Heading3}
         label={m.editor_toolbar_heading3()}
+      />
+      <ToolbarButton
+        onClick={() =>
+          editor?.chain().focus().toggleHeading({ level: 4 }).run()
+        }
+        isActive={isHeading4}
+        icon={Heading4}
+        label={m.editor_toolbar_heading4()}
       />
 
       <div className="h-4 w-px shrink-0 bg-border/50 mx-2"></div>
@@ -226,10 +258,22 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
         label={m.editor_toolbar_ordered_list()}
       />
       <ToolbarButton
+        onClick={() => editor?.chain().focus().toggleTaskList().run()}
+        isActive={isTaskList}
+        icon={ListChecks}
+        label={m.editor_toolbar_task_list()}
+      />
+      <ToolbarButton
         onClick={() => editor?.chain().focus().toggleBlockquote().run()}
         isActive={isBlockquote}
         icon={Quote}
         label={m.editor_toolbar_blockquote()}
+      />
+      <ToolbarButton
+        onClick={() => editor?.chain().focus().setHorizontalRule().run()}
+        isActive={false}
+        icon={Minus}
+        label={m.editor_toolbar_horizontal_rule()}
       />
       <ToolbarButton
         onClick={() =>

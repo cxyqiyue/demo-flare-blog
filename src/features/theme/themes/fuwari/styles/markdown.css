@@ -134,6 +134,39 @@
     }
   }
 
+  ul[data-type="taskList"],
+  ul.task-list {
+    @apply list-none p-0;
+
+    li {
+      @apply flex items-start gap-2 pl-0 marker:content-none;
+
+      > label {
+        @apply mt-1 shrink-0 cursor-pointer select-none flex items-center;
+        input[type="checkbox"] {
+          @apply h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-sm border-2 border-(--fuwari-meta-divider) bg-transparent transition-colors duration-200;
+          &:checked {
+            @apply border-(--fuwari-primary) bg-(--fuwari-primary);
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M5 13l4 4L19 7'/%3e%3c/svg%3e");
+            background-size: 10px;
+            background-position: center;
+            background-repeat: no-repeat;
+          }
+        }
+        span {
+          display: none;
+        }
+      }
+
+      > div {
+        @apply min-w-0;
+        p {
+          @apply my-0;
+        }
+      }
+    }
+  }
+
   blockquote {
     @apply not-italic border-transparent relative;
     font-weight: inherit;

@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
 import { m } from "@/paraglide/messages";
 
 interface PaginationProps {
@@ -18,9 +19,25 @@ export function Pagination({
   hasNextPage,
   onPageChange,
 }: PaginationProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
   if (total <= 0) return null;
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const startEditing = () => {
+    setDraft(String(page));
+    setIsEditing(true);
+  };
+
+  const commit = () => {
+    const parsed = Number.parseInt(draft, 10);
+    if (Number.isInteger(parsed) && parsed >= 1 && parsed <= totalPages) {
+      onPageChange(parsed);
+    }
+    setIsEditing(false);
+  };
 
   return (
     <nav
@@ -37,9 +54,37 @@ export function Pagination({
         {m.pagination_prev()}
       </button>
 
-      <span className="text-xs font-mono text-muted-foreground tabular-nums whitespace-nowrap">
-        {m.pagination_page({ page, pages: totalPages })}
-      </span>
+      {isEditing ? (
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={totalPages}
+          value={draft}
+          autoFocus
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+            } else if (e.key === "Escape") {
+              setIsEditing(false);
+            }
+          }}
+          onBlur={() => setIsEditing(false)}
+          className="w-16 h-8 rounded border border-border bg-background text-center text-xs font-mono text-foreground tabular-nums outline-none focus:border-foreground/50 focus:ring-1 focus:ring-foreground/10"
+          aria-label={m.pagination_page_input()}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={startEditing}
+          className="inline-flex items-center gap-1.5 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap cursor-pointer"
+          title={m.pagination_page_input_hint({ pages: totalPages })}
+        >
+          {m.pagination_page({ page, pages: totalPages })}
+        </button>
+      )}
 
       <button
         type="button"

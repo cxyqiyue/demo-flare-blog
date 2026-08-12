@@ -135,6 +135,28 @@ describe("jsonContentToMarkdown", () => {
     expect(result).toContain("2. second");
   });
 
+  it("should convert task list", () => {
+    const result = jsonContentToMarkdown(
+      doc({
+        type: "taskList",
+        content: [
+          {
+            type: "taskItem",
+            attrs: { checked: false },
+            content: [paragraph(text("todo"))],
+          },
+          {
+            type: "taskItem",
+            attrs: { checked: true },
+            content: [paragraph(text("done"))],
+          },
+        ],
+      }),
+    );
+    expect(result).toContain("- [ ] todo");
+    expect(result).toContain("- [x] done");
+  });
+
   it("should convert image", () => {
     const result = jsonContentToMarkdown(
       doc({

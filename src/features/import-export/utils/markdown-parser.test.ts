@@ -246,4 +246,20 @@ describe("markdownToJsonContent", () => {
     expect(p).toBeDefined();
     expect(JSON.stringify(p)).toContain("$x^2");
   });
+
+  it("should convert checkbox lists to task lists", async () => {
+    const json = await markdownToJsonContent(
+      "- [ ] todo item\n- [x] done item",
+    );
+
+    const taskList = json.content!.find((n) => n.type === "taskList");
+    expect(taskList).toBeDefined();
+    expect(taskList!.content!.length).toBe(2);
+
+    const [todo, done] = taskList!.content!;
+    expect(todo.type).toBe("taskItem");
+    expect(todo.attrs?.checked).toBe(false);
+    expect(done.type).toBe("taskItem");
+    expect(done.attrs?.checked).toBe(true);
+  });
 });

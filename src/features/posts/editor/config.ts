@@ -2,6 +2,8 @@ import FileHandler from "@tiptap/extension-file-handler";
 import Mathematics from "@tiptap/extension-mathematics";
 import Placeholder from "@tiptap/extension-placeholder";
 import TableOfContents from "@tiptap/extension-table-of-contents";
+import TaskItem from "@tiptap/extension-task-item";
+import TaskList from "@tiptap/extension-task-list";
 import type { Editor as TiptapEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { toast } from "sonner";
@@ -119,6 +121,10 @@ export const extensions = [
   }),
   BlockQuoteExtension,
   CodeBlockExtension,
+  TaskList,
+  TaskItem.configure({
+    nested: true,
+  }),
   Mathematics.configure({
     katexOptions: { throwOnError: false },
     inlineOptions: {

@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Home } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { adjacentPostsQuery } from "@/features/posts/queries";
 import { m } from "@/paraglide/messages";
 
@@ -13,41 +13,39 @@ export function PostNavigation({ slug }: PostNavigationProps) {
   const { previous, next } = data;
 
   return (
-    <nav className="flex items-center justify-between gap-6 text-sm font-mono text-muted-foreground">
+    <nav className="flex flex-col md:flex-row items-stretch justify-between gap-4 text-sm font-mono text-muted-foreground">
       {previous ? (
         <Link
           to="/post/$slug"
           params={{ slug: previous.slug }}
-          className="group flex items-center gap-2 min-w-0 hover:text-foreground transition-colors"
+          className="group flex items-center gap-2 min-w-0 rounded-lg border border-border/30 px-4 py-3 hover:border-foreground/20 hover:text-foreground transition-colors"
         >
           <ChevronLeft
             size={14}
             className="shrink-0 group-hover:-translate-x-0.5 transition-transform"
           />
-          <span className="truncate">
-            {m.post_prev()}: {previous.title}
+          <span className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-[10px] uppercase tracking-widest opacity-50">
+              {m.post_prev()}
+            </span>
+            <span className="truncate text-sm">{previous.title}</span>
           </span>
         </Link>
       ) : (
-        <span aria-hidden />
+        <div className="hidden md:flex flex-1" />
       )}
-
-      <Link
-        to="/"
-        className="flex items-center gap-1.5 shrink-0 uppercase tracking-widest text-[10px] opacity-40 hover:opacity-100 transition-opacity"
-      >
-        <Home size={12} />
-        {m.post_home()}
-      </Link>
 
       {next ? (
         <Link
           to="/post/$slug"
           params={{ slug: next.slug }}
-          className="group flex items-center gap-2 min-w-0 text-right hover:text-foreground transition-colors"
+          className="group flex items-center justify-end gap-2 min-w-0 rounded-lg border border-border/30 px-4 py-3 hover:border-foreground/20 hover:text-foreground transition-colors"
         >
-          <span className="truncate">
-            {m.post_next()}: {next.title}
+          <span className="flex flex-col gap-0.5 min-w-0 text-right">
+            <span className="text-[10px] uppercase tracking-widest opacity-50">
+              {m.post_next()}
+            </span>
+            <span className="truncate text-sm">{next.title}</span>
           </span>
           <ChevronRight
             size={14}
@@ -55,7 +53,7 @@ export function PostNavigation({ slug }: PostNavigationProps) {
           />
         </Link>
       ) : (
-        <span aria-hidden />
+        <div className="hidden md:flex flex-1" />
       )}
     </nav>
   );
@@ -63,10 +61,9 @@ export function PostNavigation({ slug }: PostNavigationProps) {
 
 export function PostNavigationSkeleton() {
   return (
-    <div className="flex items-center justify-between gap-6">
-      <div className="h-4 w-32 rounded bg-muted/40 animate-pulse" />
-      <div className="h-4 w-12 rounded bg-muted/40 animate-pulse" />
-      <div className="h-4 w-32 rounded bg-muted/40 animate-pulse" />
+    <div className="flex flex-col md:flex-row items-stretch justify-between gap-4">
+      <div className="flex-1 h-14 rounded-lg bg-muted/40 animate-pulse" />
+      <div className="flex-1 h-14 rounded-lg bg-muted/40 animate-pulse" />
     </div>
   );
 }
