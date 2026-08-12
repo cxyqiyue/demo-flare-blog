@@ -81,32 +81,34 @@ export function HomePage({
       </section>
 
       {/* Selected Posts */}
-      <section className="space-y-10">
-        <h2 className="text-xl font-serif font-medium text-foreground tracking-tight flex items-center gap-2">
-          {m.home_latest_posts()}
-        </h2>
+      {posts.length > 0 && (
+        <section className="space-y-10">
+          <h2 className="text-xl font-serif font-medium text-foreground tracking-tight flex items-center gap-2">
+            {m.home_latest_posts()}
+          </h2>
 
-        <div className="space-y-8">
-          {posts.map((post) => (
-            <PostItem
-              key={post.id}
-              post={post}
-              pinned={post.pinnedAt != null}
-              views={viewCounts?.[post.slug]}
-              isLoadingViews={isPendingViewCounts}
-            />
-          ))}
-        </div>
+          <div className="space-y-8">
+            {posts.map((post) => (
+              <PostItem
+                key={post.id}
+                post={post}
+                pinned={post.pinnedAt != null}
+                views={viewCounts?.[post.slug]}
+                isLoadingViews={isPendingViewCounts}
+              />
+            ))}
+          </div>
 
-        <Pagination
-          page={page}
-          total={total}
-          pageSize={pageSize}
-          hasPrevPage={hasPrevPage}
-          hasNextPage={hasNextPage}
-          onPageChange={onPageChange}
-        />
-      </section>
+          <Pagination
+            page={page}
+            total={total}
+            pageSize={pageSize}
+            hasPrevPage={hasPrevPage}
+            hasNextPage={hasNextPage}
+            onPageChange={onPageChange}
+          />
+        </section>
+      )}
     </div>
   );
 }
