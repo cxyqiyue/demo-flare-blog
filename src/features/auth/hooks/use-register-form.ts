@@ -50,6 +50,10 @@ export function useRegisterForm(options: UseRegisterFormOptions) {
   });
 
   const onSubmit = async (data: RegisterSchema) => {
+    if (challenge.isPending) {
+      toast.error(m.challenge_pending_hint());
+      return;
+    }
     const { error } = await authClient.signUp.email({
       email: data.email,
       password: data.password,

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import type { UseChallengeReturn } from "@/features/challenge/hooks/use-challenge";
 import { usePreviousLocation } from "@/hooks/use-previous-location";
 import { authClient } from "@/lib/auth/auth.client";
 import { getSocialLoginAuthErrorMessage } from "@/lib/auth/auth-errors";
@@ -8,10 +9,12 @@ import { normalizeRedirectUrl } from "./normalize-redirect-url";
 
 export interface UseSocialLoginOptions {
   redirectTo?: string;
+  /** 人机验证实例。验证未通过时禁止发起 OAuth 登录 */
+  challenge?: UseChallengeReturn;
 }
 
 export function useSocialLogin(options: UseSocialLoginOptions) {
-  const { redirectTo } = options;
+  const { redirectTo, challenge } = options;
 
   const [isLoading, setIsLoading] = useState(false);
   const previousLocation = usePreviousLocation();
@@ -19,6 +22,12 @@ export function useSocialLogin(options: UseSocialLoginOptions) {
 
   const handleGithubLogin = async () => {
     if (isLoading) return;
+
+    // 未通过人机验证前不允许发起 Github 登录
+    if (challenge?.isPending) {
+      toast.error(m.challenge_pending_hint());
+      return;
+    }
 
     setIsLoading(true);
 
@@ -44,6 +53,7 @@ export function useSocialLogin(options: UseSocialLoginOptions) {
   return {
     isLoading,
     handleGithubLogin,
+    challengePending: challenge?.isPending ?? false,
   };
 }
 

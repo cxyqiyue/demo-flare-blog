@@ -49,11 +49,16 @@ function RouteComponent() {
 
   const socialLogin = useSocialLogin({
     redirectTo: resolvedRedirectTo,
+    challenge,
   });
 
   const challengeElement =
-    isEmailConfigured && challengeConfig.provider !== "none" ? (
-      <ChallengeWidget action="login" challenge={challengeConfig} />
+    challengeConfig.provider !== "none" ? (
+      <ChallengeWidget
+        action="login"
+        challenge={challengeConfig}
+        useChallengeInstance={challenge}
+      />
     ) : null;
 
   return (

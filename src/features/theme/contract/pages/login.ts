@@ -16,6 +16,8 @@ export interface LoginFormData {
 
 export interface SocialLoginData {
   isLoading: boolean;
+  /** 人机验证未通过时禁用登录按钮 */
+  challengePending: boolean;
   handleGithubLogin: () => Promise<void>;
 }
 

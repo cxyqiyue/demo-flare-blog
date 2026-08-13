@@ -15,9 +15,12 @@ export interface UseChallengeOptions {
 }
 
 interface SolverResult {
-  type: "solution";
-  payload: string;
+  type: "solution" | "aborted";
+  payload?: string;
 }
+
+/** ALTCHA 求解最大时长。超时后视为失败，允许用户手动重试。 */
+const ALTCHA_SOLVE_TIMEOUT_MS = 60_000;
 
 /**
  * 统一人机验证 hook：
@@ -37,6 +40,8 @@ export function useChallenge({ action, config }: UseChallengeOptions) {
   const failedCountRef = useRef(0);
   const workerRef = useRef<Worker | null>(null);
   const mountedRef = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -45,32 +50,58 @@ export function useChallenge({ action, config }: UseChallengeOptions) {
     };
   }, []);
 
+  const clearSolveTimeout = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
   const getWorker = useCallback(() => {
     if (workerRef.current) return workerRef.current;
     const worker = new Worker(new URL("../pow/worker.ts", import.meta.url), {
       type: "module",
     });
     worker.onmessage = (event: MessageEvent<SolverResult>) => {
-      if (event.data.type === "solution") {
+      if (event.data.type === "solution" && event.data.payload) {
+        clearSolveTimeout();
         if (mountedRef.current) {
           setAltchaSolution(event.data.payload);
         }
       }
     };
+    worker.onerror = () => {
+      // worker 脚本加载失败或运行抛错：清掉引用以便下次重建，并展示失败/重试
+      clearSolveTimeout();
+      workerRef.current = null;
+      if (mountedRef.current) setAltchaFailed(true);
+    };
     workerRef.current = worker;
     return worker;
-  }, []);
+  }, [clearSolveTimeout]);
 
   const solveWithAltcha = useCallback(async () => {
     setAltchaSolution(null);
+    setAltchaFailed(false);
+    abortRef.current?.abort();
+    abortRef.current = null;
+    clearSolveTimeout();
     try {
       const payload = await getAltchaChallengeFn();
+      if (!mountedRef.current) return;
       const worker = getWorker();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      timeoutRef.current = setTimeout(() => {
+        controller.abort();
+        worker.postMessage({ type: "abort" });
+        if (mountedRef.current) setAltchaFailed(true);
+      }, ALTCHA_SOLVE_TIMEOUT_MS);
       worker.postMessage({ type: "work", payload });
     } catch {
       if (mountedRef.current) setAltchaFailed(true);
     }
-  }, [getWorker]);
+  }, [getWorker, clearSolveTimeout]);
 
   // provider = "altcha" 时立即开始计算
   useEffect(() => {
@@ -105,6 +136,9 @@ export function useChallenge({ action, config }: UseChallengeOptions) {
   }, [baseTurnstile]);
 
   const reset = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    clearSolveTimeout();
     setAltchaSolution(null);
     setAltchaFailed(false);
     failedCountRef.current = 0;
@@ -115,14 +149,17 @@ export function useChallenge({ action, config }: UseChallengeOptions) {
       setMode("altcha");
       void solveWithAltcha();
     }
-  }, [baseTurnstile, config.provider, solveWithAltcha]);
+  }, [baseTurnstile, config.provider, solveWithAltcha, clearSolveTimeout]);
 
   useEffect(() => {
     return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      clearSolveTimeout();
       workerRef.current?.terminate();
       workerRef.current = null;
     };
-  }, []);
+  }, [clearSolveTimeout]);
 
   const isPending =
     mode === "turnstile"

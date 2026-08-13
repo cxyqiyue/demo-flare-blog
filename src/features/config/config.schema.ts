@@ -115,7 +115,7 @@ export const TurnstileConfigSchema = z.object({
 
 export const AltchaConfigSchema = z.object({
   enabled: z.boolean().optional(),
-  /** ALTCHA PoW 难度（maxNumber），越大越难，默认 100000 */
+  /** ALTCHA PoW 难度（maxNumber），越大越难，默认 50000 */
   difficulty: z.number().int().min(10000).max(1000000).optional(),
 });
 
@@ -266,11 +266,11 @@ export const DEFAULT_CONFIG: SystemConfig = {
     provider: "none",
     pow: {
       enabled: false,
-      difficulty: 100000,
+      difficulty: 50000,
     },
     altcha: {
       enabled: false,
-      difficulty: 100000,
+      difficulty: 50000,
     },
     turnstile: {
       enabled: false,

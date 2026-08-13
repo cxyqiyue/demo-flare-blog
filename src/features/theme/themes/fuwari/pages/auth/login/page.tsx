@@ -19,11 +19,11 @@ export function LoginPage({
     challengePending: formChallengePending,
   } = loginForm;
 
-  const { isLoading: socialIsLoading, handleGithubLogin } = socialLogin;
+  const { isLoading: socialIsLoading, challengePending, handleGithubLogin } = socialLogin;
 
   const isFormDisabled =
     isSubmitting || loginStep !== "IDLE" || formChallengePending;
-  const isSocialDisabled = socialIsLoading;
+  const isSocialDisabled = socialIsLoading || challengePending;
 
   return (
     <div className="flex flex-col gap-8">

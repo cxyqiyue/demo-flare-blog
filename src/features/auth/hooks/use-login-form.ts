@@ -78,6 +78,10 @@ export function useLoginForm(options: UseLoginFormOptions) {
   };
 
   const onSubmit = async (data: LoginSchema) => {
+    if (challenge.isPending) {
+      toast.error(m.challenge_pending_hint());
+      return;
+    }
     setLoginStep("VERIFYING");
 
     const { error } = await authClient.signIn.email({

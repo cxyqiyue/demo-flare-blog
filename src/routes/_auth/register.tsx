@@ -37,8 +37,12 @@ function RouteComponent() {
   });
 
   const challengeElement =
-    isEmailConfigured && challengeConfig.provider !== "none" ? (
-      <ChallengeWidget action="register" challenge={challengeConfig} />
+    challengeConfig.provider !== "none" ? (
+      <ChallengeWidget
+        action="register"
+        challenge={challengeConfig}
+        useChallengeInstance={challenge}
+      />
     ) : null;
 
   return (

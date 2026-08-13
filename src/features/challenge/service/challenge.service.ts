@@ -9,7 +9,8 @@ import type { ChallengeProvider } from "@/features/config/config.schema";
 import * as ConfigService from "@/features/config/service/config.service";
 
 const ALTCHA_SECRET_PREFIX = "altcha-pow-v1:";
-const DEFAULT_ALTCHA_DIFFICULTY = 100_000;
+// 默认难度：50000 在主流设备上约 1-3 秒可解出，兼顾防滥用与交互体验
+const DEFAULT_ALTCHA_DIFFICULTY = 50_000;
 
 export interface ChallengeServerConfig {
   provider: ChallengeProvider;
