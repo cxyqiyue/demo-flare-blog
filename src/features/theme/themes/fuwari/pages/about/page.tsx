@@ -63,10 +63,14 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
         ) : null}
 
         <MarkdownContent markdown={article.markdown} className={markdownClassName} />
+      </div>
 
-        <div className="mt-10 pt-6 border-t border-(--fuwari-meta-divider)">
-          <FuwariCommentSection aboutArticleId={article.id} />
-        </div>
+      {/* Comments Section (separate container) */}
+      <div
+        className="fuwari-card-base p-6 fuwari-onload-animation"
+        style={{ animationDelay: "450ms" }}
+      >
+        <FuwariCommentSection aboutArticleId={article.id} />
       </div>
     </div>
   );

@@ -72,7 +72,7 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
         </main>
       </article>
 
-      <CommentSection aboutArticleId={article.id} className="mt-8" />
+      <CommentSection aboutArticleId={article.id} />
     </div>
   );
 }
