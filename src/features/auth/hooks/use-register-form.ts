@@ -67,9 +67,9 @@ export function useRegisterForm(options: UseRegisterFormOptions) {
       },
     });
 
-    challenge.reset();
-
     if (error) {
+      // token 一次性：失败时重置，重新验证后再重试
+      challenge.reset();
       toast.error(m.register_toast_failed(), {
         description:
           getRegisterAuthErrorMessage(error, m) ?? m.register_error_default(),

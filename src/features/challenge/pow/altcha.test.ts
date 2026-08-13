@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  type AltchaChallenge,
   createAltchaChallenge,
   decodeBase64Json,
   encodeBase64Json,
@@ -36,6 +37,41 @@ describe("ALTCHA PoW challenge flow", () => {
     });
 
     const solution = parseAltchaSolution(payload);
+    expect(solution).not.toBeNull();
+    expect(
+      verifyAltchaSolution(solution as NonNullable<typeof solution>, SECRET),
+    ).toBe(true);
+  });
+
+  it("should decode a base64 challenge payload, solve and produce a verifiable solution (worker flow)", async () => {
+    const payload = encodeBase64Json(
+      createAltchaChallenge({
+        maxNumber: 3000,
+        secret: SECRET,
+      }),
+    );
+
+    const challenge = decodeBase64Json<AltchaChallenge>(payload);
+    expect(challenge).not.toBeNull();
+    const c = challenge as NonNullable<typeof challenge>;
+
+    const number = await solveAltchaChallenge({
+      challenge: c.challenge,
+      salt: c.salt,
+      max: c.maxnumber,
+    });
+    expect(number).not.toBeNull();
+
+    const solutionPayload = encodeBase64Json({
+      algorithm: c.algorithm,
+      challenge: c.challenge,
+      maxnumber: c.maxnumber,
+      number: number as number,
+      salt: c.salt,
+      signature: c.signature,
+    });
+
+    const solution = parseAltchaSolution(solutionPayload);
     expect(solution).not.toBeNull();
     expect(
       verifyAltchaSolution(solution as NonNullable<typeof solution>, SECRET),

@@ -68,6 +68,10 @@ export function useChallenge({ action, config }: UseChallengeOptions) {
         if (mountedRef.current) {
           setAltchaSolution(event.data.payload);
         }
+      } else if (event.data.type === "aborted") {
+        // 无解/payload 非法：不要无限等待，进入失败态允许重试
+        clearSolveTimeout();
+        if (mountedRef.current) setAltchaFailed(true);
       }
     };
     worker.onerror = () => {
@@ -110,10 +114,11 @@ export function useChallenge({ action, config }: UseChallengeOptions) {
     }
   }, [config.provider, solveWithAltcha]);
 
-  // provider = "turnstile" 时的超时兜底
+  // provider = "turnstile" 时的超时兜底：仅在验证通过前触发
   useEffect(() => {
     if (config.provider !== "turnstile") return;
     if (mode !== "turnstile") return;
+    if (baseTurnstile.token) return;
 
     const timeoutId = setTimeout(() => {
       setMode("altcha");
@@ -121,15 +126,22 @@ export function useChallenge({ action, config }: UseChallengeOptions) {
     }, config.fallback.timeoutMs);
 
     return () => clearTimeout(timeoutId);
-  }, [config.provider, mode, config.fallback.timeoutMs, solveWithAltcha]);
+  }, [
+    config.provider,
+    mode,
+    baseTurnstile.token,
+    config.fallback.timeoutMs,
+    solveWithAltcha,
+  ]);
 
   const handleTurnstileError = useCallback(() => {
+    if (baseTurnstile.token) return;
     failedCountRef.current += 1;
     if (failedCountRef.current >= config.fallback.maxFailures) {
       setMode("altcha");
       void solveWithAltcha();
     }
-  }, [config.fallback.maxFailures, solveWithAltcha]);
+  }, [baseTurnstile.token, config.fallback.maxFailures, solveWithAltcha]);
 
   const handleTurnstileExpire = useCallback(() => {
     baseTurnstile.reset();
@@ -161,16 +173,24 @@ export function useChallenge({ action, config }: UseChallengeOptions) {
     };
   }, [clearSolveTimeout]);
 
-  const isPending =
+  const active = config.provider !== "none" && mode !== "none";
+  const verified =
     mode === "turnstile"
-      ? baseTurnstile.isPending
+      ? !!baseTurnstile.token
       : mode === "altcha"
-        ? !altchaSolution && !altchaFailed
+        ? !!altchaSolution
         : false;
+  // 人机验证已启用但尚未通过：登录/注册/社交登录必须阻塞
+  const isPending = active && !verified;
+  // ALTCHA 求解进行中（用于展示 spinner）
+  const isSolving = mode === "altcha" && !altchaSolution && !altchaFailed;
 
   return {
     mode,
+    active,
+    verified,
     isPending,
+    isSolving,
     token: baseTurnstile.token,
     altchaSolution,
     altchaFailed,

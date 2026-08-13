@@ -95,9 +95,9 @@ export function useLoginForm(options: UseLoginFormOptions) {
       },
     });
 
-    challenge.reset();
-
     if (error) {
+      // token 一次性：失败时重置，重新验证后再重试
+      challenge.reset();
       setLoginStep("IDLE");
       const description =
         getLoginAuthErrorMessage(error, m) ?? m.auth_error_default_desc();

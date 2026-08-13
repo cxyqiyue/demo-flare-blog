@@ -1,11 +1,12 @@
 import {
   type AltchaChallenge,
+  decodeBase64Json,
   encodeBase64Json,
   solveAltchaChallenge,
 } from "./altcha";
 
 type SolverMessage =
-  | { type: "work"; payload: AltchaChallenge }
+  | { type: "work"; payload: string }
   | { type: "abort" };
 
 let currentAbortController: AbortController | null = null;
@@ -18,7 +19,12 @@ self.onmessage = async (event: MessageEvent<SolverMessage>) => {
     return;
   }
 
-  const challenge = message.payload;
+  const challenge = decodeBase64Json<AltchaChallenge>(message.payload);
+  if (!challenge) {
+    self.postMessage({ type: "aborted" });
+    return;
+  }
+
   const abortController = new AbortController();
   currentAbortController = abortController;
 
@@ -29,7 +35,10 @@ self.onmessage = async (event: MessageEvent<SolverMessage>) => {
     signal: abortController.signal,
   });
 
-  if (abortController.signal.aborted || solution === null) {
+  // 主线程主动中止（超时/重置）时由主线程处理状态，这里静默返回
+  if (abortController.signal.aborted) return;
+
+  if (solution === null) {
     self.postMessage({ type: "aborted" });
     return;
   }
