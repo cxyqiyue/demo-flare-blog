@@ -16,7 +16,7 @@ import {
 import { RelatedPosts, RelatedPostsSkeleton } from "./components/related-posts";
 import TableOfContents from "./components/table-of-contents";
 
-export function PostPage({ post }: PostPageProps) {
+export function PostPage({ post, hideAdminEdit }: PostPageProps) {
   const navigate = useNavigate();
   const { data: session } = authClient.useSession();
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -40,7 +40,7 @@ export function PostPage({ post }: PostPageProps) {
           <ArrowLeft size={12} />
           <span>{m.post_back_to_list()}</span>
         </button>
-        {session?.user.role === "admin" && (
+        {session?.user.role === "admin" && !hideAdminEdit && (
           <Link
             to="/admin/posts/edit/$id"
             params={{ id: String(post.id) }}

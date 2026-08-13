@@ -5,4 +5,6 @@ export interface AboutPageProps {
   post: Exclude<PostWithToc, null> | null;
   /** 当前浏览者是否为管理员（用于空状态下展示创建入口） */
   isAdmin: boolean;
+  /** 管理员点击"创建/编辑"时触发页面内编辑（不跳转后台） */
+  onStartEdit?: () => void;
 }

@@ -15,7 +15,7 @@ import { PostSummary } from "./components/post-summary";
 import { RelatedPosts, RelatedPostsSkeleton } from "./components/related-posts";
 import TableOfContents from "./components/table-of-contents";
 
-export function PostPage({ post }: PostPageProps) {
+export function PostPage({ post, hideAdminEdit }: PostPageProps) {
   const { data: session } = authClient.useSession();
   // Approximate word count
   const wordCount = post.readTimeInMinutes * 300;
@@ -53,7 +53,7 @@ export function PostPage({ post }: PostPageProps) {
               {m.read_time({ count: post.readTimeInMinutes })}
             </div>
           </div>
-          {session?.user.role === "admin" && (
+          {session?.user.role === "admin" && !hideAdminEdit && (
             <Link
               to="/admin/posts/edit/$id"
               params={{ id: String(post.id) }}

@@ -1,10 +1,9 @@
-import { Link } from "@tanstack/react-router";
 import { FileQuestion, Pencil } from "lucide-react";
 import type { AboutPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
 import { PostPage } from "../post";
 
-export function AboutPage({ post, isAdmin }: AboutPageProps) {
+export function AboutPage({ post, isAdmin, onStartEdit }: AboutPageProps) {
   if (!post) {
     return (
       <div className="flex flex-col gap-4 w-full">
@@ -22,18 +21,19 @@ export function AboutPage({ post, isAdmin }: AboutPageProps) {
             {m.about_empty_desc()}
           </p>
           {isAdmin && (
-            <Link
-              to="/admin/posts"
+            <button
+              type="button"
+              onClick={onStartEdit}
               className="fuwari-btn-regular rounded-lg h-10 px-6 flex items-center justify-center gap-2 text-sm"
             >
               <Pencil size={14} strokeWidth={1.5} />
               <span>{m.about_admin_create()}</span>
-            </Link>
+            </button>
           )}
         </div>
       </div>
     );
   }
 
-  return <PostPage post={post} />;
+  return <PostPage post={post} hideAdminEdit />;
 }

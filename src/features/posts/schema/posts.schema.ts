@@ -153,6 +153,11 @@ export const UpdatePostInputSchema = z.object({
 
 export const DeletePostInputSchema = z.object({ id: z.number() });
 
+/** 关于页面内容保存（upsert slug=about 文章并发布） */
+export const SaveAboutPostInputSchema = z.object({
+  contentJson: NullableJsonContentSchema,
+});
+
 export const BatchUpdatePostsStatusInputSchema = z.object({
   ids: z.array(z.number().int().positive()).min(1).max(200),
   status: z.enum(POST_STATUSES),
@@ -182,6 +187,7 @@ export type GetPostsCountInput = z.infer<typeof GetPostsCountInputSchema>;
 export type FindPostByIdInput = z.infer<typeof FindPostByIdInputSchema>;
 export type UpdatePostInput = z.infer<typeof UpdatePostInputSchema>;
 export type DeletePostInput = z.infer<typeof DeletePostInputSchema>;
+export type SaveAboutPostInput = z.infer<typeof SaveAboutPostInputSchema>;
 export type BatchUpdatePostsStatusInput = z.infer<
   typeof BatchUpdatePostsStatusInputSchema
 >;
