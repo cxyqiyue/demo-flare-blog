@@ -6,6 +6,15 @@ export async function findAboutArticle(db: DB) {
   return rows[0] ?? null;
 }
 
+export async function findAboutArticleById(db: DB, id: number) {
+  const rows = await db
+    .select()
+    .from(AboutArticleTable)
+    .where(eq(AboutArticleTable.id, id))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export async function insertAboutArticle(
   db: DB,
   data: { title: string; markdown: string },

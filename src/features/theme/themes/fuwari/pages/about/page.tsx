@@ -1,6 +1,7 @@
 import { FileQuestion, Pencil } from "lucide-react";
 import type { AboutPageProps } from "@/features/theme/contract/pages";
 import { MarkdownContent } from "@/features/about/components/markdown-content";
+import { FuwariCommentSection } from "../../components/comments/view/comment-section";
 import { m } from "@/paraglide/messages";
 
 const markdownClassName = "prose dark:prose-invert prose-base max-w-none! fuwari-custom-md";
@@ -62,6 +63,10 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
         ) : null}
 
         <MarkdownContent markdown={article.markdown} className={markdownClassName} />
+
+        <div className="mt-10 pt-6 border-t border-(--fuwari-meta-divider)">
+          <FuwariCommentSection aboutArticleId={article.id} />
+        </div>
       </div>
     </div>
   );

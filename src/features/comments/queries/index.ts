@@ -10,7 +10,14 @@ import {
 export type CommentTargetInput = {
   postId?: number;
   momentId?: number;
+  aboutArticleId?: number;
 };
+
+function targetKey(target: CommentTargetInput) {
+  if (target.aboutArticleId != null) return `a${target.aboutArticleId}`;
+  if (target.momentId != null) return `m${target.momentId}`;
+  return `p${target.postId}`;
+}
 
 export const COMMENTS_KEYS = {
   all: ["comments"] as const,
@@ -21,22 +28,11 @@ export const COMMENTS_KEYS = {
 
   // Child keys (functions for specific queries)
   roots: (target: CommentTargetInput) =>
-    ["comments", "roots", target.postId ?? "m", target.momentId ?? "p"] as const,
+    ["comments", "roots", targetKey(target)] as const,
   replies: (target: CommentTargetInput, rootId: number) =>
-    [
-      "comments",
-      "replies",
-      target.postId ?? "m",
-      target.momentId ?? "p",
-      rootId,
-    ] as const,
+    ["comments", "replies", targetKey(target), rootId] as const,
   repliesLists: (target: CommentTargetInput) =>
-    [
-      "comments",
-      "replies",
-      target.postId ?? "m",
-      target.momentId ?? "p",
-    ] as const,
+    ["comments", "replies", targetKey(target)] as const,
   userStats: (userId: string) =>
     ["comments", "admin", "user-stats", userId] as const,
 };
@@ -110,6 +106,7 @@ export function allCommentsQuery(
     status?: CommentStatus;
     postId?: number;
     momentId?: number;
+    aboutArticleId?: number;
     userId?: string;
     userName?: string;
   } = {},

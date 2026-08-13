@@ -2,6 +2,7 @@ import { ArrowLeft, FileQuestion, Pencil } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import type { AboutPageProps } from "@/features/theme/contract/pages";
 import { MarkdownContent } from "@/features/about/components/markdown-content";
+import { CommentSection } from "../../components/comments/view/comment-section";
 import { m } from "@/paraglide/messages";
 
 export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
@@ -70,6 +71,8 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
           <MarkdownContent markdown={article.markdown} className="default-md" />
         </main>
       </article>
+
+      <CommentSection aboutArticleId={article.id} className="mt-8" />
     </div>
   );
 }

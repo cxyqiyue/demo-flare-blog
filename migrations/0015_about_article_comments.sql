@@ -1,0 +1,2 @@
+ALTER TABLE `comments` ADD `about_article_id` integer REFERENCES about_article(id);--> statement-breakpoint
+CREATE INDEX `comments_about_created_idx` ON `comments` (`about_article_id`,`root_id`,`created_at`);

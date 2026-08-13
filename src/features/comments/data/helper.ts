@@ -6,6 +6,7 @@ export function buildCommentWhereClause(options: {
   status?: CommentStatus | Array<CommentStatus>;
   postId?: number;
   momentId?: number;
+  aboutArticleId?: number;
   userId?: string;
   viewerId?: string;
   rootId?: number | null;
@@ -15,6 +16,7 @@ export function buildCommentWhereClause(options: {
     status,
     postId,
     momentId,
+    aboutArticleId,
     userId,
     viewerId,
     rootId,
@@ -29,6 +31,10 @@ export function buildCommentWhereClause(options: {
 
   if (momentId) {
     whereClauses.push(eq(CommentsTable.momentId, momentId));
+  }
+
+  if (aboutArticleId) {
+    whereClauses.push(eq(CommentsTable.aboutArticleId, aboutArticleId));
   }
 
   if (userId) {

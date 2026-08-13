@@ -3,6 +3,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import { buildCommentWhereClause } from "@/features/comments/data/helper";
 import type { CommentStatus } from "@/lib/db/schema";
 import {
+  AboutArticleTable,
   CommentsTable,
   MomentsTable,
   PostsTable,
@@ -14,6 +15,7 @@ const DEFAULT_PAGE_SIZE = 20;
 export type CommentTarget =
   | { postId: number }
   | { momentId: number }
+  | { aboutArticleId: number }
   | { postId: number; momentId?: undefined };
 
 export async function insertComment(
@@ -57,6 +59,7 @@ export async function getRootCommentsByTarget(
       replyToCommentId: CommentsTable.replyToCommentId,
       postId: CommentsTable.postId,
       momentId: CommentsTable.momentId,
+      aboutArticleId: CommentsTable.aboutArticleId,
       userId: CommentsTable.userId,
       status: CommentsTable.status,
       aiReason: CommentsTable.aiReason,
@@ -158,6 +161,7 @@ export async function getRepliesByRootId(
       replyToCommentId: CommentsTable.replyToCommentId,
       postId: CommentsTable.postId,
       momentId: CommentsTable.momentId,
+      aboutArticleId: CommentsTable.aboutArticleId,
       userId: CommentsTable.userId,
       status: CommentsTable.status,
       aiReason: CommentsTable.aiReason,
@@ -304,6 +308,7 @@ export async function getAllComments(
     status?: CommentStatus | Array<CommentStatus>;
     postId?: number;
     momentId?: number;
+    aboutArticleId?: number;
     userId?: string;
     userName?: string;
   } = {},
@@ -314,6 +319,7 @@ export async function getAllComments(
     status,
     postId,
     momentId,
+    aboutArticleId,
     userId,
     userName,
   } = options;
@@ -322,6 +328,7 @@ export async function getAllComments(
     status,
     postId,
     momentId,
+    aboutArticleId,
     userId,
   });
   const finalConditions = userName
@@ -339,6 +346,7 @@ export async function getAllComments(
       replyToCommentId: CommentsTable.replyToCommentId,
       postId: CommentsTable.postId,
       momentId: CommentsTable.momentId,
+      aboutArticleId: CommentsTable.aboutArticleId,
       userId: CommentsTable.userId,
       status: CommentsTable.status,
       aiReason: CommentsTable.aiReason,
@@ -357,6 +365,10 @@ export async function getAllComments(
       moment: {
         id: MomentsTable.id,
       },
+      about: {
+        id: AboutArticleTable.id,
+        title: AboutArticleTable.title,
+      },
       replyToUser: {
         id: parentUser.id,
         name: parentUser.name,
@@ -366,6 +378,10 @@ export async function getAllComments(
     .leftJoin(user, eq(CommentsTable.userId, user.id))
     .leftJoin(PostsTable, eq(CommentsTable.postId, PostsTable.id))
     .leftJoin(MomentsTable, eq(CommentsTable.momentId, MomentsTable.id))
+    .leftJoin(
+      AboutArticleTable,
+      eq(CommentsTable.aboutArticleId, AboutArticleTable.id),
+    )
     .leftJoin(
       parentComment,
       eq(CommentsTable.replyToCommentId, parentComment.id),
@@ -385,16 +401,25 @@ export async function getAllCommentsCount(
     status?: CommentStatus | Array<CommentStatus>;
     postId?: number;
     momentId?: number;
+    aboutArticleId?: number;
     userId?: string;
     userName?: string;
   } = {},
 ) {
-  const { status, postId, momentId, userId, userName } = options;
+  const {
+    status,
+    postId,
+    momentId,
+    aboutArticleId,
+    userId,
+    userName,
+  } = options;
 
   const conditions = buildCommentWhereClause({
     status,
     postId,
     momentId,
+    aboutArticleId,
     userId,
   });
   const finalConditions = userName

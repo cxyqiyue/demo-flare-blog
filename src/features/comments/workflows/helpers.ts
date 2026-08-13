@@ -22,6 +22,10 @@ interface SendReplyNotificationParams {
     | {
         kind: "moment";
         title: string;
+      }
+    | {
+        kind: "about";
+        title: string;
       };
   skipNotifyUserId?: string;
 }
@@ -90,7 +94,9 @@ export async function sendReplyNotification(
   const commentUrl =
     target.kind === "post"
       ? `https://${DOMAIN}/post/${target.slug}?highlightCommentId=${comment.id}&rootId=${rootId}#comment-${comment.id}`
-      : `https://${DOMAIN}/moments?highlightCommentId=${comment.id}&rootId=${rootId}#comment-${comment.id}`;
+      : target.kind === "about"
+        ? `https://${DOMAIN}/about?highlightCommentId=${comment.id}&rootId=${rootId}#comment-${comment.id}`
+        : `https://${DOMAIN}/moments?highlightCommentId=${comment.id}&rootId=${rootId}#comment-${comment.id}`;
 
   try {
     await publishNotificationEvent(

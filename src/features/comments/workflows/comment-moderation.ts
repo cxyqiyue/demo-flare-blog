@@ -1,6 +1,7 @@
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import * as AiService from "@/features/ai/ai.service";
+import * as AboutRepo from "@/features/about/data/about-article.data";
 import * as CommentService from "@/features/comments/comments.service";
 import * as CommentRepo from "@/features/comments/data/comments.data";
 import { sendReplyNotification } from "@/features/comments/workflows/helpers";
@@ -55,7 +56,7 @@ export class CommentModerationWorkflow extends WorkflowEntrypoint<Env, Params> {
       return;
     }
 
-    // Fetch the target (post or moment) for context
+    // Fetch the target (post, moment or about) for context
     const target = await step.do<
       | {
           kind: "post";
@@ -70,6 +71,13 @@ export class CommentModerationWorkflow extends WorkflowEntrypoint<Env, Params> {
           summary: string;
           contentPreview: string;
           notificationTarget: { kind: "moment"; title: string };
+        }
+      | {
+          kind: "about";
+          title: string;
+          summary: string;
+          contentPreview: string;
+          notificationTarget: { kind: "about"; title: string };
         }
       | null
     >("fetch target context", async () => {
@@ -116,6 +124,25 @@ export class CommentModerationWorkflow extends WorkflowEntrypoint<Env, Params> {
           summary: "",
           contentPreview: "",
           notificationTarget: { kind: "moment", title: m.comments_moment_notification_title() },
+        };
+      }
+      if (comment.aboutArticleId != null) {
+        const about = await AboutRepo.findAboutArticleById(db, comment.aboutArticleId);
+        if (!about) {
+          console.log(
+            JSON.stringify({
+              message: "about article not found, skipping moderation",
+              aboutArticleId: comment.aboutArticleId,
+            }),
+          );
+          return null;
+        }
+        return {
+          kind: "about",
+          title: about.title,
+          summary: "",
+          contentPreview: "",
+          notificationTarget: { kind: "about", title: about.title },
         };
       }
       return null;

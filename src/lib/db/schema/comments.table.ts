@@ -7,6 +7,7 @@ import {
   sqliteTable,
   text,
 } from "drizzle-orm/sqlite-core";
+import { AboutArticleTable } from "./about-article.table";
 import { user } from "./auth.table";
 import { createdAt, id, updatedAt } from "./helper";
 import { MomentsTable } from "./moments.table";
@@ -46,6 +47,10 @@ export const CommentsTable = sqliteTable(
     momentId: integer("moment_id").references(() => MomentsTable.id, {
       onDelete: "cascade",
     }),
+    aboutArticleId: integer("about_article_id").references(
+      () => AboutArticleTable.id,
+      { onDelete: "cascade" },
+    ),
     userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
 
     createdAt,
@@ -59,6 +64,11 @@ export const CommentsTable = sqliteTable(
     ),
     index("comments_moment_created_idx").on(
       table.momentId,
+      table.rootId,
+      table.createdAt,
+    ),
+    index("comments_about_created_idx").on(
+      table.aboutArticleId,
       table.rootId,
       table.createdAt,
     ),

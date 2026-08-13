@@ -1173,6 +1173,7 @@
   "comments_toast_destroy_not_found": "Failed to destroy: Comment not found",
   "comments_toast_destroy_success": "Comment permanently destroyed",
   "comments_moment_notification_title": "Moment comment",
+  "comments_about_target": "About page",
   "comments_ai_flag": "AI FLAG: {reason}",
   "comments_moderation_reason_empty_pending": "The comment is empty and requires manual review",
   "comments_moderation_reason_dev_approved": "Automatically approved in development",

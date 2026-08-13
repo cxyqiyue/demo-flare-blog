@@ -10,6 +10,7 @@ import type {
 import * as CommentRepo from "@/features/comments/data/comments.data";
 import type { CommentTarget } from "@/features/comments/data/comments.data";
 import { sendReplyNotification } from "@/features/comments/workflows/helpers";
+import { findAboutArticleById } from "@/features/about/data/about-article.data";
 import * as MomentRepo from "@/features/moments/data/moments.data";
 import { publishNotificationEvent } from "@/features/notification/service/notification.publisher";
 import * as PostService from "@/features/posts/services/posts.service";
@@ -18,9 +19,14 @@ import { serverEnv } from "@/lib/env/server.env";
 import { err, ok } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
 
-function resolveTarget(
-  data: { postId?: number; momentId?: number },
-): CommentTarget {
+function resolveTarget(data: {
+  postId?: number;
+  momentId?: number;
+  aboutArticleId?: number;
+}): CommentTarget {
+  if (data.aboutArticleId) {
+    return { aboutArticleId: data.aboutArticleId };
+  }
   if (data.momentId) {
     return { momentId: data.momentId };
   }
@@ -34,6 +40,7 @@ async function getTargetContext(
     rootId: number | null;
     postId: number | null;
     momentId: number | null;
+    aboutArticleId: number | null;
   },
 ) {
   if (comment.postId != null) {
@@ -59,6 +66,19 @@ async function getTargetContext(
       };
     }
   }
+  if (comment.aboutArticleId != null) {
+    const about = await findAboutArticleById(
+      context.db,
+      comment.aboutArticleId,
+    );
+    if (about) {
+      return {
+        kind: "about" as const,
+        title: about.title,
+        commentUrl: `https://${serverEnv(context.env).DOMAIN}/about?highlightCommentId=${comment.id}&rootId=${comment.rootId ?? comment.id}#comment-${comment.id}`,
+      };
+    }
+  }
   return null;
 }
 
@@ -72,6 +92,7 @@ async function sendCommentTargetNotification(
     content: unknown;
     postId: number | null;
     momentId: number | null;
+    aboutArticleId: number | null;
   },
 ) {
   if (!comment.replyToCommentId) return;
@@ -88,6 +109,7 @@ async function sendReplyNotificationForTarget(
     content: unknown;
     postId: number | null;
     momentId: number | null;
+    aboutArticleId: number | null;
   },
   moderatorUserId?: string,
 ) {
@@ -117,6 +139,18 @@ async function sendReplyNotificationForTarget(
       target: { kind: "moment", title: target.title },
       skipNotifyUserId: moderatorUserId,
     });
+  } else if (target.kind === "about") {
+    await sendReplyNotification(context, {
+      comment: {
+        id: comment.id,
+        rootId: comment.rootId,
+        replyToCommentId: comment.replyToCommentId,
+        userId: comment.userId,
+        content: comment.content as Parameters<typeof sendReplyNotification>[1]["comment"]["content"],
+      },
+      target: { kind: "about", title: target.title },
+      skipNotifyUserId: moderatorUserId,
+    });
   }
 }
 
@@ -130,6 +164,7 @@ async function notifyAdminRootComment(
     content: unknown;
     postId: number | null;
     momentId: number | null;
+    aboutArticleId: number | null;
   },
   content: unknown,
 ) {
@@ -224,14 +259,18 @@ export async function createComment(
   // Validation: ensure exactly one target is provided
   const hasPost = typeof data.postId === "number";
   const hasMoment = typeof data.momentId === "number";
-  if (hasPost === hasMoment) {
+  const hasAbout = typeof data.aboutArticleId === "number";
+  if ([hasPost, hasMoment, hasAbout].filter(Boolean).length !== 1) {
     return err({ reason: "INVALID_TARGET" });
   }
-  const target: CommentTarget = hasMoment
-    ? { momentId: data.momentId! }
-    : { postId: data.postId! };
+  const target: CommentTarget = hasAbout
+    ? { aboutArticleId: data.aboutArticleId! }
+    : hasMoment
+      ? { momentId: data.momentId! }
+      : { postId: data.postId! };
   const targetPostId = hasPost ? data.postId! : null;
   const targetMomentId = hasMoment ? data.momentId! : null;
+  const targetAboutArticleId = hasAbout ? data.aboutArticleId! : null;
 
   // Validation: ensure 2-level structure
   let rootId: number | null = null;
@@ -251,7 +290,8 @@ export async function createComment(
     }
     if (
       rootComment.postId !== targetPostId ||
-      rootComment.momentId !== targetMomentId
+      rootComment.momentId !== targetMomentId ||
+      rootComment.aboutArticleId !== targetAboutArticleId
     ) {
       return err({ reason: "ROOT_COMMENT_POST_MISMATCH" });
     }
@@ -368,6 +408,7 @@ export async function getAllComments(
       status: data.status,
       postId: data.postId,
       momentId: data.momentId,
+      aboutArticleId: data.aboutArticleId,
       userId: data.userId,
       userName: data.userName,
     }),
@@ -375,6 +416,7 @@ export async function getAllComments(
       status: data.status,
       postId: data.postId,
       momentId: data.momentId,
+      aboutArticleId: data.aboutArticleId,
       userId: data.userId,
       userName: data.userName,
     }),

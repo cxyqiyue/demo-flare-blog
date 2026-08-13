@@ -20,16 +20,23 @@ import { CommentSectionSkeleton } from "./comment-section-skeleton";
 interface CommentSectionProps {
   postId?: number;
   momentId?: number;
+  aboutArticleId?: number;
   className?: string;
 }
 
 export const CommentSection = ({
   postId,
   momentId,
+  aboutArticleId,
   className,
 }: CommentSectionProps) => {
   const { data: session } = authClient.useSession();
-  const target: CommentTargetInput = momentId != null ? { momentId } : { postId };
+  const target: CommentTargetInput =
+    aboutArticleId != null
+      ? { aboutArticleId }
+      : momentId != null
+        ? { momentId }
+        : { postId };
   const { rootId, highlightCommentId } = useRouterState({
     select: (state) =>
       (state.location.search as {

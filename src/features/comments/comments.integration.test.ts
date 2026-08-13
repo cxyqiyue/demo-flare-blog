@@ -10,6 +10,7 @@ import {
 } from "tests/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as AiService from "@/features/ai/ai.service";
+import * as AboutData from "@/features/about/data/about-article.data";
 import * as CommentService from "@/features/comments/comments.service";
 import { CommentModerationWorkflow } from "@/features/comments/workflows/comment-moderation";
 import * as WorkflowHelpers from "@/features/comments/workflows/helpers";
@@ -352,6 +353,113 @@ describe("Comments Integration", () => {
           (c: { id: number }) => c.id === comment.id,
         );
         expect(foundWithViewer).toBeDefined();
+      });
+    });
+
+    describe("About Article Comments", () => {
+      let aboutArticleId: number;
+
+      beforeEach(async () => {
+        const article = await AboutData.insertAboutArticle(adminContext.db, {
+          title: "关于页面",
+          markdown: "# 关于\n\n这是关于页面内容。",
+        });
+        aboutArticleId = article.id;
+      });
+
+      it("should create a comment targeting the about article", async () => {
+        const comment = unwrap(
+          await CommentService.createComment(userContext, {
+            aboutArticleId,
+            content: createCommentContent("关于页评论"),
+          }),
+        );
+
+        expect(comment.status).toBe("verifying");
+        expect(comment.aboutArticleId).toBe(aboutArticleId);
+        expect(comment.postId).toBeNull();
+        expect(comment.momentId).toBeNull();
+      });
+
+      it("should get root comments for the about target", async () => {
+        const root = unwrap(
+          await CommentService.createComment(userContext, {
+            aboutArticleId,
+            content: createCommentContent("关于页根评论"),
+          }),
+        );
+        await CommentService.moderateComment(adminContext, {
+          id: root.id,
+          status: "published",
+        });
+
+        const reply = unwrap(
+          await CommentService.createComment(userContext, {
+            aboutArticleId,
+            content: createCommentContent("关于页回复"),
+            rootId: root.id,
+          }),
+        );
+        await CommentService.moderateComment(adminContext, {
+          id: reply.id,
+          status: "published",
+        });
+
+        const result = await CommentService.getRootCommentsByTarget(
+          userContext,
+          { aboutArticleId },
+        );
+
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0].id).toBe(root.id);
+        expect(result.items[0].replyCount).toBe(1);
+        expect(result.total).toBe(1);
+      });
+
+      it("should return INVALID_TARGET when multiple targets are provided", async () => {
+        const result = await CommentService.createComment(userContext, {
+          postId,
+          aboutArticleId,
+          content: createCommentContent("非法目标"),
+        });
+
+        expect(result.error?.reason).toBe("INVALID_TARGET");
+      });
+
+      it("should return ROOT_COMMENT_POST_MISMATCH when replying across targets", async () => {
+        const postRoot = unwrap(
+          await CommentService.createComment(userContext, {
+            postId,
+            content: createCommentContent("文章评论"),
+          }),
+        );
+
+        const result = await CommentService.createComment(userContext, {
+          aboutArticleId,
+          content: createCommentContent("跨目标回复"),
+          rootId: postRoot.id,
+        });
+
+        expect(result.error?.reason).toBe("ROOT_COMMENT_POST_MISMATCH");
+      });
+
+      it("should include about context in admin getAllComments", async () => {
+        unwrap(
+          await CommentService.createComment(userContext, {
+            aboutArticleId,
+            content: createCommentContent("后台可见的关于页评论"),
+          }),
+        );
+
+        const all = await CommentService.getAllComments(adminContext, {
+          aboutArticleId,
+        });
+
+        expect(all.items).toHaveLength(1);
+        expect(all.items[0].about).toMatchObject({
+          id: aboutArticleId,
+          title: "关于页面",
+        });
       });
     });
 

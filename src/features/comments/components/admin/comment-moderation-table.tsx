@@ -323,6 +323,22 @@ export const CommentModerationTable = ({
                       <span>{m.comments_moment_notification_title()}</span>
                     </Link>
                   )}
+                  {comment.about && (
+                    <Link
+                      to="/about"
+                      hash={`comment-${comment.id}`}
+                      search={{
+                        highlightCommentId: comment.id,
+                        rootId: comment.rootId || undefined,
+                      }}
+                      className="text-[10px] font-mono text-muted-foreground hover:text-foreground transition-all flex items-center gap-2 group/about"
+                    >
+                      <span className="opacity-30 group-hover/about:opacity-100 transition-opacity">
+                        {m.comments_jump_to()}
+                      </span>
+                      <span>{m.comments_about_target()}</span>
+                    </Link>
+                  )}
                   {comment.replyToUser && (
                     <div className="text-[10px] font-mono text-muted-foreground flex items-center gap-2">
                       <span className="opacity-30">
@@ -425,6 +441,20 @@ export const CommentModerationTable = ({
                   >
                     <span className="opacity-40">{m.comments_jump_to()}</span>
                     {m.comments_moment_notification_title()}
+                  </Link>
+                )}
+                {comment.about && (
+                  <Link
+                    to="/about"
+                    hash={`comment-${comment.id}`}
+                    search={{
+                      highlightCommentId: comment.id,
+                      rootId: comment.rootId || undefined,
+                    }}
+                    className="truncate hover:text-foreground transition-colors"
+                  >
+                    <span className="opacity-40">{m.comments_jump_to()}</span>
+                    {m.comments_about_target()}
                   </Link>
                 )}
                 {comment.replyToUser && (

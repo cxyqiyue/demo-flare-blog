@@ -1165,6 +1165,7 @@
   "comments_toast_destroy_not_found": "删除失败: 评论不存在",
   "comments_toast_destroy_success": "评论已永久删除",
   "comments_moment_notification_title": "动态评论",
+  "comments_about_target": "关于页面",
   "comments_ai_flag": "AI判断: {reason}",
   "comments_moderation_reason_empty_pending": "评论内容为空，需人工审核",
   "comments_moderation_reason_dev_approved": "开发环境，自动通过",

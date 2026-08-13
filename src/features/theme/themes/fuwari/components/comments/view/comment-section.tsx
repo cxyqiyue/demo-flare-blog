@@ -18,14 +18,21 @@ import FuwariConfirmationModal from "./confirmation-modal";
 interface FuwariCommentSectionProps {
   postId?: number;
   momentId?: number;
+  aboutArticleId?: number;
 }
 
 export function FuwariCommentSection({
   postId,
   momentId,
+  aboutArticleId,
 }: FuwariCommentSectionProps) {
   const { data: session } = authClient.useSession();
-  const target: CommentTargetInput = momentId != null ? { momentId } : { postId };
+  const target: CommentTargetInput =
+    aboutArticleId != null
+      ? { aboutArticleId }
+      : momentId != null
+        ? { momentId }
+        : { postId };
   const { rootId, highlightCommentId } = useRouterState({
     select: (state) =>
       (state.location.search as {
