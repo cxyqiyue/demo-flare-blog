@@ -36,6 +36,8 @@ export default {
   PostPageSkeleton,
   AboutPage,
   AboutPageSkeleton,
+  markdownClassName:
+    "prose dark:prose-invert prose-base max-w-none! fuwari-custom-md",
   PublicLayout,
   AuthLayout,
   UserLayout,

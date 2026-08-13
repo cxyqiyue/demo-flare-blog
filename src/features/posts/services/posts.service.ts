@@ -20,7 +20,6 @@ import type {
   GetPublicPostsPageInput,
   PreviewSummaryInput,
   PublicPostsPageResponse,
-  SaveAboutPostInput,
   StartPostProcessInput,
   UpdatePostInput,
 } from "@/features/posts/schema/posts.schema";
@@ -482,77 +481,6 @@ export async function batchUpdatePostsStatus(
   }
 
   return ok({ updated: affected.length, skipped });
-}
-
-/** 关于页文章 slug：全站仅允许一篇文章，重复保存为更新 */
-export const ABOUT_POST_SLUG = "about";
-export const ABOUT_POST_TITLE = "关于";
-
-/**
- * 保存关于页内容（upsert slug=about 文章）。
- * - 不存在时创建并立即发布；存在时更新内容（保持原 publishedAt）。
- * - 写入后触发发布 workflow：publicContentJson 快照、搜索索引、缓存失效。
- */
-export async function saveAboutPost(
-  context: DbContext & { executionCtx: ExecutionContext; env: Env },
-  data: SaveAboutPostInput,
-) {
-  const plainText = convertToPlainText(data.contentJson);
-  const summary = (plainText.trim() ? plainText.trim().slice(0, 200) : "")
-    .replace(/\s+/g, " ")
-    .trim();
-  const readTimeInMinutes = Math.max(1, Math.round(plainText.length / 400));
-
-  const existing = await PostRepo.findPostBySlug(context.db, ABOUT_POST_SLUG, {
-    publicOnly: false,
-  });
-
-  let post:
-    | Awaited<ReturnType<typeof PostRepo.updatePost>>
-    | Awaited<ReturnType<typeof PostRepo.insertPost>>;
-  if (existing) {
-    post = await PostRepo.updatePost(context.db, existing.id, {
-      title: ABOUT_POST_TITLE,
-      slug: ABOUT_POST_SLUG,
-      summary,
-      contentJson: data.contentJson,
-      status: "published",
-      publishedAt: existing.publishedAt ?? new Date(),
-      readTimeInMinutes,
-    });
-  } else {
-    post = await PostRepo.insertPost(context.db, {
-      title: ABOUT_POST_TITLE,
-      slug: ABOUT_POST_SLUG,
-      summary,
-      contentJson: data.contentJson,
-      status: "published",
-      publishedAt: new Date(),
-      readTimeInMinutes,
-    });
-  }
-
-  if (!post) {
-    throw new Error("Failed to save about post");
-  }
-
-  context.executionCtx.waitUntil(
-    syncPostMedia(context.db, post.id, data.contentJson),
-  );
-
-  const publishedAtISO = (post.publishedAt ?? new Date()).toISOString();
-  context.executionCtx.waitUntil(
-    context.env.POST_PROCESS_WORKFLOW.create({
-      params: {
-        postId: post.id,
-        isPublished: true,
-        publishedAt: publishedAtISO,
-        isFuturePost: false,
-      },
-    }),
-  );
-
-  return ok({ id: post.id });
 }
 
 export async function deletePost(

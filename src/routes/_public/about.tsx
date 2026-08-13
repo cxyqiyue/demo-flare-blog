@@ -1,13 +1,16 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { JSONContent } from "@tiptap/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import theme from "@theme";
+import { AboutMarkdownEditor } from "@/features/about/components/about-markdown-editor";
+import {
+  ABOUT_KEYS,
+  aboutArticleQuery,
+} from "@/features/about/queries";
+import { saveAboutArticleFn } from "@/features/about/api/about.api";
+import { markdownToPlainText } from "@/features/about/utils/markdown";
 import { siteConfigQuery, siteDomainQuery } from "@/features/config/queries";
-import { AboutEditor } from "@/features/posts/components/about-editor";
-import { saveAboutPostFn } from "@/features/posts/api/posts.admin.api";
-import { POSTS_KEYS, postBySlugQuery } from "@/features/posts/queries";
 import { authClient } from "@/lib/auth/auth.client";
 import { buildCanonicalUrl, canonicalLink } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
@@ -15,18 +18,17 @@ import { m } from "@/paraglide/messages";
 export const Route = createFileRoute("/_public/about")({
   component: AboutPage,
   loader: async ({ context }) => {
-    const [post, domain, siteConfig] = await Promise.all([
-      context.queryClient.ensureQueryData(postBySlugQuery("about")),
+    const [article, domain, siteConfig] = await Promise.all([
+      context.queryClient.ensureQueryData(aboutArticleQuery()),
       context.queryClient.ensureQueryData(siteDomainQuery),
       context.queryClient.ensureQueryData(siteConfigQuery),
     ]);
 
     return {
-      post,
       authorName: siteConfig.author,
       canonicalHref: buildCanonicalUrl(domain, "/about"),
-      title: post?.title ?? m.nav_about(),
-      description: post?.summary ?? "",
+      title: article?.title ?? m.nav_about(),
+      description: article ? markdownToPlainText(article.markdown).slice(0, 160) : "",
     };
   },
   head: ({ loaderData }) => {
@@ -45,7 +47,7 @@ export const Route = createFileRoute("/_public/about")({
         },
         { property: "og:title", content: title ?? "" },
         { property: "og:description", content: description },
-        { property: "og:type", content: "article" },
+        { property: "og:type", content: "website" },
         { property: "og:url", content: canonicalHref },
       ],
       links: [canonicalLink(canonicalHref)],
@@ -56,26 +58,28 @@ export const Route = createFileRoute("/_public/about")({
 });
 
 function AboutPage() {
-  const { data: post } = useSuspenseQuery(postBySlugQuery("about"));
+  const { data: article } = useSuspenseQuery(aboutArticleQuery());
   const { data: session } = authClient.useSession();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const isAdmin = session?.user.role === "admin";
-  const showEditor = isAdmin && (editing || !post);
+  const showEditor = isAdmin && (editing || !article);
 
-  const onSave = async (content: JSONContent): Promise<boolean> => {
+  const onSave = async (title: string, markdown: string): Promise<boolean> => {
     if (saving) return false;
     setSaving(true);
     try {
-      const result = await saveAboutPostFn({ data: { contentJson: content } });
+      const result = await saveAboutArticleFn({
+        data: { title, markdown },
+      });
       if (result.error) {
         toast.error(m.about_save_error());
         return false;
       }
       await queryClient.invalidateQueries({
-        queryKey: POSTS_KEYS.detail("about"),
+        queryKey: ABOUT_KEYS.all,
       });
       setEditing(false);
       toast.success(m.about_save_success());
@@ -90,20 +94,20 @@ function AboutPage() {
 
   if (showEditor) {
     return (
-      <div className="w-full max-w-3xl mx-auto pb-20 px-6 md:px-0 pt-10">
-        <AboutEditor
-          initialContent={post?.contentJson}
-          isSubmitting={saving}
-          onSubmit={onSave}
-          onCancel={() => setEditing(false)}
-        />
-      </div>
+      <AboutMarkdownEditor
+        initialTitle={article?.title ?? ""}
+        initialMarkdown={article?.markdown ?? ""}
+        isSubmitting={saving}
+        previewClassName={theme.markdownClassName}
+        onSubmit={onSave}
+        onCancel={() => setEditing(false)}
+      />
     );
   }
 
   return (
     <theme.AboutPage
-      post={post}
+      article={article}
       isAdmin={isAdmin}
       onStartEdit={() => setEditing(true)}
     />

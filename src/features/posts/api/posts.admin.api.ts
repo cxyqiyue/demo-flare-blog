@@ -9,7 +9,6 @@ import {
   GetPostsCountInputSchema,
   GetPostsInputSchema,
   PreviewSummaryInputSchema,
-  SaveAboutPostInputSchema,
   StartPostProcessInputSchema,
   UpdatePostInputSchema,
 } from "@/features/posts/schema/posts.schema";
@@ -55,13 +54,6 @@ export const updatePostFn = createServerFn({
   .middleware([adminMiddleware])
   .inputValidator(UpdatePostInputSchema)
   .handler(({ data, context }) => PostService.updatePost(context, data));
-
-export const saveAboutPostFn = createServerFn({
-  method: "POST",
-})
-  .middleware([adminMiddleware])
-  .inputValidator(SaveAboutPostInputSchema)
-  .handler(({ data, context }) => PostService.saveAboutPost(context, data));
 
 export const deletePostFn = createServerFn({
   method: "POST",

@@ -56,6 +56,8 @@ export interface ThemeComponents {
   AboutPage: React.ComponentType<AboutPageProps>;
   /** 关于页骨架屏 */
   AboutPageSkeleton: React.ComponentType;
+  /** Markdown 内容的样式包装类（用于关于页正文与编辑器预览） */
+  markdownClassName: string;
 
   /** 友链列表页组件 */
   FriendLinksPage: React.ComponentType<FriendLinksPageProps>;

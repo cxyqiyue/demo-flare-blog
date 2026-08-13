@@ -1,10 +1,12 @@
 import { FileQuestion, Pencil } from "lucide-react";
 import type { AboutPageProps } from "@/features/theme/contract/pages";
+import { MarkdownContent } from "@/features/about/components/markdown-content";
 import { m } from "@/paraglide/messages";
-import { PostPage } from "../post";
 
-export function AboutPage({ post, isAdmin, onStartEdit }: AboutPageProps) {
-  if (!post) {
+const markdownClassName = "prose dark:prose-invert prose-base max-w-none! fuwari-custom-md";
+
+export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
+  if (!article) {
     return (
       <div className="flex flex-col gap-4 w-full">
         <div
@@ -35,5 +37,32 @@ export function AboutPage({ post, isAdmin, onStartEdit }: AboutPageProps) {
     );
   }
 
-  return <PostPage post={post} hideAdminEdit />;
+  return (
+    <div className="flex flex-col gap-4 w-full">
+      <div className="fuwari-card-base z-10 px-6 md:px-9 pt-6 pb-6 relative w-full fuwari-onload-animation">
+        <div className="flex flex-row flex-wrap fuwari-text-30 gap-5 mb-3 transition">
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={onStartEdit}
+              className="flex flex-row items-center fuwari-text-30 hover:fuwari-text-90 transition animate-in fade-in duration-500"
+            >
+              <div className="transition h-6 w-6 rounded-md bg-black/5 dark:bg-white/10 fuwari-text-50 flex items-center justify-center mr-2">
+                <Pencil strokeWidth={1.5} size={16} />
+              </div>
+              <div className="text-sm">{m.about_edit()}</div>
+            </button>
+          )}
+        </div>
+
+        {article.title ? (
+          <h1 className="transition w-full block font-bold mb-6 text-3xl md:text-[2.25rem]/[2.75rem] fuwari-text-90">
+            {article.title}
+          </h1>
+        ) : null}
+
+        <MarkdownContent markdown={article.markdown} className={markdownClassName} />
+      </div>
+    </div>
+  );
 }

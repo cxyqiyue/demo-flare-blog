@@ -36,6 +36,7 @@ export default {
   PostPageSkeleton,
   AboutPage,
   AboutPageSkeleton,
+  markdownClassName: "default-md",
   PublicLayout,
   AuthLayout,
   UserLayout,

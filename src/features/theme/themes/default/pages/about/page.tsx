@@ -1,10 +1,13 @@
-import { FileQuestion, Pencil } from "lucide-react";
+import { ArrowLeft, FileQuestion, Pencil } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import type { AboutPageProps } from "@/features/theme/contract/pages";
+import { MarkdownContent } from "@/features/about/components/markdown-content";
 import { m } from "@/paraglide/messages";
-import { PostPage } from "../post";
 
-export function AboutPage({ post, isAdmin, onStartEdit }: AboutPageProps) {
-  if (!post) {
+export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
+  const navigate = useNavigate();
+
+  if (!article) {
     return (
       <div className="w-full max-w-3xl mx-auto pb-20 px-6 md:px-0">
         <div className="py-16 md:py-24 flex flex-col items-center text-center">
@@ -32,5 +35,41 @@ export function AboutPage({ post, isAdmin, onStartEdit }: AboutPageProps) {
     );
   }
 
-  return <PostPage post={post} hideAdminEdit />;
+  return (
+    <div className="w-full max-w-3xl mx-auto pb-20 px-6 md:px-0">
+      <nav className="py-12 flex items-center justify-between">
+        <button
+          onClick={() => navigate({ to: "/posts" })}
+          className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] opacity-40 hover:opacity-100 transition-opacity"
+        >
+          <ArrowLeft size={12} />
+          <span>{m.post_back_to_list()}</span>
+        </button>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={onStartEdit}
+            className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground opacity-60 hover:opacity-100 transition-opacity"
+          >
+            <Pencil size={12} />
+            <span>{m.about_edit()}</span>
+          </button>
+        )}
+      </nav>
+
+      <article className="space-y-16">
+        {article.title ? (
+          <header className="space-y-6">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-medium leading-[1.1] tracking-tight text-foreground">
+              {article.title}
+            </h1>
+          </header>
+        ) : null}
+
+        <main className="max-w-none min-w-0 overflow-x-clip text-foreground leading-relaxed font-serif">
+          <MarkdownContent markdown={article.markdown} className="default-md" />
+        </main>
+      </article>
+    </div>
+  );
 }
