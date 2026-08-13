@@ -9,6 +9,7 @@ import {
   LayoutTemplate,
   Loader2,
   Mail,
+  MessageCircle,
   ShieldCheck,
   Webhook,
 } from "lucide-react";
@@ -40,6 +41,7 @@ import { ImageHostingSettingsSection } from "@/features/image-hosting/components
 import { useImageHostingConnection } from "@/features/image-hosting/hooks/use-image-hosting-connection";
 import { OAuthClientsSection } from "@/features/oauth-clients/components/oauth-clients-section";
 import { WebhookSettingsSection } from "@/features/webhook/components/webhook-settings-section";
+import { WechatVerifySettingsSection } from "@/features/wechat-verify/components/wechat-verify-settings-section";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -90,6 +92,11 @@ function RouteComponent() {
       label: m.settings_tab_challenge(),
     },
     {
+      value: "wechat-verify",
+      icon: MessageCircle,
+      label: m.settings_tab_wechat_verify(),
+    },
+    {
       value: "webhook",
       icon: Webhook,
       label: m.settings_tab_webhook(),
@@ -121,6 +128,7 @@ function RouteComponent() {
     ai: "ai",
     "image-hosting": "imageHosting",
     challenge: "challenge",
+    "wechat-verify": "wechatVerify",
     webhook: "notification",
   };
 
@@ -398,6 +406,18 @@ function RouteComponent() {
                 </p>
               </div>
               <ChallengeSettingsSection />
+            </TabsContent>
+
+            <TabsContent value="wechat-verify" className="mt-0 space-y-10">
+              <div className="space-y-2 pb-6 border-b border-border/30">
+                <h2 className="text-2xl font-serif font-medium tracking-tight">
+                  {m.settings_wechat_verify_title()}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {m.settings_wechat_verify_desc()}
+                </p>
+              </div>
+              <WechatVerifySettingsSection />
             </TabsContent>
 
             <TabsContent value="webhook" className="mt-0 space-y-10">

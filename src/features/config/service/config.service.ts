@@ -141,6 +141,10 @@ export function resolveSystemConfig(
       ...DEFAULT_CONFIG.usage,
       ...config?.usage,
     },
+    wechatVerify: {
+      ...DEFAULT_CONFIG.wechatVerify,
+      ...config?.wechatVerify,
+    },
     site: resolveSiteConfig(config),
   };
 }

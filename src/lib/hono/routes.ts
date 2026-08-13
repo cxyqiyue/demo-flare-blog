@@ -12,6 +12,7 @@ import postsRelatedRoute from "@/features/posts/api/hono/posts.related.route";
 import searchRoute from "@/features/search/api/hono/search.route";
 import siteDocumentsRoute from "@/features/site-documents/api/hono/site-documents.route";
 import tagsRoute from "@/features/tags/api/hono/tags.list.route";
+import wechatVerifyRoute from "@/features/wechat-verify/api/hono/wechat-verify.route";
 import { serverEnv } from "@/lib/env/server.env";
 import { createRateLimiterIdentifier, getExecutionContext } from "./helper";
 import {
@@ -135,6 +136,9 @@ app.post(
 
 // Admin export download route
 app.route("/api/admin/export", exportDownloadRoute);
+
+// 微信部署验证文件（须在 shieldMiddleware 之前注册，否则 .txt 路径会被拦截）
+app.route("/", wechatVerifyRoute);
 
 // Router之前的防护
 app.all("*", shieldMiddleware);

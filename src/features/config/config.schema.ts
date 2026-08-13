@@ -139,6 +139,13 @@ export const UsageConfigSchema = z.object({
   graphql: z.boolean().optional(),
 });
 
+export const WechatVerifyConfigSchema = z.object({
+  /** 微信部署验证文件名（如 xxx.txt），仅存于数据库，不提交到仓库 */
+  fileName: z.string().optional(),
+  /** 微信部署验证文件内容 */
+  fileContent: z.string().optional(),
+});
+
 export const CONFIG_SECTIONS = [
   "email",
   "notification",
@@ -146,6 +153,7 @@ export const CONFIG_SECTIONS = [
   "imageHosting",
   "challenge",
   "usage",
+  "wechatVerify",
   "site",
 ] as const;
 export type ConfigSection = (typeof CONFIG_SECTIONS)[number];
@@ -162,6 +170,7 @@ export const UpdateSystemConfigSectionInputSchema = z.discriminatedUnion(
     }),
     z.object({ section: z.literal("challenge"), data: ChallengeConfigSchema }),
     z.object({ section: z.literal("usage"), data: UsageConfigSchema }),
+    z.object({ section: z.literal("wechatVerify"), data: WechatVerifyConfigSchema }),
     z.object({ section: z.literal("site"), data: SiteConfigInputSchema }),
   ],
 );
@@ -176,6 +185,7 @@ export const SystemConfigSchema = z.object({
   imageHosting: ImageHostingConfigSchema.optional(),
   challenge: ChallengeConfigSchema.optional(),
   usage: UsageConfigSchema.optional(),
+  wechatVerify: WechatVerifyConfigSchema.optional(),
   site: SiteConfigInputSchema.optional(),
 });
 
@@ -193,6 +203,7 @@ export const createSystemConfigFormSchema = (messages: Messages) =>
     imageHosting: SystemConfigSchema.shape.imageHosting,
     challenge: SystemConfigSchema.shape.challenge,
     usage: SystemConfigSchema.shape.usage,
+    wechatVerify: SystemConfigSchema.shape.wechatVerify,
     site: createSiteConfigInputFormSchema(messages).optional(),
   });
 
@@ -286,6 +297,10 @@ export const DEFAULT_CONFIG: SystemConfig = {
     enabled: false,
     selfReported: false,
     graphql: false,
+  },
+  wechatVerify: {
+    fileName: "",
+    fileContent: "",
   },
   site: blogConfig satisfies SiteConfigInput,
 };
