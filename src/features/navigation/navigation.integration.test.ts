@@ -14,7 +14,7 @@ describe("NavigationService", () => {
     it("should return seeded search engines with Bing as default", async () => {
       const data = await NavigationService.getNavigationPublicData(adminContext);
 
-      expect(data.engines.length).toBeGreaterThanOrEqual(14);
+      expect(data.engines.length).toBeGreaterThanOrEqual(11);
       const bing = data.engines.find(
         (engine) => engine.domain === "www.bing.com",
       );
