@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { Pagination } from "../../components/pagination";
 
-export function NavigationPage({ data, isAdmin }: NavigationPageProps) {
+export function NavigationPage({ data, isAdmin, showBookmarks }: NavigationPageProps) {
   const state = useNavigationPageState(data);
 
   return (
@@ -68,8 +68,9 @@ export function NavigationPage({ data, isAdmin }: NavigationPageProps) {
         </form>
       </div>
 
-      {/* Bookmarks */}
-      <section className="mt-14 space-y-6">
+      {/* Bookmarks（仅管理员可见） */}
+      {showBookmarks && (
+        <section className="mt-14 space-y-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h2 className="font-serif text-xl font-medium text-foreground">
             {m.navigation_bookmarks()}
@@ -129,7 +130,8 @@ export function NavigationPage({ data, isAdmin }: NavigationPageProps) {
             onPageChange={state.onPageChange}
           />
         )}
-      </section>
+        </section>
+      )}
     </div>
   );
 }

@@ -31,19 +31,24 @@ export const BookmarkSelectSchema = createSelectSchema(BookmarksTable, {
 
 // ==================== Public response ====================
 
-export const NavigationPublicDataSchema = z.object({
-  engines: z.array(
-    SearchEngineSelectSchema.pick({
-      id: true,
-      name: true,
-      urlTemplate: true,
-      iconUrl: true,
-      domain: true,
-      isDefault: true,
-      enabled: true,
-      sortOrder: true,
-    }),
-  ),
+const SearchEnginePublicSchema = SearchEngineSelectSchema.pick({
+  id: true,
+  name: true,
+  urlTemplate: true,
+  iconUrl: true,
+  domain: true,
+  isDefault: true,
+  enabled: true,
+  sortOrder: true,
+});
+
+/** 公开响应：仅搜索引擎，不含书签（书签仅管理员可见） */
+export const PublicNavigationDataSchema = z.object({
+  engines: z.array(SearchEnginePublicSchema),
+});
+
+/** 管理响应：完整数据（引擎、文件夹、书签） */
+export const NavigationPublicDataSchema = PublicNavigationDataSchema.extend({
   folders: z.array(
     BookmarkFolderSelectSchema.pick({
       id: true,
@@ -218,6 +223,7 @@ export type SearchEngineSelect = z.infer<typeof SearchEngineSelectSchema>;
 export type BookmarkFolderSelect = z.infer<typeof BookmarkFolderSelectSchema>;
 export type BookmarkSelect = z.infer<typeof BookmarkSelectSchema>;
 export type NavigationPublicData = z.infer<typeof NavigationPublicDataSchema>;
+export type PublicNavigationData = z.infer<typeof PublicNavigationDataSchema>;
 export type CreateSearchEngineInput = z.input<
   ReturnType<typeof createSearchEngineInputSchema>
 >;

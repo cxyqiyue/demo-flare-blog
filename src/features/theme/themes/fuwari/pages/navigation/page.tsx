@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { Pagination } from "../../components/pagination";
 
-export function NavigationPage({ data, isAdmin }: NavigationPageProps) {
+export function NavigationPage({ data, isAdmin, showBookmarks }: NavigationPageProps) {
   const state = useNavigationPageState(data);
 
   return (
@@ -74,11 +74,12 @@ export function NavigationPage({ data, isAdmin }: NavigationPageProps) {
         </form>
       </div>
 
-      {/* Bookmarks */}
-      <div
-        className="fuwari-card-base p-6 md:p-8 flex flex-col gap-5 fuwari-onload-animation flex-1"
-        style={{ animationDelay: "350ms" }}
-      >
+      {/* Bookmarks（仅管理员可见） */}
+      {showBookmarks && (
+        <div
+          className="fuwari-card-base p-6 md:p-8 flex flex-col gap-5 fuwari-onload-animation flex-1"
+          style={{ animationDelay: "350ms" }}
+        >
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <h2 className="text-xl font-bold fuwari-text-90 transition-colors">
             {m.navigation_bookmarks()}
@@ -142,7 +143,8 @@ export function NavigationPage({ data, isAdmin }: NavigationPageProps) {
             <p className="mt-2 text-sm">{m.navigation_no_bookmarks_desc()}</p>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

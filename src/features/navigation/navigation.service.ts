@@ -5,6 +5,7 @@ import * as NavigationRepo from "./data/navigation.data";
 import {
   NAVIGATION_CACHE_KEYS,
   NavigationPublicDataSchema,
+  PublicNavigationDataSchema,
 } from "./navigation.schema";
 import type {
   CreateBookmarkInput,
@@ -22,15 +23,12 @@ import type {
 
 // ============ Public Methods ============
 
+/** 公开数据：仅返回启用的搜索引擎（书签属于管理员私密数据，不在此暴露） */
 export async function getNavigationPublicData(
   context: DbContext & { executionCtx: ExecutionContext },
 ) {
   const fetcher = async () => {
-    const [engines, folders, bookmarks] = await Promise.all([
-      NavigationRepo.getEnabledSearchEngines(context.db),
-      NavigationRepo.getFoldersWithCount(context.db),
-      NavigationRepo.getAllBookmarks(context.db),
-    ]);
+    const engines = await NavigationRepo.getEnabledSearchEngines(context.db);
 
     return {
       engines: engines.map((engine) => ({
@@ -43,19 +41,6 @@ export async function getNavigationPublicData(
         enabled: engine.enabled,
         sortOrder: engine.sortOrder,
       })),
-      folders: folders.map((folder) => ({
-        id: folder.id,
-        name: folder.name,
-        sortOrder: folder.sortOrder,
-        bookmarkCount: Number(folder.bookmarkCount),
-      })),
-      bookmarks: bookmarks.map((bookmark) => ({
-        id: bookmark.id,
-        folderId: bookmark.folderId,
-        name: bookmark.name,
-        url: bookmark.url,
-        sortOrder: bookmark.sortOrder,
-      })),
     };
   };
 
@@ -63,10 +48,47 @@ export async function getNavigationPublicData(
     context,
     "navigation:data",
     NAVIGATION_CACHE_KEYS.publicData,
-    NavigationPublicDataSchema,
+    PublicNavigationDataSchema,
     fetcher,
     { ttl: "7d" },
   );
+}
+
+/** 管理数据：完整返回引擎（含未启用）、文件夹与书签，仅管理员接口可访问 */
+export async function getAdminNavigationData(
+  context: DbContext & { executionCtx: ExecutionContext },
+) {
+  const [engines, folders, bookmarks] = await Promise.all([
+    NavigationRepo.getAllSearchEngines(context.db),
+    NavigationRepo.getFoldersWithCount(context.db),
+    NavigationRepo.getAllBookmarks(context.db),
+  ]);
+
+  return NavigationPublicDataSchema.parse({
+    engines: engines.map((engine) => ({
+      id: engine.id,
+      name: engine.name,
+      urlTemplate: engine.urlTemplate,
+      iconUrl: engine.iconUrl,
+      domain: engine.domain,
+      isDefault: engine.isDefault,
+      enabled: engine.enabled,
+      sortOrder: engine.sortOrder,
+    })),
+    folders: folders.map((folder) => ({
+      id: folder.id,
+      name: folder.name,
+      sortOrder: folder.sortOrder,
+      bookmarkCount: Number(folder.bookmarkCount),
+    })),
+    bookmarks: bookmarks.map((bookmark) => ({
+      id: bookmark.id,
+      folderId: bookmark.folderId,
+      name: bookmark.name,
+      url: bookmark.url,
+      sortOrder: bookmark.sortOrder,
+    })),
+  });
 }
 
 // ============ Cache Invalidation ============

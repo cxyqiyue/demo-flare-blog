@@ -16,6 +16,13 @@ import {
 } from "../navigation.schema";
 import * as NavigationService from "../navigation.service";
 
+export const getAdminNavigationDataFn = createServerFn({ method: "GET" })
+  .middleware([adminMiddleware])
+  .handler(
+    async ({ context }) =>
+      await NavigationService.getAdminNavigationData(context),
+  );
+
 export const createSearchEngineFn = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
   .inputValidator(createSearchEngineInputSchema(m))

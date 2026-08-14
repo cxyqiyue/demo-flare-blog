@@ -20,8 +20,6 @@ describe("NavigationService", () => {
       );
       expect(bing).toBeDefined();
       expect(bing?.isDefault).toBe(true);
-      expect(data.folders).toEqual([]);
-      expect(data.bookmarks).toEqual([]);
     });
 
     it("should only return enabled search engines", async () => {
@@ -37,6 +35,53 @@ describe("NavigationService", () => {
       expect(
         data.engines.find((e) => e.domain === "disabled.example.com"),
       ).toBeUndefined();
+    });
+
+    it("should never expose folders or bookmarks to the public", async () => {
+      await NavigationService.createFolder(adminContext, { name: "Secret" });
+      await NavigationService.createBookmark(adminContext, {
+        name: "Secret Bookmark",
+        url: "https://secret.example.com",
+      });
+
+      const data = await NavigationService.getNavigationPublicData(adminContext);
+      expect("folders" in data).toBe(false);
+      expect("bookmarks" in data).toBe(false);
+    });
+  });
+
+  describe("Admin Data", () => {
+    it("should return all engines including disabled ones", async () => {
+      await NavigationService.createSearchEngine(adminContext, {
+        name: "Disabled Engine",
+        urlTemplate: "https://disabled.example.com/?q={query}",
+        domain: "disabled.example.com",
+        enabled: false,
+      });
+
+      const data = await NavigationService.getAdminNavigationData(adminContext);
+      const disabled = data.engines.find(
+        (engine) => engine.domain === "disabled.example.com",
+      );
+      expect(disabled).toBeDefined();
+      expect(disabled?.enabled).toBe(false);
+    });
+
+    it("should return folders and bookmarks", async () => {
+      const folder = await NavigationService.createFolder(adminContext, {
+        name: "Dev Tools",
+      });
+      await NavigationService.createBookmark(adminContext, {
+        name: "GitHub",
+        url: "https://github.com",
+        folderId: folder.data!.id,
+      });
+
+      const data = await NavigationService.getAdminNavigationData(adminContext);
+      const devFolder = data.folders.find((f) => f.name === "Dev Tools");
+      expect(devFolder?.bookmarkCount).toBe(1);
+      expect(data.bookmarks).toHaveLength(1);
+      expect(data.bookmarks[0].name).toBe("GitHub");
     });
   });
 
@@ -115,7 +160,7 @@ describe("NavigationService", () => {
 
     it("should refuse to unset default when it is the only engine", async () => {
       // Delete all seeded engines first
-      const data = await NavigationService.getNavigationPublicData(adminContext);
+      const data = await NavigationService.getAdminNavigationData(adminContext);
       for (const engine of data.engines) {
         await NavigationService.deleteSearchEngine(adminContext, { id: engine.id });
       }
@@ -148,7 +193,7 @@ describe("NavigationService", () => {
 
       expect(bookmark.data?.name).toBe("GitHub");
 
-      const data = await NavigationService.getNavigationPublicData(adminContext);
+      const data = await NavigationService.getAdminNavigationData(adminContext);
       const devFolder = data.folders.find((f) => f.name === "Dev Tools");
       expect(devFolder?.bookmarkCount).toBe(1);
       expect(data.bookmarks).toHaveLength(1);
@@ -191,7 +236,7 @@ describe("NavigationService", () => {
       });
       expect(result.data?.success).toBe(true);
 
-      const data = await NavigationService.getNavigationPublicData(adminContext);
+      const data = await NavigationService.getAdminNavigationData(adminContext);
       expect(data.bookmarks).toHaveLength(0);
     });
 
@@ -210,7 +255,7 @@ describe("NavigationService", () => {
       });
       expect(result.data?.success).toBe(true);
 
-      const data = await NavigationService.getNavigationPublicData(adminContext);
+      const data = await NavigationService.getAdminNavigationData(adminContext);
       expect(data.folders.find((f) => f.id === folder.data!.id)).toBeUndefined();
       expect(data.bookmarks).toHaveLength(0);
     });
@@ -236,7 +281,7 @@ describe("NavigationService", () => {
 
       expect(result.data?.imported).toBe(3);
 
-      const data = await NavigationService.getNavigationPublicData(adminContext);
+      const data = await NavigationService.getAdminNavigationData(adminContext);
       const news = data.folders.find((f) => f.name === "News");
       expect(news?.bookmarkCount).toBe(2);
       expect(data.bookmarks.some((b) => b.folderId === null)).toBe(true);
@@ -257,7 +302,7 @@ describe("NavigationService", () => {
         replace: false,
       });
 
-      const data = await NavigationService.getNavigationPublicData(adminContext);
+      const data = await NavigationService.getAdminNavigationData(adminContext);
       const existing = data.folders.filter((f) => f.name === "Existing");
       expect(existing).toHaveLength(1);
       expect(existing[0].id).toBe(folder.data!.id);
@@ -281,7 +326,7 @@ describe("NavigationService", () => {
         replace: true,
       });
 
-      const data = await NavigationService.getNavigationPublicData(adminContext);
+      const data = await NavigationService.getAdminNavigationData(adminContext);
       expect(data.folders).toHaveLength(1);
       expect(data.folders[0].name).toBe("Fresh");
       expect(data.bookmarks).toHaveLength(1);

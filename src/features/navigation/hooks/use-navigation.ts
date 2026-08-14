@@ -8,13 +8,13 @@ import {
   deleteBookmarkFn,
   deleteFolderFn,
   deleteSearchEngineFn,
+  getAdminNavigationDataFn,
   importBookmarksFn,
   setDefaultSearchEngineFn,
   updateBookmarkFn,
   updateFolderFn,
   updateSearchEngineFn,
 } from "../api/navigation.admin.api";
-import { getNavigationPublicDataFn } from "../api/navigation.user.api";
 import { NAVIGATION_KEYS } from "../queries";
 
 /** 管理后台读取完整导航数据（引擎、文件夹、书签） */
@@ -22,8 +22,7 @@ export function useAdminNavigationData() {
   const query = useQuery({
     queryKey: NAVIGATION_KEYS.admin,
     queryFn: async () => {
-      // 复用公开数据查询（后台直接读取同样内容即可）
-      return await getNavigationPublicDataFn();
+      return await getAdminNavigationDataFn();
     },
   });
   return query;
