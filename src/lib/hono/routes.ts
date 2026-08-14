@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { proxy } from "hono/proxy";
 import { exportDownloadRoute } from "@/features/import-export/api/hono/download.route";
 import { handleImageRequest } from "@/features/media/service/media.service";
+import navigationFaviconRoute from "@/features/navigation/api/hono/favicon.route";
 import postsAdjacentRoute from "@/features/posts/api/hono/posts.adjacent.route";
 import postsDetailRoute from "@/features/posts/api/hono/posts.detail.route";
 import postsListRoute from "@/features/posts/api/hono/posts.list.route";
@@ -139,6 +140,9 @@ app.route("/api/admin/export", exportDownloadRoute);
 
 // 微信部署验证文件（须在 shieldMiddleware 之前注册，否则 .txt 路径会被拦截）
 app.route("/", wechatVerifyRoute);
+
+// 导航页 favicon 代理（公开 GET 路由，须在 shieldMiddleware 之前注册）
+app.route("/api/navigation", navigationFaviconRoute);
 
 // Router之前的防护
 app.all("*", shieldMiddleware);

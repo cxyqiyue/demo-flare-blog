@@ -14,6 +14,7 @@ import { VerifyEmailPage } from "./pages/auth/verify-email";
 import { FriendLinksPage, FriendLinksPageSkeleton } from "./pages/friend-links";
 import { HomePage, HomePageSkeleton } from "./pages/home";
 import { MomentsPage, MomentsPageSkeleton } from "./pages/moments";
+import { NavigationPage, NavigationPageSkeleton } from "./pages/navigation";
 import { PostPage, PostPageSkeleton } from "./pages/post";
 import { PostsPage, PostsPageSkeleton } from "./pages/posts";
 import { SearchPage } from "./pages/search";
@@ -45,6 +46,8 @@ export default {
   FriendLinksPageSkeleton,
   MomentsPage,
   MomentsPageSkeleton,
+  NavigationPage,
+  NavigationPageSkeleton,
   SearchPage,
   SubmitFriendLinkPage,
   LoginPage,

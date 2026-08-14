@@ -12,6 +12,7 @@ import type {
   HomePageProps,
   LoginPageProps,
   MomentsPageProps,
+  NavigationPageProps,
   PostPageProps,
   PostsPageProps,
   ProfilePageProps,
@@ -68,6 +69,11 @@ export interface ThemeComponents {
   MomentsPage: React.ComponentType<MomentsPageProps>;
   /** 动态列表页骨架屏 */
   MomentsPageSkeleton: React.ComponentType;
+
+  /** 导航页组件 */
+  NavigationPage: React.ComponentType<NavigationPageProps>;
+  /** 导航页骨架屏 */
+  NavigationPageSkeleton: React.ComponentType;
 
   /** 搜索页组件 */
   SearchPage: React.ComponentType<SearchPageProps>;

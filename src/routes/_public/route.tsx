@@ -34,6 +34,7 @@ function PublicLayout() {
   const queryClient = useQueryClient();
 
   const navOptions = [
+    { label: m.nav_navigation(), to: "/navigation" as const, id: "navigation" },
     { label: m.nav_home(), to: "/" as const, id: "home" },
     { label: m.nav_posts(), to: "/posts" as const, id: "posts" },
     { label: m.nav_moments(), to: "/moments" as const, id: "moments" },

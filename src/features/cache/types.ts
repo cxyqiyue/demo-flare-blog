@@ -8,6 +8,7 @@ export const CACHE_NAMESPACES = {
   FRIEND_LINKS_LIST: "friend-links:list",
   MOMENTS_LIST: "moments:list",
   MOMENTS_PAGE: "moments:page",
+  NAVIGATION_DATA: "navigation:data",
 } as const;
 
 export type CacheNamespace =
