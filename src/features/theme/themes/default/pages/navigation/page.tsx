@@ -14,6 +14,16 @@ export function NavigationPage({ data, isAdmin, showBookmarks }: NavigationPageP
 
   return (
     <div className="w-full max-w-4xl mx-auto pb-20 px-6 md:px-0">
+      {/* Header */}
+      <header className="py-12 md:py-16 space-y-6 text-center">
+        <h1 className="text-4xl md:text-5xl font-serif font-medium tracking-tight text-foreground">
+          {m.navigation_title()}
+        </h1>
+        <p className="max-w-xl mx-auto text-base md:text-lg font-light text-muted-foreground leading-relaxed">
+          {m.navigation_desc()}
+        </p>
+      </header>
+
       {/* Search Area */}
       <div className="border border-border/40 bg-background/50 rounded-lg p-6 md:p-8 space-y-6">
         {/* Engine buttons (horizontal, responsive) */}

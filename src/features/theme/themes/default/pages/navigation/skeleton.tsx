@@ -1,6 +1,12 @@
 export function NavigationPageSkeleton() {
   return (
     <div className="w-full max-w-4xl mx-auto pb-20 px-6 md:px-0">
+      {/* Header */}
+      <header className="py-12 md:py-16 space-y-6 text-center">
+        <div className="h-10 w-48 bg-muted/40 rounded-md mx-auto animate-pulse" />
+        <div className="h-4 w-72 max-w-full bg-muted/30 rounded-md mx-auto animate-pulse" />
+      </header>
+
       {/* Search Area */}
       <div className="border border-border/40 bg-background/50 rounded-lg p-6 md:p-8 space-y-6">
         <div className="flex flex-nowrap gap-2 overflow-hidden md:flex-wrap md:justify-center">
