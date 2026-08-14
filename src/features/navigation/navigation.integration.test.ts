@@ -261,6 +261,57 @@ describe("NavigationService", () => {
     });
   });
 
+  describe("Batch Delete", () => {
+    it("should delete multiple bookmarks at once", async () => {
+      const ids = [];
+      for (let i = 0; i < 3; i++) {
+        const result = await NavigationService.createBookmark(adminContext, {
+          name: `Bookmark ${i}`,
+          url: `https://site${i}.com`,
+        });
+        ids.push(result.data!.id);
+      }
+
+      const result = await NavigationService.deleteBookmarks(adminContext, {
+        ids: [ids[0], ids[2]],
+      });
+      expect(result.data?.deleted).toBe(2);
+
+      const data = await NavigationService.getAdminNavigationData(adminContext);
+      expect(data.bookmarks).toHaveLength(1);
+      expect(data.bookmarks[0].id).toBe(ids[1]);
+    });
+
+    it("should delete multiple folders and cascade their bookmarks", async () => {
+      const folderIds = [];
+      for (let i = 0; i < 2; i++) {
+        const folder = await NavigationService.createFolder(adminContext, {
+          name: `Folder ${i}`,
+        });
+        folderIds.push(folder.data!.id);
+        await NavigationService.createBookmark(adminContext, {
+          name: `Bookmark ${i}`,
+          url: `https://folder${i}.com`,
+          folderId: folder.data!.id,
+        });
+      }
+      await NavigationService.createBookmark(adminContext, {
+        name: "Uncategorized",
+        url: "https://loose.com",
+      });
+
+      const result = await NavigationService.deleteFolders(adminContext, {
+        ids: folderIds,
+      });
+      expect(result.data?.deleted).toBe(2);
+
+      const data = await NavigationService.getAdminNavigationData(adminContext);
+      expect(data.folders).toHaveLength(0);
+      expect(data.bookmarks).toHaveLength(1);
+      expect(data.bookmarks[0].name).toBe("Uncategorized");
+    });
+  });
+
   describe("Import", () => {
     it("should import bookmarks grouped into folders", async () => {
       const result = await NavigationService.importBookmarks(adminContext, {

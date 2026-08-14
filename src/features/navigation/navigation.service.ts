@@ -12,7 +12,9 @@ import type {
   CreateFolderInput,
   CreateSearchEngineInput,
   DeleteBookmarkInput,
+  DeleteBookmarksInput,
   DeleteFolderInput,
+  DeleteFoldersInput,
   DeleteSearchEngineInput,
   ImportBookmarksInput,
   SetDefaultSearchEngineInput,
@@ -255,6 +257,17 @@ export async function deleteFolder(
   return ok({ success: true });
 }
 
+export async function deleteFolders(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: DeleteFoldersInput,
+) {
+  await Promise.all(
+    data.ids.map((id) => NavigationRepo.deleteFolder(context.db, id)),
+  );
+  invalidateCache(context);
+  return ok({ deleted: data.ids.length });
+}
+
 // ============ Admin: Bookmarks ============
 
 export async function createBookmark(
@@ -298,6 +311,17 @@ export async function deleteBookmark(
   await NavigationRepo.deleteBookmark(context.db, data.id);
   invalidateCache(context);
   return ok({ success: true });
+}
+
+export async function deleteBookmarks(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: DeleteBookmarksInput,
+) {
+  await Promise.all(
+    data.ids.map((id) => NavigationRepo.deleteBookmark(context.db, id)),
+  );
+  invalidateCache(context);
+  return ok({ deleted: data.ids.length });
 }
 
 // ============ Admin: Import ============

@@ -223,9 +223,9 @@ function BookmarkCard({ bookmark }: BookmarkCardProps) {
       href={bookmark.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex flex-col items-center justify-center gap-2.5 p-4 min-h-24 rounded-lg border border-border/40 bg-background/50 hover:border-border/80 hover:bg-muted/30 transition-all text-center"
+      className="group flex flex-col items-center justify-center gap-2 p-3 min-h-20 rounded-lg border border-border/40 bg-background/50 hover:border-border/80 hover:bg-muted/30 transition-all text-center"
     >
-      <div className="w-9 h-9 rounded-md bg-muted/30 border border-border/40 flex items-center justify-center overflow-hidden shrink-0">
+      <div className="w-8 h-8 rounded-md bg-muted/30 border border-border/40 flex items-center justify-center overflow-hidden shrink-0">
         {favicon.hasIcon ? (
           <img
             src={favicon.src}
@@ -235,12 +235,12 @@ function BookmarkCard({ bookmark }: BookmarkCardProps) {
             onError={favicon.onError}
           />
         ) : (
-          <span className="text-xs font-serif font-medium text-muted-foreground/60">
+          <span className="text-[10px] font-serif font-medium text-muted-foreground/60">
             {bookmark.name.slice(0, 1)}
           </span>
         )}
       </div>
-      <span className="text-xs font-medium text-foreground/80 group-hover:text-foreground truncate max-w-full px-1">
+      <span className="text-[11px] font-medium text-foreground/80 group-hover:text-foreground truncate max-w-full px-1">
         {bookmark.name}
       </span>
     </a>

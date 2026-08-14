@@ -237,12 +237,12 @@ function BookmarkCard({ bookmark, className, style }: BookmarkCardProps) {
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "fuwari-card-base flex flex-col items-center justify-center gap-2.5 p-4 min-h-24 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group active:scale-[0.98]",
+        "fuwari-card-base flex flex-col items-center justify-center gap-2 p-3 min-h-20 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group active:scale-[0.98]",
         className,
       )}
       style={style}
     >
-      <div className="w-9 h-9 rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/5 dark:border-white/5 transition-transform duration-300 group-hover:scale-105 shrink-0">
+      <div className="w-8 h-8 rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/5 dark:border-white/5 transition-transform duration-300 group-hover:scale-105 shrink-0">
         {favicon.hasIcon ? (
           <img
             src={favicon.src}
@@ -252,12 +252,12 @@ function BookmarkCard({ bookmark, className, style }: BookmarkCardProps) {
             onError={favicon.onError}
           />
         ) : (
-          <span className="text-xs font-bold fuwari-text-50 transition-colors">
+          <span className="text-[10px] font-bold fuwari-text-50 transition-colors">
             {bookmark.name.slice(0, 1)}
           </span>
         )}
       </div>
-      <span className="text-xs font-bold fuwari-text-75 group-hover:text-(--fuwari-primary) truncate max-w-full px-1 transition-colors">
+      <span className="text-[11px] font-bold fuwari-text-75 group-hover:text-(--fuwari-primary) truncate max-w-full px-1 transition-colors">
         {bookmark.name}
       </span>
     </a>

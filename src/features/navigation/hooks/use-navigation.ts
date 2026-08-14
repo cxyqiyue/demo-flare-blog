@@ -6,7 +6,9 @@ import {
   createFolderFn,
   createSearchEngineFn,
   deleteBookmarkFn,
+  deleteBookmarksFn,
   deleteFolderFn,
+  deleteFoldersFn,
   deleteSearchEngineFn,
   getAdminNavigationDataFn,
   importBookmarksFn,
@@ -126,6 +128,23 @@ export function useAdminNavigation() {
     },
   });
 
+  const deleteFoldersMutation = useMutation({
+    mutationFn: async (input: Parameters<typeof deleteFoldersFn>[0]) =>
+      await deleteFoldersFn(input),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast.error(m.navigation_admin_toast_folder_delete_batch_fail());
+        return;
+      }
+      invalidate();
+      toast.success(
+        m.navigation_admin_toast_folder_delete_batch_success({
+          count: result.data.deleted,
+        }),
+      );
+    },
+  });
+
   const createBookmarkMutation = useMutation({
     mutationFn: async (input: Parameters<typeof createBookmarkFn>[0]) =>
       await createBookmarkFn(input),
@@ -165,6 +184,23 @@ export function useAdminNavigation() {
     },
   });
 
+  const deleteBookmarksMutation = useMutation({
+    mutationFn: async (input: Parameters<typeof deleteBookmarksFn>[0]) =>
+      await deleteBookmarksFn(input),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast.error(m.navigation_admin_toast_bookmark_delete_batch_fail());
+        return;
+      }
+      invalidate();
+      toast.success(
+        m.navigation_admin_toast_bookmark_delete_batch_success({
+          count: result.data.deleted,
+        }),
+      );
+    },
+  });
+
   const importBookmarksMutation = useMutation({
     mutationFn: async (input: Parameters<typeof importBookmarksFn>[0]) =>
       await importBookmarksFn(input),
@@ -195,12 +231,16 @@ export function useAdminNavigation() {
     isUpdatingFolder: updateFolderMutation.isPending,
     deleteFolder: deleteFolderMutation.mutateAsync,
     isDeletingFolder: deleteFolderMutation.isPending,
+    deleteFolders: deleteFoldersMutation.mutateAsync,
+    isDeletingFolders: deleteFoldersMutation.isPending,
     createBookmark: createBookmarkMutation.mutateAsync,
     isCreatingBookmark: createBookmarkMutation.isPending,
     updateBookmark: updateBookmarkMutation.mutateAsync,
     isUpdatingBookmark: updateBookmarkMutation.isPending,
     deleteBookmark: deleteBookmarkMutation.mutateAsync,
     isDeletingBookmark: deleteBookmarkMutation.isPending,
+    deleteBookmarks: deleteBookmarksMutation.mutateAsync,
+    isDeletingBookmarks: deleteBookmarksMutation.isPending,
     importBookmarks: importBookmarksMutation.mutateAsync,
     isImporting: importBookmarksMutation.isPending,
   };

@@ -178,6 +178,14 @@ export const deleteBookmarkInputSchema = z.object({
   id: z.number(),
 });
 
+export const deleteFoldersInputSchema = z.object({
+  ids: z.array(z.number()).min(1).max(500),
+});
+
+export const deleteBookmarksInputSchema = z.object({
+  ids: z.array(z.number()).min(1).max(2000),
+});
+
 // 书签导入：由前端解析浏览器导出的 Netscape 书签 HTML 后提交
 export const importBookmarksInputSchema = (m: Messages) =>
   z.object({
@@ -257,6 +265,8 @@ export type UpdateBookmarkInput = z.input<
   ReturnType<typeof updateBookmarkInputSchema>
 >;
 export type DeleteBookmarkInput = z.infer<typeof deleteBookmarkInputSchema>;
+export type DeleteFoldersInput = z.infer<typeof deleteFoldersInputSchema>;
+export type DeleteBookmarksInput = z.infer<typeof deleteBookmarksInputSchema>;
 export type ImportBookmarksInput = z.input<
   ReturnType<typeof importBookmarksInputSchema>
 >;

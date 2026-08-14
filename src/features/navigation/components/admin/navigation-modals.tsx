@@ -2,6 +2,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { ClientOnly } from "@tanstack/react-router";
 import { Loader2, X } from "lucide-react";
 import type { ComponentProps } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -351,7 +352,11 @@ interface BookmarkFormModalProps {
   initialData?: NavigationPublicData["bookmarks"][number];
   folders: NavigationPublicData["folders"];
   defaultFolderId?: number | null;
+  /** 新建文件夹（返回新文件夹 id，失败返回 null） */
+  onCreateFolder: (data: CreateFolderFormValues) => Promise<number | null>;
 }
+
+const NEW_FOLDER_VALUE = "__new__";
 
 const BookmarkFormModalInternal = ({
   isOpen,
@@ -361,6 +366,7 @@ const BookmarkFormModalInternal = ({
   initialData,
   folders,
   defaultFolderId,
+  onCreateFolder,
 }: BookmarkFormModalProps) => {
   const form = useForm<CreateBookmarkFormValues>({
     resolver: standardSchemaResolver(createBookmarkInputSchema(m)),
@@ -376,16 +382,50 @@ const BookmarkFormModalInternal = ({
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = form;
+
+  const [folderSelection, setFolderSelection] = useState<string>(
+    String(initialData?.folderId ?? defaultFolderId ?? ""),
+  );
+  const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderError, setNewFolderError] = useState<string | undefined>();
 
   const handleClose = () => {
     reset();
     onClose();
   };
 
+  const handleFolderChange = (value: string) => {
+    setFolderSelection(value);
+    if (value === NEW_FOLDER_VALUE) {
+      setValue("folderId", null);
+      setNewFolderError(undefined);
+    } else {
+      setValue("folderId", value === "" ? null : Number(value));
+    }
+  };
+
   const handleConfirm = async (data: CreateBookmarkFormValues) => {
-    const success = await onSubmit(data);
+    let folderId = data.folderId ?? null;
+
+    if (folderSelection === NEW_FOLDER_VALUE) {
+      const name = newFolderName.trim();
+      if (!name) {
+        setNewFolderError(
+          m.navigation_validation_required({
+            label: m.navigation_field_folder_name(),
+          }),
+        );
+        return;
+      }
+      const createdId = await onCreateFolder({ name });
+      if (createdId === null) return;
+      folderId = createdId;
+    }
+
+    const success = await onSubmit({ ...data, folderId });
     if (success) {
       reset();
       onClose();
@@ -420,10 +460,14 @@ const BookmarkFormModalInternal = ({
             {m.navigation_field_folder()}
           </label>
           <select
-            {...register("folderId", { valueAsNumber: true })}
+            value={folderSelection}
+            onChange={(e) => handleFolderChange(e.target.value)}
             className="w-full bg-background border border-border/50 px-3 py-2 text-sm focus:border-foreground/60 focus:outline-none transition-colors"
           >
-            <option value={""}>{m.navigation_field_none()}</option>
+            <option value="">{m.navigation_all()}</option>
+            <option value={NEW_FOLDER_VALUE}>
+              {m.navigation_admin_folder_modal_add()}…
+            </option>
             {folders.map((folder) => (
               <option key={folder.id} value={folder.id}>
                 {folder.name}
@@ -434,6 +478,20 @@ const BookmarkFormModalInternal = ({
             <p className="text-xs text-red-500">! {errors.folderId.message}</p>
           )}
         </div>
+        {folderSelection === NEW_FOLDER_VALUE && (
+          <ModalField
+            label={m.navigation_field_folder_name()}
+            placeholder={m.navigation_field_folder_name()}
+            error={newFolderError}
+            inputProps={{
+              value: newFolderName,
+              onChange: (e) => {
+                setNewFolderName(e.target.value);
+                if (newFolderError) setNewFolderError(undefined);
+              },
+            }}
+          />
+        )}
         <ModalActions
           onCancel={handleClose}
           isSubmitting={isSubmitting}

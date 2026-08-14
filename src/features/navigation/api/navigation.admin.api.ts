@@ -6,7 +6,9 @@ import {
   createFolderInputSchema,
   createSearchEngineInputSchema,
   deleteBookmarkInputSchema,
+  deleteBookmarksInputSchema,
   deleteFolderInputSchema,
+  deleteFoldersInputSchema,
   deleteSearchEngineInputSchema,
   importBookmarksInputSchema,
   setDefaultSearchEngineInputSchema,
@@ -79,6 +81,14 @@ export const deleteFolderFn = createServerFn({ method: "POST" })
       await NavigationService.deleteFolder(context, data),
   );
 
+export const deleteFoldersFn = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(deleteFoldersInputSchema)
+  .handler(
+    async ({ data, context }) =>
+      await NavigationService.deleteFolders(context, data),
+  );
+
 export const createBookmarkFn = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
   .inputValidator(createBookmarkInputSchema(m))
@@ -101,6 +111,14 @@ export const deleteBookmarkFn = createServerFn({ method: "POST" })
   .handler(
     async ({ data, context }) =>
       await NavigationService.deleteBookmark(context, data),
+  );
+
+export const deleteBookmarksFn = createServerFn({ method: "POST" })
+  .middleware([adminMiddleware])
+  .inputValidator(deleteBookmarksInputSchema)
+  .handler(
+    async ({ data, context }) =>
+      await NavigationService.deleteBookmarks(context, data),
   );
 
 export const importBookmarksFn = createServerFn({ method: "POST" })
