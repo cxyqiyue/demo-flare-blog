@@ -1,11 +1,6 @@
 export function NavigationPageSkeleton() {
   return (
     <div className="flex flex-col gap-4 w-full">
-      <div className="fuwari-card-base p-6 md:p-8 relative overflow-hidden flex flex-col items-center justify-center min-h-56">
-        <div className="h-8 w-40 rounded-md bg-muted/30 animate-pulse" />
-        <div className="mt-4 h-4 w-72 rounded-md bg-muted/20 animate-pulse" />
-      </div>
-
       <div className="fuwari-card-base p-6 md:p-8 flex flex-col gap-6">
         <div className="flex flex-nowrap gap-2 overflow-hidden md:flex-wrap md:justify-center py-1">
           {Array.from({ length: 10 }).map((_, i) => (

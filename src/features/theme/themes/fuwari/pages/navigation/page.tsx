@@ -15,23 +15,10 @@ export function NavigationPage({ data, isAdmin, showBookmarks }: NavigationPageP
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      {/* Header Banner */}
-      <div
-        className="fuwari-card-base p-6 md:p-8 relative overflow-hidden flex flex-col items-center justify-center min-h-56 fuwari-onload-animation bg-linear-to-br from-(--fuwari-primary)/5 to-transparent"
-        style={{ animationDelay: "150ms" }}
-      >
-        <h1 className="text-3xl md:text-4xl font-bold fuwari-text-90 mb-4 z-10 transition-colors">
-          {m.navigation_title()}
-        </h1>
-        <p className="fuwari-text-50 text-center max-w-xl z-10 transition-colors">
-          {m.navigation_desc()}
-        </p>
-      </div>
-
       {/* Search Area */}
       <div
         className="fuwari-card-base p-6 md:p-8 flex flex-col gap-6 fuwari-onload-animation"
-        style={{ animationDelay: "250ms" }}
+        style={{ animationDelay: "150ms" }}
       >
         {state.engines.length > 0 ? (
           <div className="flex flex-nowrap gap-2 overflow-x-auto overscroll-x-contain no-scrollbar md:flex-wrap md:justify-center py-1">
