@@ -1,5 +1,5 @@
 import { ClientOnly } from "@tanstack/react-router";
-import { Loader2, X } from "lucide-react";
+import { FolderPlus, Loader2, X } from "lucide-react";
 import type React from "react";
 import { useRef } from "react";
 import { createPortal } from "react-dom";
@@ -14,6 +14,7 @@ interface UploadModalProps {
   isOpen: boolean;
   queue: Array<UploadItem>;
   isDragging: boolean;
+  folderLabel?: string;
   onClose: () => void;
   onFileSelect: (files: Array<File>) => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -25,6 +26,7 @@ function UploadModalInternal({
   isOpen,
   queue,
   isDragging,
+  folderLabel,
   onClose,
   onFileSelect,
   onDragOver,
@@ -98,6 +100,14 @@ function UploadModalInternal({
 
         {/* Body */}
         <div className="px-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 min-h-0 pb-2">
+          {folderLabel && (
+            <div className="flex items-center gap-2 border border-border/30 bg-muted/5 px-3 py-2">
+              <FolderPlus size={12} className="text-muted-foreground" />
+              <span className="text-xs font-mono text-muted-foreground truncate">
+                {folderLabel}
+              </span>
+            </div>
+          )}
           {/* Drop Zone */}
           <div
             onClick={() => fileInputRef.current?.click()}

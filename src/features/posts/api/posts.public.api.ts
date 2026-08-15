@@ -46,10 +46,6 @@ export const getRelatedPostsFn = createServerFn()
     return await PostService.getRelatedPosts(context, data);
   });
 
-export const getPinnedPostsFn = createServerFn()
-  .middleware([dbMiddleware])
-  .handler(({ context }) => PostService.getPinnedPosts(context));
-
 export const getPopularPostsFn = createServerFn()
   .middleware([dbMiddleware])
   .inputValidator(

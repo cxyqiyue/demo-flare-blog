@@ -27,7 +27,6 @@ import {
   AdjacentPostsResponseSchema,
   normalizePostTagName,
   POSTS_CACHE_KEYS,
-  PostItemSchema,
   PostListResponseSchema,
   PostWithTocSchema,
   PublicPostsPageResponseSchema,
@@ -51,19 +50,6 @@ function stripPublicContentJson<T extends { publicContentJson?: unknown }>(
 ): Omit<T, "publicContentJson"> {
   const { publicContentJson: _publicContentJson, ...rest } = post;
   return rest;
-}
-
-export async function getPinnedPosts(
-  context: DbContext & { executionCtx: ExecutionContext },
-) {
-  return CacheService.getVersioned(
-    context,
-    "posts:list",
-    POSTS_CACHE_KEYS.pinned,
-    PostItemSchema.array(),
-    () => PostRepo.findPinnedPosts(context.db),
-    { ttl: "7d" },
-  );
 }
 
 export async function getPostsCursor(
@@ -404,17 +390,6 @@ export async function updatePost(
     return err({ reason: "POST_NOT_FOUND" });
   }
 
-  // Only one pinned post at a time: pinning a different post is blocked until
-  // the currently pinned post is unpinned first.
-  const pinning = data.data.pinnedAt != null;
-  const wasPinned = existingPost.pinnedAt != null;
-  if (pinning && !wasPinned) {
-    const pinnedPosts = await PostRepo.findPinnedPosts(context.db);
-    if (pinnedPosts.length > 0) {
-      return err({ reason: "POST_ALREADY_PINNED" });
-    }
-  }
-
   const updatedPost = await PostRepo.updatePost(context.db, data.id, data.data);
   if (!updatedPost) {
     return err({ reason: "POST_NOT_FOUND" });
@@ -423,7 +398,8 @@ export async function updatePost(
   // Pin changes affect the home page list ordering, so invalidate the cached
   // public posts list (KV-backed, long TTL).
   const pinnedAtChanged =
-    (wasPinned ? 1 : 0) !== (updatedPost.pinnedAt != null ? 1 : 0);
+    (existingPost.pinnedAt != null ? 1 : 0) !==
+    (updatedPost.pinnedAt != null ? 1 : 0);
   if (pinnedAtChanged) {
     context.executionCtx.waitUntil(
       CacheService.bumpVersion(context, "posts:list"),

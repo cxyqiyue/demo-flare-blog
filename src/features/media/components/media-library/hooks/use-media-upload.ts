@@ -26,9 +26,15 @@ export function useMediaUpload() {
 
   // Upload mutation
   const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async (item: UploadItem) => {
+      if (!item.file) {
+        throw new Error(m.media_upload_log_error_no_data());
+      }
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", item.file);
+      if (item.folder) {
+        formData.append("folder", item.folder);
+      }
       return await uploadImageFn({ data: formData });
     },
   });
@@ -77,7 +83,7 @@ export function useMediaUpload() {
       );
 
       try {
-        const result = await uploadMutation.mutateAsync(item.file);
+        const result = await uploadMutation.mutateAsync(item);
         if (result.error) {
           if (isMountedRef.current) {
             const message = m.media_upload_error_db();
@@ -150,7 +156,7 @@ export function useMediaUpload() {
     processQueue();
   }, [queue, uploadMutation, queryClient]);
 
-  const processFiles = (files: Array<File>) => {
+  const processFiles = (files: Array<File>, folder = "") => {
     const newItems: Array<UploadItem> = files.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       name: file.name,
@@ -159,6 +165,7 @@ export function useMediaUpload() {
       status: "WAITING" as const,
       log: m.media_upload_log_init(),
       file,
+      folder,
     }));
     setQueue((prev) => [...prev, ...newItems]);
   };

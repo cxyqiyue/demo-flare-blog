@@ -21,7 +21,6 @@ import { findPostByIdFn } from "../api/posts.admin.api";
 import {
   findAdjacentPostsFn,
   findPostBySlugFn,
-  getPinnedPostsFn,
   getPopularPostsFn,
   getPostsCursorFn,
   getPublicPostsPageFn,
@@ -32,7 +31,6 @@ export const POSTS_KEYS = {
   all: ["posts"] as const,
 
   // Parent keys (static arrays for prefix invalidation)
-  pinned: ["posts", "pinned"] as const,
   lists: ["posts", "list"] as const,
   details: ["posts", "detail"] as const,
   popular: ["posts", "popular"] as const,
@@ -196,11 +194,6 @@ export function postRevisionDetailQuery(postId: number, revisionId: number) {
       (await getPostRevisionFn({ data: { postId, revisionId } })) ?? null,
   });
 }
-
-export const pinnedPostsQuery = queryOptions({
-  queryKey: POSTS_KEYS.pinned,
-  queryFn: () => getPinnedPostsFn(),
-});
 
 export function popularPostsQuery(limit?: number) {
   return queryOptions({

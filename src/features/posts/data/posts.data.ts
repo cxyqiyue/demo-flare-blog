@@ -312,39 +312,6 @@ export async function findPostsByIds(db: DB, ids: Array<number>) {
     .where(inArray(PostsTable.id, ids));
 }
 
-export async function findPinnedPosts(db: DB) {
-  const posts = await db.query.PostsTable.findMany({
-    where: and(
-      buildPostWhereClause({ publicOnly: true }),
-      isNotNull(PostsTable.pinnedAt),
-    ),
-    orderBy: [desc(PostsTable.pinnedAt)],
-    columns: {
-      id: true,
-      title: true,
-      summary: true,
-      readTimeInMinutes: true,
-      slug: true,
-      status: true,
-      publishedAt: true,
-      pinnedAt: true,
-      skillId: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-    with: {
-      postTags: {
-        with: { tag: true },
-      },
-    },
-  });
-
-  return posts.map((p) => ({
-    ...p,
-    tags: p.postTags.map((pt) => pt.tag),
-  }));
-}
-
 export async function findPostsBySlugs(db: DB, slugs: string[]) {
   if (slugs.length === 0) return [];
 
@@ -657,8 +624,7 @@ export async function getPublicPostsPage(
       .select(PUBLIC_PAGE_COLUMNS)
       .from(PostsTable)
       .where(and(publicWhereClause, isNotNull(PostsTable.pinnedAt)))
-      .orderBy(desc(PostsTable.pinnedAt))
-      .limit(5);
+      .orderBy(desc(PostsTable.pinnedAt));
     items.push(...pinnedPosts);
   }
 

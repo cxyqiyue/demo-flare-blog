@@ -104,9 +104,6 @@ function EditPost() {
     ]);
 
     if (updateResult.error) {
-      if (updateResult.error.reason === "POST_ALREADY_PINNED") {
-        throw new Error(m.editor_pin_conflict_save_error());
-      }
       throw new Error(m.admin_post_edit_error_not_found());
     }
 

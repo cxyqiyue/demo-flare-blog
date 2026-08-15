@@ -12,11 +12,47 @@ export function getContentTypeFromKey(key: string): string | undefined {
   return contentTypes[extension || ""];
 }
 
-export function generateKey(fileName: string): string {
+export function generateKey(fileName: string, folder = ""): string {
   const uuid = crypto.randomUUID();
   const extension = fileName.split(".").pop()?.toLowerCase() || "bin";
 
-  return `${uuid}.${extension}`;
+  const prefix = normalizeFolderPath(folder);
+  return prefix ? `${prefix}/${uuid}.${extension}` : `${uuid}.${extension}`;
+}
+
+/**
+ * Strip leading/trailing slashes from a folder path. `""` is the root folder.
+ */
+export function normalizeFolderPath(folder: string): string {
+  return folder.replace(/^\/+|\/+$/g, "");
+}
+
+/**
+ * Build a folder key (trailing slash) from a parent path and a folder name.
+ */
+export function joinFolderKey(parent: string, name: string): string {
+  const base = normalizeFolderPath(parent);
+  const cleanName = name.replace(/^\/+|\/+$/g, "");
+  return base ? `${base}/${cleanName}/` : `${cleanName}/`;
+}
+
+/**
+ * Extract the last path segment of a key/folder key.
+ */
+export function getBasename(key: string): string {
+  const normalized = key.replace(/\/+$/, "");
+  const parts = normalized.split("/");
+  return parts[parts.length - 1] ?? normalized;
+}
+
+/**
+ * Return the parent folder path (no trailing slash) for a folder key.
+ * E.g. `photos/albums/` -> `photos`, `photos/` -> ``.
+ */
+export function getParentFolder(folderKey: string): string {
+  const normalized = folderKey.replace(/\/+$/, "");
+  const idx = normalized.lastIndexOf("/");
+  return idx === -1 ? "" : normalized.slice(0, idx);
 }
 
 /**

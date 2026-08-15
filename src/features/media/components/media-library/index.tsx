@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { ChevronRight, Folder, Home, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
@@ -6,18 +6,26 @@ import { useArticleImageHostingConfig } from "@/features/image-hosting/hooks/use
 import { formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import {
+  FolderModal,
   MediaGrid,
   MediaPreviewModal,
+  MediaTable,
   MediaToolbar,
   UploadModal,
 } from "./components";
 import { useMediaLibrary, useMediaUpload } from "./hooks";
-import type { MediaAsset } from "./types";
+import type { MediaDirectoryFile, MediaFolder } from "./types";
 
 export function MediaLibrary() {
   // Logic Hooks
   const {
     mediaItems,
+    folders,
+    currentFolder,
+    setFolder,
+    breadcrumbs,
+    view,
+    setView,
     searchQuery,
     setSearchQuery,
     unusedOnly,
@@ -26,6 +34,7 @@ export function MediaLibrary() {
     toggleSelection,
     selectAll,
     deleteTarget,
+    deletePreview,
     isDeleting,
     requestDelete,
     confirmDelete,
@@ -36,8 +45,10 @@ export function MediaLibrary() {
     isPending,
     totalMediaSize,
     updateAsset,
-    linkedMediaIds,
     refetch,
+    linkedMediaIds,
+    createFolder,
+    renameFolder,
   } = useMediaLibrary();
 
   const {
@@ -59,11 +70,53 @@ export function MediaLibrary() {
   const noop = () => {};
 
   // View State
-  const [previewAsset, setPreviewAsset] = useState<MediaAsset | null>(null);
+  const [previewAsset, setPreviewAsset] = useState<MediaDirectoryFile | null>(
+    null,
+  );
+  const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
+  const [renameFolderTarget, setRenameFolderTarget] =
+    useState<MediaFolder | null>(null);
+
+  const isSearching = searchQuery.trim().length > 0;
 
   const handleDeleteRequest = () => {
     requestDelete(Array.from(selectedIds));
   };
+
+  const handleFileDelete = (asset: MediaDirectoryFile) => {
+    const allowed = requestDelete([asset.key]);
+    if (allowed.length > 0) {
+      confirmDelete(allowed);
+    }
+  };
+
+  const handleFolderDelete = (folder: MediaFolder) => {
+    const allowed = requestDelete([folder.key]);
+    if (allowed.length > 0) {
+      confirmDelete(allowed);
+    }
+  };
+
+  const folderLabel = currentFolder
+    ? `${m.media_upload_target_folder()}: /${currentFolder}`
+    : `${m.media_upload_target_folder()}: /`;
+
+  const confirmMessage = deletePreview
+    ? deletePreview.folders > 0 && deletePreview.files > 0
+      ? m.media_delete_confirm_mixed({
+          folders: deletePreview.folders,
+          files: deletePreview.files,
+        })
+      : deletePreview.folders > 0
+        ? m.media_delete_confirm_folders({
+            count: deletePreview.folders,
+          })
+        : m.media_delete_confirm_desc({
+            count: deletePreview.files,
+          })
+    : m.media_delete_confirm_desc({
+        count: deleteTarget?.length ?? 0,
+      });
 
   return (
     <div className="space-y-8 pb-20">
@@ -108,6 +161,46 @@ export function MediaLibrary() {
         </div>
       )}
 
+      {/* Breadcrumb */}
+      <nav
+        aria-label="breadcrumb"
+        className="flex items-center gap-1 flex-wrap text-xs font-mono uppercase tracking-widest"
+      >
+        <button
+          type="button"
+          onClick={() => setFolder("")}
+          className={`flex items-center gap-1.5 py-1 px-2 transition-colors ${
+            currentFolder
+              ? "text-muted-foreground hover:text-foreground"
+              : "text-foreground font-bold"
+          }`}
+        >
+          <Home size={12} strokeWidth={1.5} />
+          {m.media_breadcrumb_root()}
+        </button>
+        {breadcrumbs.map((crumb) => (
+          <span key={crumb.path} className="flex items-center gap-1">
+            <ChevronRight size={12} className="text-muted-foreground/40" />
+            <button
+              type="button"
+              onClick={() => setFolder(crumb.path)}
+              className={`py-1 px-2 transition-colors ${
+                crumb.path === currentFolder
+                  ? "text-foreground font-bold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {crumb.label}
+            </button>
+          </span>
+        ))}
+        {currentFolder && (
+          <span className="flex items-center gap-1 ml-2 text-[9px] text-muted-foreground/50">
+            <Folder size={10} />
+          </span>
+        )}
+      </nav>
+
       <div className="animate-in fade-in duration-1000 delay-100 fill-mode-both space-y-8">
         {/* Toolbar */}
         <MediaToolbar
@@ -115,13 +208,17 @@ export function MediaLibrary() {
           onSearchChange={setSearchQuery}
           unusedOnly={unusedOnly}
           onUnusedOnlyChange={setUnusedOnly}
+          view={view}
+          onViewChange={setView}
           selectedCount={selectedIds.size}
-          totalCount={mediaItems.length}
+          totalCount={mediaItems.length + folders.length}
+          searching={isSearching}
           onSelectAll={selectAll}
           onDelete={handleDeleteRequest}
+          onNewFolder={() => setIsNewFolderOpen(true)}
         />
 
-        {/* Media Grid / Partial Skeleton */}
+        {/* Content */}
         {isPending ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8">
             {Array.from({ length: 12 }).map((_, i) => (
@@ -137,12 +234,33 @@ export function MediaLibrary() {
               </div>
             ))}
           </div>
-        ) : (
-          <MediaGrid
+        ) : view === "table" ? (
+          <MediaTable
             media={mediaItems}
+            folders={folders}
             selectedIds={selectedIds}
             onToggleSelect={toggleSelection}
             onPreview={setPreviewAsset}
+            onOpenFolder={setFolder}
+            onRenameFolder={setRenameFolderTarget}
+            onDeleteFolder={handleFolderDelete}
+            onRenameFile={setPreviewAsset}
+            onDeleteFile={handleFileDelete}
+            onLoadMore={loadMore}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onRefetch={refetch}
+          />
+        ) : (
+          <MediaGrid
+            media={mediaItems}
+            folders={folders}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelection}
+            onPreview={setPreviewAsset}
+            onOpenFolder={setFolder}
+            onRenameFolder={setRenameFolderTarget}
+            onDeleteFolder={handleFolderDelete}
             onLoadMore={loadMore}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
@@ -157,22 +275,57 @@ export function MediaLibrary() {
         isOpen={isUploadOpen}
         queue={uploadQueue}
         isDragging={isDragging}
+        folderLabel={uploadDisabled ? undefined : folderLabel}
         onClose={resetUpload}
-        onFileSelect={uploadDisabled ? noop : processFiles}
+        onFileSelect={uploadDisabled ? noop : (files) => processFiles(files, currentFolder)}
         onDragOver={uploadDisabled ? noop : handleDragOver}
         onDragLeave={uploadDisabled ? noop : handleDragLeave}
         onDrop={uploadDisabled ? noop : handleDrop}
+      />
+
+      {/* --- New Folder Modal --- */}
+      <FolderModal
+        isOpen={isNewFolderOpen}
+        mode="create"
+        parentLabel={
+          currentFolder
+            ? `${m.media_folder_parent()}: /${currentFolder}`
+            : `${m.media_folder_parent()}: /`
+        }
+        onClose={() => setIsNewFolderOpen(false)}
+        onSubmit={(name) => {
+          createFolder.mutate(name, {
+            onSettled: () => setIsNewFolderOpen(false),
+          });
+        }}
+        isSubmitting={createFolder.isPending}
+      />
+
+      {/* --- Rename Folder Modal --- */}
+      <FolderModal
+        isOpen={!!renameFolderTarget}
+        mode="rename"
+        initialName={renameFolderTarget?.name ?? ""}
+        onClose={() => setRenameFolderTarget(null)}
+        onSubmit={(name) => {
+          if (!renameFolderTarget) return;
+          renameFolder.mutate(
+            { key: renameFolderTarget.key, name },
+            {
+              onSettled: () => setRenameFolderTarget(null),
+            },
+          );
+        }}
+        isSubmitting={renameFolder.isPending}
       />
 
       {/* --- Delete Confirmation Modal --- */}
       <ConfirmationModal
         isOpen={!!deleteTarget}
         onClose={cancelDelete}
-        onConfirm={confirmDelete}
+        onConfirm={() => confirmDelete()}
         title={m.media_delete_confirm_title()}
-        message={m.media_delete_confirm_desc({
-          count: deleteTarget?.length ?? 0,
-        })}
+        message={confirmMessage}
         confirmLabel={m.media_delete_confirm_btn()}
         isDanger={true}
         isLoading={isDeleting}
@@ -186,7 +339,7 @@ export function MediaLibrary() {
           await updateAsset.mutateAsync({ data: { key, name } });
         }}
         onDelete={async (key) => {
-          const allowed = await requestDelete([key]);
+          const allowed = requestDelete([key]);
           if (allowed.length > 0) {
             confirmDelete(allowed);
           }

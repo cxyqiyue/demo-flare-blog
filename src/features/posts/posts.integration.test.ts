@@ -626,31 +626,58 @@ describe("Posts Integration", () => {
       );
     });
 
-    it("should only allow a single pinned post at a time", async () => {
-      const [postAId, postBId] = await seedPinnedScenario();
+    it("should allow multiple pinned posts ordered by pin time (newest first)", async () => {
+      const [postAId, postBId, postCId] = await seedPinnedScenario();
+
+      // Pin B first, then A, then C (C newest, B oldest)
+      const base = new Date();
       await updatePost({
         id: postBId,
-        data: { pinnedAt: new Date() },
+        data: { pinnedAt: new Date(base.getTime() - 2 * 60 * 1000) },
       });
-
-      // Pinning another post must be rejected
-      const rejected = await PostService.updatePost(adminContext, {
+      await updatePost({
         id: postAId,
-        data: { pinnedAt: new Date() },
+        data: { pinnedAt: new Date(base.getTime() - 60 * 1000) },
       });
-      expect(rejected.error?.reason).toBe("POST_ALREADY_PINNED");
-
-      // Unpinning the pinned post frees the slot
       await updatePost({
-        id: postBId,
+        id: postCId,
+        data: { pinnedAt: new Date(base.getTime()) },
+      });
+      await waitForBackgroundTasks(adminContext.executionCtx);
+
+      // All three posts are pinned, so the regular list is empty and the
+      // pinned posts are ordered by pinnedAt DESC (newest pin first).
+      const page1 = await PostService.getPublicPostsPage(createTestContext(), {
+        offset: 0,
+        limit: 10,
+      });
+      expect(page1.items.map((p) => p.slug)).toEqual([
+        "pinned-post-c",
+        "pinned-post-a",
+        "pinned-post-b",
+      ]);
+      expect(page1.total).toBe(0);
+      expect(page1.hasNextPage).toBe(false);
+
+      // Unpinning one post leaves the remaining pins ordered by pin time
+      await updatePost({
+        id: postCId,
         data: { pinnedAt: null },
       });
-      const accepted = await PostService.updatePost(adminContext, {
-        id: postAId,
-        data: { pinnedAt: new Date() },
+      await waitForBackgroundTasks(adminContext.executionCtx);
+
+      const page2 = await PostService.getPublicPostsPage(createTestContext(), {
+        offset: 0,
+        limit: 10,
       });
-      expect(accepted.error).toBeNull();
-      expect(accepted.data?.pinnedAt).not.toBeNull();
+      // C is unpinned, so it returns to the regular list after the pinned ones
+      expect(page2.items.map((p) => p.slug)).toEqual([
+        "pinned-post-a",
+        "pinned-post-b",
+        "pinned-post-c",
+      ]);
+      expect(page2.total).toBe(1); // pinned-post-c becomes a regular post
+      expect(page2.hasNextPage).toBe(false);
     });
 
     it("should invalidate the home page list cache when the pin changes", async () => {

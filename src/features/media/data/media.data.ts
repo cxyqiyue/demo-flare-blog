@@ -1,5 +1,5 @@
 import type { SQL } from "drizzle-orm";
-import { and, desc, eq, lt, sql, sum } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, sql, sum } from "drizzle-orm";
 import { escapeLikeString } from "@/features/media/data/helper";
 import { MediaTable, PostMediaTable } from "@/lib/db/schema";
 
@@ -116,4 +116,36 @@ export async function getTotalMediaSize(db: DB) {
     .from(MediaTable);
 
   return Number(result.total ?? 0);
+}
+
+export async function getMediaByKeys(
+  db: DB,
+  keys: string[],
+): Promise<Array<Media>> {
+  if (keys.length === 0) return [];
+  return await db.select().from(MediaTable).where(inArray(MediaTable.key, keys));
+}
+
+export async function deleteMediaByKeys(db: DB, keys: string[]) {
+  if (keys.length === 0) return;
+  await db.delete(MediaTable).where(inArray(MediaTable.key, keys));
+}
+
+/**
+ * Rewrite the `key`/`url` columns of every media record whose key starts with
+ * `oldPrefix` (e.g. a renamed folder), preserving the relative suffix.
+ */
+export async function updateMediaKeyPrefix(
+  db: DB,
+  oldPrefix: string,
+  newPrefix: string,
+) {
+  const suffix = sql`substr(${MediaTable.key}, ${oldPrefix.length + 1})`;
+  await db
+    .update(MediaTable)
+    .set({
+      key: sql`${newPrefix} || ${suffix}`,
+      url: sql`'/images/' || ${newPrefix} || ${suffix}`,
+    })
+    .where(sql`substr(${MediaTable.key}, 1, ${oldPrefix.length}) = ${oldPrefix}`);
 }

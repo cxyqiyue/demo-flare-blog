@@ -6,6 +6,8 @@ import { m } from "@/paraglide/messages";
 const mediaSearchSchema = z.object({
   unused: z.boolean().optional().catch(false),
   search: z.string().optional().catch(""),
+  folder: z.string().optional().catch(""),
+  view: z.enum(["grid", "table"]).optional().catch("grid"),
 });
 
 export const Route = createFileRoute("/admin/media/")({

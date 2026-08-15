@@ -814,8 +814,6 @@
   "editor_meta_pin": "Pin Post",
   "editor_meta_pinned": "Pinned",
   "editor_meta_unpinned": "Not Pinned",
-  "editor_pin_conflict_hint": "Another post “{title}” is already pinned. Unpin it first before pinning this one.",
-  "editor_pin_conflict_save_error": "Pin failed: another post is already pinned. Unpin it first and try again.",
   "editor_mode_wysiwyg": "Rich Text",
   "editor_mode_markdown": "Markdown",
   "editor_mode_preview": "Preview",
@@ -1174,6 +1172,91 @@
   ],
   "media_upload_log_error_no_data": "> ERROR: No data packet",
   "media_upload_log_stream_sending": "> UPLOAD_STREAM: Sending data packet...",
+  "media_view_grid": "Grid",
+  "media_view_table": "List",
+  "media_new_folder_btn": "New Folder",
+  "media_grid_folder": "Folder",
+  "media_breadcrumb_root": "All",
+  "media_section_folders": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "Folders ({count})"
+      }
+    }
+  ],
+  "media_section_files": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "Files ({count})"
+      }
+    }
+  ],
+  "media_table_col_name": "Name",
+  "media_table_col_type": "Type",
+  "media_table_col_size": "Size",
+  "media_table_col_usage": "Linked",
+  "media_load_more": "Load More",
+  "media_folder_create_tag": "NEW FOLDER",
+  "media_folder_create_title": "New Folder",
+  "media_folder_rename_tag": "RENAME FOLDER",
+  "media_folder_rename_title": "Rename Folder",
+  "media_folder_name_placeholder": "Folder name",
+  "media_folder_btn_cancel": "Cancel",
+  "media_folder_create_btn": "Create",
+  "media_folder_rename_btn": "Rename",
+  "media_folder_delete_btn": "Delete folder",
+  "media_folder_parent": "Location",
+  "media_upload_target_folder": "Upload to",
+  "media_preview_btn_rename": "Rename",
+  "media_delete_confirm_folders": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "Are you sure you want to delete {count} folder(s) and all files inside them? This action cannot be undone."
+      }
+    }
+  ],
+  "media_delete_confirm_mixed": [
+    {
+      "declarations": ["input folders", "input files"],
+      "match": {
+        "folders=*, files=*": "Are you sure you want to delete {folders} folder(s) and {files} file(s)? This action cannot be undone."
+      }
+    }
+  ],
+  "media_toast_folder_create_success": "Folder created",
+  "media_toast_folder_create_success_desc": [
+    {
+      "declarations": ["input name"],
+      "match": {
+        "name=*": "Folder \"{name}\" has been created."
+      }
+    }
+  ],
+  "media_toast_folder_create_fail": "Failed to create folder",
+  "media_toast_folder_create_fail_desc": "Could not create the folder. Check the name and try again.",
+  "media_toast_folder_rename_success": "Folder renamed",
+  "media_toast_folder_rename_success_desc": [
+    {
+      "declarations": ["input name"],
+      "match": {
+        "name=*": "Folder has been renamed to \"{name}\"."
+      }
+    }
+  ],
+  "media_toast_folder_rename_fail": "Failed to rename folder",
+  "media_toast_folder_rename_fail_desc": "Could not rename the folder. Please try again.",
+  "media_toast_folder_delete_skipped": "Some files kept",
+  "media_toast_folder_delete_skipped_desc": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "{count} file(s) referenced by posts were skipped from deletion."
+      }
+    }
+  ],
   "media_upload_error_db": "Failed to store media, please try again",
   "media_validation_file_required": "Please select an image file to upload",
   "media_validation_file_too_large": "File size must be less than 10MB",

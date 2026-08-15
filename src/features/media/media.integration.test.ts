@@ -32,19 +32,31 @@ describe("MediaService", () => {
     // We trust the `r2-sanity.test.ts` (or equivalent verification) matches the platform behavior,
     // and here we focus on Service Logic + DB integration.
 
-    vi.spyOn(Storage, "putToR2").mockImplementation(async (_env, file) => {
-      const key = `mocked-${Date.now()}-${file.name}`;
-      return {
-        key,
-        url: `/images/${key}`,
-        fileName: file.name,
-        mimeType: file.type,
-        sizeInBytes: file.size,
-      };
-    });
+    vi.spyOn(Storage, "putToR2").mockImplementation(
+      async (_env, file, _folder = "") => {
+        const key = `mocked-${Date.now()}-${file.name}`;
+        return {
+          key,
+          url: `/images/${key}`,
+          fileName: file.name,
+          mimeType: file.type,
+          sizeInBytes: file.size,
+        };
+      },
+    );
 
     vi.spyOn(Storage, "deleteFromR2").mockResolvedValue(undefined);
     vi.spyOn(Storage, "getFromR2").mockResolvedValue(null);
+
+    // Directory / folder operations: default empty implementations.
+    // Individual tests override these where they exercise the logic.
+    vi.spyOn(Storage, "listR2Directory").mockImplementation(
+      async () => ({ objects: [], delimitedPrefixes: [], truncated: false }) as unknown as R2Objects,
+    );
+    vi.spyOn(Storage, "listAllKeys").mockResolvedValue([]);
+    vi.spyOn(Storage, "createFolderMarker").mockResolvedValue(undefined);
+    vi.spyOn(Storage, "copyObject").mockResolvedValue(true);
+    vi.spyOn(Storage, "deleteKeys").mockResolvedValue(undefined);
   });
 
   // ============================================
@@ -66,11 +78,32 @@ describe("MediaService", () => {
       expect(result.url).toContain("/images/");
 
       // Verify Storage.putToR2 was called
-      expect(Storage.putToR2).toHaveBeenCalledWith(adminContext.env, file);
+      expect(Storage.putToR2).toHaveBeenCalledWith(
+        adminContext.env,
+        file,
+        "",
+      );
 
       // Verify DB record was created
       const mediaList = await MediaService.getMediaList(adminContext, {});
       expect(mediaList.items.some((m) => m.key === result.key)).toBeTruthy();
+    });
+
+    it("should upload file into a folder", async () => {
+      const file = new File(["folder content"], "in-folder.png", {
+        type: "image/png",
+      });
+
+      const result = unwrap(
+        await MediaService.upload(adminContext, { file, folder: "photos" }),
+      );
+
+      expect(result.fileName).toBe("in-folder.png");
+      expect(Storage.putToR2).toHaveBeenCalledWith(
+        adminContext.env,
+        file,
+        "photos",
+      );
     });
 
     it("should rollback R2 upload when DB insert fails", async () => {
@@ -316,6 +349,198 @@ describe("MediaService", () => {
       expect(linkedKeys).toContain(mediaKeys[0]);
       expect(linkedKeys).toContain(mediaKeys[1]);
       expect(linkedKeys).not.toContain(mediaKeys[2]);
+    });
+  });
+
+  // ============================================
+  // 目录与文件夹 (Directory & Folders)
+  // ============================================
+  describe("Directory & Folders", () => {
+    it("should create a folder marker in R2", async () => {
+      const result = unwrap(
+        await MediaService.createFolder(adminContext, {
+          name: "photos",
+          parent: "",
+        }),
+      );
+
+      expect(result).toEqual({ key: "photos/", name: "photos" });
+      expect(Storage.createFolderMarker).toHaveBeenCalledWith(
+        adminContext.env,
+        "photos/",
+      );
+    });
+
+    it("should reject invalid folder names", async () => {
+      const nested = await MediaService.createFolder(adminContext, {
+        name: "a/b",
+        parent: "",
+      });
+      expect(nested.error?.reason).toBe("MEDIA_INVALID_FOLDER_NAME");
+
+      const blank = await MediaService.createFolder(adminContext, {
+        name: " ",
+        parent: "",
+      });
+      expect(blank.error?.reason).toBe("MEDIA_INVALID_FOLDER_NAME");
+    });
+
+    it("should list a directory: folders + files at the current level", async () => {
+      vi.mocked(Storage.listR2Directory).mockImplementation(
+        async (_env, options = {}) => {
+          const prefix = options.prefix ?? "";
+          if (prefix === "photos/") {
+            return {
+              objects: [{ key: "photos/a.png" }, { key: "photos/b.png" }],
+              delimitedPrefixes: [],
+              truncated: false,
+            } as unknown as R2Objects;
+          }
+          return {
+            objects: [{ key: "root.png" }, { key: "photos/" }],
+            delimitedPrefixes: ["photos/"],
+            truncated: false,
+          } as unknown as R2Objects;
+        },
+      );
+
+      const root = await MediaService.getMediaDirectory(adminContext, {
+        folder: "",
+      });
+      expect(root.folders.map((f) => f.name)).toEqual(["photos"]);
+      expect(root.files.map((f) => f.name)).toEqual(["root.png"]);
+      expect(root.files[0].key).toBe("root.png");
+
+      const photos = await MediaService.getMediaDirectory(adminContext, {
+        folder: "photos",
+      });
+      expect(photos.folders).toEqual([]);
+      expect(photos.files.map((f) => f.name).sort()).toEqual([
+        "a.png",
+        "b.png",
+      ]);
+    });
+
+    it("should search globally across all folders", async () => {
+      vi.mocked(Storage.listAllKeys).mockResolvedValue([
+        "photos/a.png",
+        "photos/b.png",
+        "root.png",
+      ]);
+
+      const result = await MediaService.getMediaDirectory(adminContext, {
+        folder: "",
+        search: "a",
+      });
+      expect(result.files.map((f) => f.name)).toEqual(["a.png"]);
+
+      const none = await MediaService.getMediaDirectory(adminContext, {
+        folder: "",
+        search: "zzz-none",
+      });
+      expect(none.files).toEqual([]);
+    });
+
+    it("should rename a folder: copy objects + rewrite DB keys", async () => {
+      // Seed a DB record inside the folder
+      const MediaRepo = await import("./data/media.data");
+      await MediaRepo.insertMedia(adminContext.db, {
+        key: "photos/a.png",
+        url: "/images/photos/a.png",
+        fileName: "a.png",
+        mimeType: "image/png",
+        sizeInBytes: 100,
+      });
+
+      vi.mocked(Storage.listAllKeys).mockResolvedValue([
+        "photos/a.png",
+        "photos/",
+      ]);
+
+      const result = unwrap(
+        await MediaService.renameFolder(adminContext, {
+          key: "photos/",
+          name: "gallery",
+        }),
+      );
+      expect(result.key).toBe("gallery/");
+
+      expect(Storage.copyObject).toHaveBeenCalledWith(
+        adminContext.env,
+        "photos/a.png",
+        "gallery/a.png",
+      );
+      expect(Storage.copyObject).toHaveBeenCalledWith(
+        adminContext.env,
+        "photos/",
+        "gallery/",
+      );
+
+      await waitForBackgroundTasks(adminContext.executionCtx);
+      expect(Storage.deleteKeys).toHaveBeenCalledWith(adminContext.env, [
+        "photos/a.png",
+        "photos/",
+      ]);
+
+      const list = await MediaService.getMediaList(adminContext, {
+        search: "a.png",
+      });
+      expect(list.items).toHaveLength(1);
+      expect(list.items[0].key).toBe("gallery/a.png");
+      expect(list.items[0].url).toBe("/images/gallery/a.png");
+    });
+
+    it("should delete a folder but skip linked files", async () => {
+      const MediaRepo = await import("./data/media.data");
+
+      // Two files in the folder; `b.png` is referenced by a post.
+      await MediaRepo.insertMedia(adminContext.db, {
+        key: "photos/a.png",
+        url: "/images/photos/a.png",
+        fileName: "a.png",
+        mimeType: "image/png",
+        sizeInBytes: 100,
+      });
+      const bMedia = await MediaRepo.insertMedia(adminContext.db, {
+        key: "photos/b.png",
+        url: "/images/photos/b.png",
+        fileName: "b.png",
+        mimeType: "image/png",
+        sizeInBytes: 100,
+      });
+
+      const { id: postId } = await PostService.createEmptyPost(adminContext);
+      await PostMediaRepo.syncPostMedia(adminContext.db, postId, {
+        type: "doc",
+        content: [{ type: "image", attrs: { src: `/images/${bMedia.key}` } }],
+      });
+
+      vi.mocked(Storage.listAllKeys).mockResolvedValue([
+        "photos/a.png",
+        "photos/b.png",
+        "photos/",
+      ]);
+
+      const result = await MediaService.deleteFolders(adminContext, {
+        keys: ["photos/"],
+      });
+      expect(result.data).toEqual({
+        deletedFolders: 1,
+        deletedFiles: 1,
+        skippedFiles: 1,
+      });
+
+      await waitForBackgroundTasks(adminContext.executionCtx);
+      expect(Storage.deleteKeys).toHaveBeenCalledWith(adminContext.env, [
+        "photos/a.png",
+        "photos/",
+      ]);
+
+      // Linked file stays, unlinked file removed
+      const list = await MediaService.getMediaList(adminContext, {});
+      const remainingKeys = list.items.map((m) => m.key);
+      expect(remainingKeys).not.toContain("photos/a.png");
+      expect(remainingKeys).toContain("photos/b.png");
     });
   });
 });

@@ -2,9 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
   assertMediaKey,
+  CreateMediaFolderInputSchema,
+  DeleteMediaFoldersInputSchema,
+  GetMediaDirectoryInputSchema,
   GetMediaListInputSchema,
   MediaKeyInputSchema,
   parseUploadMediaInput,
+  RenameMediaFolderInputSchema,
   UpdateMediaNameInputSchema,
   UploadMediaInputSchema,
 } from "@/features/media/media.schema";
@@ -63,3 +67,31 @@ export const updateMediaNameFn = createServerFn({
   .middleware([adminMiddleware])
   .inputValidator(UpdateMediaNameInputSchema)
   .handler(({ data, context }) => MediaService.updateMediaName(context, data));
+
+export const getMediaDirectoryFn = createServerFn()
+  .middleware([adminMiddleware])
+  .inputValidator(GetMediaDirectoryInputSchema)
+  .handler(({ data, context }) =>
+    MediaService.getMediaDirectory(context, data),
+  );
+
+export const createMediaFolderFn = createServerFn({
+  method: "POST",
+})
+  .middleware([adminMiddleware])
+  .inputValidator(CreateMediaFolderInputSchema)
+  .handler(({ data, context }) => MediaService.createFolder(context, data));
+
+export const renameMediaFolderFn = createServerFn({
+  method: "POST",
+})
+  .middleware([adminMiddleware])
+  .inputValidator(RenameMediaFolderInputSchema)
+  .handler(({ data, context }) => MediaService.renameFolder(context, data));
+
+export const deleteMediaFoldersFn = createServerFn({
+  method: "POST",
+})
+  .middleware([adminMiddleware])
+  .inputValidator(DeleteMediaFoldersInputSchema)
+  .handler(({ data, context }) => MediaService.deleteFolders(context, data));

@@ -807,8 +807,6 @@
   "editor_meta_pin": "置顶文章",
   "editor_meta_pinned": "已置顶",
   "editor_meta_unpinned": "未置顶",
-  "editor_pin_conflict_hint": "已有置顶文章《{title}》，请先取消置顶后再置顶本篇。",
-  "editor_pin_conflict_save_error": "置顶失败：已有其他文章被置顶，请先取消置顶后再重试。",
   "editor_mode_wysiwyg": "富文本",
   "editor_mode_markdown": "Markdown",
   "editor_mode_preview": "预览",
@@ -1167,6 +1165,91 @@
   ],
   "media_upload_log_error_no_data": "> ERROR: 没有数据包",
   "media_upload_log_stream_sending": "> UPLOAD_STREAM: 数据包发送中...",
+  "media_view_grid": "网格",
+  "media_view_table": "列表",
+  "media_new_folder_btn": "新建文件夹",
+  "media_grid_folder": "文件夹",
+  "media_breadcrumb_root": "全部",
+  "media_section_folders": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "文件夹 ({count})"
+      }
+    }
+  ],
+  "media_section_files": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "文件 ({count})"
+      }
+    }
+  ],
+  "media_table_col_name": "名称",
+  "media_table_col_type": "类型",
+  "media_table_col_size": "大小",
+  "media_table_col_usage": "引用",
+  "media_load_more": "加载更多",
+  "media_folder_create_tag": "NEW FOLDER",
+  "media_folder_create_title": "新建文件夹",
+  "media_folder_rename_tag": "RENAME FOLDER",
+  "media_folder_rename_title": "重命名文件夹",
+  "media_folder_name_placeholder": "文件夹名称",
+  "media_folder_btn_cancel": "取消",
+  "media_folder_create_btn": "创建",
+  "media_folder_rename_btn": "重命名",
+  "media_folder_delete_btn": "删除文件夹",
+  "media_folder_parent": "位置",
+  "media_upload_target_folder": "上传至",
+  "media_preview_btn_rename": "重命名",
+  "media_delete_confirm_folders": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "您确定要删除这 {count} 个文件夹及其中的全部文件吗？此操作无法撤销。"
+      }
+    }
+  ],
+  "media_delete_confirm_mixed": [
+    {
+      "declarations": ["input folders", "input files"],
+      "match": {
+        "folders=*, files=*": "您确定要删除 {folders} 个文件夹和 {files} 个文件吗？此操作无法撤销。"
+      }
+    }
+  ],
+  "media_toast_folder_create_success": "文件夹已创建",
+  "media_toast_folder_create_success_desc": [
+    {
+      "declarations": ["input name"],
+      "match": {
+        "name=*": "文件夹「{name}」已创建。"
+      }
+    }
+  ],
+  "media_toast_folder_create_fail": "创建文件夹失败",
+  "media_toast_folder_create_fail_desc": "无法创建文件夹，请检查名称后重试。",
+  "media_toast_folder_rename_success": "文件夹已重命名",
+  "media_toast_folder_rename_success_desc": [
+    {
+      "declarations": ["input name"],
+      "match": {
+        "name=*": "文件夹已重命名为「{name}」。"
+      }
+    }
+  ],
+  "media_toast_folder_rename_fail": "重命名文件夹失败",
+  "media_toast_folder_rename_fail_desc": "无法重命名文件夹，请重试。",
+  "media_toast_folder_delete_skipped": "部分文件被保留",
+  "media_toast_folder_delete_skipped_desc": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "{count} 个被文章引用的文件已跳过删除。"
+      }
+    }
+  ],
   "media_upload_error_db": "媒体入库失败，请重试",
   "media_validation_file_required": "请选择要上传的图片文件",
   "media_validation_file_too_large": "文件大小不能超过 10MB",

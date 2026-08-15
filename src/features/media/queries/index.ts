@@ -1,6 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import {
   getLinkedMediaKeysFn,
+  getMediaDirectoryFn,
   getMediaFn,
   getTotalMediaSizeFn,
 } from "../api/media.api";
@@ -10,12 +11,15 @@ export const MEDIA_KEYS = {
 
   // Parent keys (static arrays for prefix invalidation)
   lists: ["media", "list"] as const,
+  directory: ["media", "directory"] as const,
   totalSize: ["media", "total-size"] as const,
   linked: ["media", "linked-keys"] as const,
 
   // Child keys (functions for specific queries)
   list: (search: string = "", unusedOnly: boolean = false) =>
     ["media", "list", search, unusedOnly] as const,
+  dir: (folder: string, search: string, unusedOnly: boolean) =>
+    ["media", "directory", folder, search, unusedOnly] as const,
   linkedKeys: (keys: string) => ["media", "linked-keys", keys] as const,
   linkedPosts: (key: string) => ["media", "linked-posts", key] as const,
 };
@@ -36,6 +40,24 @@ export function mediaInfiniteQueryOptions(
       }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: undefined as number | undefined,
+  });
+}
+
+export function mediaDirectoryQuery(
+  folder: string,
+  search: string,
+  unusedOnly: boolean,
+) {
+  return queryOptions({
+    queryKey: MEDIA_KEYS.dir(folder, search, unusedOnly),
+    queryFn: () =>
+      getMediaDirectoryFn({
+        data: {
+          folder: folder || undefined,
+          search: search || undefined,
+          unusedOnly: unusedOnly || undefined,
+        },
+      }),
   });
 }
 

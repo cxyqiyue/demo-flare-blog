@@ -205,7 +205,6 @@ export const POSTS_CACHE_KEYS = {
   related: (slug: string, limit?: number) =>
     ["posts", "related-ids", slug, limit] as const,
   syncHash: (id: number) => `post_hash:${id}` as const,
-  pinned: (version: string) => [version, "posts", "pinned"] as const,
   publicPage: (version: string, offset: number, limit: number) =>
     [version, "posts", "page", offset, limit] as const,
   adjacent: (version: string, slug: string) =>
