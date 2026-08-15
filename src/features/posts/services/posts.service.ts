@@ -191,16 +191,19 @@ export async function getPublicPostsPage(
     (version) => POSTS_CACHE_KEYS.publicPage(version, offset, limit),
     PublicPostsPageResponseSchema,
     async () => {
-      const { items, total } = await PostRepo.getPublicPostsPage(context.db, {
-        offset,
-        limit,
-      });
+      const { items, total, regularCount } = await PostRepo.getPublicPostsPage(
+        context.db,
+        {
+          offset,
+          limit,
+        },
+      );
       return {
         items,
         total,
         offset,
         limit,
-        hasNextPage: offset + items.length < total,
+        hasNextPage: offset + regularCount < total,
         hasPrevPage: offset > 0,
       };
     },
@@ -396,9 +399,35 @@ export async function updatePost(
   context: DbContext & { executionCtx: ExecutionContext; env?: Env },
   data: UpdatePostInput,
 ) {
+  const existingPost = await PostRepo.findPostById(context.db, data.id);
+  if (!existingPost) {
+    return err({ reason: "POST_NOT_FOUND" });
+  }
+
+  // Only one pinned post at a time: pinning a different post is blocked until
+  // the currently pinned post is unpinned first.
+  const pinning = data.data.pinnedAt != null;
+  const wasPinned = existingPost.pinnedAt != null;
+  if (pinning && !wasPinned) {
+    const pinnedPosts = await PostRepo.findPinnedPosts(context.db);
+    if (pinnedPosts.length > 0) {
+      return err({ reason: "POST_ALREADY_PINNED" });
+    }
+  }
+
   const updatedPost = await PostRepo.updatePost(context.db, data.id, data.data);
   if (!updatedPost) {
     return err({ reason: "POST_NOT_FOUND" });
+  }
+
+  // Pin changes affect the home page list ordering, so invalidate the cached
+  // public posts list (KV-backed, long TTL).
+  const pinnedAtChanged =
+    (wasPinned ? 1 : 0) !== (updatedPost.pinnedAt != null ? 1 : 0);
+  if (pinnedAtChanged) {
+    context.executionCtx.waitUntil(
+      CacheService.bumpVersion(context, "posts:list"),
+    );
   }
 
   if (data.data.contentJson !== undefined) {

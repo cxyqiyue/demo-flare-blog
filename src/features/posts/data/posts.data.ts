@@ -614,8 +614,9 @@ const PUBLIC_PAGE_COLUMNS = {
 
 /**
  * Offset-based pagination for public posts (home page).
- * All published posts are paginated purely by publish time (newest first),
- * including pinned ones (pinned is just a badge on the card).
+ * Pinned posts are shown once at the very top of the first page and are
+ * excluded from the regular timestamp-ordered list, so they never occupy a
+ * slot and push later posts down. Pagination only applies to regular posts.
  */
 export async function getPublicPostsPage(
   db: DB,
@@ -623,25 +624,45 @@ export async function getPublicPostsPage(
 ): Promise<{
   items: Array<PostListItem>;
   total: number;
+  regularCount: number;
 }> {
   const offset = options.offset ?? 0;
   const limit = Math.min(options.limit ?? 10, 50);
 
-  const whereClause = buildPostWhereClause({ publicOnly: true });
+  const publicWhereClause = buildPostWhereClause({ publicOnly: true });
+  const regularWhereClause = and(
+    publicWhereClause,
+    sql`${PostsTable.pinnedAt} IS NULL`,
+  );
 
-  const [posts, totalRows] = await Promise.all([
+  const [regularPosts, totalRows] = await Promise.all([
     db
       .select(PUBLIC_PAGE_COLUMNS)
       .from(PostsTable)
-      .where(whereClause)
+      .where(regularWhereClause)
       .orderBy(desc(PostsTable.publishedAt), desc(PostsTable.id))
       .limit(limit)
       .offset(offset),
-    db.select({ count: count() }).from(PostsTable).where(whereClause),
+    db.select({ count: count() }).from(PostsTable).where(regularWhereClause),
   ]);
 
-  const items = posts as Array<PostListItem>;
   const total = totalRows[0]?.count ?? 0;
+
+  const items = [] as Array<PostListItem>;
+
+  // Pinned posts are prepended to the first page only; they are excluded from
+  // the regular list above so they don't occupy a timestamp slot.
+  if (offset === 0) {
+    const pinnedPosts = await db
+      .select(PUBLIC_PAGE_COLUMNS)
+      .from(PostsTable)
+      .where(and(publicWhereClause, isNotNull(PostsTable.pinnedAt)))
+      .orderBy(desc(PostsTable.pinnedAt))
+      .limit(5);
+    items.push(...pinnedPosts);
+  }
+
+  items.push(...regularPosts);
 
   if (items.length > 0) {
     const postIds = items.map((p) => p.id);
@@ -670,7 +691,7 @@ export async function getPublicPostsPage(
     });
   }
 
-  return { items, total };
+  return { items, total, regularCount: regularPosts.length };
 }
 
 /**

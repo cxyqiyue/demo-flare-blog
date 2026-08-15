@@ -18,6 +18,8 @@ Deeply integrated with D1, R2, KV, Workflows, and other Serverless services — 
 
 > Join the Telegram group to discuss this project: [Telegram Group](https://t.me/+Rmtf2Jmx_MUwNWE1)
 
+> Join the QQ group as well: [QQ Group](https://qun.qq.com/universal-share/share?ac=1&authKey=xfLd%2B0FCPOGjICC7%2BNsCJ7%2BxRngZg%2BWZckIoWTSpvcEaCc1Fyn%2BmB30Wq2z0c1IT&busi_data=eyJncm91cENvZGUiOiI4NzE4NDQ2NjgiLCJ0b2tlbiI6ImhGaXB3Z2xTY2ZCYS9XTVg2UGU1TVpSRnNxVFAvdGljRTVpbGhkNkRpano1U3lteEx6UTcxR0ZCQmxkYW1pZGMiLCJ1aW4iOiIyOTE4MzM2OTI2In0%3D&data=D0JnYq8EXQFBrTS9kPGSsewT1sCGk5xYW65Jd8jXXhDZ2KcUKER1Xrf_qFOUunvqxBU-SM12OA6wS7lsFxU7Og&svctype=4&tempid=h5_group_info)
+
 > **Origin**: This project is a fork/customization of [flare-stack-blog](https://github.com/du2333/flare-stack-blog) (v1.5.2) and retains its GPL-3.0 license; some features are inspired by [Rin](https://github.com/openRin/Rin). See the [Reference Projects](#reference-projects) below.
 
 ## Previews
@@ -123,6 +125,8 @@ src/
 ## Deployment Guide
 
 The complete flow from **forking the repository** to **going live**. The **GitHub Actions** automated pipeline is recommended (Steps 0–6); a Cloudflare Dashboard manual alternative is also available ([Option 2](#option-2-deploy-via-cloudflare-dashboard)).
+
+> Deployment tutorials: step-by-step guide at [Blog Deployment Tutorial](https://blog.qyfy.kdns.fr/post/demo-flare-blog%E9%83%A8%E7%BD%B2%E6%95%99%E7%A8%8B) (Chinese), advanced tips at [Blog Deployment Advanced Tutorial](https://blog.qyfy.kdns.fr/post/demo-flare-blog%E8%BF%9B%E9%98%B6%E6%95%99%E7%A8%8B) (Chinese).
 
 ### Step 0: Fork the Repository
 

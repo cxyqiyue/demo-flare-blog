@@ -807,6 +807,8 @@
   "editor_meta_pin": "置顶文章",
   "editor_meta_pinned": "已置顶",
   "editor_meta_unpinned": "未置顶",
+  "editor_pin_conflict_hint": "已有置顶文章《{title}》，请先取消置顶后再置顶本篇。",
+  "editor_pin_conflict_save_error": "置顶失败：已有其他文章被置顶，请先取消置顶后再重试。",
   "editor_mode_wysiwyg": "富文本",
   "editor_mode_markdown": "Markdown",
   "editor_mode_preview": "预览",

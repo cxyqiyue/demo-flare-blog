@@ -9,6 +9,7 @@ import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { markdownToJsonContent } from "@/features/import-export/utils/markdown-parser";
 import { jsonContentToMarkdown } from "@/features/import-export/utils/markdown-serializer";
 import { extensions } from "@/features/posts/editor/config";
+import { pinnedPostsQuery } from "@/features/posts/queries";
 import type { PostRevisionSnapshot } from "@/features/posts/schema/post-revisions.schema";
 import { tagsAdminQueryOptions } from "@/features/tags/queries";
 import { ContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
@@ -78,6 +79,20 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
 
   // Fetch all tags for AI context and matching
   const { data: allTags = [] } = useQuery(tagsAdminQueryOptions());
+
+  // Enforce a single-pin rule in the editor UI: while another post is pinned,
+  // this post's pin button is disabled until the other pin is removed.
+  const { data: pinnedPosts = [] } = useQuery(pinnedPostsQuery);
+
+  const otherPinnedPost = useMemo(
+    () => pinnedPosts.find((p) => p.id !== initialData.id) ?? null,
+    [pinnedPosts, initialData.id],
+  );
+
+  const canPin = otherPinnedPost === null || post.pinnedAt != null;
+  const pinConflictHint = otherPinnedPost
+    ? m.editor_pin_conflict_hint({ title: otherPinnedPost.title })
+    : null;
 
   // Auto-save hook
   const useAutoSaveReturn = useAutoSave({
@@ -384,6 +399,8 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
               isCalculatingReadTime={isCalculatingReadTime}
               isGeneratingSummary={isGeneratingSummary}
               isGeneratingTags={isGeneratingTags}
+              canPin={canPin}
+              pinConflictHint={pinConflictHint}
               onPostChange={handlePostChange}
               onGenerateSlug={handleGenerateSlug}
               onCalculateReadTime={handleCalculateReadTime}

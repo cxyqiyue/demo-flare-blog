@@ -20,6 +20,8 @@ interface PostEditorMetadataProps {
   isCalculatingReadTime: boolean;
   isGeneratingSummary: boolean;
   isGeneratingTags: boolean;
+  canPin: boolean;
+  pinConflictHint: string | null;
   onPostChange: (updates: Partial<PostEditorData>) => void;
   onGenerateSlug: () => void;
   onCalculateReadTime: () => void;
@@ -33,6 +35,8 @@ export function PostEditorMetadata({
   isCalculatingReadTime,
   isGeneratingSummary,
   isGeneratingTags,
+  canPin,
+  pinConflictHint,
   onPostChange,
   onGenerateSlug,
   onCalculateReadTime,
@@ -88,12 +92,19 @@ export function PostEditorMetadata({
                     pinnedAt: post.pinnedAt ? null : new Date(),
                   })
                 }
+                disabled={!canPin && !post.pinnedAt}
+                title={pinConflictHint ?? undefined}
                 className={`
                   flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider transition-colors
                   ${
                     post.pinnedAt
                       ? "border-b border-foreground font-bold text-foreground"
                       : "text-muted-foreground hover:text-foreground"
+                  }
+                  ${
+                    !canPin && !post.pinnedAt
+                      ? "cursor-not-allowed opacity-40 hover:text-muted-foreground"
+                      : ""
                   }
                 `}
               >
@@ -102,6 +113,11 @@ export function PostEditorMetadata({
                   ? m.editor_meta_pinned()
                   : m.editor_meta_unpinned()}
               </button>
+              {pinConflictHint && (
+                <p className="mt-1 max-w-52 text-[10px] leading-snug text-muted-foreground">
+                  {pinConflictHint}
+                </p>
+              )}
             </div>
           </div>
         )}

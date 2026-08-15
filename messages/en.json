@@ -814,6 +814,8 @@
   "editor_meta_pin": "Pin Post",
   "editor_meta_pinned": "Pinned",
   "editor_meta_unpinned": "Not Pinned",
+  "editor_pin_conflict_hint": "Another post “{title}” is already pinned. Unpin it first before pinning this one.",
+  "editor_pin_conflict_save_error": "Pin failed: another post is already pinned. Unpin it first and try again.",
   "editor_mode_wysiwyg": "Rich Text",
   "editor_mode_markdown": "Markdown",
   "editor_mode_preview": "Preview",

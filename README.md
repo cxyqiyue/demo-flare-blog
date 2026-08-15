@@ -18,6 +18,8 @@
 
 > 建了个 Telegram 群组，欢迎交流本项目相关问题：[Telegram 群](https://t.me/+Rmtf2Jmx_MUwNWE1)
 
+> 也建了 QQ 群，欢迎加入交流：[QQ 群](https://qun.qq.com/universal-share/share?ac=1&authKey=xfLd%2B0FCPOGjICC7%2BNsCJ7%2BxRngZg%2BWZckIoWTSpvcEaCc1Fyn%2BmB30Wq2z0c1IT&busi_data=eyJncm91cENvZGUiOiI4NzE4NDQ2NjgiLCJ0b2tlbiI6ImhGaXB3Z2xTY2ZCYS9XTVg2UGU1TVpSRnNxVFAvdGljRTVpbGhkNkRpano1U3lteEx6UTcxR0ZCQmxkYW1pZGMiLCJ1aW4iOiIyOTE4MzM2OTI2In0%3D&data=D0JnYq8EXQFBrTS9kPGSsewT1sCGk5xYW65Jd8jXXhDZ2KcUKER1Xrf_qFOUunvqxBU-SM12OA6wS7lsFxU7Og&svctype=4&tempid=h5_group_info)
+
 > **项目来源**：本项目基于 [flare-stack-blog](https://github.com/du2333/flare-stack-blog)（v1.5.2）改造而来，保留 GPL-3.0 协议；部分功能参考 [Rin](https://github.com/openRin/Rin)。部署与日常使用见下文。
 
 ## 界面预览
@@ -127,6 +129,8 @@ src/
 ## 部署流程
 
 下面是从 **Fork 仓库** 到 **正式上线** 的完整流程。推荐使用 **GitHub Actions** 自动化部署（步骤 0–6）；也可以选择 Cloudflare Dashboard 手动部署（见 [方案二](#方案二-cloudflare-dashboard-手动部署)）。
+
+> 部署教程：部署流程可参考图文教程 [博客部署图文教程](https://blog.qyfy.kdns.fr/post/demo-flare-blog%E9%83%A8%E7%BD%B2%E6%95%99%E7%A8%8B)，进阶玩法见 [博客部署进阶教程](https://blog.qyfy.kdns.fr/post/demo-flare-blog%E8%BF%9B%E9%98%B6%E6%95%99%E7%A8%8B)。
 
 ### 阶段 0：Fork 仓库
 

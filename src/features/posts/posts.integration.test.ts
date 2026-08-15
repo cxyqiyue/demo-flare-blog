@@ -559,6 +559,155 @@ describe("Posts Integration", () => {
     });
   });
 
+  describe("Pinned Posts (Home Page)", () => {
+    const seedPinnedScenario = async () => {
+      const base = new Date("2026-01-10T12:00:00.000Z");
+      // Post A (newest), Post B (middle), Post C (oldest)
+      const ids: Array<number> = [];
+      for (const [i, [title, slug]] of [
+        ["Post A", "pinned-post-a"],
+        ["Post B", "pinned-post-b"],
+        ["Post C", "pinned-post-c"],
+      ].entries()) {
+        const { id } = await PostService.createEmptyPost(adminContext);
+        await updatePost({
+          id,
+          data: {
+            title,
+            slug,
+            status: "published",
+            publishedAt: new Date(base.getTime() - i * 60 * 1000),
+          },
+        });
+        ids.push(id);
+      }
+      return ids; // [postAId, postBId, postCId]
+    };
+
+    it("should show the pinned post at the top of the first page and exclude it from the regular list", async () => {
+      const [, postBId] = await seedPinnedScenario();
+      await updatePost({
+        id: postBId,
+        data: { pinnedAt: new Date() },
+      });
+      await waitForBackgroundTasks(adminContext.executionCtx);
+
+      const page1 = await PostService.getPublicPostsPage(createTestContext(), {
+        offset: 0,
+        limit: 1,
+      });
+      expect(page1.items.map((p) => p.slug)).toEqual([
+        "pinned-post-b",
+        "pinned-post-a",
+      ]);
+      expect(page1.total).toBe(2); // pinned post is not counted as a regular post
+      expect(page1.hasNextPage).toBe(true);
+
+      const page2 = await PostService.getPublicPostsPage(createTestContext(), {
+        offset: 1,
+        limit: 1,
+      });
+      expect(page2.items.map((p) => p.slug)).toEqual(["pinned-post-c"]);
+      expect(page2.hasNextPage).toBe(false);
+
+      const page3 = await PostService.getPublicPostsPage(createTestContext(), {
+        offset: 2,
+        limit: 1,
+      });
+      expect(page3.items.map((p) => p.slug)).toEqual([]);
+      expect(page3.hasNextPage).toBe(false);
+
+      // The pinned post appears exactly once across all pages
+      const allSlugs = [...page1.items, ...page2.items, ...page3.items].map(
+        (p) => p.slug,
+      );
+      expect(allSlugs.filter((slug) => slug === "pinned-post-b")).toHaveLength(
+        1,
+      );
+    });
+
+    it("should only allow a single pinned post at a time", async () => {
+      const [postAId, postBId] = await seedPinnedScenario();
+      await updatePost({
+        id: postBId,
+        data: { pinnedAt: new Date() },
+      });
+
+      // Pinning another post must be rejected
+      const rejected = await PostService.updatePost(adminContext, {
+        id: postAId,
+        data: { pinnedAt: new Date() },
+      });
+      expect(rejected.error?.reason).toBe("POST_ALREADY_PINNED");
+
+      // Unpinning the pinned post frees the slot
+      await updatePost({
+        id: postBId,
+        data: { pinnedAt: null },
+      });
+      const accepted = await PostService.updatePost(adminContext, {
+        id: postAId,
+        data: { pinnedAt: new Date() },
+      });
+      expect(accepted.error).toBeNull();
+      expect(accepted.data?.pinnedAt).not.toBeNull();
+    });
+
+    it("should invalidate the home page list cache when the pin changes", async () => {
+      const [, postBId] = await seedPinnedScenario();
+
+      const before = await PostService.getPublicPostsPage(createTestContext(), {
+        offset: 0,
+        limit: 1,
+      });
+      expect(before.items.map((p) => p.slug)).toEqual(["pinned-post-a"]);
+      await waitForBackgroundTasks(adminContext.executionCtx);
+
+      const oldVersion = await CacheService.getVersion(
+        adminContext,
+        "posts:list",
+      );
+
+      await updatePost({
+        id: postBId,
+        data: { pinnedAt: new Date() },
+      });
+      await waitForBackgroundTasks(adminContext.executionCtx);
+
+      const newVersion = await CacheService.getVersion(
+        adminContext,
+        "posts:list",
+      );
+      expect(newVersion).not.toBe(oldVersion);
+
+      const after = await PostService.getPublicPostsPage(createTestContext(), {
+        offset: 0,
+        limit: 1,
+      });
+      expect(after.items.map((p) => p.slug)).toEqual([
+        "pinned-post-b",
+        "pinned-post-a",
+      ]);
+    });
+
+    it("should not affect the /posts cursor list ordering", async () => {
+      const [, postBId] = await seedPinnedScenario();
+      await updatePost({
+        id: postBId,
+        data: { pinnedAt: new Date() },
+      });
+      await waitForBackgroundTasks(adminContext.executionCtx);
+
+      const result = await PostService.getPostsCursor(createTestContext(), {});
+      // Pinned post stays in its publish-time position on the /posts page
+      expect(result.items.map((p) => p.slug)).toEqual([
+        "pinned-post-a",
+        "pinned-post-b",
+        "pinned-post-c",
+      ]);
+    });
+  });
+
   describe("Admin Operations", () => {
     it("should get posts for admin with status filter", async () => {
       // Create draft and published posts
