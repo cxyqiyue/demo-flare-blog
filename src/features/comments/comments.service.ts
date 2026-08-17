@@ -1,3 +1,4 @@
+import { findAboutArticleById } from "@/features/about/data/about-article.data";
 import type {
   CreateCommentInput,
   DeleteCommentInput,
@@ -7,10 +8,9 @@ import type {
   ModerateCommentInput,
   StartCommentModerationInput,
 } from "@/features/comments/comments.schema";
-import * as CommentRepo from "@/features/comments/data/comments.data";
 import type { CommentTarget } from "@/features/comments/data/comments.data";
+import * as CommentRepo from "@/features/comments/data/comments.data";
 import { sendReplyNotification } from "@/features/comments/workflows/helpers";
-import { findAboutArticleById } from "@/features/about/data/about-article.data";
 import * as MomentRepo from "@/features/moments/data/moments.data";
 import { publishNotificationEvent } from "@/features/notification/service/notification.publisher";
 import * as PostService from "@/features/posts/services/posts.service";
@@ -57,7 +57,10 @@ async function getTargetContext(
     }
   }
   if (comment.momentId != null) {
-    const moment = await MomentRepo.findMomentById(context.db, comment.momentId);
+    const moment = await MomentRepo.findMomentById(
+      context.db,
+      comment.momentId,
+    );
     if (moment) {
       return {
         kind: "moment" as const,
@@ -122,9 +125,15 @@ async function sendReplyNotificationForTarget(
         rootId: comment.rootId,
         replyToCommentId: comment.replyToCommentId,
         userId: comment.userId,
-        content: comment.content as Parameters<typeof sendReplyNotification>[1]["comment"]["content"],
+        content: comment.content as Parameters<
+          typeof sendReplyNotification
+        >[1]["comment"]["content"],
       },
-      target: { kind: "post", slug: target.post.slug, title: target.post.title },
+      target: {
+        kind: "post",
+        slug: target.post.slug,
+        title: target.post.title,
+      },
       skipNotifyUserId: moderatorUserId,
     });
   } else if (target.kind === "moment") {
@@ -134,7 +143,9 @@ async function sendReplyNotificationForTarget(
         rootId: comment.rootId,
         replyToCommentId: comment.replyToCommentId,
         userId: comment.userId,
-        content: comment.content as Parameters<typeof sendReplyNotification>[1]["comment"]["content"],
+        content: comment.content as Parameters<
+          typeof sendReplyNotification
+        >[1]["comment"]["content"],
       },
       target: { kind: "moment", title: target.title },
       skipNotifyUserId: moderatorUserId,
@@ -146,7 +157,9 @@ async function sendReplyNotificationForTarget(
         rootId: comment.rootId,
         replyToCommentId: comment.replyToCommentId,
         userId: comment.userId,
-        content: comment.content as Parameters<typeof sendReplyNotification>[1]["comment"]["content"],
+        content: comment.content as Parameters<
+          typeof sendReplyNotification
+        >[1]["comment"]["content"],
       },
       target: { kind: "about", title: target.title },
       skipNotifyUserId: moderatorUserId,

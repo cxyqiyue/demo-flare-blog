@@ -1,11 +1,11 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import theme from "@theme";
+import type { NavigationPublicData } from "@/features/navigation/navigation.schema";
 import {
   navigationAdminDataQuery,
   navigationPublicDataQuery,
 } from "@/features/navigation/queries";
-import type { NavigationPublicData } from "@/features/navigation/navigation.schema";
 import { authClient } from "@/lib/auth/auth.client";
 import { m } from "@/paraglide/messages";
 
@@ -39,7 +39,10 @@ function NavigationPage() {
   const isAdmin = session?.user.role === "admin";
 
   // 书签数据仅管理员可访问，未登录/普通用户不会请求
-  const adminQuery = useQuery({ ...navigationAdminDataQuery(), enabled: isAdmin });
+  const adminQuery = useQuery({
+    ...navigationAdminDataQuery(),
+    enabled: isAdmin,
+  });
   const adminData = adminQuery.data;
 
   const data: NavigationPublicData =

@@ -1,9 +1,9 @@
 import { Link, useRouteContext } from "@tanstack/react-router";
+import type { SiteConfig } from "@/features/config/site-config.schema";
 import {
   resolveSocialHref,
   SOCIAL_PLATFORMS,
 } from "@/features/config/utils/social-platforms";
-import type { SiteConfig } from "@/features/config/site-config.schema";
 import { m } from "@/paraglide/messages";
 
 export function Profile() {

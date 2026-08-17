@@ -25,8 +25,7 @@ export function parseUploadMediaInput(formData: FormData, messages: Messages) {
   }
 
   const folderRaw = formData.get("folder");
-  const folder =
-    typeof folderRaw === "string" ? folderRaw.trim() : "";
+  const folder = typeof folderRaw === "string" ? folderRaw.trim() : "";
 
   return { file, folder };
 }
@@ -80,7 +79,15 @@ export const DeleteMediaFoldersInputSchema = z.object({
 
 export type UpdateMediaNameInput = z.infer<typeof UpdateMediaNameInputSchema>;
 export type GetMediaListInput = z.infer<typeof GetMediaListInputSchema>;
-export type GetMediaDirectoryInput = z.infer<typeof GetMediaDirectoryInputSchema>;
-export type CreateMediaFolderInput = z.infer<typeof CreateMediaFolderInputSchema>;
-export type RenameMediaFolderInput = z.infer<typeof RenameMediaFolderInputSchema>;
-export type DeleteMediaFoldersInput = z.infer<typeof DeleteMediaFoldersInputSchema>;
+export type GetMediaDirectoryInput = z.infer<
+  typeof GetMediaDirectoryInputSchema
+>;
+export type CreateMediaFolderInput = z.infer<
+  typeof CreateMediaFolderInputSchema
+>;
+export type RenameMediaFolderInput = z.infer<
+  typeof RenameMediaFolderInputSchema
+>;
+export type DeleteMediaFoldersInput = z.infer<
+  typeof DeleteMediaFoldersInputSchema
+>;

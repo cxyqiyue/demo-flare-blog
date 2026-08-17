@@ -30,7 +30,9 @@ async function migrateLegacyAboutPost(
     if (!existing) {
       await AboutRepo.insertAboutArticle(context.db, {
         title: legacy.title || DEFAULT_TITLE,
-        markdown: legacy.contentJson ? jsonContentToMarkdown(legacy.contentJson) : "",
+        markdown: legacy.contentJson
+          ? jsonContentToMarkdown(legacy.contentJson)
+          : "",
       });
     }
     await deleteLegacyPost(context, { id: legacy.id });
@@ -55,10 +57,14 @@ export async function saveAboutArticle(
 
   const existing = await AboutRepo.findAboutArticle(context.db);
   if (existing) {
-    const article = await AboutRepo.updateAboutArticle(context.db, existing.id, {
-      title,
-      markdown,
-    });
+    const article = await AboutRepo.updateAboutArticle(
+      context.db,
+      existing.id,
+      {
+        title,
+        markdown,
+      },
+    );
     return ok(article);
   }
 

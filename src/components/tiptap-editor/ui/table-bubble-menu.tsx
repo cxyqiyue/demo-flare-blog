@@ -57,7 +57,9 @@ const MenuButton: React.FC<MenuButtonProps> = ({
   </button>
 );
 
-const Separator = () => <div className="h-3.5 w-px shrink-0 bg-border/40 mx-1" />;
+const Separator = () => (
+  <div className="h-3.5 w-px shrink-0 bg-border/40 mx-1" />
+);
 
 export const TableBubbleMenu: React.FC<TableBubbleMenuProps> = ({ editor }) => {
   if (!editor) return null;

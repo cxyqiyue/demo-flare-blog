@@ -51,7 +51,12 @@ describe("MediaService", () => {
     // Directory / folder operations: default empty implementations.
     // Individual tests override these where they exercise the logic.
     vi.spyOn(Storage, "listR2Directory").mockImplementation(
-      async () => ({ objects: [], delimitedPrefixes: [], truncated: false }) as unknown as R2Objects,
+      async () =>
+        ({
+          objects: [],
+          delimitedPrefixes: [],
+          truncated: false,
+        }) as unknown as R2Objects,
     );
     vi.spyOn(Storage, "listAllKeys").mockResolvedValue([]);
     vi.spyOn(Storage, "createFolderMarker").mockResolvedValue(undefined);
@@ -78,11 +83,7 @@ describe("MediaService", () => {
       expect(result.url).toContain("/images/");
 
       // Verify Storage.putToR2 was called
-      expect(Storage.putToR2).toHaveBeenCalledWith(
-        adminContext.env,
-        file,
-        "",
-      );
+      expect(Storage.putToR2).toHaveBeenCalledWith(adminContext.env, file, "");
 
       // Verify DB record was created
       const mediaList = await MediaService.getMediaList(adminContext, {});

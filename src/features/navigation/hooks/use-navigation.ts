@@ -211,7 +211,9 @@ export function useAdminNavigation() {
       }
       invalidate();
       toast.success(
-        m.navigation_admin_toast_import_success({ count: result.data.imported }),
+        m.navigation_admin_toast_import_success({
+          count: result.data.imported,
+        }),
       );
     },
   });

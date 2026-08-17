@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   Bold,
   Code,
@@ -18,7 +19,6 @@ import {
   Strikethrough,
   Table,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MarkdownContent } from "@/features/about/components/markdown-content";
@@ -63,10 +63,7 @@ function lineRange(value: string, start: number, end: number) {
   return { ls, le };
 }
 
-function wrapInline(
-  marker: string,
-  placeholder: string,
-): InsertFn {
+function wrapInline(marker: string, placeholder: string): InsertFn {
   return (value, sel) => {
     const selected = value.slice(sel.start, sel.end);
     if (selected) {
@@ -114,7 +111,11 @@ function setHeading(level: number): InsertFn {
       nextLine = `${marker} ${line}`;
     }
     const next = `${value.slice(0, ls)}${nextLine}${value.slice(le)}`;
-    return { next, selStart: ls + nextLine.length, selEnd: ls + nextLine.length };
+    return {
+      next,
+      selStart: ls + nextLine.length,
+      selEnd: ls + nextLine.length,
+    };
   };
 }
 
@@ -172,14 +173,30 @@ export function AboutMarkdownEditor({
   const tableTemplate = `| ${SEL_START}${m.about_editor_ph_table_header()}${SEL_END} | ${m.about_editor_ph_table_header()} |\n| --- | --- |\n| ${m.about_editor_ph_table_cell()} | ${m.about_editor_ph_table_cell()} |\n\n`;
 
   const actions: Array<ToolbarAction> = [
-    { icon: Bold, label: m.about_editor_bold(), run: wrapInline("**", m.about_editor_ph_bold()) },
-    { icon: Italic, label: m.about_editor_italic(), run: wrapInline("*", m.about_editor_ph_italic()) },
-    { icon: Strikethrough, label: m.about_editor_strike(), run: wrapInline("~~", m.about_editor_ph_strike()) },
+    {
+      icon: Bold,
+      label: m.about_editor_bold(),
+      run: wrapInline("**", m.about_editor_ph_bold()),
+    },
+    {
+      icon: Italic,
+      label: m.about_editor_italic(),
+      run: wrapInline("*", m.about_editor_ph_italic()),
+    },
+    {
+      icon: Strikethrough,
+      label: m.about_editor_strike(),
+      run: wrapInline("~~", m.about_editor_ph_strike()),
+    },
     { icon: Heading1, label: m.about_editor_h1(), run: setHeading(1) },
     { icon: Heading2, label: m.about_editor_h2(), run: setHeading(2) },
     { icon: Heading3, label: m.about_editor_h3(), run: setHeading(3) },
     { icon: Quote, label: m.about_editor_quote(), run: prefixLine("> ") },
-    { icon: Code, label: m.about_editor_inline_code(), run: wrapInline("`", "code") },
+    {
+      icon: Code,
+      label: m.about_editor_inline_code(),
+      run: wrapInline("`", "code"),
+    },
     {
       icon: CodeXml,
       label: m.about_editor_code_block(),
@@ -188,17 +205,33 @@ export function AboutMarkdownEditor({
     {
       icon: LinkIcon,
       label: m.about_editor_link(),
-      run: insertTemplate(`[${SEL_START}${m.about_editor_ph_link()}${SEL_END}](https://)\n`),
+      run: insertTemplate(
+        `[${SEL_START}${m.about_editor_ph_link()}${SEL_END}](https://)\n`,
+      ),
     },
     {
       icon: ImageIcon,
       label: m.about_editor_image(),
-      run: insertTemplate(`![${SEL_START}${m.about_editor_ph_image()}${SEL_END}](https://)\n`),
+      run: insertTemplate(
+        `![${SEL_START}${m.about_editor_ph_image()}${SEL_END}](https://)\n`,
+      ),
     },
     { icon: List, label: m.about_editor_bullet_list(), run: prefixLine("- ") },
-    { icon: ListOrdered, label: m.about_editor_ordered_list(), run: prefixLine("1. ") },
-    { icon: ListChecks, label: m.about_editor_task_list(), run: prefixLine("- [ ] ") },
-    { icon: Table, label: m.about_editor_table(), run: insertTemplate(tableTemplate) },
+    {
+      icon: ListOrdered,
+      label: m.about_editor_ordered_list(),
+      run: prefixLine("1. "),
+    },
+    {
+      icon: ListChecks,
+      label: m.about_editor_task_list(),
+      run: prefixLine("- [ ] "),
+    },
+    {
+      icon: Table,
+      label: m.about_editor_table(),
+      run: insertTemplate(tableTemplate),
+    },
     { icon: Minus, label: m.about_editor_hr(), run: prefixLine("---") },
     {
       icon: Sigma,
@@ -238,7 +271,12 @@ export function AboutMarkdownEditor({
               {m.about_cancel()}
             </Button>
           ) : null}
-          <Button type="button" size="sm" onClick={handleSave} disabled={isSubmitting}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleSave}
+            disabled={isSubmitting}
+          >
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (

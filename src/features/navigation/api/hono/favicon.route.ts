@@ -2,7 +2,8 @@ import { Hono } from "hono";
 
 const app = new Hono<{ Bindings: Env }>();
 
-const DOMAIN_PATTERN = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i;
+const DOMAIN_PATTERN =
+  /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i;
 
 const FAVICON_SOURCES = (domain: string) => [
   `https://${domain}/favicon.ico`,
@@ -38,7 +39,8 @@ app.get("/favicon", async (c) => {
       return new Response(body, {
         headers: {
           "Content-Type": contentType,
-          "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+          "Cache-Control":
+            "public, max-age=86400, stale-while-revalidate=604800",
         },
       });
     } catch {

@@ -1,5 +1,11 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import { createdAt, id, updatedAt } from "./helper";
 
 /**
@@ -16,7 +22,9 @@ export const SearchEnginesTable = sqliteTable(
     iconUrl: text("icon_url"),
     domain: text("domain").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
-    isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
+    isDefault: integer("is_default", { mode: "boolean" })
+      .notNull()
+      .default(false),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     createdAt,
     updatedAt,

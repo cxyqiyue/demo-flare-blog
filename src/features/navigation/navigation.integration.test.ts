@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import * as NavigationService from "./navigation.service";
-import { app } from "@/lib/hono";
 import { createAdminTestContext, testRequest } from "tests/test-utils";
+import { beforeEach, describe, expect, it } from "vitest";
+import { app } from "@/lib/hono";
+import * as NavigationService from "./navigation.service";
 
 describe("NavigationService", () => {
   let adminContext: ReturnType<typeof createAdminTestContext>;
@@ -12,7 +12,8 @@ describe("NavigationService", () => {
 
   describe("Public Data", () => {
     it("should return seeded search engines with Bing as default", async () => {
-      const data = await NavigationService.getNavigationPublicData(adminContext);
+      const data =
+        await NavigationService.getNavigationPublicData(adminContext);
 
       expect(data.engines.length).toBeGreaterThanOrEqual(11);
       const bing = data.engines.find(
@@ -31,7 +32,8 @@ describe("NavigationService", () => {
       });
       expect(engine.data).toBeDefined();
 
-      const data = await NavigationService.getNavigationPublicData(adminContext);
+      const data =
+        await NavigationService.getNavigationPublicData(adminContext);
       expect(
         data.engines.find((e) => e.domain === "disabled.example.com"),
       ).toBeUndefined();
@@ -44,7 +46,8 @@ describe("NavigationService", () => {
         url: "https://secret.example.com",
       });
 
-      const data = await NavigationService.getNavigationPublicData(adminContext);
+      const data =
+        await NavigationService.getNavigationPublicData(adminContext);
       expect("folders" in data).toBe(false);
       expect("bookmarks" in data).toBe(false);
     });
@@ -104,12 +107,16 @@ describe("NavigationService", () => {
         domain: "newdefault.com",
       });
 
-      const result = await NavigationService.setDefaultSearchEngine(adminContext, {
-        id: created.data!.id,
-      });
+      const result = await NavigationService.setDefaultSearchEngine(
+        adminContext,
+        {
+          id: created.data!.id,
+        },
+      );
       expect(result.data?.isDefault).toBe(true);
 
-      const data = await NavigationService.getNavigationPublicData(adminContext);
+      const data =
+        await NavigationService.getNavigationPublicData(adminContext);
       const defaults = data.engines.filter((engine) => engine.isDefault);
       expect(defaults).toHaveLength(1);
       expect(defaults[0].domain).toBe("newdefault.com");
@@ -146,7 +153,8 @@ describe("NavigationService", () => {
       });
       expect(result.data?.success).toBe(true);
 
-      const data = await NavigationService.getNavigationPublicData(adminContext);
+      const data =
+        await NavigationService.getNavigationPublicData(adminContext);
       const defaults = data.engines.filter((engine) => engine.isDefault);
       expect(defaults).toHaveLength(1);
     });
@@ -162,7 +170,9 @@ describe("NavigationService", () => {
       // Delete all seeded engines first
       const data = await NavigationService.getAdminNavigationData(adminContext);
       for (const engine of data.engines) {
-        await NavigationService.deleteSearchEngine(adminContext, { id: engine.id });
+        await NavigationService.deleteSearchEngine(adminContext, {
+          id: engine.id,
+        });
       }
 
       const only = await NavigationService.createSearchEngine(adminContext, {
@@ -214,11 +224,14 @@ describe("NavigationService", () => {
         id: folder.data!.id,
         name: "New Name",
       });
-      const updatedBookmark = await NavigationService.updateBookmark(adminContext, {
-        id: bookmark.data!.id,
-        name: "New Bookmark",
-        url: "https://new.com",
-      });
+      const updatedBookmark = await NavigationService.updateBookmark(
+        adminContext,
+        {
+          id: bookmark.data!.id,
+          name: "New Bookmark",
+          url: "https://new.com",
+        },
+      );
 
       expect(updatedFolder.data?.name).toBe("New Name");
       expect(updatedBookmark.data?.name).toBe("New Bookmark");
@@ -256,7 +269,9 @@ describe("NavigationService", () => {
       expect(result.data?.success).toBe(true);
 
       const data = await NavigationService.getAdminNavigationData(adminContext);
-      expect(data.folders.find((f) => f.id === folder.data!.id)).toBeUndefined();
+      expect(
+        data.folders.find((f) => f.id === folder.data!.id),
+      ).toBeUndefined();
       expect(data.bookmarks).toHaveLength(0);
     });
   });
@@ -361,7 +376,9 @@ describe("NavigationService", () => {
     });
 
     it("should replace all existing data when replace is true", async () => {
-      await NavigationService.createFolder(adminContext, { name: "Old Folder" });
+      await NavigationService.createFolder(adminContext, {
+        name: "Old Folder",
+      });
       await NavigationService.createBookmark(adminContext, {
         name: "Old Bookmark",
         url: "https://old.com",
@@ -393,7 +410,10 @@ describe("Navigation Favicon Route", () => {
   });
 
   it("returns 400 for an invalid domain", async () => {
-    const res = await testRequest(app, "/api/navigation/favicon?domain=bad%20domain");
+    const res = await testRequest(
+      app,
+      "/api/navigation/favicon?domain=bad%20domain",
+    );
     expect(res.status).toBe(400);
   });
 });

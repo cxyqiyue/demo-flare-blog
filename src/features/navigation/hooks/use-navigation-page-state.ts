@@ -9,7 +9,8 @@ const BOOKMARKS_PER_PAGE = 12;
  */
 export function useNavigationPageState(data: NavigationPublicData) {
   const engines = data.engines;
-  const defaultEngine = engines.find((engine) => engine.isDefault) ?? engines[0];
+  const defaultEngine =
+    engines.find((engine) => engine.isDefault) ?? engines[0];
 
   const [selectedEngineId, setSelectedEngineId] = useState<number | undefined>(
     defaultEngine?.id,

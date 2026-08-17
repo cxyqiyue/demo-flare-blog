@@ -1,9 +1,9 @@
 import { ClientOnly, Link, useRouteContext } from "@tanstack/react-router";
+import type { SiteConfig } from "@/features/config/site-config.schema";
 import {
   resolveSocialHref,
   SOCIAL_PLATFORMS,
 } from "@/features/config/utils/social-platforms";
-import type { SiteConfig } from "@/features/config/site-config.schema";
 import type { NavOption } from "@/features/theme/contract/layouts";
 import { m } from "@/paraglide/messages";
 

@@ -1,6 +1,7 @@
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import * as CacheService from "@/features/cache/cache.service";
+import * as CommentRepo from "@/features/comments/data/comments.data";
 import type {
   ExportManifest,
   PostFrontmatter,
@@ -17,7 +18,6 @@ import {
   makeExportImageRewriter,
 } from "@/features/import-export/utils/markdown-serializer";
 import { buildZip } from "@/features/import-export/utils/zip";
-import * as CommentRepo from "@/features/comments/data/comments.data";
 import { getFromR2 } from "@/features/media/data/media.storage";
 import * as PageviewRepo from "@/features/pageview/data/pageview.data";
 import * as PostRepo from "@/features/posts/data/posts.data";

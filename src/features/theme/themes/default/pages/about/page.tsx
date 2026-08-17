@@ -1,9 +1,9 @@
-import { ArrowLeft, FileQuestion, Pencil } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import type { AboutPageProps } from "@/features/theme/contract/pages";
+import { ArrowLeft, FileQuestion, Pencil } from "lucide-react";
 import { MarkdownContent } from "@/features/about/components/markdown-content";
-import { CommentSection } from "../../components/comments/view/comment-section";
+import type { AboutPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
+import { CommentSection } from "../../components/comments/view/comment-section";
 
 export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
   const navigate = useNavigate();

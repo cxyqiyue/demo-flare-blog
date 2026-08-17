@@ -1,10 +1,11 @@
 import { FileQuestion, Pencil } from "lucide-react";
-import type { AboutPageProps } from "@/features/theme/contract/pages";
 import { MarkdownContent } from "@/features/about/components/markdown-content";
-import { FuwariCommentSection } from "../../components/comments/view/comment-section";
+import type { AboutPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
+import { FuwariCommentSection } from "../../components/comments/view/comment-section";
 
-const markdownClassName = "prose dark:prose-invert prose-base max-w-none! fuwari-custom-md";
+const markdownClassName =
+  "prose dark:prose-invert prose-base max-w-none! fuwari-custom-md";
 
 export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
   if (!article) {
@@ -62,7 +63,10 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
           </h1>
         ) : null}
 
-        <MarkdownContent markdown={article.markdown} className={markdownClassName} />
+        <MarkdownContent
+          markdown={article.markdown}
+          className={markdownClassName}
+        />
       </div>
 
       {/* Comments Section (separate container) */}

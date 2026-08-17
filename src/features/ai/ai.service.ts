@@ -1,5 +1,5 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { generateText, Output, type LanguageModel } from "ai";
+import { generateText, type LanguageModel, Output } from "ai";
 import { createWorkersAI } from "workers-ai-provider";
 import { z } from "zod";
 import type {
@@ -86,7 +86,9 @@ function buildTextModel(
   return createWorkersAI({ binding: env.AI })(TEXT_MODEL);
 }
 
-async function getConfiguredTextModel(context: AiContext): Promise<LanguageModel> {
+async function getConfiguredTextModel(
+  context: AiContext,
+): Promise<LanguageModel> {
   const config = await ConfigService.getSystemConfig(context);
   return buildTextModel(context.env, config?.ai);
 }
@@ -145,8 +147,7 @@ export async function testAiConnection(
   } catch (error) {
     return err({
       reason: "AI_CONNECTION_FAILED",
-      message:
-        error instanceof Error ? error.message : String(error),
+      message: error instanceof Error ? error.message : String(error),
     });
   }
 }
@@ -221,7 +222,9 @@ ${content.comment}
         verdict: z
           .enum(["approve", "block", "review"])
           .describe("放行 / 拦截 / 人工审核"),
-        reason: z.string().describe("审核理由，简短说明为什么放行、拦截或转人工"),
+        reason: z
+          .string()
+          .describe("审核理由，简短说明为什么放行、拦截或转人工"),
       }),
     }),
   });
@@ -232,10 +235,7 @@ ${content.comment}
   };
 }
 
-export async function summarizeText(
-  context: AiContext,
-  text: string,
-) {
+export async function summarizeText(context: AiContext, text: string) {
   const model = await getConfiguredTextModel(context);
 
   const result = await generateText({

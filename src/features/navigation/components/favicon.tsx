@@ -20,7 +20,9 @@ export function useFaviconSource(domain: string, iconUrl?: string | null) {
 
   const src =
     iconUrl ||
-    (domain ? `/api/navigation/favicon?domain=${encodeURIComponent(domain)}` : "");
+    (domain
+      ? `/api/navigation/favicon?domain=${encodeURIComponent(domain)}`
+      : "");
 
   return {
     src,

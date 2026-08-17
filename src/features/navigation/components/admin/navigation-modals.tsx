@@ -8,16 +8,16 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import type { NavigationPublicData } from "@/features/navigation/navigation.schema";
-import {
-  createBookmarkInputSchema,
-  createFolderInputSchema,
-  createSearchEngineInputSchema,
-} from "@/features/navigation/navigation.schema";
 import type {
   CreateBookmarkFormValues,
   CreateFolderFormValues,
   CreateSearchEngineFormValues,
+  NavigationPublicData,
+} from "@/features/navigation/navigation.schema";
+import {
+  createBookmarkInputSchema,
+  createFolderInputSchema,
+  createSearchEngineInputSchema,
 } from "@/features/navigation/navigation.schema";
 import { m } from "@/paraglide/messages";
 
@@ -374,7 +374,8 @@ const BookmarkFormModalInternal = ({
       name: initialData?.name ?? "",
       url: initialData?.url ?? "",
       folderId:
-        initialData?.folderId ?? (defaultFolderId !== undefined ? defaultFolderId : null),
+        initialData?.folderId ??
+        (defaultFolderId !== undefined ? defaultFolderId : null),
       sortOrder: initialData?.sortOrder ?? 0,
     },
   });

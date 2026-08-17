@@ -1,14 +1,11 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import theme from "@theme";
 import { useState } from "react";
 import { toast } from "sonner";
-import theme from "@theme";
-import { AboutMarkdownEditor } from "@/features/about/components/about-markdown-editor";
-import {
-  ABOUT_KEYS,
-  aboutArticleQuery,
-} from "@/features/about/queries";
 import { saveAboutArticleFn } from "@/features/about/api/about.api";
+import { AboutMarkdownEditor } from "@/features/about/components/about-markdown-editor";
+import { ABOUT_KEYS, aboutArticleQuery } from "@/features/about/queries";
 import { markdownToPlainText } from "@/features/about/utils/markdown";
 import { siteConfigQuery, siteDomainQuery } from "@/features/config/queries";
 import { authClient } from "@/lib/auth/auth.client";
@@ -28,7 +25,9 @@ export const Route = createFileRoute("/_public/about")({
       authorName: siteConfig.author,
       canonicalHref: buildCanonicalUrl(domain, "/about"),
       title: article?.title ?? m.nav_about(),
-      description: article ? markdownToPlainText(article.markdown).slice(0, 160) : "",
+      description: article
+        ? markdownToPlainText(article.markdown).slice(0, 160)
+        : "",
     };
   },
   head: ({ loaderData }) => {

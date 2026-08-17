@@ -6,8 +6,8 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useComments } from "@/features/comments/hooks/use-comments";
 import {
-  rootCommentsByTargetInfiniteQuery,
   type CommentTargetInput,
+  rootCommentsByTargetInfiniteQuery,
 } from "@/features/comments/queries";
 import { authClient } from "@/lib/auth/auth.client";
 import { m } from "@/paraglide/messages";

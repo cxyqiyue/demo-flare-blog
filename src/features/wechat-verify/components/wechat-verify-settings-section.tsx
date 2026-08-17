@@ -119,7 +119,10 @@ export function WechatVerifySettingsSection() {
 
       {/* 说明：不提交到仓库 */}
       <div className="flex items-start gap-3 border border-border/20 bg-muted/10 p-4">
-        <BadgeCheck size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
+        <BadgeCheck
+          size={14}
+          className="mt-0.5 shrink-0 text-muted-foreground"
+        />
         <p className="text-sm text-muted-foreground">
           {m.settings_wechat_verify_storage_note()}
         </p>

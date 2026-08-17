@@ -32,17 +32,16 @@ export async function insertSearchEngine(
   db: DB,
   data: typeof SearchEnginesTable.$inferInsert,
 ) {
-  const [engine] = await db
-    .insert(SearchEnginesTable)
-    .values(data)
-    .returning();
+  const [engine] = await db.insert(SearchEnginesTable).values(data).returning();
   return engine;
 }
 
 export async function updateSearchEngine(
   db: DB,
   id: number,
-  data: Partial<Omit<typeof SearchEnginesTable.$inferInsert, "id" | "createdAt">>,
+  data: Partial<
+    Omit<typeof SearchEnginesTable.$inferInsert, "id" | "createdAt">
+  >,
 ) {
   const [engine] = await db
     .update(SearchEnginesTable)
@@ -84,7 +83,10 @@ export async function getFoldersWithCount(db: DB) {
       bookmarkCount: sql<number>`count(${BookmarksTable.id})`,
     })
     .from(BookmarkFoldersTable)
-    .leftJoin(BookmarksTable, eq(BookmarksTable.folderId, BookmarkFoldersTable.id))
+    .leftJoin(
+      BookmarksTable,
+      eq(BookmarksTable.folderId, BookmarkFoldersTable.id),
+    )
     .groupBy(BookmarkFoldersTable.id)
     .orderBy(asc(BookmarkFoldersTable.sortOrder), asc(BookmarkFoldersTable.id));
 }
@@ -109,7 +111,9 @@ export async function insertFolder(
 export async function updateFolder(
   db: DB,
   id: number,
-  data: Partial<Omit<typeof BookmarkFoldersTable.$inferInsert, "id" | "createdAt">>,
+  data: Partial<
+    Omit<typeof BookmarkFoldersTable.$inferInsert, "id" | "createdAt">
+  >,
 ) {
   const [folder] = await db
     .update(BookmarkFoldersTable)
@@ -143,10 +147,7 @@ export async function insertBookmark(
   db: DB,
   data: typeof BookmarksTable.$inferInsert,
 ) {
-  const [bookmark] = await db
-    .insert(BookmarksTable)
-    .values(data)
-    .returning();
+  const [bookmark] = await db.insert(BookmarksTable).values(data).returning();
   return bookmark;
 }
 

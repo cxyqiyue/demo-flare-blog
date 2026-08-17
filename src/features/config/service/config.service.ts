@@ -35,7 +35,9 @@ export function resolveChallengeProvider(
   return "none";
 }
 
-export function resolveChallengeConfig(config: SystemConfig | null | undefined) {
+export function resolveChallengeConfig(
+  config: SystemConfig | null | undefined,
+) {
   const challenge = config?.challenge;
   const altchaEnabled =
     challenge?.altcha?.enabled ?? challenge?.pow?.enabled ?? false;
@@ -43,11 +45,16 @@ export function resolveChallengeConfig(config: SystemConfig | null | undefined) 
     provider: resolveChallengeProvider(config),
     altcha: {
       enabled: altchaEnabled,
-      difficulty: challenge?.altcha?.difficulty ?? DEFAULT_CONFIG.challenge?.altcha?.difficulty,
+      difficulty:
+        challenge?.altcha?.difficulty ??
+        DEFAULT_CONFIG.challenge?.altcha?.difficulty,
     },
     pow: {
       enabled: altchaEnabled,
-      difficulty: challenge?.altcha?.difficulty ?? challenge?.pow?.difficulty ?? DEFAULT_CONFIG.challenge?.pow?.difficulty,
+      difficulty:
+        challenge?.altcha?.difficulty ??
+        challenge?.pow?.difficulty ??
+        DEFAULT_CONFIG.challenge?.pow?.difficulty,
     },
     turnstile: {
       enabled: challenge?.turnstile?.enabled ?? false,

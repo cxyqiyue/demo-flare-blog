@@ -12,6 +12,4 @@ export const saveAboutArticleFn = createServerFn({
 })
   .middleware([adminMiddleware])
   .inputValidator(SaveAboutArticleInputSchema)
-  .handler(({ data, context }) =>
-    AboutService.saveAboutArticle(context, data),
-  );
+  .handler(({ data, context }) => AboutService.saveAboutArticle(context, data));

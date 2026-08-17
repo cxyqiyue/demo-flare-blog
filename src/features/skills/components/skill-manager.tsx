@@ -12,7 +12,10 @@ import {
   importSkillsFn,
   updateSkillFn,
 } from "@/features/skills/api/skills.api";
-import { SKILLS_KEYS, skillsAdminQueryOptions } from "@/features/skills/queries";
+import {
+  SKILLS_KEYS,
+  skillsAdminQueryOptions,
+} from "@/features/skills/queries";
 import { m } from "@/paraglide/messages";
 
 export function SkillManager() {
@@ -63,13 +66,12 @@ export function SkillManager() {
   });
 
   const updateSkillMutation = useMutation({
-    mutationFn: (data: {
-      id: number;
-      name?: string;
-      description?: string;
-    }) =>
+    mutationFn: (data: { id: number; name?: string; description?: string }) =>
       updateSkillFn({
-        data: { id: data.id, data: { name: data.name, description: data.description } },
+        data: {
+          id: data.id,
+          data: { name: data.name, description: data.description },
+        },
       }),
     onSuccess: (result) => {
       if (result.error) {
@@ -179,7 +181,9 @@ export function SkillManager() {
             <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground font-mono mb-2 group-hover:text-foreground transition-colors">
               {stat.label}
             </div>
-            <div className="text-3xl font-serif text-foreground">{stat.value}</div>
+            <div className="text-3xl font-serif text-foreground">
+              {stat.value}
+            </div>
           </div>
         ))}
       </div>
@@ -344,7 +348,10 @@ export function SkillManager() {
                         />
                       ) : (
                         <div className="flex items-center gap-2">
-                          <Wand2 size={12} className="text-muted-foreground/30" />
+                          <Wand2
+                            size={12}
+                            className="text-muted-foreground/30"
+                          />
                           <span className="text-foreground tracking-tight font-mono text-sm">
                             {skill.name}
                           </span>
@@ -438,7 +445,10 @@ export function SkillManager() {
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <Wand2 size={14} className="text-muted-foreground/50 shrink-0" />
+                    <Wand2
+                      size={14}
+                      className="text-muted-foreground/50 shrink-0"
+                    />
                     <span className="font-medium text-foreground break-all">
                       {skill.name}
                     </span>

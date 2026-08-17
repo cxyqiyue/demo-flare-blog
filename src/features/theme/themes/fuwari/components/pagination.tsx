@@ -92,7 +92,9 @@ export function Pagination({
         <span className="shrink-0">
           <span className="opacity-60">/</span>
           &nbsp;{totalPages}
-          {m.pagination_page_suffix() && <>&nbsp;{m.pagination_page_suffix()}</>}
+          {m.pagination_page_suffix() && (
+            <>&nbsp;{m.pagination_page_suffix()}</>
+          )}
         </span>
       </div>
 

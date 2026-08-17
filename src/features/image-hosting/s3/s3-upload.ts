@@ -72,11 +72,7 @@ function formatAmzDate(date: Date): string {
  * 将对象 key 中的每一段做 URL 编码（保留 `/` 作为路径分隔符）。
  */
 function encodeObjectKey(key: string): string {
-  return key
-    .split("/")
-    .filter(Boolean)
-    .map(encodeURIComponent)
-    .join("/");
+  return key.split("/").filter(Boolean).map(encodeURIComponent).join("/");
 }
 
 interface SignRequestParams {

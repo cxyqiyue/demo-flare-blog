@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { useComments } from "@/features/comments/hooks/use-comments";
 import {
-  rootCommentsByTargetInfiniteQuery,
   type CommentTargetInput,
+  rootCommentsByTargetInfiniteQuery,
 } from "@/features/comments/queries";
 import { authClient } from "@/lib/auth/auth.client";
 import { cn } from "@/lib/utils";

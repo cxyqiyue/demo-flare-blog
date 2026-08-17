@@ -1,7 +1,7 @@
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { WorkflowEntrypoint } from "cloudflare:workers";
-import * as AiService from "@/features/ai/ai.service";
 import * as AboutRepo from "@/features/about/data/about-article.data";
+import * as AiService from "@/features/ai/ai.service";
 import * as CommentService from "@/features/comments/comments.service";
 import * as CommentRepo from "@/features/comments/data/comments.data";
 import { sendReplyNotification } from "@/features/comments/workflows/helpers";
@@ -101,14 +101,15 @@ export class CommentModerationWorkflow extends WorkflowEntrypoint<Env, Params> {
           title: post.title,
           summary: post.summary ?? "",
           contentPreview: buildContentPreview(post.contentJson),
-          notificationTarget: { kind: "post", slug: post.slug, title: post.title },
+          notificationTarget: {
+            kind: "post",
+            slug: post.slug,
+            title: post.title,
+          },
         };
       }
       if (comment.momentId != null) {
-        const moment = await MomentRepo.findMomentById(
-          db,
-          comment.momentId,
-        );
+        const moment = await MomentRepo.findMomentById(db, comment.momentId);
         if (!moment) {
           console.log(
             JSON.stringify({
@@ -123,11 +124,17 @@ export class CommentModerationWorkflow extends WorkflowEntrypoint<Env, Params> {
           title: m.comments_moment_notification_title(),
           summary: "",
           contentPreview: "",
-          notificationTarget: { kind: "moment", title: m.comments_moment_notification_title() },
+          notificationTarget: {
+            kind: "moment",
+            title: m.comments_moment_notification_title(),
+          },
         };
       }
       if (comment.aboutArticleId != null) {
-        const about = await AboutRepo.findAboutArticleById(db, comment.aboutArticleId);
+        const about = await AboutRepo.findAboutArticleById(
+          db,
+          comment.aboutArticleId,
+        );
         if (!about) {
           console.log(
             JSON.stringify({

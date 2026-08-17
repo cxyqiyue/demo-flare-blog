@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
+import { renderMarkdownToHtml } from "@/features/about/utils/markdown";
 import { highlight } from "@/lib/shiki";
 import { cn } from "@/lib/utils";
-import { renderMarkdownToHtml } from "@/features/about/utils/markdown";
 
 interface MarkdownContentProps {
   markdown: string;

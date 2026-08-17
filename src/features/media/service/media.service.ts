@@ -153,7 +153,9 @@ async function enrichDirectoryFiles(
       name: rec?.fileName ?? getBasename(key),
       url: rec?.url ?? `/images/${key}`,
       mimeType:
-        rec?.mimeType ?? getContentTypeFromKey(key) ?? "application/octet-stream",
+        rec?.mimeType ??
+        getContentTypeFromKey(key) ??
+        "application/octet-stream",
       sizeInBytes: rec?.sizeInBytes ?? 0,
       width: rec?.width ?? null,
       height: rec?.height ?? null,
@@ -278,9 +280,7 @@ export async function deleteFolders(
     // Keep folder markers and unlinked files, delete them; linked files stay.
     const toDelete = keys.filter((k) => k.endsWith("/") || !linkedKeys.has(k));
     if (toDelete.length > 0) {
-      context.executionCtx.waitUntil(
-        Storage.deleteKeys(context.env, toDelete),
-      );
+      context.executionCtx.waitUntil(Storage.deleteKeys(context.env, toDelete));
     }
     await MediaRepo.deleteMediaByKeys(
       context.db,
@@ -288,7 +288,8 @@ export async function deleteFolders(
     );
 
     deletedFiles += toDelete.filter((k) => !k.endsWith("/")).length;
-    skippedFiles += fileKeys.length - toDelete.filter((k) => !k.endsWith("/")).length;
+    skippedFiles +=
+      fileKeys.length - toDelete.filter((k) => !k.endsWith("/")).length;
   }
 
   return ok({

@@ -1,14 +1,14 @@
+import { createAdminTestContext, seedUser } from "tests/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as ImageHostingService from "@/features/image-hosting/image-hosting.service";
+import { DEFAULT_CONFIG } from "@/features/config/config.schema";
+import * as ConfigRepo from "@/features/config/data/config.data";
 import {
   DEFAULT_FFSKY_API_ENDPOINT,
   IMGBB_API_ENDPOINT,
 } from "@/features/image-hosting/image-hosting.schema";
+import * as ImageHostingService from "@/features/image-hosting/image-hosting.service";
 import { extractImageUrlFromMarkdown } from "@/features/image-hosting/utils/extract-image-url";
-import * as ConfigRepo from "@/features/config/data/config.data";
-import { DEFAULT_CONFIG } from "@/features/config/config.schema";
 import { unwrap } from "@/lib/errors";
-import { createAdminTestContext, seedUser } from "tests/test-utils";
 
 /**
  * ImageHostingService Tests
@@ -32,7 +32,9 @@ describe("ImageHostingService", () => {
     vi.unstubAllGlobals();
   });
 
-  async function seedImageHosting(imageHosting: typeof DEFAULT_CONFIG.imageHosting) {
+  async function seedImageHosting(
+    imageHosting: typeof DEFAULT_CONFIG.imageHosting,
+  ) {
     await ConfigRepo.upsertSystemConfig(adminContext.db, {
       ...DEFAULT_CONFIG,
       imageHosting,
@@ -379,7 +381,9 @@ describe("ImageHostingService", () => {
       });
 
       expect(unwrap(result).url).toBe("https://custom.example/u/1.png");
-      expect(fetchMock.mock.calls[0][0]).toBe("https://custom.example/api/1/upload");
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        "https://custom.example/api/1/upload",
+      );
       const form = captureFormData(fetchMock);
       expect(form?.get("source")).toBeTruthy();
     });
@@ -473,9 +477,9 @@ describe("ImageHostingService", () => {
   // ============================================
   describe("extractImageUrlFromMarkdown", () => {
     it("should extract the url from a plain markdown image", () => {
-      expect(
-        extractImageUrlFromMarkdown("![alt](https://img.com/a.png)"),
-      ).toBe("https://img.com/a.png");
+      expect(extractImageUrlFromMarkdown("![alt](https://img.com/a.png)")).toBe(
+        "https://img.com/a.png",
+      );
     });
 
     it("should extract the inner image url from a linked image embed", () => {
@@ -487,9 +491,9 @@ describe("ImageHostingService", () => {
     });
 
     it("should extract a bare url", () => {
-      expect(
-        extractImageUrlFromMarkdown("https://raw.example/img.png"),
-      ).toBe("https://raw.example/img.png");
+      expect(extractImageUrlFromMarkdown("https://raw.example/img.png")).toBe(
+        "https://raw.example/img.png",
+      );
     });
 
     it("should return null for empty input", () => {

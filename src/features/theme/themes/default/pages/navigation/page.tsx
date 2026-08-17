@@ -1,15 +1,19 @@
 import { Link } from "@tanstack/react-router";
-import type { NavigationPageProps } from "@/features/theme/contract/pages";
 import {
   getHostname,
   useFaviconSource,
 } from "@/features/navigation/components/favicon";
 import { useNavigationPageState } from "@/features/navigation/hooks/use-navigation-page-state";
+import type { NavigationPageProps } from "@/features/theme/contract/pages";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { Pagination } from "../../components/pagination";
 
-export function NavigationPage({ data, isAdmin, showBookmarks }: NavigationPageProps) {
+export function NavigationPage({
+  data,
+  isAdmin,
+  showBookmarks,
+}: NavigationPageProps) {
   const state = useNavigationPageState(data);
 
   return (
@@ -71,65 +75,65 @@ export function NavigationPage({ data, isAdmin, showBookmarks }: NavigationPageP
       {/* Bookmarks（仅管理员可见） */}
       {showBookmarks && (
         <section className="mt-14 space-y-6">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h2 className="font-serif text-xl font-medium text-foreground">
-            {m.navigation_bookmarks()}
-          </h2>
-          {isAdmin && (
-            <Link
-              to="/admin/navigation"
-              className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
-            >
-              [ {m.navigation_admin_title()} ]
-            </Link>
-          )}
-        </div>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <h2 className="font-serif text-xl font-medium text-foreground">
+              {m.navigation_bookmarks()}
+            </h2>
+            {isAdmin && (
+              <Link
+                to="/admin/navigation"
+                className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
+              >
+                [ {m.navigation_admin_title()} ]
+              </Link>
+            )}
+          </div>
 
-        {/* Folder Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar pb-1">
-          <FolderTab
-            active={state.activeFolderId === null}
-            onClick={() => state.selectFolder(null)}
-            label={`${m.navigation_all()} (${state.totalBookmarks})`}
-          />
-          {state.folders.map((folder) => (
+          {/* Folder Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar pb-1">
             <FolderTab
-              key={folder.id}
-              active={state.activeFolderId === folder.id}
-              onClick={() => state.selectFolder(folder.id)}
-              label={`${folder.name} (${folder.bookmarkCount})`}
+              active={state.activeFolderId === null}
+              onClick={() => state.selectFolder(null)}
+              label={`${m.navigation_all()} (${state.totalBookmarks})`}
             />
-          ))}
-        </div>
-
-        {/* Bookmark Cards */}
-        {state.pageItems.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {state.pageItems.map((bookmark) => (
-              <BookmarkCard key={bookmark.id} bookmark={bookmark} />
+            {state.folders.map((folder) => (
+              <FolderTab
+                key={folder.id}
+                active={state.activeFolderId === folder.id}
+                onClick={() => state.selectFolder(folder.id)}
+                label={`${folder.name} (${folder.bookmarkCount})`}
+              />
             ))}
           </div>
-        ) : (
-          <div className="py-16 text-center">
-            <p className="font-serif text-lg text-muted-foreground/50">
-              {m.navigation_no_bookmarks()}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground/30 font-mono">
-              {m.navigation_no_bookmarks_desc()}
-            </p>
-          </div>
-        )}
 
-        {state.total > state.pageSize && (
-          <Pagination
-            page={state.page}
-            total={state.total}
-            pageSize={state.pageSize}
-            hasPrevPage={state.hasPrevPage}
-            hasNextPage={state.hasNextPage}
-            onPageChange={state.onPageChange}
-          />
-        )}
+          {/* Bookmark Cards */}
+          {state.pageItems.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {state.pageItems.map((bookmark) => (
+                <BookmarkCard key={bookmark.id} bookmark={bookmark} />
+              ))}
+            </div>
+          ) : (
+            <div className="py-16 text-center">
+              <p className="font-serif text-lg text-muted-foreground/50">
+                {m.navigation_no_bookmarks()}
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground/30 font-mono">
+                {m.navigation_no_bookmarks_desc()}
+              </p>
+            </div>
+          )}
+
+          {state.total > state.pageSize && (
+            <Pagination
+              page={state.page}
+              total={state.total}
+              pageSize={state.pageSize}
+              hasPrevPage={state.hasPrevPage}
+              hasNextPage={state.hasNextPage}
+              onPageChange={state.onPageChange}
+            />
+          )}
         </section>
       )}
     </div>

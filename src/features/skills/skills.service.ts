@@ -90,10 +90,7 @@ export async function createSkill(context: DbContext, data: CreateSkillInput) {
   return ok(skill);
 }
 
-export async function updateSkill(
-  context: DbContext,
-  data: UpdateSkillInput,
-) {
+export async function updateSkill(context: DbContext, data: UpdateSkillInput) {
   const existingSkill = await SkillRepo.findSkillById(context.db, data.id);
   if (!existingSkill) {
     return err({ reason: "SKILL_NOT_FOUND" });
@@ -122,10 +119,7 @@ export async function updateSkill(
   return ok(skill);
 }
 
-export async function deleteSkill(
-  context: DbContext,
-  data: DeleteSkillInput,
-) {
+export async function deleteSkill(context: DbContext, data: DeleteSkillInput) {
   const skill = await SkillRepo.findSkillById(context.db, data.id);
   if (!skill) {
     return err({ reason: "SKILL_NOT_FOUND" });

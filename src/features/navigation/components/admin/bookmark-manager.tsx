@@ -1,14 +1,24 @@
-import { FileUp, FolderPlus, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  FileUp,
+  FolderPlus,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
-import { getHostname, useFaviconSource } from "@/features/navigation/components/favicon";
+import { ImportBookmarkModal } from "@/features/navigation/components/admin/import-bookmark-modal";
 import {
   BookmarkFormModal,
   FolderFormModal,
 } from "@/features/navigation/components/admin/navigation-modals";
-import { ImportBookmarkModal } from "@/features/navigation/components/admin/import-bookmark-modal";
+import {
+  getHostname,
+  useFaviconSource,
+} from "@/features/navigation/components/favicon";
 import {
   useAdminNavigation,
   useAdminNavigationData,
@@ -50,10 +60,11 @@ export function BookmarkManager() {
     editing: Bookmark | null;
   }>({ open: false, editing: null });
   const [deletingFolder, setDeletingFolder] = useState<Folder | null>(null);
-  const [deletingBookmark, setDeletingBookmark] = useState<Bookmark | null>(null);
-  const [batchDeleteTarget, setBatchDeleteTarget] = useState<BatchDeleteTarget | null>(
+  const [deletingBookmark, setDeletingBookmark] = useState<Bookmark | null>(
     null,
   );
+  const [batchDeleteTarget, setBatchDeleteTarget] =
+    useState<BatchDeleteTarget | null>(null);
   const [selectedFolderIds, setSelectedFolderIds] = useState<number[]>([]);
   const [selectedBookmarkIds, setSelectedBookmarkIds] = useState<number[]>([]);
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
@@ -227,7 +238,9 @@ export function BookmarkManager() {
             ) : (
               <div className="ml-0.5 flex">
                 <button
-                  onClick={() => setFolderModal({ open: true, editing: folder })}
+                  onClick={() =>
+                    setFolderModal({ open: true, editing: folder })
+                  }
                   className="p-0.5 text-muted-foreground/50 hover:text-foreground transition-colors"
                   title={m.navigation_admin_edit()}
                 >
@@ -451,7 +464,10 @@ function BookmarkCard({
         </p>
       </div>
       {busy ? (
-        <Loader2 size={14} className="animate-spin text-muted-foreground shrink-0" />
+        <Loader2
+          size={14}
+          className="animate-spin text-muted-foreground shrink-0"
+        />
       ) : (
         <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           <button

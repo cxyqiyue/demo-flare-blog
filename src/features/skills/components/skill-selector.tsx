@@ -38,7 +38,12 @@ export function SkillSelector({ value, onChange }: SkillSelectorProps) {
         onClick={() => setOpen((prev) => !prev)}
         className="flex w-full items-center justify-between gap-2 border border-input bg-transparent px-2 py-1.5 text-left text-sm shadow-sm transition-colors cursor-pointer hover:border-foreground/30"
       >
-        <span className={cn("truncate", selected ? "text-foreground" : "text-muted-foreground/50")}>
+        <span
+          className={cn(
+            "truncate",
+            selected ? "text-foreground" : "text-muted-foreground/50",
+          )}
+        >
           {selected ? selected.name : m.editor_skill_none()}
         </span>
         {selected ? (
@@ -98,7 +103,9 @@ export function SkillSelector({ value, onChange }: SkillSelectorProps) {
                   }}
                 >
                   <span className="flex-1 truncate">{skill.name}</span>
-                  {isSelected && <Check className="ml-auto h-4 w-4 opacity-50" />}
+                  {isSelected && (
+                    <Check className="ml-auto h-4 w-4 opacity-50" />
+                  )}
                 </div>
               );
             })}

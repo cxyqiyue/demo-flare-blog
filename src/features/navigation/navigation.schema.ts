@@ -71,8 +71,7 @@ export const NavigationPublicDataSchema = PublicNavigationDataSchema.extend({
 
 // ==================== Cache ====================
 export const NAVIGATION_CACHE_KEYS = {
-  publicData: (version: string) =>
-    ["navigation", "public", version] as const,
+  publicData: (version: string) => ["navigation", "public", version] as const,
 } as const;
 
 // ==================== Admin inputs ====================
@@ -82,7 +81,10 @@ export const createSearchEngineInputSchema = (m: Messages) =>
     name: z
       .string()
       .trim()
-      .min(1, m.navigation_validation_required({ label: m.navigation_field_name() }))
+      .min(
+        1,
+        m.navigation_validation_required({ label: m.navigation_field_name() }),
+      )
       .max(100, m.navigation_validation_too_long({ max: 100 })),
     urlTemplate: z
       .string()
@@ -101,7 +103,9 @@ export const createSearchEngineInputSchema = (m: Messages) =>
       .trim()
       .min(
         1,
-        m.navigation_validation_required({ label: m.navigation_field_domain() }),
+        m.navigation_validation_required({
+          label: m.navigation_field_domain(),
+        }),
       )
       .max(253, m.navigation_validation_too_long({ max: 253 })),
     sortOrder: z.number().int().min(0).max(10000).default(0),
@@ -129,7 +133,9 @@ export const createFolderInputSchema = (m: Messages) =>
       .trim()
       .min(
         1,
-        m.navigation_validation_required({ label: m.navigation_field_folder_name() }),
+        m.navigation_validation_required({
+          label: m.navigation_field_folder_name(),
+        }),
       )
       .max(50, m.navigation_validation_too_long({ max: 50 })),
     sortOrder: z.number().int().min(0).max(10000).default(0),
@@ -152,7 +158,9 @@ export const createBookmarkInputSchema = (m: Messages) =>
       .trim()
       .min(
         1,
-        m.navigation_validation_required({ label: m.navigation_field_bookmark_name() }),
+        m.navigation_validation_required({
+          label: m.navigation_field_bookmark_name(),
+        }),
       )
       .max(100, m.navigation_validation_too_long({ max: 100 })),
     url: z
@@ -160,7 +168,9 @@ export const createBookmarkInputSchema = (m: Messages) =>
       .trim()
       .min(
         1,
-        m.navigation_validation_required({ label: m.navigation_field_bookmark_url() }),
+        m.navigation_validation_required({
+          label: m.navigation_field_bookmark_url(),
+        }),
       )
       .refine(
         (value) => value.startsWith("http://") || value.startsWith("https://"),
@@ -206,7 +216,9 @@ export const importBookmarksInputSchema = (m: Messages) =>
                   .trim()
                   .min(
                     1,
-                    m.navigation_validation_required({ label: m.navigation_field_bookmark_name() }),
+                    m.navigation_validation_required({
+                      label: m.navigation_field_bookmark_name(),
+                    }),
                   )
                   .max(100, m.navigation_validation_too_long({ max: 100 })),
                 url: z
@@ -253,7 +265,9 @@ export type CreateFolderInput = z.input<
 export type CreateFolderFormValues = z.input<
   ReturnType<typeof createFolderInputSchema>
 >;
-export type UpdateFolderInput = z.input<ReturnType<typeof updateFolderInputSchema>>;
+export type UpdateFolderInput = z.input<
+  ReturnType<typeof updateFolderInputSchema>
+>;
 export type DeleteFolderInput = z.infer<typeof deleteFolderInputSchema>;
 export type CreateBookmarkInput = z.input<
   ReturnType<typeof createBookmarkInputSchema>

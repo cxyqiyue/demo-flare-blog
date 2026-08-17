@@ -1,8 +1,8 @@
 import { Loader2, ShieldCheck } from "lucide-react";
 import { Turnstile as WidgetTurnstile } from "@/components/common/turnstile";
 import {
-  useChallenge,
   type UseChallengeReturn,
+  useChallenge,
 } from "@/features/challenge/hooks/use-challenge";
 import { m } from "@/paraglide/messages";
 

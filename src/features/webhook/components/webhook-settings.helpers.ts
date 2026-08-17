@@ -1,5 +1,7 @@
-import type { NotificationWebhookEventType } from "@/features/webhook/webhook.schema";
-import type { WebhookType } from "@/features/webhook/webhook.schema";
+import type {
+  NotificationWebhookEventType,
+  WebhookType,
+} from "@/features/webhook/webhook.schema";
 import { NOTIFICATION_WEBHOOK_EVENTS } from "@/features/webhook/webhook.schema";
 import { m } from "@/paraglide/messages";
 

@@ -7,7 +7,8 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { getOptimizedImageUrl } from "@/features/media/utils/media.utils";import { formatBytes } from "@/lib/utils";
+import { getOptimizedImageUrl } from "@/features/media/utils/media.utils";
+import { formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { MediaDirectoryFile, MediaFolder } from "../types";
 
@@ -66,7 +67,9 @@ const FolderRow = ({
         <Folder
           size={16}
           strokeWidth={1.5}
-          className={isSelected ? "text-foreground" : "text-muted-foreground/70"}
+          className={
+            isSelected ? "text-foreground" : "text-muted-foreground/70"
+          }
         />
         <span className="truncate text-xs font-mono font-medium text-foreground">
           {folder.name}

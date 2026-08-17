@@ -162,7 +162,10 @@ export const UpdateSystemConfigSectionInputSchema = z.discriminatedUnion(
   "section",
   [
     z.object({ section: z.literal("email"), data: EmailConfigSchema }),
-    z.object({ section: z.literal("notification"), data: NotificationConfigSchema }),
+    z.object({
+      section: z.literal("notification"),
+      data: NotificationConfigSchema,
+    }),
     z.object({ section: z.literal("ai"), data: AiConfigSchema }),
     z.object({
       section: z.literal("imageHosting"),
@@ -170,7 +173,10 @@ export const UpdateSystemConfigSectionInputSchema = z.discriminatedUnion(
     }),
     z.object({ section: z.literal("challenge"), data: ChallengeConfigSchema }),
     z.object({ section: z.literal("usage"), data: UsageConfigSchema }),
-    z.object({ section: z.literal("wechatVerify"), data: WechatVerifyConfigSchema }),
+    z.object({
+      section: z.literal("wechatVerify"),
+      data: WechatVerifyConfigSchema,
+    }),
     z.object({ section: z.literal("site"), data: SiteConfigInputSchema }),
   ],
 );

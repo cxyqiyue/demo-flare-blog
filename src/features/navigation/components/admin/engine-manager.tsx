@@ -3,8 +3,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
-import { useFaviconSource } from "@/features/navigation/components/favicon";
 import { EngineFormModal } from "@/features/navigation/components/admin/navigation-modals";
+import { useFaviconSource } from "@/features/navigation/components/favicon";
 import {
   useAdminNavigation,
   useAdminNavigationData,

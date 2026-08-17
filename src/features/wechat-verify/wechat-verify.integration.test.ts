@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
+import { createTestDb, testRequest } from "tests/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
-
 import * as CacheService from "@/features/cache/cache.service";
 import {
   CONFIG_CACHE_KEYS,
@@ -8,7 +8,6 @@ import {
 } from "@/features/config/config.schema";
 import * as ConfigRepo from "@/features/config/data/config.data";
 import { app } from "@/lib/hono";
-import { createTestDb, testRequest } from "tests/test-utils";
 
 async function seedWechatVerify(fileName: string, fileContent: string) {
   await ConfigRepo.upsertSystemConfig(createTestDb(), {

@@ -36,7 +36,12 @@ export function useMediaLibrary() {
   // Search Param Handlers
   const setSearchQuery = (term: string) => {
     navigate({
-      search: { search: term, unused: unused ?? false, folder, view: currentView },
+      search: {
+        search: term,
+        unused: unused ?? false,
+        folder,
+        view: currentView,
+      },
       replace: true,
     });
   };
@@ -218,7 +223,11 @@ export function useMediaLibrary() {
         const result = (await deleteMediaFoldersFn({
           data: { keys: folderKeys },
         })) as unknown as {
-          data: { deletedFolders: number; deletedFiles: number; skippedFiles: number };
+          data: {
+            deletedFolders: number;
+            deletedFiles: number;
+            skippedFiles: number;
+          };
           error: { reason: string } | null;
         };
         if (result.error) {

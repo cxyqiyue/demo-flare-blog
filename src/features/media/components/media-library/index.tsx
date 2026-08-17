@@ -277,7 +277,9 @@ export function MediaLibrary() {
         isDragging={isDragging}
         folderLabel={uploadDisabled ? undefined : folderLabel}
         onClose={resetUpload}
-        onFileSelect={uploadDisabled ? noop : (files) => processFiles(files, currentFolder)}
+        onFileSelect={
+          uploadDisabled ? noop : (files) => processFiles(files, currentFolder)
+        }
         onDragOver={uploadDisabled ? noop : handleDragOver}
         onDragLeave={uploadDisabled ? noop : handleDragLeave}
         onDrop={uploadDisabled ? noop : handleDrop}

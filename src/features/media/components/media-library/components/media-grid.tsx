@@ -132,7 +132,9 @@ const FolderCard = memo(
           <Folder
             size={40}
             strokeWidth={1}
-            className={isSelected ? "text-foreground" : "text-muted-foreground/70"}
+            className={
+              isSelected ? "text-foreground" : "text-muted-foreground/70"
+            }
           />
         </div>
 

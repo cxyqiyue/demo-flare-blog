@@ -186,7 +186,9 @@ function RouteComponent() {
     if (window.matchMedia("(min-width: 1024px)").matches) return;
 
     const frame = requestAnimationFrame(() => {
-      const activeEl = listEl.querySelector<HTMLElement>('[data-state="active"]');
+      const activeEl = listEl.querySelector<HTMLElement>(
+        '[data-state="active"]',
+      );
       activeEl?.scrollIntoView({
         behavior: "smooth",
         inline: "center",

@@ -8,8 +8,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAdminNavigation } from "@/features/navigation/hooks/use-navigation";
-import { importBookmarksInputSchema } from "@/features/navigation/navigation.schema";
 import type { ImportBookmarksFormValues } from "@/features/navigation/navigation.schema";
+import { importBookmarksInputSchema } from "@/features/navigation/navigation.schema";
 import { m } from "@/paraglide/messages";
 
 interface ParsedBookmark {
@@ -102,10 +102,12 @@ const ImportBookmarkModalInternal = ({
       list.push({ name: bookmark.name, url: bookmark.url });
       grouped.set(folderName, list);
     }
-    const items = Array.from(grouped.entries()).map(([folderName, bookmarks]) => ({
-      ...(folderName ? { folderName } : {}),
-      bookmarks,
-    }));
+    const items = Array.from(grouped.entries()).map(
+      ([folderName, bookmarks]) => ({
+        ...(folderName ? { folderName } : {}),
+        bookmarks,
+      }),
+    );
 
     const result = await importBookmarks({ data: { items, replace } });
     if (result.data) {
@@ -155,9 +157,7 @@ const ImportBookmarkModalInternal = ({
             />
           </label>
 
-          {parseError && (
-            <p className="text-xs text-red-500">! {parseError}</p>
-          )}
+          {parseError && <p className="text-xs text-red-500">! {parseError}</p>}
 
           {parsed.length > 0 && (
             <p className="text-sm text-muted-foreground">

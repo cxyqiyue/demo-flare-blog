@@ -1,7 +1,4 @@
-import {
-  createAdminTestContext,
-  seedUser,
-} from "tests/test-utils";
+import { createAdminTestContext, seedUser } from "tests/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import * as PostRepo from "@/features/posts/data/posts.data";
 import * as PostService from "@/features/posts/services/posts.service";

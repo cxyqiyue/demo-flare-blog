@@ -123,7 +123,10 @@ export async function getMediaByKeys(
   keys: string[],
 ): Promise<Array<Media>> {
   if (keys.length === 0) return [];
-  return await db.select().from(MediaTable).where(inArray(MediaTable.key, keys));
+  return await db
+    .select()
+    .from(MediaTable)
+    .where(inArray(MediaTable.key, keys));
 }
 
 export async function deleteMediaByKeys(db: DB, keys: string[]) {
@@ -147,5 +150,7 @@ export async function updateMediaKeyPrefix(
       key: sql`${newPrefix} || ${suffix}`,
       url: sql`'/images/' || ${newPrefix} || ${suffix}`,
     })
-    .where(sql`substr(${MediaTable.key}, 1, ${oldPrefix.length}) = ${oldPrefix}`);
+    .where(
+      sql`substr(${MediaTable.key}, 1, ${oldPrefix.length}) = ${oldPrefix}`,
+    );
 }

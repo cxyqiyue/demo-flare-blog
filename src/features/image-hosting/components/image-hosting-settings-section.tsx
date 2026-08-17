@@ -5,7 +5,7 @@ import {
   PlugZap,
   Server,
 } from "lucide-react";
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { type Dispatch, type SetStateAction, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -158,14 +158,22 @@ export function ImageHostingSettingsSection({
    * 启用某个托管方时，自动关闭其余托管方的对应通道。
    */
   const setCommentProvider = (provider: "imgbb" | "s3", checked: boolean) => {
-    setValue("imageHosting.imgbb.commentEnabled", provider === "imgbb" ? checked : false, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("imageHosting.s3.commentEnabled", provider === "s3" ? checked : false, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
+    setValue(
+      "imageHosting.imgbb.commentEnabled",
+      provider === "imgbb" ? checked : false,
+      {
+        shouldDirty: true,
+        shouldTouch: true,
+      },
+    );
+    setValue(
+      "imageHosting.s3.commentEnabled",
+      provider === "s3" ? checked : false,
+      {
+        shouldDirty: true,
+        shouldTouch: true,
+      },
+    );
     setImgbbStatus("IDLE");
     setS3Status("IDLE");
   };
@@ -174,18 +182,30 @@ export function ImageHostingSettingsSection({
     provider: "imgbb" | "ffsky" | "s3",
     checked: boolean,
   ) => {
-    setValue("imageHosting.imgbb.articleEnabled", provider === "imgbb" ? checked : false, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("imageHosting.ffsky.articleEnabled", provider === "ffsky" ? checked : false, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("imageHosting.s3.articleEnabled", provider === "s3" ? checked : false, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
+    setValue(
+      "imageHosting.imgbb.articleEnabled",
+      provider === "imgbb" ? checked : false,
+      {
+        shouldDirty: true,
+        shouldTouch: true,
+      },
+    );
+    setValue(
+      "imageHosting.ffsky.articleEnabled",
+      provider === "ffsky" ? checked : false,
+      {
+        shouldDirty: true,
+        shouldTouch: true,
+      },
+    );
+    setValue(
+      "imageHosting.s3.articleEnabled",
+      provider === "s3" ? checked : false,
+      {
+        shouldDirty: true,
+        shouldTouch: true,
+      },
+    );
     setImgbbStatus("IDLE");
     setFfskyStatus("IDLE");
     setS3Status("IDLE");
@@ -202,10 +222,14 @@ export function ImageHostingSettingsSection({
     });
     const builder = S3_PRESET_ENDPOINT_BUILDER[provider];
     if (builder) {
-      setValue("imageHosting.s3.endpoint", builder(S3_DEFAULT_REGIONS[provider]), {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
+      setValue(
+        "imageHosting.s3.endpoint",
+        builder(S3_DEFAULT_REGIONS[provider]),
+        {
+          shouldDirty: true,
+          shouldTouch: true,
+        },
+      );
     }
     setS3Status("IDLE");
   };
@@ -213,9 +237,7 @@ export function ImageHostingSettingsSection({
   const handleTest = async (provider: Provider) => {
     let apiKey: string;
     let apiEndpoint: string | undefined;
-    let s3:
-      | TestImageHostingConnectionInput["s3"]
-      | undefined;
+    let s3: TestImageHostingConnectionInput["s3"] | undefined;
     let setStatus: Dispatch<SetStateAction<ConnectionStatus>>;
     let setEcho: Dispatch<SetStateAction<string>>;
 
@@ -384,10 +406,7 @@ export function ImageHostingSettingsSection({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="rounded-sm bg-muted/40 p-2">
-                <CloudUpload
-                  size={16}
-                  className="text-muted-foreground"
-                />
+                <CloudUpload size={16} className="text-muted-foreground" />
               </div>
               <div className="space-y-1">
                 <h5 className="text-sm font-medium text-foreground">
@@ -684,15 +703,9 @@ export function ImageHostingSettingsSection({
         </div>
       </div>
 
-      {imgbbStatus === "SUCCESS" && imgbbEcho && (
-        <EchoBlock url={imgbbEcho} />
-      )}
-      {ffskyStatus === "SUCCESS" && ffskyEcho && (
-        <EchoBlock url={ffskyEcho} />
-      )}
-      {s3Status === "SUCCESS" && s3Echo && (
-        <EchoBlock url={s3Echo} />
-      )}
+      {imgbbStatus === "SUCCESS" && imgbbEcho && <EchoBlock url={imgbbEcho} />}
+      {ffskyStatus === "SUCCESS" && ffskyEcho && <EchoBlock url={ffskyEcho} />}
+      {s3Status === "SUCCESS" && s3Echo && <EchoBlock url={s3Echo} />}
     </div>
   );
 }

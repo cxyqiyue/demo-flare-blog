@@ -9,8 +9,8 @@ import {
   seedUser,
 } from "tests/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as AiService from "@/features/ai/ai.service";
 import * as AboutData from "@/features/about/data/about-article.data";
+import * as AiService from "@/features/ai/ai.service";
 import * as CommentService from "@/features/comments/comments.service";
 import { CommentModerationWorkflow } from "@/features/comments/workflows/comment-moderation";
 import * as WorkflowHelpers from "@/features/comments/workflows/helpers";
@@ -1234,7 +1234,10 @@ describe("Comments Integration", () => {
 
       const moderateSpy = vi
         .spyOn(AiService, "moderateComment")
-        .mockResolvedValue({ verdict: "approve", reason: "上下文完整，允许通过" });
+        .mockResolvedValue({
+          verdict: "approve",
+          reason: "上下文完整，允许通过",
+        });
       vi.spyOn(WorkflowHelpers, "sendReplyNotification").mockResolvedValue();
 
       await CommentModerationWorkflow.prototype.run.call(

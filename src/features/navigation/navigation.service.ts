@@ -2,11 +2,6 @@ import * as CacheService from "@/features/cache/cache.service";
 import { err, ok } from "@/lib/errors";
 import { purgeCDNCache } from "@/lib/invalidate";
 import * as NavigationRepo from "./data/navigation.data";
-import {
-  NAVIGATION_CACHE_KEYS,
-  NavigationPublicDataSchema,
-  PublicNavigationDataSchema,
-} from "./navigation.schema";
 import type {
   CreateBookmarkInput,
   CreateFolderInput,
@@ -21,6 +16,11 @@ import type {
   UpdateBookmarkInput,
   UpdateFolderInput,
   UpdateSearchEngineInput,
+} from "./navigation.schema";
+import {
+  NAVIGATION_CACHE_KEYS,
+  NavigationPublicDataSchema,
+  PublicNavigationDataSchema,
 } from "./navigation.schema";
 
 // ============ Public Methods ============
@@ -141,7 +141,10 @@ export async function updateSearchEngine(
   context: DbContext & { executionCtx: ExecutionContext },
   data: UpdateSearchEngineInput,
 ) {
-  const existing = await NavigationRepo.findSearchEngineById(context.db, data.id);
+  const existing = await NavigationRepo.findSearchEngineById(
+    context.db,
+    data.id,
+  );
   if (!existing) {
     return err({ reason: "NOT_FOUND" });
   }
@@ -152,9 +155,9 @@ export async function updateSearchEngine(
     await NavigationRepo.clearDefaultSearchEngine(context.db);
   } else if (isDefault === false && existing.isDefault) {
     // 取消默认：如果仍需要默认引擎，则回退到第一条
-    const others = (await NavigationRepo.getAllSearchEngines(context.db)).filter(
-      (engine) => engine.id !== id,
-    );
+    const others = (
+      await NavigationRepo.getAllSearchEngines(context.db)
+    ).filter((engine) => engine.id !== id);
     if (others.length === 0) {
       // 仅此一条引擎，不能取消默认
       return err({ reason: "LAST_DEFAULT_ENGINE" });
@@ -174,7 +177,10 @@ export async function deleteSearchEngine(
   context: DbContext & { executionCtx: ExecutionContext },
   data: DeleteSearchEngineInput,
 ) {
-  const existing = await NavigationRepo.findSearchEngineById(context.db, data.id);
+  const existing = await NavigationRepo.findSearchEngineById(
+    context.db,
+    data.id,
+  );
   if (!existing) {
     return err({ reason: "NOT_FOUND" });
   }
@@ -200,7 +206,10 @@ export async function setDefaultSearchEngine(
   context: DbContext & { executionCtx: ExecutionContext },
   data: SetDefaultSearchEngineInput,
 ) {
-  const existing = await NavigationRepo.findSearchEngineById(context.db, data.id);
+  const existing = await NavigationRepo.findSearchEngineById(
+    context.db,
+    data.id,
+  );
   if (!existing) {
     return err({ reason: "NOT_FOUND" });
   }
@@ -294,7 +303,11 @@ export async function updateBookmark(
   }
 
   const { id, ...updateData } = data;
-  const updated = await NavigationRepo.updateBookmark(context.db, id, updateData);
+  const updated = await NavigationRepo.updateBookmark(
+    context.db,
+    id,
+    updateData,
+  );
   invalidateCache(context);
   return ok(updated);
 }
@@ -348,9 +361,9 @@ export async function importBookmarks(
 
     let folderId: number | null = null;
     if (item.folderName) {
-      const existingFolder = (await NavigationRepo.getAllFolders(context.db)).find(
-        (folder) => folder.name === item.folderName,
-      );
+      const existingFolder = (
+        await NavigationRepo.getAllFolders(context.db)
+      ).find((folder) => folder.name === item.folderName);
       const folder = existingFolder
         ? existingFolder
         : await NavigationRepo.insertFolder(context.db, {

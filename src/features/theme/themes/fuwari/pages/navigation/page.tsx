@@ -1,16 +1,20 @@
 import { Link } from "@tanstack/react-router";
 import { Search } from "lucide-react";
-import type { NavigationPageProps } from "@/features/theme/contract/pages";
 import {
   getHostname,
   useFaviconSource,
 } from "@/features/navigation/components/favicon";
 import { useNavigationPageState } from "@/features/navigation/hooks/use-navigation-page-state";
+import type { NavigationPageProps } from "@/features/theme/contract/pages";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { Pagination } from "../../components/pagination";
 
-export function NavigationPage({ data, isAdmin, showBookmarks }: NavigationPageProps) {
+export function NavigationPage({
+  data,
+  isAdmin,
+  showBookmarks,
+}: NavigationPageProps) {
   const state = useNavigationPageState(data);
 
   return (
@@ -80,69 +84,69 @@ export function NavigationPage({ data, isAdmin, showBookmarks }: NavigationPageP
           className="fuwari-card-base p-6 md:p-8 flex flex-col gap-5 fuwari-onload-animation flex-1"
           style={{ animationDelay: "350ms" }}
         >
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h2 className="text-xl font-bold fuwari-text-90 transition-colors">
-            {m.navigation_bookmarks()}
-          </h2>
-          {isAdmin && (
-            <Link
-              to="/admin/navigation"
-              className="fuwari-btn-regular text-xs font-bold px-4 py-2 rounded-xl active:scale-95 transition-all"
-            >
-              [ {m.navigation_admin_title()} ]
-            </Link>
-          )}
-        </div>
-
-        {/* Folder Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar py-1">
-          <FolderTab
-            active={state.activeFolderId === null}
-            onClick={() => state.selectFolder(null)}
-            label={`${m.navigation_all()} (${state.totalBookmarks})`}
-          />
-          {state.folders.map((folder) => (
-            <FolderTab
-              key={folder.id}
-              active={state.activeFolderId === folder.id}
-              onClick={() => state.selectFolder(folder.id)}
-              label={`${folder.name} (${folder.bookmarkCount})`}
-            />
-          ))}
-        </div>
-
-        {state.pageItems.length > 0 ? (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-              {state.pageItems.map((bookmark, i) => (
-                <BookmarkCard
-                  key={bookmark.id}
-                  bookmark={bookmark}
-                  className="fuwari-onload-animation"
-                  style={{ animationDelay: `${400 + i * 40}ms` }}
-                />
-              ))}
-            </div>
-
-            {state.total > state.pageSize && (
-              <div className="border-t border-(--fuwari-input-border) pt-5">
-                <Pagination
-                  page={state.page}
-                  total={state.total}
-                  pageSize={state.pageSize}
-                  hasPrevPage={state.hasPrevPage}
-                  hasNextPage={state.hasNextPage}
-                  onPageChange={state.onPageChange}
-                />
-              </div>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <h2 className="text-xl font-bold fuwari-text-90 transition-colors">
+              {m.navigation_bookmarks()}
+            </h2>
+            {isAdmin && (
+              <Link
+                to="/admin/navigation"
+                className="fuwari-btn-regular text-xs font-bold px-4 py-2 rounded-xl active:scale-95 transition-all"
+              >
+                [ {m.navigation_admin_title()} ]
+              </Link>
             )}
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-16 fuwari-text-30 transition-colors">
-            <p className="text-lg">{m.navigation_no_bookmarks()}</p>
-            <p className="mt-2 text-sm">{m.navigation_no_bookmarks_desc()}</p>
           </div>
-        )}
+
+          {/* Folder Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar py-1">
+            <FolderTab
+              active={state.activeFolderId === null}
+              onClick={() => state.selectFolder(null)}
+              label={`${m.navigation_all()} (${state.totalBookmarks})`}
+            />
+            {state.folders.map((folder) => (
+              <FolderTab
+                key={folder.id}
+                active={state.activeFolderId === folder.id}
+                onClick={() => state.selectFolder(folder.id)}
+                label={`${folder.name} (${folder.bookmarkCount})`}
+              />
+            ))}
+          </div>
+
+          {state.pageItems.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                {state.pageItems.map((bookmark, i) => (
+                  <BookmarkCard
+                    key={bookmark.id}
+                    bookmark={bookmark}
+                    className="fuwari-onload-animation"
+                    style={{ animationDelay: `${400 + i * 40}ms` }}
+                  />
+                ))}
+              </div>
+
+              {state.total > state.pageSize && (
+                <div className="border-t border-(--fuwari-input-border) pt-5">
+                  <Pagination
+                    page={state.page}
+                    total={state.total}
+                    pageSize={state.pageSize}
+                    hasPrevPage={state.hasPrevPage}
+                    hasNextPage={state.hasNextPage}
+                    onPageChange={state.onPageChange}
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 fuwari-text-30 transition-colors">
+              <p className="text-lg">{m.navigation_no_bookmarks()}</p>
+              <p className="mt-2 text-sm">{m.navigation_no_bookmarks_desc()}</p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -172,9 +176,7 @@ function EngineButton({ engine, selected, onSelect }: EngineButtonProps) {
       aria-pressed={selected}
       className={cn(
         "shrink-0 inline-flex items-center gap-2 px-3 h-9 rounded-xl text-xs font-bold transition-all active:scale-95",
-        selected
-          ? "fuwari-btn-primary"
-          : "fuwari-btn-regular hover:shadow-sm",
+        selected ? "fuwari-btn-primary" : "fuwari-btn-regular hover:shadow-sm",
       )}
     >
       <span className="w-4 h-4 flex items-center justify-center overflow-hidden rounded-md shrink-0">

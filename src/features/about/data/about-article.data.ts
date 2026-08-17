@@ -19,10 +19,7 @@ export async function insertAboutArticle(
   db: DB,
   data: { title: string; markdown: string },
 ) {
-  const [article] = await db
-    .insert(AboutArticleTable)
-    .values(data)
-    .returning();
+  const [article] = await db.insert(AboutArticleTable).values(data).returning();
   return article;
 }
 

@@ -1,5 +1,5 @@
-import * as ConfigService from "@/features/config/service/config.service";
 import type { SystemConfig } from "@/features/config/config.schema";
+import * as ConfigService from "@/features/config/service/config.service";
 import type {
   ArticleImageHostingConfig,
   CommentImageHostingConfig,
@@ -12,8 +12,8 @@ import {
   TEST_IMAGE_BASE64,
 } from "@/features/image-hosting/image-hosting.schema";
 import {
-  uploadToS3,
   type S3UploadConfig,
+  uploadToS3,
 } from "@/features/image-hosting/s3/s3-upload";
 import { parseUploadMediaInput } from "@/features/media/media.schema";
 import { getImageDimensions } from "@/features/media/utils/image-dimensions";
@@ -84,8 +84,7 @@ function resolveS3RuntimeConfig(
   if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
 
   return {
-    enabled:
-      pathway === "article" ? !!s3.articleEnabled : !!s3.commentEnabled,
+    enabled: pathway === "article" ? !!s3.articleEnabled : !!s3.commentEnabled,
     config: {
       endpoint: endpoint.replace(/\/+$/, ""),
       bucket,
@@ -119,7 +118,10 @@ async function uploadToS3ForFile(
   config: S3UploadConfig,
   file: File,
 ): Promise<
-  Result<{ url: string }, { reason: "PROVIDER_REQUEST_FAILED"; message: string }>
+  Result<
+    { url: string },
+    { reason: "PROVIDER_REQUEST_FAILED"; message: string }
+  >
 > {
   return await uploadToS3(config, {
     key: buildObjectKey(config.pathPrefix, extensionFromMime(file.type)),
@@ -204,7 +206,10 @@ async function uploadToEndpoint(
   base64: string,
   fieldName: "image" | "source",
 ): Promise<
-  Result<{ url: string }, { reason: "PROVIDER_REQUEST_FAILED"; message: string }>
+  Result<
+    { url: string },
+    { reason: "PROVIDER_REQUEST_FAILED"; message: string }
+  >
 > {
   try {
     const form = new FormData();

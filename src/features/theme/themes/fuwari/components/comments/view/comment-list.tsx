@@ -4,8 +4,8 @@ import type { JSONContent } from "@tiptap/react";
 import { useEffect, useState } from "react";
 import type { RootCommentWithReplyCount } from "@/features/comments/comments.schema";
 import {
-  repliesByRootIdInfiniteQuery,
   type CommentTargetInput,
+  repliesByRootIdInfiniteQuery,
 } from "@/features/comments/queries";
 import { authClient } from "@/lib/auth/auth.client";
 import { m } from "@/paraglide/messages";

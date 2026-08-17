@@ -4,7 +4,9 @@ import { BookmarkManager } from "./bookmark-manager";
 import { EngineManager } from "./engine-manager";
 
 export function NavigationAdminPage() {
-  const [activeTab, setActiveTab] = useState<"engines" | "bookmarks">("engines");
+  const [activeTab, setActiveTab] = useState<"engines" | "bookmarks">(
+    "engines",
+  );
 
   const tabs = [
     { key: "engines" as const, label: m.navigation_admin_tab_engines() },

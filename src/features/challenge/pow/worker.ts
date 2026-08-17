@@ -5,9 +5,7 @@ import {
   solveAltchaChallenge,
 } from "./altcha";
 
-type SolverMessage =
-  | { type: "work"; payload: string }
-  | { type: "abort" };
+type SolverMessage = { type: "work"; payload: string } | { type: "abort" };
 
 let currentAbortController: AbortController | null = null;
 

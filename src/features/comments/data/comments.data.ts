@@ -267,10 +267,7 @@ export async function getCommentsByUserId(
   return comments;
 }
 
-export async function getCommentsByPostIds(
-  db: DB,
-  postIds: number[],
-) {
+export async function getCommentsByPostIds(db: DB, postIds: number[]) {
   if (postIds.length === 0) return [];
 
   const comments = await db
@@ -406,14 +403,8 @@ export async function getAllCommentsCount(
     userName?: string;
   } = {},
 ) {
-  const {
-    status,
-    postId,
-    momentId,
-    aboutArticleId,
-    userId,
-    userName,
-  } = options;
+  const { status, postId, momentId, aboutArticleId, userId, userName } =
+    options;
 
   const conditions = buildCommentWhereClause({
     status,

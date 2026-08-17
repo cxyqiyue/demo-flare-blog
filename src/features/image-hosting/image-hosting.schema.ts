@@ -24,8 +24,10 @@ export const S3_PRESET_ENDPOINT_BUILDER: Partial<
   Record<S3Provider, (region: string) => string>
 > = {
   aws: (region) => `https://s3.${region || "us-east-1"}.amazonaws.com`,
-  "aliyun-oss": (region) => `https://${region || "oss-cn-hangzhou"}.aliyuncs.com`,
-  "tencent-cos": (region) => `https://cos.${region || "ap-guangzhou"}.myqcloud.com`,
+  "aliyun-oss": (region) =>
+    `https://${region || "oss-cn-hangzhou"}.aliyuncs.com`,
+  "tencent-cos": (region) =>
+    `https://cos.${region || "ap-guangzhou"}.myqcloud.com`,
 };
 
 export const IMGBB_API_ENDPOINT = "https://api.imgbb.com/1/upload";

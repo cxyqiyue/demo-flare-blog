@@ -43,8 +43,9 @@ export function MediaPreviewModal({
   const shouldRender = useDelayUnmount(isMounted, 200);
 
   // Persist asset during exit animation
-  const [activeAsset, setActiveAsset] =
-    useState<MediaDirectoryFile | null>(asset);
+  const [activeAsset, setActiveAsset] = useState<MediaDirectoryFile | null>(
+    asset,
+  );
 
   // Editing state
   const [isEditing, setIsEditing] = useState(false);

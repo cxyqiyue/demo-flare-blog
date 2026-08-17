@@ -151,7 +151,10 @@ export function useCommentImageUploader() {
         if (popup.closed) settle(null);
       }, 500);
 
-      const timeoutTimer = window.setTimeout(() => settle(null), POPUP_TIMEOUT_MS);
+      const timeoutTimer = window.setTimeout(
+        () => settle(null),
+        POPUP_TIMEOUT_MS,
+      );
 
       window.addEventListener("message", onMessage);
     });

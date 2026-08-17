@@ -68,10 +68,7 @@ export const AdminNotificationEmail = ({
       : m.email_comment_admin_root_action({}, { locale });
 
   return (
-    <EmailLayout
-      locale={locale}
-      previewText={previewText}
-    >
+    <EmailLayout locale={locale} previewText={previewText}>
       <h1
         style={{
           fontFamily: '"Playfair Display", "Georgia", serif',

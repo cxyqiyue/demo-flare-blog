@@ -222,10 +222,7 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
             <div className="flex flex-col flex-1 min-h-0">
               {articleImageHostingEnabled ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center bg-muted/5">
-                  <CloudUpload
-                    size={24}
-                    className="text-muted-foreground/30"
-                  />
+                  <CloudUpload size={24} className="text-muted-foreground/30" />
                   <p className="max-w-md text-sm text-muted-foreground">
                     {m.editor_insert_image_hosting_hint()}
                   </p>

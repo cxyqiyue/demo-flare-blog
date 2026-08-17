@@ -19,7 +19,11 @@ export function LoginPage({
     challengePending: formChallengePending,
   } = loginForm;
 
-  const { isLoading: socialIsLoading, challengePending, handleGithubLogin } = socialLogin;
+  const {
+    isLoading: socialIsLoading,
+    challengePending,
+    handleGithubLogin,
+  } = socialLogin;
 
   const isFormDisabled =
     isSubmitting || loginStep !== "IDLE" || formChallengePending;

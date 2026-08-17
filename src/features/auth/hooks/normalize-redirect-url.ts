@@ -4,8 +4,7 @@ export function normalizeRedirectUrl(
   redirectTo: string | undefined,
   fallback: string,
 ) {
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   const safeFallback = `${origin}${fallback}`;
 

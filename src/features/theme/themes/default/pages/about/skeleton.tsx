@@ -1,5 +1,5 @@
-import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { m } from "@/paraglide/messages";
 
 export function AboutPageSkeleton() {
