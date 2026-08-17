@@ -904,6 +904,8 @@
   "editor_action_unknown_error": "未知错误",
   "editor_image_upload_failed": "图片上传失败",
   "editor_image_upload_success_desc": "{name} 已归档保存",
+  "editor_image_uploading": "上传中...",
+  "editor_image_upload_local": "选择本地图片",
   "editor_image_caption_placeholder": "图片说明...",
   "editor_toolbar_heading1": "一级标题",
   "editor_toolbar_heading2": "二级标题",

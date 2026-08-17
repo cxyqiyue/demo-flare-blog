@@ -1,12 +1,12 @@
 import { ClientOnly } from "@tanstack/react-router";
 import {
   Check,
-  CloudUpload,
   Globe,
   Image as ImageIcon,
   Link as LinkIcon,
   Loader2,
   Search,
+  Upload,
   X,
 } from "lucide-react";
 import type React from "react";
@@ -26,6 +26,7 @@ interface InsertModalProps {
   initialUrl?: string;
   onClose: () => void;
   onSubmit: (url: string, attrs?: { width?: number; height?: number }) => void;
+  onFileUpload?: (file: File) => Promise<string | null>;
 }
 
 const MediaItem = memo(
@@ -87,6 +88,7 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
   initialUrl = "",
   onClose,
   onSubmit,
+  onFileUpload,
 }) => {
   const isMounted = !!type;
   const shouldRender = useDelayUnmount(isMounted, 500);
@@ -98,6 +100,8 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
 
   const [inputUrl, setInputUrl] = useState(initialUrl);
   const [selectedMedia, setSelectedMedia] = useState<MediaAsset | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { enabled: articleImageHostingEnabled } =
     useArticleImageHostingConfig();
@@ -138,6 +142,27 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
       setSearchQuery("");
     }
   }, [initialUrl, type, setSearchQuery]);
+
+  const handleFileUpload = async (file: File) => {
+    if (!onFileUpload) return;
+    setUploading(true);
+    try {
+      const url = await onFileUpload(file);
+      if (url) {
+        onSubmit(url);
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
 
   const handleSubmit = () => {
     const trimmed = inputUrl.trim();
@@ -221,9 +246,32 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
           {activeType === "IMAGE" && (
             <div className="flex flex-col flex-1 min-h-0">
               {articleImageHostingEnabled ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center bg-muted/5">
-                  <CloudUpload size={24} className="text-muted-foreground/30" />
-                  <p className="max-w-md text-sm text-muted-foreground">
+                <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 text-center bg-muted/5">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                    className="hidden"
+                    onChange={handleFileInputChange}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="flex items-center gap-3 px-6 py-3 border border-border hover:bg-muted/20 transition-colors disabled:opacity-50"
+                  >
+                    {uploading ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Upload size={16} />
+                    )}
+                    <span className="text-sm font-mono">
+                      {uploading
+                        ? m.editor_image_uploading()
+                        : m.editor_image_upload_local()}
+                    </span>
+                  </button>
+                  <p className="max-w-md text-xs text-muted-foreground/60">
                     {m.editor_insert_image_hosting_hint()}
                   </p>
                 </div>

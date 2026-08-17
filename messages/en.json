@@ -911,6 +911,8 @@
   "editor_action_unknown_error": "Unknown error",
   "editor_image_upload_failed": "Image upload failed",
   "editor_image_upload_success_desc": "{name} has been saved to the media library",
+  "editor_image_uploading": "Uploading...",
+  "editor_image_upload_local": "Choose local image",
   "editor_image_caption_placeholder": "Add a caption...",
   "editor_toolbar_heading1": "Heading 1",
   "editor_toolbar_heading2": "Heading 2",

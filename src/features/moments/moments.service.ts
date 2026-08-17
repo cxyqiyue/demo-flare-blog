@@ -83,11 +83,23 @@ function invalidateCache(
 
 // ============ Admin Methods ============
 
+function stripImageNodes(content: JSONContent | null): JSONContent | null {
+  if (!content) return content;
+  const walk = (node: JSONContent): JSONContent => {
+    if (node.type === "image") return { ...node, type: "text", text: "" };
+    if (node.content) {
+      return { ...node, content: node.content.map(walk) };
+    }
+    return node;
+  };
+  return walk(content);
+}
+
 export async function createMoment(
   context: DbContext & { executionCtx: ExecutionContext } & AuthContext,
   data: CreateMomentInput,
 ) {
-  const content = data.content as JSONContent | null;
+  const content = stripImageNodes(data.content as JSONContent | null);
 
   const moment = await MomentRepo.insertMoment(context.db, {
     content,
@@ -109,7 +121,7 @@ export async function updateMoment(
     return err({ reason: "NOT_FOUND" });
   }
 
-  const content = data.content as JSONContent | null;
+  const content = stripImageNodes(data.content as JSONContent | null);
 
   const updated = await MomentRepo.updateMoment(context.db, data.id, {
     content,

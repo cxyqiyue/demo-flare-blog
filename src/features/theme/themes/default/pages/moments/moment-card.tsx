@@ -1,8 +1,11 @@
 import { ClientOnly } from "@tanstack/react-router";
+import type { JSONContent } from "@tiptap/react";
 import { Heart, Loader2, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
+import { MomentEditor } from "@/features/moments/components/moment-editor";
+import { collectImageUrls } from "@/features/moments/components/moment-editor-config";
 import type { MomentWithStats } from "@/features/moments/moments.schema";
 import { cn, formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -14,7 +17,11 @@ interface MomentCardProps {
   isAdmin: boolean;
   onToggleLike: (momentId: number) => Promise<boolean>;
   onDelete: (id: number) => Promise<boolean>;
-  onEdit: (moment: MomentWithStats) => void;
+  onUpdate: (
+    id: number,
+    content: JSONContent,
+    images: string[],
+  ) => Promise<boolean>;
 }
 
 function MomentImage({ src }: { src: string }) {
@@ -33,12 +40,14 @@ export function MomentCard({
   isAdmin,
   onToggleLike,
   onDelete,
-  onEdit,
+  onUpdate,
 }: MomentCardProps) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [liking, setLiking] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isLiked = moment.isLiked;
 
@@ -59,6 +68,19 @@ export function MomentCard({
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
+    }
+  };
+
+  const handleEditSubmit = async (content: JSONContent): Promise<boolean> => {
+    if (isSubmitting) return false;
+    const images = collectImageUrls(content);
+    setIsSubmitting(true);
+    try {
+      const ok = await onUpdate(moment.id, content, images);
+      if (ok) setEditing(false);
+      return ok;
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -96,14 +118,16 @@ export function MomentCard({
 
         {isAdmin && (
           <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(moment)}
-              className="h-auto p-1 text-muted-foreground/40 hover:text-foreground bg-transparent hover:bg-transparent"
-            >
-              <Pencil size={14} />
-            </Button>
+            {!editing && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditing(true)}
+                className="h-auto p-1 text-muted-foreground/40 hover:text-foreground bg-transparent hover:bg-transparent"
+              >
+                <Pencil size={14} />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -116,21 +140,32 @@ export function MomentCard({
         )}
       </header>
 
-      {/* Content */}
-      <div className="px-6 pt-4">
-        {renderedContent ? (
-          <div className="text-sm leading-relaxed text-foreground/90 font-light">
-            {renderedContent}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground/50 font-light italic">
-            {m.moments_empty_content()}
-          </p>
-        )}
-      </div>
+      {/* Content / Editor */}
+      {editing ? (
+        <div className="px-6 pt-4">
+          <MomentEditor
+            onSubmit={handleEditSubmit}
+            isSubmitting={isSubmitting}
+            initialContent={moment.content}
+            onCancel={() => setEditing(false)}
+          />
+        </div>
+      ) : (
+        <div className="px-6 pt-4">
+          {renderedContent ? (
+            <div className="text-sm leading-relaxed text-foreground/90 font-light">
+              {renderedContent}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground/50 font-light italic">
+              {m.moments_empty_content()}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Images */}
-      {moment.images.length > 0 && (
+      {moment.images.length > 0 && !editing && (
         <div
           className={cn(
             "px-6 pt-4 grid gap-2",
@@ -150,36 +185,38 @@ export function MomentCard({
       )}
 
       {/* Actions */}
-      <footer className="flex items-center gap-6 px-6 pb-5 pt-5 border-t border-border/10 mt-5">
-        <button
-          type="button"
-          onClick={handleToggleLike}
-          disabled={liking}
-          className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-        >
-          {liking ? (
-            <Loader2 size={14} className="animate-spin" />
-          ) : (
-            <Heart
-              size={14}
-              className={cn(isLiked && "fill-current text-red-500")}
-            />
-          )}
-          {moment.likeCount}
-        </button>
+      {!editing && (
+        <footer className="flex items-center gap-6 px-6 pb-5 pt-5 border-t border-border/10 mt-5">
+          <button
+            type="button"
+            onClick={handleToggleLike}
+            disabled={liking}
+            className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            {liking ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Heart
+                size={14}
+                className={cn(isLiked && "fill-current text-red-500")}
+              />
+            )}
+            {moment.likeCount}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setCommentsOpen((open) => !open)}
-          className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <MessageCircle size={14} />
-          {moment.commentCount}
-        </button>
-      </footer>
+          <button
+            type="button"
+            onClick={() => setCommentsOpen((open) => !open)}
+            className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <MessageCircle size={14} />
+            {moment.commentCount}
+          </button>
+        </footer>
+      )}
 
       {/* Comments */}
-      {commentsOpen && (
+      {commentsOpen && !editing && (
         <div className="border-t border-border/10 px-6 py-5">
           <CommentSection momentId={moment.id} />
         </div>

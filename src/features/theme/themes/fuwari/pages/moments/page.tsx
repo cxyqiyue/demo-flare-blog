@@ -1,5 +1,5 @@
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
-import type { MomentWithStats } from "@/features/moments/moments.schema";
 import type { MomentsPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
 import { Pagination } from "../../components/pagination";
@@ -20,30 +20,7 @@ export function MomentsPage({
   hasNextPage,
   onPageChange,
 }: MomentsPageProps) {
-  const [editingMoment, setEditingMoment] = useState<MomentWithStats | null>(
-    null,
-  );
-
-  const handleEdit = (moment: MomentWithStats) => {
-    setEditingMoment(moment);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingMoment(null);
-  };
-
-  const handleUpdate = async (
-    id: number,
-    content: import("@tiptap/react").JSONContent,
-    images: string[],
-  ): Promise<boolean> => {
-    const ok = await onUpdateMoment(id, content, images);
-    if (ok) {
-      setEditingMoment(null);
-    }
-    return ok;
-  };
+  const [composerOpen, setComposerOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -60,26 +37,27 @@ export function MomentsPage({
         </p>
       </div>
 
-      {/* Admin Composer */}
+      {/* Admin Composer (collapsible) */}
       {isAdmin && (
         <div
           className="fuwari-onload-animation"
           style={{ animationDelay: "250ms" }}
         >
-          <MomentComposer
-            onCreate={onCreateMoment}
-            editingMoment={
-              editingMoment
-                ? {
-                    id: editingMoment.id,
-                    content: editingMoment.content,
-                    images: editingMoment.images,
-                  }
-                : null
-            }
-            onUpdate={handleUpdate}
-            onCancelEdit={handleCancelEdit}
-          />
+          <button
+            type="button"
+            onClick={() => setComposerOpen((v) => !v)}
+            className="fuwari-card-base w-full flex items-center justify-between p-4 md:p-5 fuwari-text-50 hover:fuwari-text-75 transition-colors cursor-pointer"
+          >
+            <span className="text-sm font-bold">
+              {m.moments_composer_title()}
+            </span>
+            {composerOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          {composerOpen && (
+            <div className="mt-2">
+              <MomentComposer onCreate={onCreateMoment} />
+            </div>
+          )}
         </div>
       )}
 
@@ -97,7 +75,7 @@ export function MomentsPage({
                 isAdmin={isAdmin}
                 onToggleLike={onToggleLike}
                 onDelete={onDeleteMoment}
-                onEdit={handleEdit}
+                onUpdate={onUpdateMoment}
               />
             </div>
           ))}

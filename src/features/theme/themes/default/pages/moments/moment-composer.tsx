@@ -6,25 +6,9 @@ import { m } from "@/paraglide/messages";
 
 interface MomentComposerProps {
   onCreate: (content: JSONContent, images: string[]) => Promise<boolean>;
-  editingMoment?: {
-    id: number;
-    content: JSONContent | null;
-    images: string[];
-  } | null;
-  onUpdate?: (
-    id: number,
-    content: JSONContent,
-    images: string[],
-  ) => Promise<boolean>;
-  onCancelEdit?: () => void;
 }
 
-export function MomentComposer({
-  onCreate,
-  editingMoment,
-  onUpdate,
-  onCancelEdit,
-}: MomentComposerProps) {
+export function MomentComposer({ onCreate }: MomentComposerProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (content: JSONContent): Promise<boolean> => {
@@ -36,17 +20,10 @@ export function MomentComposer({
 
     setIsSubmitting(true);
     try {
-      if (editingMoment && onUpdate) {
-        return await onUpdate(editingMoment.id, content, images);
-      }
       return await onCreate(content, images);
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleCancel = () => {
-    onCancelEdit?.();
   };
 
   return (
@@ -54,16 +31,11 @@ export function MomentComposer({
       <div className="flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-foreground/40" />
         <h3 className="text-sm font-serif font-medium text-foreground">
-          {editingMoment ? m.moments_edit_btn() : m.moments_composer_title()}
+          {m.moments_composer_title()}
         </h3>
       </div>
 
-      <MomentEditor
-        onSubmit={handleSubmit}
-        isSubmitting={isSubmitting}
-        initialContent={editingMoment?.content}
-        onCancel={editingMoment ? handleCancel : undefined}
-      />
+      <MomentEditor onSubmit={handleSubmit} isSubmitting={isSubmitting} />
     </div>
   );
 }

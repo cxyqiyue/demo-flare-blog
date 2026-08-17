@@ -5,6 +5,9 @@ import type {
 } from "@tiptap/react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { uploadToImageHostingFn } from "@/features/image-hosting/api/image-hosting.api";
+import { uploadImageFn } from "@/features/media/api/media.api";
 import { normalizeLinkHref } from "@/lib/links/normalize-link-href";
 import { cn } from "@/lib/utils";
 import type { FormulaModalPayload } from "./formula-modal-store";
@@ -180,6 +183,29 @@ export const Editor = memo(function Editor({
     setModalOpen(null);
   };
 
+  const handleFileUpload = useCallback(
+    async (file: File): Promise<string | null> => {
+      try {
+        const formData = new FormData();
+        formData.append("image", file);
+        const hosted = await uploadToImageHostingFn({ data: formData });
+        if (!hosted.error && hosted.data.mode === "image-hosting") {
+          return hosted.data.url;
+        }
+        const result = await uploadImageFn({ data: formData });
+        if (result.error) {
+          toast.error("上传失败");
+          return null;
+        }
+        return result.data.url;
+      } catch {
+        toast.error("上传失败");
+        return null;
+      }
+    },
+    [],
+  );
+
   return (
     <div className={cn("relative flex flex-col group", className)}>
       {editable && (
@@ -208,6 +234,7 @@ export const Editor = memo(function Editor({
           initialUrl={modalInitialUrl}
           onClose={() => setModalOpen(null)}
           onSubmit={handleModalSubmit}
+          onFileUpload={handleFileUpload}
         />
       )}
 

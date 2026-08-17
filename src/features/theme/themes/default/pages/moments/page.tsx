@@ -1,5 +1,5 @@
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
-import type { MomentWithStats } from "@/features/moments/moments.schema";
 import type { MomentsPageProps } from "@/features/theme/contract/pages";
 import { Pagination } from "@/features/theme/themes/default/components/pagination";
 import { m } from "@/paraglide/messages";
@@ -20,30 +20,7 @@ export function MomentsPage({
   hasNextPage,
   onPageChange,
 }: MomentsPageProps) {
-  const [editingMoment, setEditingMoment] = useState<MomentWithStats | null>(
-    null,
-  );
-
-  const handleEdit = (moment: MomentWithStats) => {
-    setEditingMoment(moment);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingMoment(null);
-  };
-
-  const handleUpdate = async (
-    id: number,
-    content: import("@tiptap/react").JSONContent,
-    images: string[],
-  ): Promise<boolean> => {
-    const ok = await onUpdateMoment(id, content, images);
-    if (ok) {
-      setEditingMoment(null);
-    }
-    return ok;
-  };
+  const [composerOpen, setComposerOpen] = useState(false);
 
   return (
     <div className="w-full max-w-3xl mx-auto pb-20 px-6 md:px-0">
@@ -57,22 +34,19 @@ export function MomentsPage({
         </p>
       </header>
 
-      {/* Admin Composer */}
+      {/* Admin Composer (collapsible) */}
       {isAdmin && (
-        <MomentComposer
-          onCreate={onCreateMoment}
-          editingMoment={
-            editingMoment
-              ? {
-                  id: editingMoment.id,
-                  content: editingMoment.content,
-                  images: editingMoment.images,
-                }
-              : null
-          }
-          onUpdate={handleUpdate}
-          onCancelEdit={handleCancelEdit}
-        />
+        <div className="mb-8">
+          <button
+            type="button"
+            onClick={() => setComposerOpen((v) => !v)}
+            className="flex items-center gap-2 text-sm font-serif font-medium text-muted-foreground hover:text-foreground transition-colors mb-4"
+          >
+            {composerOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {m.moments_composer_title()}
+          </button>
+          {composerOpen && <MomentComposer onCreate={onCreateMoment} />}
+        </div>
       )}
 
       {/* Moments List */}
@@ -95,7 +69,7 @@ export function MomentsPage({
                 isAdmin={isAdmin}
                 onToggleLike={onToggleLike}
                 onDelete={onDeleteMoment}
-                onEdit={handleEdit}
+                onUpdate={onUpdateMoment}
               />
             ))}
 

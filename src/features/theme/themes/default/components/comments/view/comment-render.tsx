@@ -1,7 +1,6 @@
 import type { JSONContent } from "@tiptap/react";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { getCommentExtensions } from "@/features/comments/components/editor/config";
-import { ImageDisplay } from "../../content/image-display";
 
 export function renderCommentReact(content: JSONContent | null) {
   if (!content) return null;
@@ -14,29 +13,18 @@ export function renderCommentReact(content: JSONContent | null) {
           const attrs = node.attrs as {
             src: string;
             alt?: string | null;
-            width?: number | string;
-            height?: number | string;
           };
 
           const alt =
             (attrs.alt && attrs.alt !== "null" ? attrs.alt : null) ||
             "comment image";
 
-          const width =
-            typeof attrs.width === "string"
-              ? parseInt(attrs.width)
-              : attrs.width;
-          const height =
-            typeof attrs.height === "string"
-              ? parseInt(attrs.height)
-              : attrs.height;
-
           return (
-            <ImageDisplay
+            <img
               src={attrs.src}
               alt={alt}
-              width={width || undefined}
-              height={height || undefined}
+              loading="lazy"
+              className="max-w-full h-auto rounded-sm my-2 border border-border/40"
             />
           );
         },
