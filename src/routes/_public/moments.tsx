@@ -8,6 +8,7 @@ import { z } from "zod";
 import {
   createMomentFn,
   deleteMomentFn,
+  updateMomentFn,
 } from "@/features/moments/api/moments.admin.api";
 import { toggleMomentLikeFn } from "@/features/moments/api/moments.user.api";
 import {
@@ -129,6 +130,30 @@ function MomentsPage() {
     [refresh],
   );
 
+  const onUpdateMoment = useCallback(
+    async (
+      id: number,
+      content: JSONContent,
+      images: string[],
+    ): Promise<boolean> => {
+      try {
+        const result = await updateMomentFn({
+          data: { id, content, images },
+        });
+        if (result.error) {
+          toast.error(m.moments_update_error());
+          return false;
+        }
+        await refresh();
+        return true;
+      } catch {
+        toast.error(m.moments_update_error());
+        return false;
+      }
+    },
+    [refresh],
+  );
+
   const handlePageChange = (nextPage: number) => {
     navigate({
       search: { page: nextPage > 1 ? nextPage : undefined },
@@ -141,6 +166,7 @@ function MomentsPage() {
       isAdmin={session?.user.role === "admin"}
       onToggleLike={onToggleLike}
       onCreateMoment={onCreateMoment}
+      onUpdateMoment={onUpdateMoment}
       onDeleteMoment={onDeleteMoment}
       page={currentPage}
       pageSize={MOMENTS_PER_PAGE}

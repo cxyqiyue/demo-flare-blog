@@ -8,6 +8,7 @@ import type {
   DeleteMomentInput,
   GetPublicMomentsPageInput,
   ToggleMomentLikeInput,
+  UpdateMomentInput,
 } from "./moments.schema";
 import {
   MOMENTS_CACHE_KEYS,
@@ -97,6 +98,27 @@ export async function createMoment(
   invalidateCache(context);
 
   return ok(moment);
+}
+
+export async function updateMoment(
+  context: DbContext & { executionCtx: ExecutionContext } & AuthContext,
+  data: UpdateMomentInput,
+) {
+  const moment = await MomentRepo.findMomentById(context.db, data.id);
+  if (!moment) {
+    return err({ reason: "NOT_FOUND" });
+  }
+
+  const content = data.content as JSONContent | null;
+
+  const updated = await MomentRepo.updateMoment(context.db, data.id, {
+    content,
+    images: data.images,
+  });
+
+  invalidateCache(context);
+
+  return ok(updated);
 }
 
 export async function deleteMoment(

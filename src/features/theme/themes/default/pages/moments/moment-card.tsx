@@ -1,19 +1,20 @@
 import { ClientOnly } from "@tanstack/react-router";
-import { Heart, Loader2, MessageCircle, Trash2 } from "lucide-react";
+import { Heart, Loader2, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
 import type { MomentWithStats } from "@/features/moments/moments.schema";
 import { cn, formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
-import { CommentSection } from "../../components/comments/view/comment-section";
 import { renderCommentReact } from "../../components/comments/view/comment-render";
+import { CommentSection } from "../../components/comments/view/comment-section";
 
 interface MomentCardProps {
   moment: MomentWithStats;
   isAdmin: boolean;
   onToggleLike: (momentId: number) => Promise<boolean>;
   onDelete: (id: number) => Promise<boolean>;
+  onEdit: (moment: MomentWithStats) => void;
 }
 
 function MomentImage({ src }: { src: string }) {
@@ -32,6 +33,7 @@ export function MomentCard({
   isAdmin,
   onToggleLike,
   onDelete,
+  onEdit,
 }: MomentCardProps) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [liking, setLiking] = useState(false);
@@ -93,14 +95,24 @@ export function MomentCard({
         </div>
 
         {isAdmin && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowDeleteModal(true)}
-            className="h-auto p-1 text-muted-foreground/40 hover:text-destructive bg-transparent hover:bg-transparent"
-          >
-            <Trash2 size={14} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(moment)}
+              className="h-auto p-1 text-muted-foreground/40 hover:text-foreground bg-transparent hover:bg-transparent"
+            >
+              <Pencil size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDeleteModal(true)}
+              className="h-auto p-1 text-muted-foreground/40 hover:text-destructive bg-transparent hover:bg-transparent"
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
         )}
       </header>
 

@@ -1,8 +1,20 @@
 import type { JSONContent } from "@tiptap/react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import clsx from "clsx";
-import { Bold, Code, Image as ImageIcon, Italic, Link as LinkIcon, Loader2, Redo, Send, Strikethrough, Underline as UnderlineIcon, Undo } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import {
+  Bold,
+  Code,
+  Image as ImageIcon,
+  Italic,
+  Link as LinkIcon,
+  Loader2,
+  Redo,
+  Send,
+  Strikethrough,
+  Underline as UnderlineIcon,
+  Undo,
+} from "lucide-react";
 import { useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { getMomentExtensions } from "@/features/moments/components/moment-editor-config";
@@ -12,6 +24,7 @@ interface MomentEditorProps {
   onSubmit: (content: JSONContent) => Promise<boolean>;
   isSubmitting?: boolean;
   onCancel?: () => void;
+  initialContent?: JSONContent | null;
 }
 
 interface ToolbarButtonProps {
@@ -46,12 +59,13 @@ export function MomentEditor({
   onSubmit,
   isSubmitting,
   onCancel,
+  initialContent,
 }: MomentEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
     extensions: getMomentExtensions(),
-    content: "",
+    content: initialContent ?? "",
     autofocus: "end",
     editorProps: {
       attributes: {
@@ -78,7 +92,10 @@ export function MomentEditor({
   const insertLink = useCallback(() => {
     if (!editor) return;
     const previousUrl = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt(m.comments_editor_modal_link_label(), previousUrl ?? "");
+    const url = window.prompt(
+      m.comments_editor_modal_link_label(),
+      previousUrl ?? "",
+    );
     if (url === null) return;
     if (url.trim() === "") {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
@@ -206,7 +223,9 @@ export function MomentEditor({
             <span>
               {isSubmitting
                 ? m.moments_composer_publishing()
-                : m.moments_composer_submit()}
+                : initialContent
+                  ? m.moments_edit_submit()
+                  : m.moments_composer_submit()}
             </span>
             {isSubmitting ? (
               <Loader2 size={12} className="animate-spin" />

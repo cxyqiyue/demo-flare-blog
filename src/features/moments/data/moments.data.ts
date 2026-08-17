@@ -46,6 +46,19 @@ export async function getAllMoments(
     .offset(offset);
 }
 
+export async function updateMoment(
+  db: DB,
+  id: number,
+  data: { content: typeof MomentsTable.$inferInsert.content; images: string[] },
+) {
+  const [moment] = await db
+    .update(MomentsTable)
+    .set(data)
+    .where(eq(MomentsTable.id, id))
+    .returning();
+  return moment;
+}
+
 export async function deleteMoment(db: DB, id: number) {
   await db.delete(MomentsTable).where(eq(MomentsTable.id, id));
 }

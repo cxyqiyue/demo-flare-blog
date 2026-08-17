@@ -110,7 +110,8 @@ export function getMomentExtensions() {
     ImageExtension.configure({
       inline: false,
       HTMLAttributes: {
-        class: "rounded-sm max-h-96 object-contain my-2 border border-border/20",
+        class:
+          "rounded-sm max-h-96 object-contain my-2 border border-border/20",
       },
     }),
     ImageUpload.configure({

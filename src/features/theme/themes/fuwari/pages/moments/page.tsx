@@ -1,3 +1,5 @@
+import { useState } from "react";
+import type { MomentWithStats } from "@/features/moments/moments.schema";
 import type { MomentsPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
 import { Pagination } from "../../components/pagination";
@@ -9,6 +11,7 @@ export function MomentsPage({
   isAdmin,
   onToggleLike,
   onCreateMoment,
+  onUpdateMoment,
   onDeleteMoment,
   page,
   pageSize,
@@ -17,6 +20,31 @@ export function MomentsPage({
   hasNextPage,
   onPageChange,
 }: MomentsPageProps) {
+  const [editingMoment, setEditingMoment] = useState<MomentWithStats | null>(
+    null,
+  );
+
+  const handleEdit = (moment: MomentWithStats) => {
+    setEditingMoment(moment);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMoment(null);
+  };
+
+  const handleUpdate = async (
+    id: number,
+    content: import("@tiptap/react").JSONContent,
+    images: string[],
+  ): Promise<boolean> => {
+    const ok = await onUpdateMoment(id, content, images);
+    if (ok) {
+      setEditingMoment(null);
+    }
+    return ok;
+  };
+
   return (
     <div className="flex flex-col gap-4 w-full">
       {/* Header Banner */}
@@ -38,7 +66,20 @@ export function MomentsPage({
           className="fuwari-onload-animation"
           style={{ animationDelay: "250ms" }}
         >
-          <MomentComposer onCreate={onCreateMoment} />
+          <MomentComposer
+            onCreate={onCreateMoment}
+            editingMoment={
+              editingMoment
+                ? {
+                    id: editingMoment.id,
+                    content: editingMoment.content,
+                    images: editingMoment.images,
+                  }
+                : null
+            }
+            onUpdate={handleUpdate}
+            onCancelEdit={handleCancelEdit}
+          />
         </div>
       )}
 
@@ -56,6 +97,7 @@ export function MomentsPage({
                 isAdmin={isAdmin}
                 onToggleLike={onToggleLike}
                 onDelete={onDeleteMoment}
+                onEdit={handleEdit}
               />
             </div>
           ))}

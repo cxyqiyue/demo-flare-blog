@@ -33,6 +33,13 @@ export const CreateMomentInputSchema = z.object({
 });
 export type CreateMomentInput = z.infer<typeof CreateMomentInputSchema>;
 
+export const UpdateMomentInputSchema = z.object({
+  id: z.number(),
+  content: NullableJsonContentSchema,
+  images: z.array(z.string().min(1).max(2000)).max(9).default([]),
+});
+export type UpdateMomentInput = z.infer<typeof UpdateMomentInputSchema>;
+
 export const DeleteMomentInputSchema = z.object({
   id: z.number(),
 });

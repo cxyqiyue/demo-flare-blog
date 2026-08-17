@@ -12,6 +12,12 @@ export interface MomentsPageProps {
   onToggleLike: (momentId: number) => Promise<boolean>;
   /** 发布动态（管理员），返回是否成功 */
   onCreateMoment: (content: JSONContent, images: string[]) => Promise<boolean>;
+  /** 编辑动态（管理员），返回是否成功 */
+  onUpdateMoment: (
+    id: number,
+    content: JSONContent,
+    images: string[],
+  ) => Promise<boolean>;
   /** 删除动态（管理员），返回是否成功 */
   onDeleteMoment: (id: number) => Promise<boolean>;
   /** 当前页码（从 1 开始） */
