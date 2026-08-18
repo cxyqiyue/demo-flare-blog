@@ -121,6 +121,78 @@ async function signRequestV4({
   return `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 }
 
+interface SignGetRequestParams {
+  canonicalUri: string;
+  canonicalQueryString?: string;
+  host: string;
+  amzDate: string;
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+}
+
+async function signGetRequest({
+  canonicalUri,
+  canonicalQueryString = "",
+  host,
+  amzDate,
+  region,
+  accessKeyId,
+  secretAccessKey,
+}: SignGetRequestParams): Promise<string> {
+  const canonicalHeaders = `host:${host}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = "host;x-amz-date";
+  const canonicalRequest = `GET\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${EMPTY_PAYLOAD_HASH}`;
+
+  const dateStamp = amzDate.slice(0, 8);
+  const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+  const canonicalRequestHash = await sha256Hex(canonicalRequest);
+  const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`;
+
+  const kDate = await hmacSha256("AWS4" + secretAccessKey, dateStamp);
+  const kRegion = await hmacSha256(kDate, region);
+  const kService = await hmacSha256(kRegion, "s3");
+  const kSigning = await hmacSha256(kService, "aws4_request");
+  const signature = await hmacSha256Hex(kSigning, stringToSign);
+
+  return `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+}
+
+interface SignDeleteRequestParams {
+  canonicalUri: string;
+  host: string;
+  amzDate: string;
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+}
+
+async function signDeleteRequest({
+  canonicalUri,
+  host,
+  amzDate,
+  region,
+  accessKeyId,
+  secretAccessKey,
+}: SignDeleteRequestParams): Promise<string> {
+  const canonicalHeaders = `host:${host}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = "host;x-amz-date";
+  const canonicalRequest = `DELETE\n${canonicalUri}\n\n${canonicalHeaders}\n${signedHeaders}\n${EMPTY_PAYLOAD_HASH}`;
+
+  const dateStamp = amzDate.slice(0, 8);
+  const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+  const canonicalRequestHash = await sha256Hex(canonicalRequest);
+  const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`;
+
+  const kDate = await hmacSha256("AWS4" + secretAccessKey, dateStamp);
+  const kRegion = await hmacSha256(kDate, region);
+  const kService = await hmacSha256(kRegion, "s3");
+  const kSigning = await hmacSha256(kService, "aws4_request");
+  const signature = await hmacSha256Hex(kSigning, stringToSign);
+
+  return `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+}
+
 export type S3UploadResult = Result<
   { url: string },
   { reason: "PROVIDER_REQUEST_FAILED"; message: string }
@@ -227,15 +299,10 @@ export async function listS3Objects(
     const canonicalQueryString = params.toString().split("&").sort().join("&");
     const canonicalUri = `/${encodeURIComponent(cfg.bucket)}`;
 
-    const contentType = "application/octet-stream";
-
-    const authorization = await signRequestV4({
-      method: "GET",
+    const authorization = await signGetRequest({
       canonicalUri,
       canonicalQueryString,
       host,
-      contentType,
-      payloadHash: EMPTY_PAYLOAD_HASH,
       amzDate,
       region,
       accessKeyId: cfg.accessKeyId,
@@ -246,8 +313,6 @@ export async function listS3Objects(
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        "Content-Type": contentType,
-        "x-amz-content-sha256": EMPTY_PAYLOAD_HASH,
         "x-amz-date": amzDate,
         Authorization: authorization,
       },
@@ -328,14 +393,9 @@ export async function deleteS3Object(
     const fullKey = [cfg.pathPrefix?.trim(), key].filter(Boolean).join("/");
     const canonicalUri = `/${encodeURIComponent(cfg.bucket)}/${encodeObjectKey(fullKey)}`;
 
-    const contentType = "application/octet-stream";
-
-    const authorization = await signRequestV4({
-      method: "DELETE",
+    const authorization = await signDeleteRequest({
       canonicalUri,
       host,
-      contentType,
-      payloadHash: EMPTY_PAYLOAD_HASH,
       amzDate,
       region,
       accessKeyId: cfg.accessKeyId,
@@ -345,8 +405,6 @@ export async function deleteS3Object(
     const response = await fetch(`${endpoint.origin}${canonicalUri}`, {
       method: "DELETE",
       headers: {
-        "Content-Type": contentType,
-        "x-amz-content-sha256": EMPTY_PAYLOAD_HASH,
         "x-amz-date": amzDate,
         Authorization: authorization,
       },

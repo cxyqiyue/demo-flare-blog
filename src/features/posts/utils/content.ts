@@ -16,8 +16,7 @@ export function slugify(text: string | null | undefined) {
     // ^      : 取反
     // a-z0-9 : 英文和数字
     // \-     : 横杠
-    // \u4e00-\u9fa5 : 汉字的标准 Unicode 范围 (基本覆盖所有常用字)
-    .replace(/[^a-z0-9\-\u4E00-\u9FA5]+/g, "")
+    .replace(/[^a-z0-9\-]+/g, "")
 
     // 3. 处理连续的横杠 (比如 "Hello... World" 会变成 "hello---world"，这里修正为 "hello-world")
     .replace(/-{2,}/g, "-")
