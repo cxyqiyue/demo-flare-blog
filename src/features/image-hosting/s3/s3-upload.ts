@@ -227,12 +227,14 @@ export async function listS3Objects(
     const canonicalQueryString = params.toString().split("&").sort().join("&");
     const canonicalUri = `/${encodeURIComponent(cfg.bucket)}`;
 
+    const contentType = "application/octet-stream";
+
     const authorization = await signRequestV4({
       method: "GET",
       canonicalUri,
       canonicalQueryString,
       host,
-      contentType: "",
+      contentType,
       payloadHash: EMPTY_PAYLOAD_HASH,
       amzDate,
       region,
@@ -244,7 +246,7 @@ export async function listS3Objects(
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        "Content-Type": "",
+        "Content-Type": contentType,
         "x-amz-content-sha256": EMPTY_PAYLOAD_HASH,
         "x-amz-date": amzDate,
         Authorization: authorization,
@@ -326,11 +328,13 @@ export async function deleteS3Object(
     const fullKey = [cfg.pathPrefix?.trim(), key].filter(Boolean).join("/");
     const canonicalUri = `/${encodeURIComponent(cfg.bucket)}/${encodeObjectKey(fullKey)}`;
 
+    const contentType = "application/octet-stream";
+
     const authorization = await signRequestV4({
       method: "DELETE",
       canonicalUri,
       host,
-      contentType: "",
+      contentType,
       payloadHash: EMPTY_PAYLOAD_HASH,
       amzDate,
       region,
@@ -341,7 +345,7 @@ export async function deleteS3Object(
     const response = await fetch(`${endpoint.origin}${canonicalUri}`, {
       method: "DELETE",
       headers: {
-        "Content-Type": "",
+        "Content-Type": contentType,
         "x-amz-content-sha256": EMPTY_PAYLOAD_HASH,
         "x-amz-date": amzDate,
         Authorization: authorization,

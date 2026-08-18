@@ -51,6 +51,8 @@ export function useMediaLibrary(providers: MediaProvider[]) {
 
   const currentProviderId = useMemo(() => {
     if (providerParam) return providerParam;
+    const defaultProvider = providers.find((p) => p.isDefault);
+    if (defaultProvider) return defaultProvider.id;
     const listable = providers.find((p) => p.canList);
     return listable?.id ?? "r2";
   }, [providerParam, providers]);
@@ -142,14 +144,13 @@ export function useMediaLibrary(providers: MediaProvider[]) {
 
   // ── External (S3) Directory Query ──
   const externalQuery = useInfiniteQuery({
-    queryKey: ["media", "external", currentProviderId, currentFolder, debouncedSearch],
+    queryKey: ["media", "external", currentProviderId, currentFolder],
     queryFn: ({ pageParam }) =>
       listExternalDirectoryFn({
         data: {
           providerId: currentProviderId,
           folder: currentFolder || undefined,
           continuationToken: pageParam ?? undefined,
-          search: debouncedSearch || undefined,
         },
       }),
     initialPageParam: null as string | null,
@@ -162,7 +163,7 @@ export function useMediaLibrary(providers: MediaProvider[]) {
 
   const mediaItems: MediaFileItem[] = useMemo(() => {
     if (isExternal) {
-      return (externalQuery.data?.pages.flatMap((page) => page.files) ?? []).map((f) => ({
+      const files = (externalQuery.data?.pages.flatMap((page) => page.files) ?? []).map((f) => ({
         key: f.key,
         fileName: f.name,
         url: f.url,
@@ -173,12 +174,18 @@ export function useMediaLibrary(providers: MediaProvider[]) {
         createdAt: null,
         isLinked: false,
       }));
+      // Client-side search filtering for external providers
+      if (debouncedSearch) {
+        const query = debouncedSearch.toLowerCase();
+        return files.filter((f) => f.fileName.toLowerCase().includes(query));
+      }
+      return files;
     }
     return (r2Query.data?.pages.flatMap((page) => page.files) ?? []).map((file) => ({
       ...file,
       fileName: file.name,
     }));
-  }, [isExternal, externalQuery.data, r2Query.data]);
+  }, [isExternal, externalQuery.data, r2Query.data, debouncedSearch]);
 
   const folders = useMemo(() => {
     if (isExternal) {
@@ -414,9 +421,12 @@ export function useMediaLibrary(providers: MediaProvider[]) {
 
   const externalError = useMemo(() => {
     if (!isExternal) return undefined;
+    if (externalQuery.error) {
+      return externalQuery.error.message || "S3 request failed";
+    }
     const lastPage = externalQuery.data?.pages[externalQuery.data.pages.length - 1];
     return lastPage?.error;
-  }, [isExternal, externalQuery.data]);
+  }, [isExternal, externalQuery.data, externalQuery.error]);
 
   return {
     // Provider

@@ -477,6 +477,12 @@ export async function getMediaProviders(
   const ih = config?.imageHosting;
   const providers: MediaProvider[] = [];
 
+  // Determine which provider should be default based on image hosting config
+  const s3Enabled =
+    (ih?.s3?.articleEnabled ?? false) || (ih?.s3?.commentEnabled ?? false);
+  const r2NativeEnabled =
+    (ih?.r2Native?.articleEnabled ?? true) || (ih?.r2Native?.commentEnabled ?? true);
+
   // R2 Native — always available
   providers.push({
     id: "r2",
@@ -486,6 +492,7 @@ export async function getMediaProviders(
     canDelete: true,
     canUpload: true,
     canCreateFolder: true,
+    isDefault: !s3Enabled && r2NativeEnabled,
   });
 
   // S3
@@ -499,6 +506,7 @@ export async function getMediaProviders(
       canDelete: true,
       canUpload: true,
       canCreateFolder: false,
+      isDefault: s3Enabled,
     });
   }
 

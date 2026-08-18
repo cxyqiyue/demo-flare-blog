@@ -22,6 +22,7 @@ export interface MediaProvider {
   canDelete: boolean;
   canUpload: boolean;
   canCreateFolder: boolean;
+  isDefault?: boolean;
 }
 
 export const UploadMediaInputSchema = z.instanceof(FormData);
