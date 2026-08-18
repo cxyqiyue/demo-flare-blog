@@ -51,7 +51,7 @@ async function getTargetContext(
       return {
         kind: "post" as const,
         title: post.title,
-        commentUrl: `https://${serverEnv(context.env).DOMAIN}/post/${post.slug}?highlightCommentId=${comment.id}&rootId=${comment.rootId ?? comment.id}#comment-${comment.id}`,
+        commentUrl: `https://${serverEnv(context.env).DOMAIN}/post/${encodeURIComponent(post.slug)}?highlightCommentId=${comment.id}&rootId=${comment.rootId ?? comment.id}#comment-${comment.id}`,
         post: { slug: post.slug, title: post.title },
       };
     }

@@ -109,9 +109,9 @@ export async function purgeCDNCache(env: Env, options: PurgeOptions) {
 export async function purgePostCDNCache(env: Env, slug: string) {
   return purgeCDNCache(env, {
     urls: [
-      `/post/${slug}`, // 页面
-      `/api/post/${slug}`, // 单篇 API（单数）
-      `/api/post/${slug}/related`, // 相关文章 API
+      `/post/${encodeURIComponent(slug)}`, // 页面
+      `/api/post/${encodeURIComponent(slug)}`, // 单篇 API（单数）
+      `/api/post/${encodeURIComponent(slug)}/related`, // 相关文章 API
       `/api/tags`, // 标签 API
       "/",
     ],

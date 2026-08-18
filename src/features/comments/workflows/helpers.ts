@@ -93,7 +93,7 @@ export async function sendReplyNotification(
   const rootId = comment.rootId ?? comment.id;
   const commentUrl =
     target.kind === "post"
-      ? `https://${DOMAIN}/post/${target.slug}?highlightCommentId=${comment.id}&rootId=${rootId}#comment-${comment.id}`
+      ? `https://${DOMAIN}/post/${encodeURIComponent(target.slug)}?highlightCommentId=${comment.id}&rootId=${rootId}#comment-${comment.id}`
       : target.kind === "about"
         ? `https://${DOMAIN}/about?highlightCommentId=${comment.id}&rootId=${rootId}#comment-${comment.id}`
         : `https://${DOMAIN}/moments?highlightCommentId=${comment.id}&rootId=${rootId}#comment-${comment.id}`;

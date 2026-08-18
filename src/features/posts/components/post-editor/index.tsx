@@ -335,7 +335,7 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
         processState={processState}
         isPostDirty={isPostDirty}
         onPreview={() => {
-          if (post.slug) window.open(`/post/${post.slug}`, "_blank");
+          if (post.slug) window.open(`/post/${encodeURIComponent(post.slug)}`, "_blank");
         }}
         onProcess={handleProcessData}
         onOpenAi={() => setIsAiOpen(true)}
