@@ -85,10 +85,11 @@ function invalidateCache(
 
 function stripImageNodes(content: JSONContent | null): JSONContent | null {
   if (!content) return content;
-  const walk = (node: JSONContent): JSONContent => {
-    if (node.type === "image") return { ...node, type: "text", text: "" };
+  const walk = (node: JSONContent): JSONContent | null => {
+    if (node.type === "image") return null;
     if (node.content) {
-      return { ...node, content: node.content.map(walk) };
+      const filtered = node.content.map(walk).filter(Boolean) as JSONContent[];
+      return { ...node, content: filtered };
     }
     return node;
   };
