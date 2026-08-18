@@ -10,7 +10,6 @@ import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import type { SystemConfig } from "@/features/config/config.schema";
 import {
@@ -89,16 +88,14 @@ export function ImageHostingSettingsSection({
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // ── R2 Native ──
-  const r2CommentEnabled =
-    watch("imageHosting.r2Native.commentEnabled") ?? false;
-  const r2Enabled = r2CommentEnabled;
+  const r2Enabled =
+    (watch("imageHosting.r2Native.articleEnabled") ?? false) ||
+    (watch("imageHosting.r2Native.commentEnabled") ?? false);
 
   // ── S3 ──
-  const s3CommentEnabled =
-    watch("imageHosting.s3.commentEnabled") ?? false;
-  const s3ArticleEnabled =
-    watch("imageHosting.s3.articleEnabled") ?? false;
-  const s3Enabled = s3CommentEnabled || s3ArticleEnabled;
+  const s3Enabled =
+    (watch("imageHosting.s3.articleEnabled") ?? false) ||
+    (watch("imageHosting.s3.commentEnabled") ?? false);
   const s3Provider = watch("imageHosting.s3.provider") ?? "cloudflare-r2";
   const s3Endpoint = watch("imageHosting.s3.endpoint") ?? "";
   const s3Bucket = watch("imageHosting.s3.bucket") ?? "";
@@ -240,7 +237,8 @@ export function ImageHostingSettingsSection({
       type,
       apiKey: "",
       apiEndpoint: type === "ffsky" ? "https://api.ffsky.top/api/upload" : "",
-      articleEnabled: false,
+      articleEnabled: true,
+      commentEnabled: true,
     };
     const updated = [...apiProviders, newProvider];
     setValue("imageHosting.apiProviders", updated, { shouldDirty: true });
@@ -317,26 +315,6 @@ export function ImageHostingSettingsSection({
               <p className="text-xs text-muted-foreground">
                 {m.settings_image_hosting_r2_native_desc_full()}
               </p>
-              <label className="flex cursor-pointer items-center gap-3 md:gap-4 border border-border/20 bg-muted/10 p-3 md:p-4 transition-colors hover:bg-muted/20">
-                <Checkbox
-                  checked={r2CommentEnabled}
-                  onCheckedChange={(checked) =>
-                    setValue(
-                      "imageHosting.r2Native.commentEnabled",
-                      !!checked,
-                      { shouldDirty: true },
-                    )
-                  }
-                />
-                <div className="min-w-0 space-y-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {m.settings_image_hosting_field_comment_enabled()}
-                  </p>
-                  <p className="text-xs md:text-sm text-muted-foreground">
-                    {m.settings_image_hosting_r2_native_comment_desc()}
-                  </p>
-                </div>
-              </label>
             </div>
           )}
         </div>
@@ -406,28 +384,6 @@ export function ImageHostingSettingsSection({
                     {S3_PROVIDER_LABELS[provider]}
                   </button>
                 ))}
-              </div>
-
-              {/* Comment / Article Toggles */}
-              <div className="grid gap-4 xl:grid-cols-2">
-                <label className="flex cursor-pointer items-center gap-4 border border-border/20 bg-muted/10 p-4 transition-colors hover:bg-muted/20">
-                  <Checkbox
-                    checked={s3CommentEnabled}
-                    onCheckedChange={(checked) =>
-                      setValue("imageHosting.s3.commentEnabled", !!checked, {
-                        shouldDirty: true,
-                      })
-                    }
-                  />
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {m.settings_image_hosting_field_comment_enabled()}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {m.settings_image_hosting_field_comment_enabled_desc()}
-                    </p>
-                  </div>
-                </label>
               </div>
 
               {/* S3 Config Fields */}
@@ -730,27 +686,6 @@ export function ImageHostingSettingsSection({
                             className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground"
                           />
                         </div>
-
-                        <label className="flex cursor-pointer items-center gap-4 border border-border/20 bg-muted/10 p-4 transition-colors hover:bg-muted/20">
-                          <Checkbox
-                            checked={p.articleEnabled}
-                            onCheckedChange={(checked) =>
-                              updateApiProvider(
-                                p.id,
-                                "articleEnabled",
-                                !!checked,
-                              )
-                            }
-                          />
-                          <div className="min-w-0 space-y-1">
-                            <p className="text-sm font-medium text-foreground">
-                              {m.settings_image_hosting_field_article_enabled()}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {m.settings_image_hosting_field_article_enabled_desc()}
-                            </p>
-                          </div>
-                        </label>
 
                         {p.type === "ffsky" && (
                           <div className="space-y-4">

@@ -5,10 +5,15 @@ import {
 } from "@/features/config/api/config.api";
 import { CONFIG_KEYS, systemConfigQuery } from "@/features/config/queries";
 
+const MEDIA_PROVIDERS_KEY = ["media", "providers"] as const;
+
 export function useSystemSetting() {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery(systemConfigQuery);
+
+  const invalidateMediaProviders = () =>
+    queryClient.invalidateQueries({ queryKey: MEDIA_PROVIDERS_KEY });
 
   const saveMutation = useMutation({
     mutationFn: updateSystemConfigFn,
@@ -16,6 +21,7 @@ export function useSystemSetting() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: CONFIG_KEYS.system }),
         queryClient.invalidateQueries({ queryKey: CONFIG_KEYS.site }),
+        invalidateMediaProviders(),
       ]);
     },
   });
@@ -26,6 +32,7 @@ export function useSystemSetting() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: CONFIG_KEYS.system }),
         queryClient.invalidateQueries({ queryKey: CONFIG_KEYS.site }),
+        invalidateMediaProviders(),
       ]);
     },
   });

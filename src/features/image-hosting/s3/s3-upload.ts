@@ -302,7 +302,8 @@ function parseListObjectsXml(
     .filter(Boolean);
 
   // Strip bucket prefix from keys
-  const strippedPrefix = prefix ? `${prefix}/` : "";
+  const normalizedPrefix = prefix.replace(/\/+$/, "");
+  const strippedPrefix = normalizedPrefix ? `${normalizedPrefix}/` : "";
   const stripPrefix = (key: string) => key.startsWith(strippedPrefix) ? key.slice(strippedPrefix.length) : key;
 
   return ok({

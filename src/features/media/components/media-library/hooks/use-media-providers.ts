@@ -8,7 +8,7 @@ export function useMediaProviders() {
   const { data: providers = [], isLoading } = useQuery({
     queryKey: MEDIA_PROVIDERS_KEY,
     queryFn: getMediaProvidersFn,
-    staleTime: 60_000,
+    staleTime: 5_000,
   });
 
   return { providers, isLoading };

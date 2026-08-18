@@ -55,6 +55,26 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     return listable?.id ?? "r2";
   }, [providerParam, providers]);
   const currentProvider = findProvider(providers, currentProviderId);
+
+  // Auto-switch if the URL-pinned provider no longer exists in the list
+  useEffect(() => {
+    if (providers.length === 0) return;
+    if (providerParam && !findProvider(providers, providerParam)) {
+      const fallback = providers.find((p) => p.canList);
+      if (fallback) {
+        navigate({
+          search: {
+            search: search ?? "",
+            unused: unused ?? false,
+            folder: "",
+            view: currentView,
+            provider: fallback.id,
+          },
+          replace: true,
+        });
+      }
+    }
+  }, [providers, providerParam]);
   const isExternal = currentProviderId !== "r2";
   const canList = currentProvider?.canList ?? false;
 
