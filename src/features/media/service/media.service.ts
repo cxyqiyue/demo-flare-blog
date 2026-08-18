@@ -10,6 +10,7 @@ import type {
   MediaProvider,
   RenameMediaFolderInput,
   UpdateMediaNameInput,
+  UploadToProviderInput,
 } from "@/features/media/media.schema";
 import { getImageDimensions } from "@/features/media/utils/image-dimensions";
 import {
@@ -23,6 +24,7 @@ import {
 import {
   deleteS3Objects,
   listS3Objects,
+  uploadToS3ForMediaLibrary,
   type S3Config,
 } from "@/features/image-hosting/s3/s3-upload";
 import * as ConfigService from "@/features/config/service/config.service";
@@ -80,6 +82,30 @@ export async function upload(
     );
     return err({ reason: "MEDIA_RECORD_CREATE_FAILED" });
   }
+}
+
+export async function uploadToProvider(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: UploadToProviderInput,
+  file: File,
+) {
+  const folder = normalizeFolderPath(data.folder ?? "");
+
+  if (data.providerId === "s3") {
+    const config = await ConfigService.getSystemConfig(context);
+    const s3Config = resolveS3ConfigForMedia(config);
+    if (!s3Config) {
+      return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+    }
+
+    const result = await uploadToS3ForMediaLibrary(s3Config, file, folder);
+    if (result.error) {
+      return err({ reason: "S3_UPLOAD_FAILED" });
+    }
+    return ok(result.data);
+  }
+
+  return err({ reason: "UNSUPPORTED_PROVIDER" });
 }
 
 export async function deleteImage(
@@ -507,6 +533,7 @@ export interface ExternalDirectoryFile {
 
 export interface ExternalDirectoryResult {
   files: ExternalDirectoryFile[];
+  folders: Array<{ key: string; name: string }>;
   nextContinuationToken: string | null;
 }
 
@@ -517,7 +544,7 @@ export async function listExternalDirectory(
   if (data.providerId === "s3") {
     const config = await ConfigService.getSystemConfig(context);
     const s3Config = resolveS3ConfigForMedia(config);
-    if (!s3Config) return { files: [], nextContinuationToken: null };
+    if (!s3Config) return { files: [], folders: [], nextContinuationToken: null };
 
     const prefix = normalizeFolderPath(data.folder);
     const result = await listS3Objects(s3Config, {
@@ -528,7 +555,7 @@ export async function listExternalDirectory(
 
     if (result.error) {
       console.error(JSON.stringify({ message: "s3 list failed", error: result.error.message }));
-      return { files: [], nextContinuationToken: null };
+      return { files: [], folders: [], nextContinuationToken: null };
     }
 
     const files: ExternalDirectoryFile[] = result.data.objects.map((o) => ({
@@ -541,13 +568,14 @@ export async function listExternalDirectory(
 
     return {
       files,
+      folders: result.data.prefixes.map((p) => ({ key: p, name: getBasename(p) })),
       nextContinuationToken: result.data.isTruncated
         ? (result.data.nextContinuationToken ?? null)
         : null,
     };
   }
 
-  return { files: [], nextContinuationToken: null };
+  return { files: [], folders: [], nextContinuationToken: null };
 }
 
 export async function deleteExternalFiles(

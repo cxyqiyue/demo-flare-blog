@@ -15,6 +15,7 @@ import {
   MOMENTS_KEYS,
   publicMomentsPageQuery,
 } from "@/features/moments/queries";
+import type { MomentsPageResponse } from "@/features/moments/moments.schema";
 import { authClient } from "@/lib/auth/auth.client";
 import { m } from "@/paraglide/messages";
 
@@ -67,9 +68,7 @@ function MomentsPage() {
   const { data: session } = authClient.useSession();
   const queryClient = useQueryClient();
 
-  const refresh = useCallback(() => {
-    return queryClient.invalidateQueries({ queryKey: MOMENTS_KEYS.all });
-  }, [queryClient]);
+  const pageQueryKey = [...MOMENTS_KEYS.publicPage, offset, MOMENTS_PER_PAGE];
 
   const onToggleLike = useCallback(
     async (momentId: number): Promise<boolean> => {
@@ -79,14 +78,28 @@ function MomentsPage() {
           toast.error(m.moments_like_error());
           return false;
         }
-        await refresh();
+        const { liked, likeCount } = result.data;
+        queryClient.setQueryData<MomentsPageResponse>(
+          pageQueryKey,
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              items: old.items.map((item) =>
+                item.id === momentId
+                  ? { ...item, isLiked: liked, likeCount }
+                  : item,
+              ),
+            };
+          },
+        );
         return true;
       } catch {
         toast.error(m.moments_like_error());
         return false;
       }
     },
-    [refresh],
+    [queryClient, pageQueryKey],
   );
 
   const onCreateMoment = useCallback(
@@ -102,14 +115,14 @@ function MomentsPage() {
           toast.error(m.moments_create_error());
           return false;
         }
-        await refresh();
+        await queryClient.refetchQueries({ queryKey: pageQueryKey });
         return true;
       } catch {
         toast.error(m.moments_create_error());
         return false;
       }
     },
-    [refresh],
+    [queryClient, pageQueryKey],
   );
 
   const onDeleteMoment = useCallback(
@@ -120,14 +133,24 @@ function MomentsPage() {
           toast.error(m.moments_delete_error());
           return false;
         }
-        await refresh();
+        queryClient.setQueryData<MomentsPageResponse>(
+          pageQueryKey,
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              items: old.items.filter((item) => item.id !== id),
+              total: old.total - 1,
+            };
+          },
+        );
         return true;
       } catch {
         toast.error(m.moments_delete_error());
         return false;
       }
     },
-    [refresh],
+    [queryClient, pageQueryKey],
   );
 
   const onUpdateMoment = useCallback(
@@ -144,14 +167,14 @@ function MomentsPage() {
           toast.error(m.moments_update_error());
           return false;
         }
-        await refresh();
+        await queryClient.refetchQueries({ queryKey: pageQueryKey });
         return true;
       } catch {
         toast.error(m.moments_update_error());
         return false;
       }
     },
-    [refresh],
+    [queryClient, pageQueryKey],
   );
 
   const handlePageChange = (nextPage: number) => {

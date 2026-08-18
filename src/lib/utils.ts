@@ -11,28 +11,68 @@ export function cn(...inputs: Array<ClassValue>) {
   return twMerge(clsx(inputs));
 }
 
+function getLocalTimezone(): string {
+  if (isSSR) return "UTC";
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return "UTC";
+  }
+}
+
 export function formatDate(
   date: Date | undefined | null | string | number,
   options: { includeTime?: boolean } = {},
 ) {
   if (!date) return "";
   const d = new Date(date);
+  const tz = getLocalTimezone();
+  const fmtOpts: Intl.DateTimeFormatOptions = { timeZone: tz };
   if (options.includeTime) {
-    return m.format_datetime({ date: d });
+    Object.assign(fmtOpts, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  } else {
+    Object.assign(fmtOpts, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   }
-  return m.format_date({ date: d });
+  return new Intl.DateTimeFormat(undefined, fmtOpts).format(d);
 }
 
 export function formatTime(date: Date | undefined | null | string | number) {
   if (!date) return "";
-  return m.format_time({ date: new Date(date) });
+  const d = new Date(date);
+  const tz = getLocalTimezone();
+  return new Intl.DateTimeFormat(undefined, {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
 }
 
 export function formatMonthDayTime(
   date: Date | undefined | null | string | number,
 ) {
   if (!date) return "";
-  return m.format_month_day_time({ date: new Date(date) });
+  const d = new Date(date);
+  const tz = getLocalTimezone();
+  return new Intl.DateTimeFormat(undefined, {
+    timeZone: tz,
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
 }
 
 export function formatTimeAgo(date: Date | null | string) {

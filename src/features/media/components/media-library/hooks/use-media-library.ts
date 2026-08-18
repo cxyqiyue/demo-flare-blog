@@ -157,9 +157,11 @@ export function useMediaLibrary(providers: MediaProvider[]) {
   }, [isExternal, externalQuery.data, r2Query.data]);
 
   const folders = useMemo(() => {
-    if (isExternal) return [];
+    if (isExternal) {
+      return externalQuery.data?.pages.flatMap((page) => page.folders) ?? [];
+    }
     return r2Query.data?.pages.flatMap((page) => page.folders) ?? [];
-  }, [isExternal, r2Query.data]);
+  }, [isExternal, externalQuery.data, r2Query.data]);
 
   // Linked media keys — only for R2
   const mediaKeys = useMemo(() => mediaItems.map((item) => item.key), [mediaItems]);

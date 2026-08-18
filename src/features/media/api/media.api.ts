@@ -27,6 +27,21 @@ export const uploadImageFn = createServerFn({
     MediaService.upload(context, parseUploadMediaInput(data, m)),
   );
 
+export const uploadToProviderFn = createServerFn({
+  method: "POST",
+})
+  .middleware([adminMiddleware])
+  .inputValidator(UploadMediaInputSchema)
+  .handler(({ data, context }) => {
+    const providerId = data.get("providerId") as string;
+    const folder = (data.get("folder") as string) ?? "";
+    const file = data.get("image");
+    if (!(file instanceof File)) {
+      throw new Error(m.media_validation_file_required());
+    }
+    return MediaService.uploadToProvider(context, { providerId, folder }, file);
+  });
+
 export const deleteImageFn = createServerFn({
   method: "POST",
 })

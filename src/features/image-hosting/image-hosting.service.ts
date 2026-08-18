@@ -242,30 +242,7 @@ export async function uploadForArticle(
   const config = await ConfigService.getSystemConfig(context);
   const ih = config?.imageHosting;
 
-  // ── 1. R2 原生优先 ──
-  if (ih?.r2Native?.articleEnabled) {
-    const ext = extensionFromMime(file.type);
-    const key = buildObjectKey("articles", ext);
-    try {
-      await MediaStorage.putToR2(context.env, file, key);
-      const dimensions = getImageDimensions(await file.arrayBuffer());
-      const url = `/images/${key}`;
-      return ok({
-        mode: "image-hosting",
-        provider: "r2-native",
-        url,
-        width: dimensions?.width,
-        height: dimensions?.height,
-      });
-    } catch (error) {
-      return err({
-        reason: "IMAGE_HOSTING_UPLOAD_FAILED",
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  // ── 2. S3 兼容存储 ──
+  // ── 1. S3 兼容存储（第三方优先） ──
   const s3Runtime = resolveS3RuntimeConfig(config, "article");
   if (s3Runtime?.enabled) {
     const result = await uploadToS3ForFile(s3Runtime.config, file);
@@ -285,7 +262,7 @@ export async function uploadForArticle(
     });
   }
 
-  // ── 3. API Key 图床 ──
+  // ── 2. API Key 图床（第三方优先） ──
   const apiProviders = ih?.apiProviders ?? [];
   let lastError: { message: string } | null = null;
 
@@ -328,6 +305,29 @@ export async function uploadForArticle(
     });
   }
 
+  // ── 3. R2 原生（兜底） ──
+  if (ih?.r2Native?.articleEnabled) {
+    const ext = extensionFromMime(file.type);
+    const key = buildObjectKey("articles", ext);
+    try {
+      await MediaStorage.putToR2(context.env, file, key);
+      const dimensions = getImageDimensions(await file.arrayBuffer());
+      const url = `/images/${key}`;
+      return ok({
+        mode: "image-hosting",
+        provider: "r2-native",
+        url,
+        width: dimensions?.width,
+        height: dimensions?.height,
+      });
+    } catch (error) {
+      return err({
+        reason: "IMAGE_HOSTING_UPLOAD_FAILED",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   return ok({ mode: "none" });
 }
 
@@ -344,22 +344,7 @@ export async function uploadCommentImage(
   const config = await ConfigService.getSystemConfig(context);
   const ih = config?.imageHosting;
 
-  // ── 1. R2 原生 ──
-  if (ih?.r2Native?.commentEnabled) {
-    const ext = extensionFromMime(file.type);
-    const key = buildObjectKey("comments", ext);
-    try {
-      await MediaStorage.putToR2(context.env, file, key);
-      return ok({ url: `/images/${key}` });
-    } catch (error) {
-      return err({
-        reason: "COMMENT_IMAGE_UPLOAD_FAILED",
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  // ── 2. S3 兼容存储 ──
+  // ── 1. S3 兼容存储（第三方优先） ──
   const s3Runtime = resolveS3RuntimeConfig(config, "comment");
   if (s3Runtime?.enabled) {
     const result = await uploadToS3ForFile(s3Runtime.config, file);
@@ -372,7 +357,7 @@ export async function uploadCommentImage(
     return ok({ url: result.data.url });
   }
 
-  // ── 3. API Key 图床（仅支持 commentEnabled 的） ──
+  // ── 2. API Key 图床（第三方优先，仅支持 commentEnabled 的） ──
   const apiProviders = ih?.apiProviders ?? [];
   for (const p of apiProviders) {
     if (!p.commentEnabled || !p.apiKey?.trim()) continue;
@@ -398,6 +383,21 @@ export async function uploadCommentImage(
       });
     }
     return ok({ url: result.data.url });
+  }
+
+  // ── 3. R2 原生（兜底） ──
+  if (ih?.r2Native?.commentEnabled) {
+    const ext = extensionFromMime(file.type);
+    const key = buildObjectKey("comments", ext);
+    try {
+      await MediaStorage.putToR2(context.env, file, key);
+      return ok({ url: `/images/${key}` });
+    } catch (error) {
+      return err({
+        reason: "COMMENT_IMAGE_UPLOAD_FAILED",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   return err({

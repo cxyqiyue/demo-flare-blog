@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { uploadImageFn } from "@/features/media/api/media.api";
+import { uploadImageFn, uploadToProviderFn } from "@/features/media/api/media.api";
 import { MEDIA_KEYS } from "@/features/media/queries";
 import { formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -28,12 +28,23 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
     };
   }, []);
 
-  // Upload mutation — delegates to existing R2 upload (for now all providers go through R2 backend)
+  // Upload mutation — routes to the selected provider
   const uploadMutation = useMutation({
     mutationFn: async (item: UploadItem) => {
       if (!item.file) {
         throw new Error(m.media_upload_log_error_no_data());
       }
+
+      if (provider && provider.type !== "r2") {
+        const formData = new FormData();
+        formData.append("image", item.file);
+        formData.append("providerId", provider.id);
+        if (item.folder) {
+          formData.append("folder", item.folder);
+        }
+        return await uploadToProviderFn({ data: formData });
+      }
+
       const formData = new FormData();
       formData.append("image", item.file);
       if (item.folder) {

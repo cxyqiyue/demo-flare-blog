@@ -45,11 +45,7 @@ const COMPAT_TYPE_LABELS: Record<AiCompatType, string> = {
   "gemini-compatible": "Gemini Compatible",
 };
 
-const COMPAT_TYPE_DESCS: Record<AiCompatType, () => string> = {
-  "openai-compatible": () => m.settings_ai_compat_openai(),
-  "claude-compatible": () => m.settings_ai_compat_claude(),
-  "gemini-compatible": () => m.settings_ai_compat_gemini(),
-};
+
 
 function skillLabel(name: AiBlogSkillType): string {
   if (name === "docs") return m.settings_ai_skill_docs();
@@ -291,7 +287,7 @@ export function AiSettingsSection({
                             {p.name || COMPAT_TYPE_LABELS[p.type]}
                           </p>
                           <p className="text-xs text-muted-foreground truncate">
-                            {COMPAT_TYPE_DESCS[p.type]()} · {p.model || m.settings_ai_provider_model_unconfigured()}
+                            {p.model || m.settings_ai_provider_model_unconfigured()}
                           </p>
                         </div>
                       </button>
