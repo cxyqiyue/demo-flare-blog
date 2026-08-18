@@ -463,7 +463,7 @@ function resolveS3ConfigForMedia(
   return {
     endpoint: endpoint.replace(/\/+$/, ""),
     bucket,
-    region: s3.region?.trim() || "",
+    region: s3.region?.trim() || "us-east-1",
     accessKeyId,
     secretAccessKey,
     pathPrefix: s3.pathPrefix?.trim() || "",

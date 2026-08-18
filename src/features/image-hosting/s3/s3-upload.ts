@@ -78,6 +78,16 @@ function encodeObjectKey(key: string): string {
   return key.split("/").filter(Boolean).map(encodeURIComponent).join("/");
 }
 
+/**
+ * 编码 S3 查询参数值（AWS SigV4 规范）。
+ * encodeURIComponent 会将 / 编码为 %2F，但 AWS S3 期望 / 保持原样。
+ */
+function encodeS3QueryParam(value: string): string {
+  return encodeURIComponent(value)
+    .toLowerCase()
+    .replace(/%2f/g, "/");
+}
+
 interface SignRequestParams {
   method: string;
   canonicalUri: string;
@@ -292,15 +302,17 @@ export async function listS3Objects(
 
     const bucketPrefix = [cfg.pathPrefix?.trim(), options.prefix].filter(Boolean).join("/");
 
-    const params = new URLSearchParams({
-      "list-type": "2",
-      ...(bucketPrefix ? { prefix: bucketPrefix } : {}),
-      ...(options.delimiter ? { delimiter: options.delimiter } : {}),
-      ...(options.continuationToken ? { "continuation-token": options.continuationToken } : {}),
-      "max-keys": String(options.maxKeys ?? 1000),
-    });
+    // 手动构建查询字符串，避免 URLSearchParams 将 / 编码为 %2F 导致签名校验失败
+    const queryParams: Array<[string, string]> = [["list-type", "2"]];
+    if (bucketPrefix) queryParams.push(["prefix", bucketPrefix]);
+    if (options.delimiter) queryParams.push(["delimiter", options.delimiter]);
+    if (options.continuationToken) queryParams.push(["continuation-token", options.continuationToken]);
+    queryParams.push(["max-keys", String(options.maxKeys ?? 1000)]);
 
-    const canonicalQueryString = params.toString().split("&").sort().join("&");
+    const canonicalQueryString = queryParams
+      .map(([k, v]) => `${encodeS3QueryParam(k)}=${encodeS3QueryParam(v)}`)
+      .sort()
+      .join("&");
     const canonicalUri = `/${encodeURIComponent(cfg.bucket)}`;
 
     const authorization = await signGetRequest({
