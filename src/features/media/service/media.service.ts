@@ -2,9 +2,12 @@ import * as MediaRepo from "@/features/media/data/media.data";
 import * as Storage from "@/features/media/data/media.storage";
 import type {
   CreateMediaFolderInput,
+  DeleteExternalFilesInput,
   DeleteMediaFoldersInput,
   GetMediaDirectoryInput,
   GetMediaListInput,
+  ListExternalDirectoryInput,
+  MediaProvider,
   RenameMediaFolderInput,
   UpdateMediaNameInput,
 } from "@/features/media/media.schema";
@@ -17,6 +20,12 @@ import {
   joinFolderKey,
   normalizeFolderPath,
 } from "@/features/media/utils/media.utils";
+import {
+  deleteS3Objects,
+  listS3Objects,
+  type S3Config,
+} from "@/features/image-hosting/s3/s3-upload";
+import * as ConfigService from "@/features/config/service/config.service";
 import * as PostMediaRepo from "@/features/posts/data/post-media.data";
 import { CACHE_CONTROL } from "@/lib/constants";
 import { err, ok } from "@/lib/errors";
@@ -410,4 +419,175 @@ export async function handleImageRequest(
     );
     return await serveOriginal();
   }
+}
+
+// ── Media Provider Management ────────────────────────────────
+
+function resolveS3ConfigForMedia(
+  config: Awaited<ReturnType<typeof ConfigService.getSystemConfig>>,
+): S3Config | null {
+  const s3 = config?.imageHosting?.s3;
+  if (!s3) return null;
+  const endpoint = s3.endpoint?.trim();
+  const bucket = s3.bucket?.trim();
+  const accessKeyId = s3.accessKeyId?.trim();
+  const secretAccessKey = s3.secretAccessKey?.trim();
+  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
+  return {
+    endpoint: endpoint.replace(/\/+$/, ""),
+    bucket,
+    region: s3.region?.trim() || "",
+    accessKeyId,
+    secretAccessKey,
+    pathPrefix: s3.pathPrefix?.trim() || "",
+    publicUrl: s3.publicUrl?.trim() || "",
+  };
+}
+
+export async function getMediaProviders(
+  context: DbContext & { executionCtx: ExecutionContext },
+): Promise<MediaProvider[]> {
+  const config = await ConfigService.getSystemConfig(context);
+  const ih = config?.imageHosting;
+  const providers: MediaProvider[] = [];
+
+  // R2 Native — always available
+  providers.push({
+    id: "r2",
+    name: "Cloudflare R2",
+    type: "r2",
+    canList: true,
+    canDelete: true,
+    canUpload: true,
+    canCreateFolder: true,
+  });
+
+  // S3
+  const s3Config = resolveS3ConfigForMedia(config);
+  if (s3Config) {
+    const s3Enabled = ih?.s3?.articleEnabled || ih?.s3?.commentEnabled;
+    if (s3Enabled) {
+      providers.push({
+        id: "s3",
+        name: ih?.s3?.provider ? `${ih.s3.provider} (S3)` : "S3",
+        type: "s3",
+        canList: true,
+        canDelete: true,
+        canUpload: true,
+        canCreateFolder: false,
+      });
+    }
+  }
+
+  // API Key providers — upload only
+  const apiProviders = ih?.apiProviders ?? [];
+  for (const p of apiProviders) {
+    if (!p.apiKey?.trim()) continue;
+    providers.push({
+      id: p.id,
+      name: p.name,
+      type: "api-key",
+      canList: false,
+      canDelete: false,
+      canUpload: true,
+      canCreateFolder: false,
+    });
+  }
+
+  return providers;
+}
+
+export interface ExternalDirectoryFile {
+  key: string;
+  name: string;
+  url: string;
+  mimeType: string;
+  sizeInBytes: number;
+}
+
+export interface ExternalDirectoryResult {
+  files: ExternalDirectoryFile[];
+  nextContinuationToken: string | null;
+}
+
+export async function listExternalDirectory(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: ListExternalDirectoryInput,
+): Promise<ExternalDirectoryResult> {
+  if (data.providerId === "s3") {
+    const config = await ConfigService.getSystemConfig(context);
+    const s3Config = resolveS3ConfigForMedia(config);
+    if (!s3Config) return { files: [], nextContinuationToken: null };
+
+    const prefix = normalizeFolderPath(data.folder);
+    const result = await listS3Objects(s3Config, {
+      prefix: prefix ? `${prefix}/` : "",
+      delimiter: "/",
+      continuationToken: data.continuationToken,
+    });
+
+    if (result.error) {
+      console.error(JSON.stringify({ message: "s3 list failed", error: result.error.message }));
+      return { files: [], nextContinuationToken: null };
+    }
+
+    const files: ExternalDirectoryFile[] = result.data.objects.map((o) => ({
+      key: o.key,
+      name: getBasename(o.key),
+      url: buildS3PublicUrl(s3Config, o.key),
+      mimeType: guessMimeFromKey(o.key),
+      sizeInBytes: o.size,
+    }));
+
+    return {
+      files,
+      nextContinuationToken: result.data.isTruncated
+        ? (result.data.nextContinuationToken ?? null)
+        : null,
+    };
+  }
+
+  return { files: [], nextContinuationToken: null };
+}
+
+export async function deleteExternalFiles(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: DeleteExternalFilesInput,
+): Promise<{ deleted: number; skipped: number }> {
+  if (data.providerId === "s3") {
+    const config = await ConfigService.getSystemConfig(context);
+    const s3Config = resolveS3ConfigForMedia(config);
+    if (!s3Config) return { deleted: 0, skipped: data.keys.length };
+
+    const result = await deleteS3Objects(s3Config, data.keys);
+    if (result.error) {
+      console.error(JSON.stringify({ message: "s3 delete failed", error: result.error.message }));
+      return { deleted: 0, skipped: data.keys.length };
+    }
+    return { deleted: result.data.deleted, skipped: 0 };
+  }
+
+  return { deleted: 0, skipped: data.keys.length };
+}
+
+function buildS3PublicUrl(cfg: S3Config, key: string): string {
+  const base = (
+    cfg.publicUrl?.trim() ||
+    `${cfg.endpoint.replace(/\/+$/, "")}/${cfg.bucket}`
+  ).replace(/\/+$/, "");
+  const encoded = key.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  return `${base}/${encoded}`;
+}
+
+function guessMimeFromKey(key: string): string {
+  const ext = key.split(".").pop()?.toLowerCase() ?? "";
+  const map: Record<string, string> = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    webp: "image/webp",
+    svg: "image/svg+xml",
+  };
+  return map[ext] ?? "application/octet-stream";
 }

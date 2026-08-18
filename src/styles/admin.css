@@ -5,24 +5,54 @@
   font-size: 15px;
 }
 
-/* Typography Normalization - Professional Minimums */
-.admin-layout :is(.text-\[9px\], .text-\[10px\], .text-xs) {
-  font-size: 13px !important;
-  line-height: 1.4 !important;
-  font-weight: 500 !important;
+/* ── Mobile-first: default (no overrides on small screens) ── */
+
+/* ── Desktop-only overrides (≥768px) ── */
+@media (min-width: 768px) {
+  /* Typography Normalization - Professional Minimums */
+  .admin-layout :is(.text-\[9px\], .text-\[10px\], .text-xs) {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+    font-weight: 500 !important;
+  }
+
+  .admin-layout .text-sm {
+    font-size: 14.5px !important;
+    line-height: 1.5 !important;
+    font-weight: 450 !important;
+  }
+
+  .admin-layout .text-base {
+    font-size: 16px !important;
+  }
+
+  /* Global Lucide Icon Overrides for tiny sizes */
+  .admin-layout [size="10"],
+  .admin-layout [size="12"],
+  .admin-layout [size="14"] {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  /* Header Adjustments */
+  .admin-layout header .text-\[10px\] {
+    font-size: 12px !important;
+  }
+
+  /* Breathability Improvements */
+  .admin-layout .p-6 {
+    padding: 1.75rem !important;
+  }
+
+  .admin-layout .md\:p-12 {
+    padding: 3.5rem !important;
+  }
+
+  .admin-layout .gap-4 {
+    gap: 1.25rem !important;
+  }
 }
 
-.admin-layout .text-sm {
-  font-size: 14.5px !important;
-  line-height: 1.5 !important;
-  font-weight: 450 !important;
-}
-
-.admin-layout .text-base {
-  font-size: 16px !important;
-}
-
-/* Icon Scaling - Increase hardcoded small icons */
 .admin-layout svg {
   /* Scale icons slightly if they are small */
   transition: transform 0.2s ease;
@@ -48,32 +78,6 @@
 .admin-layout .tabs-trigger {
   font-size: 12px !important;
   padding-bottom: 0.5rem !important;
-}
-
-/* Global Lucide Icon Overrides for tiny sizes */
-.admin-layout [size="10"],
-.admin-layout [size="12"],
-.admin-layout [size="14"] {
-  width: 16px !important;
-  height: 16px !important;
-}
-
-/* Header Adjustments */
-.admin-layout header .text-\[10px\] {
-  font-size: 12px !important;
-}
-
-/* Breathability Improvements */
-.admin-layout .p-6 {
-  padding: 1.75rem !important;
-}
-
-.admin-layout .md\:p-12 {
-  padding: 3.5rem !important;
-}
-
-.admin-layout .gap-4 {
-  gap: 1.25rem !important;
 }
 
 .admin-layout .no-scrollbar {

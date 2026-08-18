@@ -1,7 +1,7 @@
 import type { JSONContent } from "@tiptap/react";
 import { useMemo } from "react";
 import { renderReact } from "@/features/theme/themes/fuwari/components/content/render";
-import { cn } from "@/lib/utils";
+import { cn, sanitizeJsonContent } from "@/lib/utils";
 
 interface ContentRendererProps {
   content: JSONContent | null;
@@ -15,7 +15,8 @@ interface ContentRendererProps {
 export function ContentRenderer({ content, className }: ContentRendererProps) {
   const renderedContent = useMemo(() => {
     if (!content) return null;
-    return renderReact(content);
+    const safe = sanitizeJsonContent(content);
+    return safe ? renderReact(safe) : null;
   }, [content]);
 
   if (!content) {

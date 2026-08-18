@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "@/lib/errors";
 
-export interface S3UploadConfig {
+export interface S3Config {
   endpoint: string;
   bucket: string;
   region: string;
@@ -9,6 +9,9 @@ export interface S3UploadConfig {
   pathPrefix: string;
   publicUrl: string;
 }
+
+/** @deprecated Use S3Config */
+export type S3UploadConfig = S3Config;
 
 export interface S3UploadInput {
   key: string;
@@ -78,6 +81,7 @@ function encodeObjectKey(key: string): string {
 interface SignRequestParams {
   method: string;
   canonicalUri: string;
+  canonicalQueryString?: string;
   host: string;
   contentType: string;
   payloadHash: string;
@@ -90,6 +94,7 @@ interface SignRequestParams {
 async function signRequestV4({
   method,
   canonicalUri,
+  canonicalQueryString = "",
   host,
   contentType,
   payloadHash,
@@ -100,7 +105,7 @@ async function signRequestV4({
 }: SignRequestParams): Promise<string> {
   const canonicalHeaders = `content-type:${contentType}\nhost:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
   const signedHeaders = "content-type;host;x-amz-content-sha256;x-amz-date";
-  const canonicalRequest = `${method}\n${canonicalUri}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+  const canonicalRequest = `${method}\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
 
   const dateStamp = amzDate.slice(0, 8);
   const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
@@ -180,5 +185,230 @@ export async function uploadToS3(
       reason: "PROVIDER_REQUEST_FAILED",
       message: error instanceof Error ? error.message : String(error),
     });
+  }
+}
+
+// ── S3 List Objects ──────────────────────────────────────────
+
+const EMPTY_PAYLOAD_HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+export interface S3ListObjectsResult {
+  objects: Array<{ key: string; size: number; lastModified: string }>;
+  prefixes: string[];
+  isTruncated: boolean;
+  nextContinuationToken?: string;
+}
+
+export async function listS3Objects(
+  cfg: S3Config,
+  options: {
+    prefix?: string;
+    delimiter?: string;
+    continuationToken?: string;
+    maxKeys?: number;
+  } = {},
+): Promise<Result<S3ListObjectsResult, { reason: "S3_LIST_FAILED"; message: string }>> {
+  try {
+    const endpoint = new URL(cfg.endpoint);
+    const host = endpoint.host;
+    const region = cfg.region?.trim() || "us-east-1";
+    const amzDate = formatAmzDate(new Date());
+
+    const bucketPrefix = [cfg.pathPrefix?.trim(), options.prefix].filter(Boolean).join("/");
+
+    const params = new URLSearchParams({
+      "list-type": "2",
+      ...(bucketPrefix ? { prefix: bucketPrefix } : {}),
+      ...(options.delimiter ? { delimiter: options.delimiter } : {}),
+      ...(options.continuationToken ? { "continuation-token": options.continuationToken } : {}),
+      "max-keys": String(options.maxKeys ?? 1000),
+    });
+
+    const canonicalQueryString = params.toString().split("&").sort().join("&");
+    const canonicalUri = `/${encodeURIComponent(cfg.bucket)}/`;
+
+    const authorization = await signRequestV4({
+      method: "GET",
+      canonicalUri,
+      canonicalQueryString,
+      host,
+      contentType: "",
+      payloadHash: EMPTY_PAYLOAD_HASH,
+      amzDate,
+      region,
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
+    });
+
+    const url = `${endpoint.origin}${canonicalUri}?${canonicalQueryString}`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "",
+        "x-amz-content-sha256": EMPTY_PAYLOAD_HASH,
+        "x-amz-date": amzDate,
+        Authorization: authorization,
+      },
+    });
+
+    if (!response.ok) {
+      const text = (await response.text()).slice(0, 300);
+      return err({ reason: "S3_LIST_FAILED", message: text || `S3 list failed: ${response.status}` });
+    }
+
+    const xml = await response.text();
+    return parseListObjectsXml(xml, bucketPrefix);
+  } catch (error) {
+    return err({ reason: "S3_LIST_FAILED", message: error instanceof Error ? error.message : String(error) });
+  }
+}
+
+function parseListObjectsXml(
+  xml: string,
+  prefix: string,
+): Result<S3ListObjectsResult, { reason: "S3_LIST_FAILED"; message: string }> {
+  const getTag = (tag: string, xml: string): string | null => {
+    const match = xml.match(new RegExp(`<${tag}>([^<]*)</${tag}>`));
+    return match ? match[1] : null;
+  };
+
+  const getAllTags = (tag: string, xml: string): string[] => {
+    const results: string[] = [];
+    const regex = new RegExp(`<${tag}>([^<]*)</${tag}>`, "g");
+    let match;
+    while ((match = regex.exec(xml)) !== null) {
+      results.push(match[1]);
+    }
+    return results;
+  };
+
+  const parseObjects = (xmlChunk: string): Array<{ key: string; size: number; lastModified: string }> => {
+    const contents = xmlChunk.split("<Contents>").slice(1);
+    return contents.map((chunk) => {
+      const endOfChunk = chunk.split("</Contents>")[0];
+      return {
+        key: getTag("Key", endOfChunk) ?? "",
+        size: Number(getTag("Size", endOfChunk) ?? "0"),
+        lastModified: getTag("LastModified", endOfChunk) ?? "",
+      };
+    });
+  };
+
+  const isTruncated = getTag("IsTruncated", xml) === "true";
+  const nextToken = getTag("NextContinuationToken", xml);
+  const objects = parseObjects(xml);
+  const prefixes = getAllTags("CommonPrefixes", xml)
+    .map((p) => getTag("Prefix", p) ?? "")
+    .filter(Boolean);
+
+  // Strip bucket prefix from keys
+  const strippedPrefix = prefix ? `${prefix}/` : "";
+  const stripPrefix = (key: string) => key.startsWith(strippedPrefix) ? key.slice(strippedPrefix.length) : key;
+
+  return ok({
+    objects: objects.map((o) => ({ ...o, key: stripPrefix(o.key) })),
+    prefixes: prefixes.map((p) => stripPrefix(p.replace(/\/$/, ""))),
+    isTruncated,
+    nextContinuationToken: nextToken ?? undefined,
+  });
+}
+
+// ── S3 Delete Object ─────────────────────────────────────────
+
+export async function deleteS3Object(
+  cfg: S3Config,
+  key: string,
+): Promise<Result<{ success: boolean }, { reason: "S3_DELETE_FAILED"; message: string }>> {
+  try {
+    const endpoint = new URL(cfg.endpoint);
+    const host = endpoint.host;
+    const region = cfg.region?.trim() || "us-east-1";
+    const amzDate = formatAmzDate(new Date());
+
+    const fullKey = [cfg.pathPrefix?.trim(), key].filter(Boolean).join("/");
+    const canonicalUri = `/${encodeURIComponent(cfg.bucket)}/${encodeObjectKey(fullKey)}`;
+
+    const authorization = await signRequestV4({
+      method: "DELETE",
+      canonicalUri,
+      host,
+      contentType: "",
+      payloadHash: EMPTY_PAYLOAD_HASH,
+      amzDate,
+      region,
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
+    });
+
+    const response = await fetch(`${endpoint.origin}${canonicalUri}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "",
+        "x-amz-content-sha256": EMPTY_PAYLOAD_HASH,
+        "x-amz-date": amzDate,
+        Authorization: authorization,
+      },
+    });
+
+    if (!response.ok && response.status !== 404) {
+      const text = (await response.text()).slice(0, 300);
+      return err({ reason: "S3_DELETE_FAILED", message: text || `S3 delete failed: ${response.status}` });
+    }
+
+    return ok({ success: true });
+  } catch (error) {
+    return err({ reason: "S3_DELETE_FAILED", message: error instanceof Error ? error.message : String(error) });
+  }
+}
+
+// ── S3 Batch Delete ──────────────────────────────────────────
+
+export async function deleteS3Objects(
+  cfg: S3Config,
+  keys: string[],
+): Promise<Result<{ deleted: number }, { reason: "S3_DELETE_FAILED"; message: string }>> {
+  let deleted = 0;
+  for (const key of keys) {
+    const result = await deleteS3Object(cfg, key);
+    if (result.error) return result;
+    deleted++;
+  }
+  return ok({ deleted });
+}
+
+// ── S3 Upload for Media Library ───────────────────────────────
+
+export async function uploadToS3ForMediaLibrary(
+  cfg: S3Config,
+  file: File,
+  folder: string,
+): Promise<Result<
+  { key: string; url: string; fileName: string; mimeType: string; sizeInBytes: number },
+  { reason: "S3_UPLOAD_FAILED"; message: string }
+>> {
+  try {
+    const ext = file.name.split(".").pop() || "bin";
+    const baseName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const objectKey = [folder, baseName].filter(Boolean).join("/");
+
+    const result = await uploadToS3(cfg, {
+      key: objectKey,
+      body: await file.arrayBuffer(),
+      contentType: file.type || "application/octet-stream",
+    });
+
+    if (result.error) {
+      return err({ reason: "S3_UPLOAD_FAILED", message: result.error.message });
+    }
+
+    return ok({
+      key: objectKey,
+      url: result.data.url,
+      fileName: file.name,
+      mimeType: file.type,
+      sizeInBytes: file.size,
+    });
+  } catch (error) {
+    return err({ reason: "S3_UPLOAD_FAILED", message: error instanceof Error ? error.message : String(error) });
   }
 }

@@ -1,12 +1,15 @@
 import type { JSONContent } from "@tiptap/react";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { getCommentExtensions } from "@/features/comments/components/editor/config";
+import { sanitizeJsonContent } from "@/lib/utils";
 
 export function renderCommentReact(content: JSONContent | null) {
   if (!content) return null;
+  const safe = sanitizeJsonContent(content);
+  if (!safe) return null;
   return renderToReactElement({
     extensions: getCommentExtensions(),
-    content,
+    content: safe,
     options: {
       nodeMapping: {
         image: ({ node }) => {

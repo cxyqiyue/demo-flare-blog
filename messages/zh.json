@@ -2066,5 +2066,43 @@
   "users_toast_not_found": "用户不存在",
   "users_toast_protected": "该账户受保护，无法修改",
   "users_toast_permission_denied": "您没有权限修改该用户",
-  "users_toast_unknown_error": "未知错误"
+  "users_toast_unknown_error": "未知错误",
+  "media_view_list": "列表",
+  "media_empty_provider": "当前图床暂无文件",
+  "media_batch_copy_urls_success": "图链已复制",
+  "media_batch_copy_urls_success_desc": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "已将 {count} 个图链复制到剪贴板"
+      }
+    }
+  ],
+  "media_batch_copy_urls_fail": "复制图链失败",
+  "media_toolbar_selected": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "已选 {count} 项"
+      }
+    }
+  ],
+  "media_toolbar_select_all": "全选",
+  "media_toolbar_copy_urls": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "复制图链 ({count})"
+      }
+    }
+  ],
+  "media_toolbar_delete": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "删除 ({count})"
+      }
+    }
+  ],
+  "media_toolbar_new_folder": "新建文件夹"
 }

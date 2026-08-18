@@ -270,17 +270,17 @@ export function ImageHostingSettingsSection({
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
       <div className="border border-border/30 bg-background/50 overflow-hidden divide-y divide-border/20">
         {/* ── R2 原生存储 ── */}
-        <div className="space-y-6 p-6 md:p-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="rounded-sm bg-muted/40 p-2">
+        <div className="space-y-6 p-4 md:p-8">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 md:gap-4 min-w-0">
+              <div className="rounded-sm bg-muted/40 p-2 shrink-0">
                 <Database size={16} className="text-muted-foreground" />
               </div>
-              <div className="space-y-1">
-                <h5 className="text-sm font-medium text-foreground">
+              <div className="space-y-1 min-w-0">
+                <h5 className="text-sm font-medium text-foreground truncate">
                   {m.settings_image_hosting_r2_native_title()}
                 </h5>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground line-clamp-2">
                   {m.settings_image_hosting_r2_native_desc()}
                 </p>
               </div>
@@ -317,7 +317,7 @@ export function ImageHostingSettingsSection({
               <p className="text-xs text-muted-foreground">
                 {m.settings_image_hosting_r2_native_desc_full()}
               </p>
-              <label className="flex cursor-pointer items-center gap-4 border border-border/20 bg-muted/10 p-4 transition-colors hover:bg-muted/20">
+              <label className="flex cursor-pointer items-center gap-3 md:gap-4 border border-border/20 bg-muted/10 p-3 md:p-4 transition-colors hover:bg-muted/20">
                 <Checkbox
                   checked={r2CommentEnabled}
                   onCheckedChange={(checked) =>
@@ -332,7 +332,7 @@ export function ImageHostingSettingsSection({
                   <p className="text-sm font-medium text-foreground">
                     {m.settings_image_hosting_field_comment_enabled()}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs md:text-sm text-muted-foreground">
                     {m.settings_image_hosting_r2_native_comment_desc()}
                   </p>
                 </div>
@@ -342,17 +342,17 @@ export function ImageHostingSettingsSection({
         </div>
 
         {/* ── S3 兼容存储 ── */}
-        <div className="space-y-8 p-6 md:p-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="rounded-sm bg-muted/40 p-2">
+        <div className="space-y-6 md:space-y-8 p-4 md:p-8">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 md:gap-4 min-w-0">
+              <div className="rounded-sm bg-muted/40 p-2 shrink-0">
                 <Server size={16} className="text-muted-foreground" />
               </div>
-              <div className="space-y-1">
-                <h5 className="text-sm font-medium text-foreground">
+              <div className="space-y-1 min-w-0">
+                <h5 className="text-sm font-medium text-foreground truncate">
                   S3 Compatible Storage
                 </h5>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground line-clamp-2">
                   {m.settings_image_hosting_s3_desc_short()}
                 </p>
               </div>
@@ -431,7 +431,7 @@ export function ImageHostingSettingsSection({
               </div>
 
               {/* S3 Config Fields */}
-              <div className="grid grid-cols-1 gap-x-16 gap-y-10 px-2 xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:gap-x-16 md:gap-y-10 px-0 md:px-2 xl:grid-cols-2">
                 <div className="space-y-4">
                   <label className="text-sm text-muted-foreground">
                     Endpoint
@@ -570,9 +570,9 @@ export function ImageHostingSettingsSection({
               </div>
 
               {/* S3 Test Toolbar */}
-              <div className="flex flex-col items-center justify-between gap-6 bg-muted/10 p-6 px-10 sm:flex-row">
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-3">
+              <div className="flex flex-col items-center justify-between gap-4 bg-muted/10 p-4 sm:p-6 sm:px-10 sm:flex-row">
+                <div className="flex items-center gap-4 md:gap-6">
+                  <div className="flex items-center gap-2 md:gap-3">
                     <div
                       className={cn(
                         "h-2.5 w-2.5 rounded-full transition-all duration-700",
@@ -585,7 +585,7 @@ export function ImageHostingSettingsSection({
                               : "bg-muted-foreground/20",
                       )}
                     />
-                    <span className="text-sm font-serif font-medium text-foreground">
+                    <span className="text-xs md:text-sm font-serif font-medium text-foreground">
                       {s3Status === "SUCCESS"
                         ? m.settings_image_hosting_test_success()
                         : s3Status === "ERROR"
@@ -608,7 +608,7 @@ export function ImageHostingSettingsSection({
                   onClick={handleTestS3}
                   disabled={s3Status === "TESTING" || !canTestS3}
                   className={cn(
-                    "h-10 rounded-none border-border/50 px-8 text-[10px] font-mono uppercase tracking-[0.2em] transition-all hover:bg-background",
+                    "h-9 md:h-10 rounded-none border-border/50 px-6 md:px-8 text-[10px] font-mono uppercase tracking-[0.2em] transition-all hover:bg-background",
                     !canTestS3
                       ? "cursor-not-allowed opacity-30"
                       : "text-foreground",
@@ -629,16 +629,16 @@ export function ImageHostingSettingsSection({
         </div>
 
         {/* ── API Key 图床 ── */}
-        <div className="space-y-6 p-6 md:p-8">
-          <div className="flex items-center gap-4">
-            <div className="rounded-sm bg-muted/40 p-2">
+        <div className="space-y-6 p-4 md:p-8">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="rounded-sm bg-muted/40 p-2 shrink-0">
               <KeyRound size={16} className="text-muted-foreground" />
             </div>
-            <div className="space-y-1">
-              <h5 className="text-sm font-medium text-foreground">
+            <div className="space-y-1 min-w-0">
+              <h5 className="text-sm font-medium text-foreground truncate">
                 {m.settings_image_hosting_api_providers_title()}
               </h5>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground line-clamp-2">
                 {m.settings_image_hosting_api_providers_desc()}
               </p>
             </div>
@@ -654,13 +654,13 @@ export function ImageHostingSettingsSection({
                 return (
                   <div key={p.id} className="border border-border/30">
                     {/* Provider Header */}
-                    <div className="flex items-center gap-3 p-4">
+                    <div className="flex items-center gap-2 md:gap-3 p-3 md:p-4">
                       <button
                         type="button"
                         onClick={() =>
                           setEditingId(isExpanded ? null : p.id)
                         }
-                        className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                        className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 text-left"
                       >
                         <div
                           className={cn(
@@ -679,7 +679,7 @@ export function ImageHostingSettingsSection({
                           </p>
                         </div>
                       </button>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-muted/50 text-muted-foreground shrink-0">
+                      <span className="hidden sm:inline text-[10px] font-mono px-2 py-0.5 rounded bg-muted/50 text-muted-foreground shrink-0">
                         {API_PROVIDER_LABELS[p.type]}
                       </span>
                       <button
@@ -717,7 +717,7 @@ export function ImageHostingSettingsSection({
 
                     {/* Expanded Config */}
                     {isExpanded && (
-                      <div className="border-t border-border/20 p-4 space-y-4 bg-muted/5">
+                      <div className="border-t border-border/20 p-3 md:p-4 space-y-4 bg-muted/5">
                         <div className="space-y-4">
                           <label className="text-xs text-muted-foreground">
                             {m.settings_image_hosting_provider_name_label()}
@@ -797,8 +797,8 @@ export function ImageHostingSettingsSection({
                         </div>
 
                         {/* Test Toolbar */}
-                        <div className="flex flex-col items-center justify-between gap-4 bg-muted/10 p-4 sm:flex-row">
-                          <div className="flex items-center gap-3">
+                        <div className="flex flex-col items-center justify-between gap-3 bg-muted/10 p-3 sm:p-4 sm:flex-row">
+                          <div className="flex items-center gap-2 md:gap-3">
                             <div
                               className={cn(
                                 "h-2 w-2 rounded-full transition-all duration-700",
@@ -827,7 +827,7 @@ export function ImageHostingSettingsSection({
                             onClick={() => handleTestApi(p)}
                             disabled={status === "TESTING" || !p.apiKey?.trim()}
                             className={cn(
-                              "h-9 rounded-none border-border/50 px-6 text-[10px] font-mono uppercase tracking-[0.2em] transition-all hover:bg-background",
+                              "h-8 md:h-9 rounded-none border-border/50 px-5 md:px-6 text-[10px] font-mono uppercase tracking-[0.2em] transition-all hover:bg-background",
                               !p.apiKey?.trim()
                                 ? "cursor-not-allowed opacity-30"
                                 : "text-foreground",

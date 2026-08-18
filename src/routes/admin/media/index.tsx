@@ -8,6 +8,7 @@ const mediaSearchSchema = z.object({
   search: z.string().optional().catch(""),
   folder: z.string().optional().catch(""),
   view: z.enum(["grid", "table"]).optional().catch("grid"),
+  provider: z.string().optional().catch("r2"),
 });
 
 export const Route = createFileRoute("/admin/media/")({

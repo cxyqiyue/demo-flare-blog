@@ -10,6 +10,20 @@ export const ACCEPTED_IMAGE_TYPES = [
   "image/gif",
 ];
 
+// ── Media Provider Types ─────────────────────────────────────
+export const MEDIA_PROVIDER_TYPES = ["r2", "s3", "api-key"] as const;
+export type MediaProviderType = (typeof MEDIA_PROVIDER_TYPES)[number];
+
+export interface MediaProvider {
+  id: string;
+  name: string;
+  type: MediaProviderType;
+  canList: boolean;
+  canDelete: boolean;
+  canUpload: boolean;
+  canCreateFolder: boolean;
+}
+
 export const UploadMediaInputSchema = z.instanceof(FormData);
 
 export function parseUploadMediaInput(formData: FormData, messages: Messages) {
@@ -90,4 +104,30 @@ export type RenameMediaFolderInput = z.infer<
 >;
 export type DeleteMediaFoldersInput = z.infer<
   typeof DeleteMediaFoldersInputSchema
+>;
+
+// ── External Provider Operations ─────────────────────────────
+export const ListExternalDirectoryInputSchema = z.object({
+  providerId: z.string().min(1),
+  folder: z.string().max(500).default(""),
+  continuationToken: z.string().optional(),
+  search: z.string().optional(),
+});
+
+export const UploadToProviderInputSchema = z.object({
+  providerId: z.string().min(1),
+  folder: z.string().default(""),
+});
+
+export const DeleteExternalFilesInputSchema = z.object({
+  providerId: z.string().min(1),
+  keys: z.array(z.string().min(1)).min(1).max(100),
+});
+
+export type ListExternalDirectoryInput = z.infer<
+  typeof ListExternalDirectoryInputSchema
+>;
+export type UploadToProviderInput = z.infer<typeof UploadToProviderInputSchema>;
+export type DeleteExternalFilesInput = z.infer<
+  typeof DeleteExternalFilesInputSchema
 >;

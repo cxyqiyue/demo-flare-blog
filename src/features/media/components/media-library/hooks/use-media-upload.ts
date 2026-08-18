@@ -5,9 +5,14 @@ import { uploadImageFn } from "@/features/media/api/media.api";
 import { MEDIA_KEYS } from "@/features/media/queries";
 import { formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import type { MediaProvider } from "@/features/media/media.schema";
 import type { UploadItem } from "../types";
 
-export function useMediaUpload() {
+interface UseMediaUploadOptions {
+  provider: MediaProvider | undefined;
+}
+
+export function useMediaUpload({ provider }: UseMediaUploadOptions) {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [queue, setQueue] = useState<Array<UploadItem>>([]);
@@ -16,7 +21,6 @@ export function useMediaUpload() {
   const processingRef = useRef(false);
   const isMountedRef = useRef(true);
 
-  // 监听组件挂载和卸载
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -24,7 +28,7 @@ export function useMediaUpload() {
     };
   }, []);
 
-  // Upload mutation
+  // Upload mutation — delegates to existing R2 upload (for now all providers go through R2 backend)
   const uploadMutation = useMutation({
     mutationFn: async (item: UploadItem) => {
       if (!item.file) {
@@ -45,22 +49,14 @@ export function useMediaUpload() {
       const waitingIndex = queue.findIndex((item) => item.status === "WAITING");
       const item = queue[waitingIndex];
 
-      if (waitingIndex === -1 || processingRef.current) {
-        return;
-      }
-
-      // LOCK
+      if (waitingIndex === -1 || processingRef.current) return;
       processingRef.current = true;
 
       if (!item.file) {
         setQueue((prev) =>
           prev.map((q, i) =>
             i === waitingIndex
-              ? {
-                  ...q,
-                  status: "ERROR",
-                  log: m.media_upload_log_error_no_data(),
-                }
+              ? { ...q, status: "ERROR", log: m.media_upload_log_error_no_data() }
               : q,
           ),
         );
@@ -68,16 +64,10 @@ export function useMediaUpload() {
         return;
       }
 
-      // Update to UPLOADING
       setQueue((prev) =>
         prev.map((q, i) =>
           i === waitingIndex
-            ? {
-                ...q,
-                status: "UPLOADING",
-                progress: 50,
-                log: m.media_upload_log_stream_sending(),
-              }
+            ? { ...q, status: "UPLOADING", progress: 50, log: m.media_upload_log_stream_sending() }
             : q,
         ),
       );
@@ -87,22 +77,14 @@ export function useMediaUpload() {
         if (result.error) {
           if (isMountedRef.current) {
             const message = m.media_upload_error_db();
-
             setQueue((prev) =>
               prev.map((q, i) =>
                 i === waitingIndex
-                  ? {
-                      ...q,
-                      status: "ERROR",
-                      progress: 0,
-                      log: m.media_upload_log_error({ message }),
-                    }
+                  ? { ...q, status: "ERROR", progress: 0, log: m.media_upload_log_error({ message }) }
                   : q,
               ),
             );
-            toast.error(m.media_upload_fail({ name: item.name }), {
-              description: message,
-            });
+            toast.error(m.media_upload_fail({ name: item.name }), { description: message });
           }
           return;
         }
@@ -111,44 +93,26 @@ export function useMediaUpload() {
           setQueue((prev) =>
             prev.map((q, i) =>
               i === waitingIndex
-                ? {
-                    ...q,
-                    status: "COMPLETE",
-                    progress: 100,
-                    log: m.media_upload_log_complete(),
-                  }
+                ? { ...q, status: "COMPLETE", progress: 100, log: m.media_upload_log_complete() }
                 : q,
             ),
           );
-
           toast.success(m.media_upload_success({ name: item.name }));
           queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
         }
       } catch (error) {
         if (isMountedRef.current) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : m.request_error_unknown_title();
-
+          const message = error instanceof Error ? error.message : m.request_error_unknown_title();
           setQueue((prev) =>
             prev.map((q, i) =>
               i === waitingIndex
-                ? {
-                    ...q,
-                    status: "ERROR",
-                    progress: 0,
-                    log: m.media_upload_log_error({ message }),
-                  }
+                ? { ...q, status: "ERROR", progress: 0, log: m.media_upload_log_error({ message }) }
                 : q,
             ),
           );
-          toast.error(m.media_upload_fail({ name: item.name }), {
-            description: message,
-          });
+          toast.error(m.media_upload_fail({ name: item.name }), { description: message });
         }
       } finally {
-        // 关键修复：使用 finally 确保锁一定会被释放
         processingRef.current = false;
       }
     };
@@ -204,5 +168,6 @@ export function useMediaUpload() {
     handleDrop,
     processFiles,
     reset,
+    canUpload: provider?.canUpload ?? false,
   };
 }

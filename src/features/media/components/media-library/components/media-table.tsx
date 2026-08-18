@@ -19,10 +19,10 @@ interface MediaTableProps {
   onToggleSelect: (key: string) => void;
   onPreview: (asset: MediaDirectoryFile) => void;
   onOpenFolder: (folder: string) => void;
-  onRenameFolder: (folder: MediaFolder) => void;
-  onDeleteFolder: (folder: MediaFolder) => void;
-  onRenameFile: (asset: MediaDirectoryFile) => void;
-  onDeleteFile: (asset: MediaDirectoryFile) => void;
+  onRenameFolder?: (folder: MediaFolder) => void;
+  onDeleteFolder?: (folder: MediaFolder) => void;
+  onRenameFile?: (asset: MediaDirectoryFile) => void;
+  onDeleteFile?: (asset: MediaDirectoryFile) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
@@ -41,8 +41,8 @@ const FolderRow = ({
   isSelected: boolean;
   onToggleSelect: (key: string) => void;
   onOpen: (folder: string) => void;
-  onRename: (folder: MediaFolder) => void;
-  onDelete: (folder: MediaFolder) => void;
+  onRename?: (folder: MediaFolder) => void;
+  onDelete?: (folder: MediaFolder) => void;
 }) => {
   return (
     <div className="group flex items-center gap-3 border border-border/50 hover:border-foreground/50 transition-all bg-muted/5 px-3 py-2.5">
@@ -79,22 +79,26 @@ const FolderRow = ({
         {m.media_grid_folder()}
       </span>
       <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-        <button
-          type="button"
-          onClick={() => onRename(folder)}
-          className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-          title={m.media_folder_rename_btn()}
-        >
-          <Pencil size={12} />
-        </button>
-        <button
-          type="button"
-          onClick={() => onDelete(folder)}
-          className="w-7 h-7 flex items-center justify-center text-red-500 hover:text-red-600 transition-colors"
-          title={m.media_folder_delete_btn()}
-        >
-          <Trash2 size={12} />
-        </button>
+        {onRename && (
+          <button
+            type="button"
+            onClick={() => onRename(folder)}
+            className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            title={m.media_folder_rename_btn()}
+          >
+            <Pencil size={12} />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={() => onDelete(folder)}
+            className="w-7 h-7 flex items-center justify-center text-red-500 hover:text-red-600 transition-colors"
+            title={m.media_folder_delete_btn()}
+          >
+            <Trash2 size={12} />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -114,8 +118,8 @@ const FileRow = ({
   isLinked: boolean;
   onToggleSelect: (key: string) => void;
   onPreview: (asset: MediaDirectoryFile) => void;
-  onRename: (asset: MediaDirectoryFile) => void;
-  onDelete: (asset: MediaDirectoryFile) => void;
+  onRename?: (asset: MediaDirectoryFile) => void;
+  onDelete?: (asset: MediaDirectoryFile) => void;
 }) => {
   const isImage = asset.mimeType.startsWith("image/");
   const thumbnailUrl = getOptimizedImageUrl(asset.key);
@@ -163,7 +167,7 @@ const FileRow = ({
       <span className="hidden lg:inline-block shrink-0 w-20 text-right text-[10px] font-mono text-muted-foreground">
         {formatBytes(asset.sizeInBytes)}
       </span>
-      <span className="shrink-0 w-16 text-right">
+      <span className="hidden sm:inline-block shrink-0 w-16 text-right">
         {isLinked ? (
           <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-widest text-emerald-600">
             <Link2 size={10} /> {m.media_grid_linked()}
@@ -175,22 +179,26 @@ const FileRow = ({
         )}
       </span>
       <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-        <button
-          type="button"
-          onClick={() => onRename(asset)}
-          className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-          title={m.media_preview_btn_rename()}
-        >
-          <Pencil size={12} />
-        </button>
-        <button
-          type="button"
-          onClick={() => onDelete(asset)}
-          className="w-7 h-7 flex items-center justify-center text-red-500 hover:text-red-600 transition-colors"
-          title={m.media_preview_btn_delete()}
-        >
-          <Trash2 size={12} />
-        </button>
+        {onRename && (
+          <button
+            type="button"
+            onClick={() => onRename(asset)}
+            className="w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            title={m.media_preview_btn_rename()}
+          >
+            <Pencil size={12} />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={() => onDelete(asset)}
+            className="w-7 h-7 flex items-center justify-center text-red-500 hover:text-red-600 transition-colors"
+            title={m.media_preview_btn_delete()}
+          >
+            <Trash2 size={12} />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -278,7 +286,7 @@ export function MediaTable({
             <div className="hidden lg:block shrink-0 w-20 text-right text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
               {m.media_table_col_size()}
             </div>
-            <div className="shrink-0 w-16 text-right text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+            <div className="hidden sm:block shrink-0 w-16 text-right text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
               {m.media_table_col_usage()}
             </div>
             <div className="w-16 shrink-0" />

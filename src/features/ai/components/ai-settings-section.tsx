@@ -195,16 +195,16 @@ export function AiSettingsSection({
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
       <div className="border border-border/30 bg-background/50 overflow-hidden divide-y divide-border/20">
         {/* ── 内置 Cloudflare AI ── */}
-        <div className="space-y-6 p-6 md:p-8">
-          <div className="flex items-center gap-4">
-            <div className="rounded-sm bg-muted/40 p-2">
+        <div className="space-y-6 p-4 md:p-8">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="rounded-sm bg-muted/40 p-2 shrink-0">
               <Cpu size={16} className="text-muted-foreground" />
             </div>
-            <div className="space-y-1">
-              <h5 className="text-sm font-medium text-foreground">
+            <div className="space-y-1 min-w-0">
+              <h5 className="text-sm font-medium text-foreground truncate">
                 {m.settings_ai_builtin_title()}
               </h5>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground line-clamp-2">
                 {m.settings_ai_builtin_desc()}
               </p>
             </div>
@@ -214,13 +214,13 @@ export function AiSettingsSection({
             type="button"
             onClick={handleSelectWorkersAi}
             className={cn(
-              "w-full flex items-center justify-between border p-4 text-left transition-all",
+              "w-full flex items-center justify-between border p-3 md:p-4 text-left transition-all",
               !isUsingThirdParty
                 ? "border-foreground bg-muted/20"
                 : "border-border/30 hover:border-border/60",
             )}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
               <div
                 className={cn(
                   "h-3 w-3 shrink-0 rounded-full border",
@@ -229,11 +229,11 @@ export function AiSettingsSection({
                     : "border-border/60",
                 )}
               />
-              <div className="space-y-1">
+              <div className="space-y-1 min-w-0">
                 <p className="text-sm font-medium text-foreground">
                   Cloudflare Workers AI
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground line-clamp-2">
                   {m.settings_ai_builtin_desc_full()}
                 </p>
               </div>
@@ -242,17 +242,17 @@ export function AiSettingsSection({
         </div>
 
         {/* ── 第三方 AI 供应商列表 ── */}
-        <div className="space-y-6 p-6 md:p-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="rounded-sm bg-muted/40 p-2">
+        <div className="space-y-6 p-4 md:p-8">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 md:gap-4 min-w-0">
+              <div className="rounded-sm bg-muted/40 p-2 shrink-0">
                 <Server size={16} className="text-muted-foreground" />
               </div>
-              <div className="space-y-1">
-                <h5 className="text-sm font-medium text-foreground">
+              <div className="space-y-1 min-w-0">
+                <h5 className="text-sm font-medium text-foreground truncate">
                   {m.settings_ai_third_party_title()}
                 </h5>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground line-clamp-2">
                   {m.settings_ai_third_party_desc()}
                 </p>
               </div>
@@ -268,7 +268,7 @@ export function AiSettingsSection({
                 return (
                   <div key={p.id} className="border border-border/30">
                     {/* 供应商头部 */}
-                    <div className="flex items-center gap-3 p-4">
+                    <div className="flex items-center gap-2 md:gap-3 p-3 md:p-4">
                       <button
                         type="button"
                         onClick={() =>
@@ -276,7 +276,7 @@ export function AiSettingsSection({
                             ? handleSelectWorkersAi()
                             : handleSelectProvider(p.id)
                         }
-                        className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                        className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 text-left"
                       >
                         <div
                           className={cn(
@@ -295,7 +295,7 @@ export function AiSettingsSection({
                           </p>
                         </div>
                       </button>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-muted/50 text-muted-foreground shrink-0">
+                      <span className="hidden sm:inline text-[10px] font-mono px-2 py-0.5 rounded bg-muted/50 text-muted-foreground shrink-0">
                         {COMPAT_TYPE_LABELS[p.type]}
                       </span>
                       <button
@@ -333,7 +333,7 @@ export function AiSettingsSection({
 
                     {/* 展开的配置表单 */}
                     {isExpanded && (
-                      <div className="border-t border-border/20 p-4 space-y-4 bg-muted/5">
+                      <div className="border-t border-border/20 p-3 md:p-4 space-y-4 bg-muted/5">
                         <div className="space-y-4">
                           <label className="text-xs text-muted-foreground">
                             {m.settings_ai_provider_name_label()}
@@ -343,7 +343,7 @@ export function AiSettingsSection({
                             onChange={(e) =>
                               updateProvider(p.id, "name", e.target.value)
                             }
-                            className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground"
+                            className="w-full rounded-none border border-border/30 bg-muted/10 px-3 md:px-4 py-4 md:py-5 text-sm text-foreground"
                           />
                         </div>
                         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -357,7 +357,7 @@ export function AiSettingsSection({
                                 updateProvider(p.id, "baseUrl", e.target.value)
                               }
                               placeholder={`https://...`}
-                              className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground"
+                              className="w-full rounded-none border border-border/30 bg-muted/10 px-3 md:px-4 py-4 md:py-5 text-sm text-foreground"
                             />
                           </div>
                           <div className="space-y-4">
@@ -370,7 +370,7 @@ export function AiSettingsSection({
                                 updateProvider(p.id, "model", e.target.value)
                               }
                               placeholder="gpt-4o-mini"
-                              className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground"
+                              className="w-full rounded-none border border-border/30 bg-muted/10 px-3 md:px-4 py-4 md:py-5 text-sm text-foreground"
                             />
                           </div>
                         </div>
@@ -386,7 +386,7 @@ export function AiSettingsSection({
                                 updateProvider(p.id, "apiKey", e.target.value)
                               }
                               placeholder="sk-..."
-                              className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground pr-10"
+                              className="w-full rounded-none border border-border/30 bg-muted/10 px-3 md:px-4 py-4 md:py-5 text-sm text-foreground pr-10"
                             />
                             <KeyRound
                               size={14}
@@ -421,22 +421,22 @@ export function AiSettingsSection({
         </div>
 
         {/* ── Blog Writing Skill ── */}
-        <div className="space-y-6 p-6 md:p-8">
-          <div className="flex items-center gap-4">
-            <div className="rounded-sm bg-muted/40 p-2">
+        <div className="space-y-6 p-4 md:p-8">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="rounded-sm bg-muted/40 p-2 shrink-0">
               <PenLine size={16} className="text-muted-foreground" />
             </div>
-            <div className="space-y-1">
-              <h5 className="text-sm font-medium text-foreground">
+            <div className="space-y-1 min-w-0">
+              <h5 className="text-sm font-medium text-foreground truncate">
                 {m.settings_ai_skill_title()}
               </h5>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground line-clamp-2">
                 {m.settings_ai_skill_desc()}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {AI_BLOG_SKILL_TYPES.map((name) => {
               const isActive = aiConfig?.blogSkillType === name;
               return (
@@ -449,7 +449,7 @@ export function AiSettingsSection({
                     });
                   }}
                   className={cn(
-                    "flex items-start gap-3 border p-4 text-left transition-all",
+                    "flex items-start gap-2 md:gap-3 border p-3 md:p-4 text-left transition-all",
                     isActive
                       ? "border-foreground bg-muted/20"
                       : "border-border/30 hover:border-border/60",
@@ -463,11 +463,11 @@ export function AiSettingsSection({
                         : "border-border/60",
                     )}
                   />
-                  <div className="space-y-1">
+                  <div className="space-y-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">
                       {skillLabel(name)}
                     </p>
-                    <p className="text-xs leading-relaxed text-muted-foreground">
+                    <p className="text-xs leading-relaxed text-muted-foreground line-clamp-3">
                       {skillDescription(name)}
                     </p>
                   </div>
@@ -478,16 +478,16 @@ export function AiSettingsSection({
         </div>
 
         {/* ── Writing Instructions ── */}
-        <div className="space-y-6 p-6 md:p-8">
-          <div className="flex items-center gap-4">
-            <div className="rounded-sm bg-muted/40 p-2">
+        <div className="space-y-6 p-4 md:p-8">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="rounded-sm bg-muted/40 p-2 shrink-0">
               <PenLine size={16} className="text-muted-foreground" />
             </div>
-            <div className="space-y-1">
-              <h5 className="text-sm font-medium text-foreground">
+            <div className="space-y-1 min-w-0">
+              <h5 className="text-sm font-medium text-foreground truncate">
                 {m.settings_ai_writing_instructions_title()}
               </h5>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground line-clamp-2">
                 {m.settings_ai_writing_instructions_desc()}
               </p>
             </div>
@@ -504,9 +504,9 @@ export function AiSettingsSection({
         </div>
 
         {/* ── Test Toolbar ── */}
-        <div className="flex flex-col items-center justify-between gap-6 bg-muted/10 p-6 px-10 sm:flex-row">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
+        <div className="flex flex-col items-center justify-between gap-4 bg-muted/10 p-4 sm:p-6 sm:px-10 sm:flex-row">
+          <div className="flex items-center gap-4 md:gap-6">
+            <div className="flex items-center gap-2 md:gap-3">
               <div
                 className={cn(
                   "h-2.5 w-2.5 rounded-full transition-all duration-700",
@@ -519,7 +519,7 @@ export function AiSettingsSection({
                         : "bg-muted-foreground/20",
                 )}
               />
-              <span className="text-sm font-serif font-medium text-foreground">
+              <span className="text-xs md:text-sm font-serif font-medium text-foreground">
                 {status === "SUCCESS"
                   ? m.settings_ai_test_success()
                   : status === "ERROR"
@@ -545,7 +545,7 @@ export function AiSettingsSection({
             onClick={handleTest}
             disabled={status === "TESTING" || !canTest}
             className={cn(
-              "h-10 rounded-none border-border/50 px-8 text-[10px] font-mono uppercase tracking-[0.2em] transition-all hover:bg-background",
+              "h-9 md:h-10 rounded-none border-border/50 px-6 md:px-8 text-[10px] font-mono uppercase tracking-[0.2em] transition-all hover:bg-background",
               !canTest ? "cursor-not-allowed opacity-30" : "text-foreground",
             )}
           >

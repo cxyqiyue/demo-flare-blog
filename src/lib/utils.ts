@@ -1,6 +1,7 @@
 import type { ClassValue } from "clsx";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { JSONContent } from "@tiptap/react";
 
 import { m } from "@/paraglide/messages";
 
@@ -64,4 +65,24 @@ export function formatBytes(bytes: number, decimals = 2) {
   const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${Number.parseFloat((bytes / k ** i).toFixed(dm))} ${sizes[i]}`;
+}
+
+/**
+ * Sanitize a Tiptap JSONContent tree by removing empty text nodes that
+ * would cause ProseMirror's `TextNode` constructor to throw
+ * `RangeError("Empty text nodes are not allowed")`.
+ */
+export function sanitizeJsonContent(node: JSONContent): JSONContent | null {
+  if (node.type === "text") {
+    return typeof node.text === "string" && node.text.length > 0
+      ? node
+      : null;
+  }
+  if (node.content && Array.isArray(node.content)) {
+    const cleaned = node.content
+      .map((child) => sanitizeJsonContent(child as JSONContent))
+      .filter(Boolean) as JSONContent[];
+    return { ...node, content: cleaned };
+  }
+  return node;
 }

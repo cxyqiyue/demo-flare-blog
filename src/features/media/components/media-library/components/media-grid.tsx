@@ -20,12 +20,12 @@ interface MediaGridProps {
   onToggleSelect: (key: string) => void;
   onPreview: (asset: MediaDirectoryFile) => void;
   onOpenFolder: (folder: string) => void;
-  onRenameFolder: (folder: MediaFolder) => void;
-  onDeleteFolder: (folder: MediaFolder) => void;
+  onRenameFolder?: (folder: MediaFolder) => void;
+  onDeleteFolder?: (folder: MediaFolder) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
-  linkedMediaIds: Set<string>;
+  linkedMediaIds?: Set<string>;
   onRefetch?: () => void;
 }
 
@@ -43,8 +43,8 @@ const FolderCard = memo(
     isSelected: boolean;
     onOpen: (folder: string) => void;
     onToggleSelect: (key: string) => void;
-    onRename: (folder: MediaFolder) => void;
-    onDelete: (folder: MediaFolder) => void;
+    onRename?: (folder: MediaFolder) => void;
+    onDelete?: (folder: MediaFolder) => void;
     selectionModeActive: boolean;
   }) => {
     const handleStandardClick = () => {
@@ -103,28 +103,32 @@ const FolderCard = memo(
 
         {/* Folder Actions */}
         <div className="absolute top-0 right-0 z-20 flex gap-1 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRename(folder);
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="w-6 h-6 flex items-center justify-center bg-background/80 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Pencil size={11} />
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(folder);
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="w-6 h-6 flex items-center justify-center bg-background/80 backdrop-blur-sm border border-border/50 text-red-500 hover:text-red-600 transition-colors"
-          >
-            <Trash2 size={11} />
-          </button>
+          {onRename && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRename(folder);
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="w-6 h-6 flex items-center justify-center bg-background/80 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Pencil size={11} />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(folder);
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="w-6 h-6 flex items-center justify-center bg-background/80 backdrop-blur-sm border border-border/50 text-red-500 hover:text-red-600 transition-colors"
+            >
+              <Trash2 size={11} />
+            </button>
+          )}
         </div>
 
         {/* Icon */}
@@ -368,7 +372,7 @@ export function MediaGrid({
 
         {media.map((asset) => {
           const isSelected = selectedIds.has(asset.key);
-          const isLinked = linkedMediaIds.has(asset.key);
+          const isLinked = linkedMediaIds?.has(asset.key) ?? false;
           const isImage = asset.mimeType.startsWith("image/");
 
           return (

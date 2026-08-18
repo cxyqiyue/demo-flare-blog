@@ -9,9 +9,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   createMediaFolderFn,
+  deleteExternalFilesFn,
   deleteImageFn,
   deleteMediaFoldersFn,
   getMediaDirectoryFn,
+  listExternalDirectoryFn,
   renameMediaFolderFn,
   updateMediaNameFn,
 } from "@/features/media/api/media.api";
@@ -22,79 +24,83 @@ import {
 } from "@/features/media/queries";
 import { useDebounce } from "@/hooks/use-debounce";
 import { m } from "@/paraglide/messages";
+import { findProvider } from "./use-media-providers";
+import type { MediaProvider } from "@/features/media/media.schema";
 
 const isFolderKey = (key: string) => key.endsWith("/");
 
-export function useMediaLibrary() {
+// Unified file type for all providers
+export interface MediaFileItem {
+  key: string;
+  fileName: string;
+  url: string;
+  mimeType: string;
+  sizeInBytes: number;
+  width: number | null;
+  height: number | null;
+  createdAt: Date | null;
+  isLinked: boolean;
+}
+
+export function useMediaLibrary(providers: MediaProvider[]) {
   const queryClient = useQueryClient();
   const navigate = useNavigate({ from: "/admin/media/" });
-  const { search, unused, folder, view } = useSearch({ from: "/admin/media/" });
+  const { search, unused, folder, view, provider: providerParam } = useSearch({
+    from: "/admin/media/",
+  });
+
+  const currentProviderId = providerParam ?? "r2";
+  const currentProvider = findProvider(providers, currentProviderId);
+  const isExternal = currentProviderId !== "r2";
+  const canList = currentProvider?.canList ?? false;
 
   const currentFolder = folder ?? "";
   const currentView = view ?? "grid";
 
-  // Search Param Handlers
-  const setSearchQuery = (term: string) => {
+  // Navigation helpers — all preserve provider
+  const navigateSearch = (patch: Record<string, unknown>) => {
     navigate({
       search: {
-        search: term,
+        search: search ?? "",
         unused: unused ?? false,
         folder,
         view: currentView,
+        provider: currentProviderId,
+        ...patch,
       },
       replace: true,
     });
   };
 
-  const setUnusedOnly = (val: boolean) => {
-    navigate({
-      search: { search: search ?? "", unused: val, folder, view: currentView },
-    });
-  };
+  const setSearchQuery = (term: string) => navigateSearch({ search: term, folder: "" });
+  const setUnusedOnly = (val: boolean) => navigateSearch({ unused: val });
+  const setFolder = (nextFolder: string) => navigateSearch({ folder: nextFolder });
+  const setView = (nextView: "grid" | "table") => navigateSearch({ view: nextView });
 
-  const setFolder = (nextFolder: string) => {
+  const setProvider = (id: string) => {
     navigate({
       search: {
-        search: search ?? "",
-        unused: unused ?? false,
-        folder: nextFolder,
+        search: "",
+        unused: false,
+        folder: "",
         view: currentView,
-      },
-    });
-  };
-
-  const setView = (nextView: "grid" | "table") => {
-    navigate({
-      search: {
-        search: search ?? "",
-        unused: unused ?? false,
-        folder,
-        view: nextView,
+        provider: id,
       },
     });
   };
 
   const debouncedSearch = useDebounce(search ?? "", 300);
 
-  // Selection & Deletion State (key 作为唯一标识；文件夹 key 以 `/` 结尾)
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(
-    () => new Set(),
-  );
+  // Selection & Deletion State
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [deleteTarget, setDeleteTarget] = useState<Array<string> | null>(null);
   const [deletePreview, setDeletePreview] = useState<{
     folders: number;
     files: number;
   } | null>(null);
 
-  // Infinite Query for the current directory (R2 cursor based)
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isPending,
-    refetch,
-  } = useInfiniteQuery({
+  // ── R2 Directory Query (existing, DB-backed) ──
+  const r2Query = useInfiniteQuery({
     queryKey: MEDIA_KEYS.dir(currentFolder, debouncedSearch, unused ?? false),
     queryFn: ({ pageParam }) =>
       getMediaDirectoryFn({
@@ -107,39 +113,65 @@ export function useMediaLibrary() {
       }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
+    enabled: !isExternal,
   });
 
-  const mediaItems = useMemo(
-    () =>
-      (data?.pages.flatMap((page) => page.files) ?? []).map((file) => ({
-        ...file,
-        fileName: file.name,
-      })),
-    [data],
-  );
-  const folders = useMemo(
-    () => data?.pages.flatMap((page) => page.folders) ?? [],
-    [data],
-  );
+  // ── External (S3) Directory Query ──
+  const externalQuery = useInfiniteQuery({
+    queryKey: ["media", "external", currentProviderId, currentFolder, debouncedSearch],
+    queryFn: ({ pageParam }) =>
+      listExternalDirectoryFn({
+        data: {
+          providerId: currentProviderId,
+          folder: currentFolder || undefined,
+          continuationToken: pageParam ?? undefined,
+          search: debouncedSearch || undefined,
+        },
+      }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextContinuationToken ?? null,
+    enabled: isExternal && canList,
+  });
 
-  // Get all visible media keys for linked check
-  const mediaKeys = useMemo(
-    () => mediaItems.map((item) => item.key),
-    [mediaItems],
-  );
+  // Merge results based on provider
+  const isPending = isExternal ? externalQuery.isPending : r2Query.isPending;
 
+  const mediaItems: MediaFileItem[] = useMemo(() => {
+    if (isExternal) {
+      return (externalQuery.data?.pages.flatMap((page) => page.files) ?? []).map((f) => ({
+        key: f.key,
+        fileName: f.name,
+        url: f.url,
+        mimeType: f.mimeType,
+        sizeInBytes: f.sizeInBytes,
+        width: null,
+        height: null,
+        createdAt: null,
+        isLinked: false,
+      }));
+    }
+    return (r2Query.data?.pages.flatMap((page) => page.files) ?? []).map((file) => ({
+      ...file,
+      fileName: file.name,
+    }));
+  }, [isExternal, externalQuery.data, r2Query.data]);
+
+  const folders = useMemo(() => {
+    if (isExternal) return [];
+    return r2Query.data?.pages.flatMap((page) => page.folders) ?? [];
+  }, [isExternal, r2Query.data]);
+
+  // Linked media keys — only for R2
+  const mediaKeys = useMemo(() => mediaItems.map((item) => item.key), [mediaItems]);
   const { data: linkedKeysData } = useQuery({
     ...linkedMediaKeysQuery(mediaKeys),
-    enabled: mediaKeys.length > 0,
+    enabled: mediaKeys.length > 0 && !isExternal,
   });
-
   const { data: totalMediaSize } = useQuery(totalMediaSizeQuery);
 
-  const linkedMediaIds = useMemo(() => {
-    return new Set<string>(linkedKeysData ?? []);
-  }, [linkedKeysData]);
+  const linkedMediaIds = useMemo(() => new Set<string>(linkedKeysData ?? []), [linkedKeysData]);
 
-  // Breadcrumbs for the current folder
+  // Breadcrumbs
   const breadcrumbs = useMemo(() => {
     if (!currentFolder) return [] as Array<{ label: string; path: string }>;
     const segments = currentFolder.split("/").filter(Boolean);
@@ -156,9 +188,9 @@ export function useMediaLibrary() {
   useEffect(() => {
     setSelectedKeys(new Set());
     setDeleteTarget(null);
-  }, [debouncedSearch, unused, currentFolder]);
+  }, [debouncedSearch, unused, currentFolder, currentProviderId]);
 
-  // ---- Folder operations ----
+  // ── Folder operations (R2 only) ──
   const createFolder = useMutation({
     mutationFn: (name: string) =>
       createMediaFolderFn({ data: { name, parent: currentFolder } }),
@@ -171,9 +203,7 @@ export function useMediaLibrary() {
       }
       queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
       toast.success(m.media_toast_folder_create_success(), {
-        description: m.media_toast_folder_create_success_desc({
-          name: result.data.name,
-        }),
+        description: m.media_toast_folder_create_success_desc({ name: result.data.name }),
       });
     },
   });
@@ -190,29 +220,36 @@ export function useMediaLibrary() {
       }
       queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
       toast.success(m.media_toast_folder_rename_success(), {
-        description: m.media_toast_folder_rename_success_desc({
-          name: variables.name,
-        }),
+        description: m.media_toast_folder_rename_success_desc({ name: variables.name }),
       });
     },
   });
 
-  // ---- Delete ----
+  // ── Delete ──
   const deleteMutation = useMutation({
     mutationFn: async (keys: Array<string>) => {
       const folderKeys = keys.filter(isFolderKey);
       const fileKeys = keys.filter((k) => !isFolderKey(k));
-      const deletedFiles: Array<string> = [];
 
+      // External provider (S3)
+      if (isExternal && currentProvider?.canDelete) {
+        const result = await deleteExternalFilesFn({
+          data: { providerId: currentProviderId, keys: fileKeys },
+        });
+        return {
+          deletedFiles: fileKeys.slice(0, result.deleted),
+          deletedFolders: 0,
+          skippedFiles: result.skipped,
+          error: null,
+        };
+      }
+
+      // R2 (existing logic)
+      const deletedFiles: Array<string> = [];
       for (const key of fileKeys) {
         const result = await deleteImageFn({ data: { key } });
         if (result.error) {
-          return {
-            deletedFiles,
-            deletedFolders: 0,
-            skippedFiles: 0,
-            error: result.error,
-          };
+          return { deletedFiles, deletedFolders: 0, skippedFiles: 0, error: result.error };
         }
         deletedFiles.push(key);
       }
@@ -220,40 +257,21 @@ export function useMediaLibrary() {
       let deletedFolders = 0;
       let skippedFiles = 0;
       if (folderKeys.length > 0) {
-        const result = (await deleteMediaFoldersFn({
-          data: { keys: folderKeys },
-        })) as unknown as {
-          data: {
-            deletedFolders: number;
-            deletedFiles: number;
-            skippedFiles: number;
-          };
+        const result = (await deleteMediaFoldersFn({ data: { keys: folderKeys } })) as unknown as {
+          data: { deletedFolders: number; deletedFiles: number; skippedFiles: number };
           error: { reason: string } | null;
         };
         if (result.error) {
-          return {
-            deletedFiles,
-            deletedFolders,
-            skippedFiles,
-            error: result.error,
-          };
+          return { deletedFiles, deletedFolders, skippedFiles, error: result.error };
         }
         deletedFolders = result.data.deletedFolders;
         skippedFiles = result.data.skippedFiles;
       }
 
-      return {
-        deletedFiles,
-        deletedFolders,
-        skippedFiles,
-        error: null,
-      };
+      return { deletedFiles, deletedFolders, skippedFiles, error: null };
     },
     onSuccess: (result) => {
-      const totalDeleted =
-        result.deletedFiles.length +
-        (result.deletedFolders > 0 ? result.deletedFolders : 0);
-
+      const totalDeleted = result.deletedFiles.length + (result.deletedFolders > 0 ? result.deletedFolders : 0);
       if (totalDeleted > 0) {
         queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
         setSelectedKeys((prev) => {
@@ -262,32 +280,22 @@ export function useMediaLibrary() {
           return next;
         });
       }
-
       if (result.error) {
         if (totalDeleted > 0) {
           toast.warning(m.media_toast_partial_delete(), {
-            description: m.media_toast_partial_delete_desc({
-              count: totalDeleted,
-            }),
+            description: m.media_toast_partial_delete_desc({ count: totalDeleted }),
           });
         } else {
-          toast.warning(m.media_toast_delete_fail(), {
-            description: m.media_toast_delete_fail_desc(),
-          });
+          toast.warning(m.media_toast_delete_fail(), { description: m.media_toast_delete_fail_desc() });
         }
         return;
       }
-
       toast.success(m.media_toast_delete_success(), {
-        description: m.media_toast_delete_success_desc({
-          count: totalDeleted,
-        }),
+        description: m.media_toast_delete_success_desc({ count: totalDeleted }),
       });
       if (result.skippedFiles > 0) {
         toast.warning(m.media_toast_folder_delete_skipped(), {
-          description: m.media_toast_folder_delete_skipped_desc({
-            count: result.skippedFiles,
-          }),
+          description: m.media_toast_folder_delete_skipped_desc({ count: result.skippedFiles }),
         });
       }
     },
@@ -297,43 +305,44 @@ export function useMediaLibrary() {
     },
   });
 
-  // Update name mutation
+  // Update name (R2 only)
   const updateAsset = useMutation({
-    mutationFn: (payload: Parameters<typeof updateMediaNameFn>[0]) =>
-      updateMediaNameFn(payload),
+    mutationFn: (payload: Parameters<typeof updateMediaNameFn>[0]) => updateMediaNameFn(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
-      toast.success(m.media_toast_metadata_updated(), {
-        description: m.media_toast_metadata_updated_desc(),
-      });
+      toast.success(m.media_toast_metadata_updated(), { description: m.media_toast_metadata_updated_desc() });
     },
   });
 
-  // Load more handler
+  // Load more
   const loadMore = useCallback(() => {
-    if (!isFetchingNextPage && hasNextPage) {
-      fetchNextPage();
+    if (isExternal) {
+      if (!externalQuery.isFetchingNextPage && externalQuery.hasNextPage) externalQuery.fetchNextPage();
+    } else {
+      if (!r2Query.isFetchingNextPage && r2Query.hasNextPage) r2Query.fetchNextPage();
     }
-  }, [isFetchingNextPage, hasNextPage, fetchNextPage]);
+  }, [isExternal, r2Query, externalQuery]);
+
+  const isLoadingMore = isExternal ? externalQuery.isFetchingNextPage : r2Query.isFetchingNextPage;
+  const hasMore = isExternal ? externalQuery.hasNextPage : r2Query.hasNextPage;
+
+  const refetch = useCallback(() => {
+    if (isExternal) externalQuery.refetch();
+    else r2Query.refetch();
+  }, [isExternal, r2Query, externalQuery]);
 
   // Selection handlers
   const toggleSelection = (key: string) => {
     setSelectedKeys((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
 
   const selectAll = () => {
-    const allKeys = [
-      ...folders.map((f) => f.key),
-      ...mediaItems.map((item) => item.key),
-    ];
+    const allKeys = [...folders.map((f) => f.key), ...mediaItems.map((item) => item.key)];
     if (selectedKeys.size === allKeys.length && allKeys.length > 0) {
       setSelectedKeys(new Set());
     } else {
@@ -341,48 +350,49 @@ export function useMediaLibrary() {
     }
   };
 
-  // Request delete - validate against linked files, then show confirmation
+  // Request delete — skip linked check for external providers
   const requestDelete = (keys: Array<string>) => {
-    const blockedKeys = keys.filter(
-      (key) => !isFolderKey(key) && linkedMediaIds.has(key),
-    );
-    const allowedKeys = keys.filter(
-      (key) => isFolderKey(key) || !linkedMediaIds.has(key),
-    );
-
-    if (blockedKeys.length > 0) {
-      toast.warning(m.media_toast_protected_delete(), {
-        description: m.media_toast_protected_delete_desc({
-          count: blockedKeys.length,
-        }),
-      });
+    if (!isExternal) {
+      const blockedKeys = keys.filter((key) => !isFolderKey(key) && linkedMediaIds.has(key));
+      const allowedKeys = keys.filter((key) => isFolderKey(key) || !linkedMediaIds.has(key));
+      if (blockedKeys.length > 0) {
+        toast.warning(m.media_toast_protected_delete(), {
+          description: m.media_toast_protected_delete_desc({ count: blockedKeys.length }),
+        });
+      }
+      if (allowedKeys.length > 0) {
+        setDeleteTarget(allowedKeys);
+        setDeletePreview({
+          folders: allowedKeys.filter(isFolderKey).length,
+          files: allowedKeys.filter((k) => !isFolderKey(k)).length,
+        });
+      }
+      return allowedKeys;
     }
-
-    if (allowedKeys.length > 0) {
-      setDeleteTarget(allowedKeys);
-      setDeletePreview({
-        folders: allowedKeys.filter(isFolderKey).length,
-        files: allowedKeys.filter((k) => !isFolderKey(k)).length,
-      });
-    }
-
-    return allowedKeys;
+    // External: no linked check
+    setDeleteTarget(keys);
+    setDeletePreview({ folders: 0, files: keys.length });
+    return keys;
   };
 
-  // Confirm delete
   const confirmDelete = (keys?: Array<string>) => {
     const target = keys ?? deleteTarget;
     if (!target || target.length === 0) return;
     deleteMutation.mutate(target);
   };
 
-  // Cancel delete
   const cancelDelete = () => {
     setDeleteTarget(null);
     setDeletePreview(null);
   };
 
   return {
+    // Provider
+    currentProviderId,
+    currentProvider,
+    setProvider,
+    isExternal,
+    // Data
     mediaItems,
     folders,
     currentFolder,
@@ -395,20 +405,24 @@ export function useMediaLibrary() {
     setSearchQuery,
     unusedOnly: unused ?? false,
     setUnusedOnly,
+    // Selection
     selectedIds: selectedKeys,
     toggleSelection,
     selectAll,
+    // Delete
     deleteTarget,
     deletePreview,
     isDeleting: deleteMutation.isPending,
     requestDelete,
     confirmDelete,
     cancelDelete,
+    // Pagination
     refetch,
     loadMore,
-    isLoadingMore: isFetchingNextPage,
-    hasMore: hasNextPage,
+    isLoadingMore,
+    hasMore,
     isPending,
+    // R2-specific
     linkedMediaIds,
     totalMediaSize,
     updateAsset,

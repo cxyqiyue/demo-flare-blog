@@ -2,7 +2,6 @@ import { ChevronRight, Folder, Home, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
-import { useArticleImageHostingConfig } from "@/features/image-hosting/hooks/use-article-image-hosting-config";
 import { formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import {
@@ -11,14 +10,19 @@ import {
   MediaPreviewModal,
   MediaTable,
   MediaToolbar,
+  ProviderSelector,
   UploadModal,
 } from "./components";
-import { useMediaLibrary, useMediaUpload } from "./hooks";
+import { useMediaLibrary, useMediaProviders, useMediaUpload } from "./hooks";
 import type { MediaDirectoryFile, MediaFolder } from "./types";
 
 export function MediaLibrary() {
-  // Logic Hooks
+  const { providers } = useMediaProviders();
   const {
+    currentProviderId,
+    currentProvider,
+    setProvider,
+    isExternal,
     mediaItems,
     folders,
     currentFolder,
@@ -49,7 +53,7 @@ export function MediaLibrary() {
     linkedMediaIds,
     createFolder,
     renameFolder,
-  } = useMediaLibrary();
+  } = useMediaLibrary(providers);
 
   const {
     isOpen: isUploadOpen,
@@ -61,21 +65,16 @@ export function MediaLibrary() {
     handleDrop,
     processFiles,
     reset: resetUpload,
-  } = useMediaUpload();
+    canUpload,
+  } = useMediaUpload({ provider: currentProvider });
 
-  const { enabled: articleImageHostingEnabled } =
-    useArticleImageHostingConfig();
-  // 第三方图床（文章区）启用时关闭 R2 上传入口，避免传错地方
-  const uploadDisabled = articleImageHostingEnabled;
-  const noop = () => {};
+  // Upload is always available for any provider that supports it
+  const uploadDisabled = !canUpload;
 
   // View State
-  const [previewAsset, setPreviewAsset] = useState<MediaDirectoryFile | null>(
-    null,
-  );
+  const [previewAsset, setPreviewAsset] = useState<MediaDirectoryFile | null>(null);
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
-  const [renameFolderTarget, setRenameFolderTarget] =
-    useState<MediaFolder | null>(null);
+  const [renameFolderTarget, setRenameFolderTarget] = useState<MediaFolder | null>(null);
 
   const isSearching = searchQuery.trim().length > 0;
 
@@ -103,31 +102,22 @@ export function MediaLibrary() {
 
   const confirmMessage = deletePreview
     ? deletePreview.folders > 0 && deletePreview.files > 0
-      ? m.media_delete_confirm_mixed({
-          folders: deletePreview.folders,
-          files: deletePreview.files,
-        })
+      ? m.media_delete_confirm_mixed({ folders: deletePreview.folders, files: deletePreview.files })
       : deletePreview.folders > 0
-        ? m.media_delete_confirm_folders({
-            count: deletePreview.folders,
-          })
-        : m.media_delete_confirm_desc({
-            count: deletePreview.files,
-          })
-    : m.media_delete_confirm_desc({
-        count: deleteTarget?.length ?? 0,
-      });
+        ? m.media_delete_confirm_folders({ count: deletePreview.folders })
+        : m.media_delete_confirm_desc({ count: deletePreview.files })
+    : m.media_delete_confirm_desc({ count: deleteTarget?.length ?? 0 });
 
   return (
     <div className="space-y-8 pb-20">
       {/* Header Section */}
-      <div className="flex justify-between items-end animate-in fade-in slide-in-from-bottom-4 duration-1000 fill-mode-both border-b border-border/30 pb-6">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-serif font-medium tracking-tight">
+      <div className="flex justify-between items-end gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000 fill-mode-both border-b border-border/30 pb-6">
+        <div className="space-y-1 min-w-0">
+          <h1 className="text-2xl md:text-3xl font-serif font-medium tracking-tight">
             {m.media_title()}
           </h1>
           <div className="flex items-center gap-2">
-            <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
+            <p className="text-[10px] md:text-xs font-mono text-muted-foreground uppercase tracking-widest">
               {m.media_stats_assets({
                 count: mediaItems.length,
                 size: formatBytes(totalMediaSize ?? 0),
@@ -138,19 +128,15 @@ export function MediaLibrary() {
         <Button
           onClick={() => setIsUploadOpen(true)}
           disabled={uploadDisabled}
-          title={
-            uploadDisabled
-              ? m.media_upload_disabled_by_image_hosting_desc()
-              : undefined
-          }
-          className="h-10 px-6 text-[11px] uppercase tracking-[0.2em] font-medium rounded-none gap-2 bg-foreground text-background hover:bg-foreground/90 transition-all border border-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-foreground"
+          title={uploadDisabled ? m.media_upload_disabled_by_image_hosting_desc() : undefined}
+          className="h-9 md:h-10 px-4 md:px-6 text-[10px] md:text-[11px] uppercase tracking-[0.2em] font-medium rounded-none gap-2 bg-foreground text-background hover:bg-foreground/90 transition-all border border-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-foreground shrink-0"
         >
           <Plus size={14} />
-          {m.media_upload_btn()}
+          <span className="hidden sm:inline">{m.media_upload_btn()}</span>
         </Button>
       </div>
 
-      {uploadDisabled && (
+      {uploadDisabled && !isExternal && (
         <div className="border border-amber-500/30 bg-amber-500/5 p-4">
           <p className="text-xs font-mono uppercase tracking-widest text-amber-600">
             {m.media_upload_disabled_by_image_hosting_title()}
@@ -161,6 +147,13 @@ export function MediaLibrary() {
         </div>
       )}
 
+      {/* Provider Selector */}
+      <ProviderSelector
+        providers={providers}
+        currentId={currentProviderId}
+        onSelect={setProvider}
+      />
+
       {/* Breadcrumb */}
       <nav
         aria-label="breadcrumb"
@@ -170,9 +163,7 @@ export function MediaLibrary() {
           type="button"
           onClick={() => setFolder("")}
           className={`flex items-center gap-1.5 py-1 px-2 transition-colors ${
-            currentFolder
-              ? "text-muted-foreground hover:text-foreground"
-              : "text-foreground font-bold"
+            currentFolder ? "text-muted-foreground hover:text-foreground" : "text-foreground font-bold"
           }`}
         >
           <Home size={12} strokeWidth={1.5} />
@@ -185,9 +176,7 @@ export function MediaLibrary() {
               type="button"
               onClick={() => setFolder(crumb.path)}
               className={`py-1 px-2 transition-colors ${
-                crumb.path === currentFolder
-                  ? "text-foreground font-bold"
-                  : "text-muted-foreground hover:text-foreground"
+                crumb.path === currentFolder ? "text-foreground font-bold" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {crumb.label}
@@ -215,7 +204,10 @@ export function MediaLibrary() {
           searching={isSearching}
           onSelectAll={selectAll}
           onDelete={handleDeleteRequest}
-          onNewFolder={() => setIsNewFolderOpen(true)}
+          onNewFolder={currentProvider?.canCreateFolder ? () => setIsNewFolderOpen(true) : undefined}
+          selectedKeys={selectedIds}
+          mediaItems={mediaItems}
+          canDelete={currentProvider?.canDelete ?? false}
         />
 
         {/* Content */}
@@ -234,6 +226,12 @@ export function MediaLibrary() {
               </div>
             ))}
           </div>
+        ) : mediaItems.length === 0 && folders.length === 0 && isExternal ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+              {m.media_empty_provider()}
+            </p>
+          </div>
         ) : view === "table" ? (
           <MediaTable
             media={mediaItems}
@@ -242,10 +240,10 @@ export function MediaLibrary() {
             onToggleSelect={toggleSelection}
             onPreview={setPreviewAsset}
             onOpenFolder={setFolder}
-            onRenameFolder={setRenameFolderTarget}
-            onDeleteFolder={handleFolderDelete}
-            onRenameFile={setPreviewAsset}
-            onDeleteFile={handleFileDelete}
+            onRenameFolder={currentProvider?.canCreateFolder ? setRenameFolderTarget : undefined}
+            onDeleteFolder={currentProvider?.canDelete ? handleFolderDelete : undefined}
+            onRenameFile={!isExternal ? setPreviewAsset : undefined}
+            onDeleteFile={currentProvider?.canDelete ? handleFileDelete : undefined}
             onLoadMore={loadMore}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
@@ -259,12 +257,12 @@ export function MediaLibrary() {
             onToggleSelect={toggleSelection}
             onPreview={setPreviewAsset}
             onOpenFolder={setFolder}
-            onRenameFolder={setRenameFolderTarget}
-            onDeleteFolder={handleFolderDelete}
+            onRenameFolder={currentProvider?.canCreateFolder ? setRenameFolderTarget : undefined}
+            onDeleteFolder={currentProvider?.canDelete ? handleFolderDelete : undefined}
             onLoadMore={loadMore}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
-            linkedMediaIds={linkedMediaIds}
+            linkedMediaIds={!isExternal ? linkedMediaIds : undefined}
             onRefetch={refetch}
           />
         )}
@@ -277,28 +275,20 @@ export function MediaLibrary() {
         isDragging={isDragging}
         folderLabel={uploadDisabled ? undefined : folderLabel}
         onClose={resetUpload}
-        onFileSelect={
-          uploadDisabled ? noop : (files) => processFiles(files, currentFolder)
-        }
-        onDragOver={uploadDisabled ? noop : handleDragOver}
-        onDragLeave={uploadDisabled ? noop : handleDragLeave}
-        onDrop={uploadDisabled ? noop : handleDrop}
+        onFileSelect={uploadDisabled ? () => {} : (files) => processFiles(files, currentFolder)}
+        onDragOver={uploadDisabled ? () => {} : handleDragOver}
+        onDragLeave={uploadDisabled ? () => {} : handleDragLeave}
+        onDrop={uploadDisabled ? () => {} : handleDrop}
       />
 
       {/* --- New Folder Modal --- */}
       <FolderModal
         isOpen={isNewFolderOpen}
         mode="create"
-        parentLabel={
-          currentFolder
-            ? `${m.media_folder_parent()}: /${currentFolder}`
-            : `${m.media_folder_parent()}: /`
-        }
+        parentLabel={currentFolder ? `${m.media_folder_parent()}: /${currentFolder}` : `${m.media_folder_parent()}: /`}
         onClose={() => setIsNewFolderOpen(false)}
         onSubmit={(name) => {
-          createFolder.mutate(name, {
-            onSettled: () => setIsNewFolderOpen(false),
-          });
+          createFolder.mutate(name, { onSettled: () => setIsNewFolderOpen(false) });
         }}
         isSubmitting={createFolder.isPending}
       />
@@ -311,12 +301,7 @@ export function MediaLibrary() {
         onClose={() => setRenameFolderTarget(null)}
         onSubmit={(name) => {
           if (!renameFolderTarget) return;
-          renameFolder.mutate(
-            { key: renameFolderTarget.key, name },
-            {
-              onSettled: () => setRenameFolderTarget(null),
-            },
-          );
+          renameFolder.mutate({ key: renameFolderTarget.key, name }, { onSettled: () => setRenameFolderTarget(null) });
         }}
         isSubmitting={renameFolder.isPending}
       />
@@ -337,15 +322,11 @@ export function MediaLibrary() {
       <MediaPreviewModal
         asset={previewAsset}
         onClose={() => setPreviewAsset(null)}
-        onUpdateName={async (key, name) => {
-          await updateAsset.mutateAsync({ data: { key, name } });
-        }}
-        onDelete={async (key) => {
+        onUpdateName={!isExternal ? async (key, name) => { await updateAsset.mutateAsync({ data: { key, name } }); } : undefined}
+        onDelete={currentProvider?.canDelete ? async (key) => {
           const allowed = requestDelete([key]);
-          if (allowed.length > 0) {
-            confirmDelete(allowed);
-          }
-        }}
+          if (allowed.length > 0) confirmDelete(allowed);
+        } : undefined}
       />
     </div>
   );

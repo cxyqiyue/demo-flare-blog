@@ -2074,5 +2074,43 @@
   "users_toast_not_found": "User not found",
   "users_toast_protected": "This account is protected and cannot be modified",
   "users_toast_permission_denied": "You do not have permission to modify this user",
-  "users_toast_unknown_error": "Unknown error"
+  "users_toast_unknown_error": "Unknown error",
+  "media_view_list": "List",
+  "media_empty_provider": "No files in this provider",
+  "media_batch_copy_urls_success": "URLs copied",
+  "media_batch_copy_urls_success_desc": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "{count} image URLs copied to clipboard"
+      }
+    }
+  ],
+  "media_batch_copy_urls_fail": "Failed to copy URLs",
+  "media_toolbar_selected": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "{count} selected"
+      }
+    }
+  ],
+  "media_toolbar_select_all": "Select All",
+  "media_toolbar_copy_urls": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "Copy URLs ({count})"
+      }
+    }
+  ],
+  "media_toolbar_delete": [
+    {
+      "declarations": ["input count"],
+      "match": {
+        "count=*": "Delete ({count})"
+      }
+    }
+  ],
+  "media_toolbar_new_folder": "New Folder"
 }

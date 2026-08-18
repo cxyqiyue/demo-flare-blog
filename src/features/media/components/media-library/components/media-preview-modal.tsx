@@ -29,8 +29,8 @@ import { m } from "@/paraglide/messages";
 interface MediaPreviewModalProps {
   asset: MediaDirectoryFile | null;
   onClose: () => void;
-  onUpdateName: (key: string, name: string) => Promise<void>;
-  onDelete: (key: string) => Promise<void>;
+  onUpdateName?: (key: string, name: string) => Promise<void>;
+  onDelete?: (key: string) => Promise<void>;
 }
 
 export function MediaPreviewModal({
@@ -62,7 +62,7 @@ export function MediaPreviewModal({
     }
   }, [asset]);
   const handleSaveName = async () => {
-    if (!activeAsset || !editName.trim()) return;
+    if (!activeAsset || !editName.trim() || !onUpdateName) return;
 
     setIsSaving(true);
     try {
@@ -77,7 +77,7 @@ export function MediaPreviewModal({
   };
 
   const handleDelete = async () => {
-    if (!activeAsset) return;
+    if (!activeAsset || !onDelete) return;
 
     // Safety check for linked posts handled by parent, but good to have visual feedback
     if (linkedPosts.length > 0) {
@@ -143,15 +143,15 @@ export function MediaPreviewModal({
         onClick={onClose}
       />
 
-      {/* Close Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onClose}
-        className={`absolute top-4 right-4 z-110 text-muted-foreground hover:text-foreground transition-all duration-500 rounded-none h-12 w-12 ${
-          isMounted ? "opacity-100 scale-100" : "opacity-0 scale-90"
-        }`}
-      >
+        {/* Close Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className={`absolute top-3 right-3 md:top-4 md:right-4 z-110 text-muted-foreground hover:text-foreground transition-all duration-500 rounded-none h-10 w-10 md:h-12 md:w-12 ${
+            isMounted ? "opacity-100 scale-100" : "opacity-0 scale-90"
+          }`}
+        >
         <X size={24} strokeWidth={1} />
       </Button>
 
@@ -180,8 +180,8 @@ export function MediaPreviewModal({
         {/* --- Metadata Sidebar (Right/Bottom) --- */}
         <div className="flex-1 md:w-1/3 flex flex-col min-h-0 bg-background">
           {/* Header */}
-          <div className="p-6 md:p-8 border-b border-border/30">
-            <div className="text-xs font-mono text-muted-foreground uppercase tracking-[0.3em] mb-4">
+          <div className="p-4 md:p-8 border-b border-border/30">
+            <div className="text-[10px] md:text-xs font-mono text-muted-foreground uppercase tracking-[0.3em] mb-3 md:mb-4">
               {m.media_preview_details()}
             </div>
 
@@ -235,7 +235,7 @@ export function MediaPreviewModal({
           </div>
 
           {/* Details List */}
-          <div className="flex-1 p-6 md:p-8 space-y-8 overflow-y-auto custom-scrollbar">
+          <div className="flex-1 p-4 md:p-8 space-y-6 md:space-y-8 overflow-y-auto custom-scrollbar">
             <div className="grid grid-cols-2 gap-y-6 gap-x-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground uppercase tracking-widest">
@@ -323,8 +323,8 @@ export function MediaPreviewModal({
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="p-6 md:p-8 border-t border-border/30 bg-background flex flex-col gap-3">
+            {/* Actions */}
+          <div className="p-4 md:p-8 border-t border-border/30 bg-background flex flex-col gap-3">
             <div className="flex flex-col xl:flex-row gap-3">
               <a
                 href={`${activeAsset.url}?original=true`}
@@ -350,19 +350,21 @@ export function MediaPreviewModal({
               </Button>
             </div>
 
-            <Button
-              variant="ghost"
-              onClick={handleDelete}
-              disabled={isDeleting || linkedPosts.length > 0}
-              className="w-full h-10 text-xs uppercase tracking-widest font-medium text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-all rounded-none gap-2"
-            >
-              {isDeleting ? (
-                <Loader2 size={12} className="animate-spin" />
-              ) : (
-                <Trash2 size={12} />
-              )}
-              <span>[ {m.media_preview_btn_delete()} ]</span>
-            </Button>
+            {onDelete && (
+              <Button
+                variant="ghost"
+                onClick={handleDelete}
+                disabled={isDeleting || linkedPosts.length > 0}
+                className="w-full h-10 text-xs uppercase tracking-widest font-medium text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-all rounded-none gap-2"
+              >
+                {isDeleting ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <Trash2 size={12} />
+                )}
+                <span>[ {m.media_preview_btn_delete()} ]</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>

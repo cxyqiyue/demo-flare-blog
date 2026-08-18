@@ -3,9 +3,11 @@ import { z } from "zod";
 import {
   assertMediaKey,
   CreateMediaFolderInputSchema,
+  DeleteExternalFilesInputSchema,
   DeleteMediaFoldersInputSchema,
   GetMediaDirectoryInputSchema,
   GetMediaListInputSchema,
+  ListExternalDirectoryInputSchema,
   MediaKeyInputSchema,
   parseUploadMediaInput,
   RenameMediaFolderInputSchema,
@@ -95,3 +97,19 @@ export const deleteMediaFoldersFn = createServerFn({
   .middleware([adminMiddleware])
   .inputValidator(DeleteMediaFoldersInputSchema)
   .handler(({ data, context }) => MediaService.deleteFolders(context, data));
+
+export const getMediaProvidersFn = createServerFn()
+  .middleware([adminMiddleware])
+  .handler(({ context }) => MediaService.getMediaProviders(context));
+
+export const listExternalDirectoryFn = createServerFn()
+  .middleware([adminMiddleware])
+  .inputValidator(ListExternalDirectoryInputSchema)
+  .handler(({ data, context }) => MediaService.listExternalDirectory(context, data));
+
+export const deleteExternalFilesFn = createServerFn({
+  method: "POST",
+})
+  .middleware([adminMiddleware])
+  .inputValidator(DeleteExternalFilesInputSchema)
+  .handler(({ data, context }) => MediaService.deleteExternalFiles(context, data));
