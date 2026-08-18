@@ -128,3 +128,16 @@ export const deleteExternalFilesFn = createServerFn({
   .middleware([adminMiddleware])
   .inputValidator(DeleteExternalFilesInputSchema)
   .handler(({ data, context }) => MediaService.deleteExternalFiles(context, data));
+
+export const createExternalFolderFn = createServerFn({
+  method: "POST",
+})
+  .middleware([adminMiddleware])
+  .inputValidator(
+    z.object({
+      providerId: z.string(),
+      name: z.string(),
+      parent: z.string().optional(),
+    }),
+  )
+  .handler(({ data, context }) => MediaService.createExternalFolder(context, data));

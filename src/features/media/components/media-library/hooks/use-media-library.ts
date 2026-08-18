@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   createMediaFolderFn,
+  createExternalFolderFn,
   deleteExternalFilesFn,
   deleteImageFn,
   deleteMediaFoldersFn,
@@ -223,10 +224,12 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     setDeleteTarget(null);
   }, [debouncedSearch, unused, currentFolder, currentProviderId]);
 
-  // ── Folder operations (R2 only) ──
+  // ── Folder operations ──
   const createFolder = useMutation({
     mutationFn: (name: string) =>
-      createMediaFolderFn({ data: { name, parent: currentFolder } }),
+      isExternal && currentProviderId
+        ? createExternalFolderFn({ data: { providerId: currentProviderId, name, parent: currentFolder } })
+        : createMediaFolderFn({ data: { name, parent: currentFolder } }),
     onSuccess: (result) => {
       if (result.error) {
         toast.error(m.media_toast_folder_create_fail(), {

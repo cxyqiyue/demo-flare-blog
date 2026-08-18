@@ -24,13 +24,14 @@ import {
 import {
   deleteS3Objects,
   listS3Objects,
+  uploadToS3,
   uploadToS3ForMediaLibrary,
   type S3Config,
 } from "@/features/image-hosting/s3/s3-upload";
 import * as ConfigService from "@/features/config/service/config.service";
 import * as PostMediaRepo from "@/features/posts/data/post-media.data";
 import { CACHE_CONTROL } from "@/lib/constants";
-import { err, ok } from "@/lib/errors";
+import { err, ok, type Result } from "@/lib/errors";
 
 const DEFAULT_DIRECTORY_LIMIT = 50;
 
@@ -505,7 +506,7 @@ export async function getMediaProviders(
       canList: true,
       canDelete: true,
       canUpload: true,
-      canCreateFolder: false,
+      canCreateFolder: true,
       isDefault: s3Enabled,
     });
   }
@@ -602,6 +603,38 @@ export async function deleteExternalFiles(
   }
 
   return { deleted: 0, skipped: data.keys.length };
+}
+
+export async function createExternalFolder(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: { providerId: string; name: string; parent?: string },
+): Promise<Result<{ key: string; name: string }, { reason: string }>> {
+  if (data.providerId === "s3") {
+    const config = await ConfigService.getSystemConfig(context);
+    const s3Config = resolveS3ConfigForMedia(config);
+    if (!s3Config) return err({ reason: "S3 未配置" });
+
+    const name = data.name.replace(/^\/+|\/+$/g, "").trim();
+    if (!name || name.includes("/")) return err({ reason: "MEDIA_INVALID_FOLDER_NAME" });
+
+    const parent = normalizeFolderPath(data.parent ?? "");
+    const folderKey = joinFolderKey(parent, name);
+
+    const result = await uploadToS3(s3Config, {
+      key: `${folderKey}/`,
+      body: new ArrayBuffer(0),
+      contentType: "application/x-directory",
+    });
+
+    if (result.error) {
+      console.error(JSON.stringify({ message: "s3 create folder failed", error: result.error.message }));
+      return err({ reason: "S3_FOLDER_CREATE_FAILED" });
+    }
+
+    return ok({ key: folderKey, name });
+  }
+
+  return err({ reason: "UNSUPPORTED_PROVIDER" });
 }
 
 function buildS3PublicUrl(cfg: S3Config, key: string): string {

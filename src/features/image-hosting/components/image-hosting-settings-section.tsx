@@ -109,6 +109,7 @@ export function ImageHostingSettingsSection({
   // ── API Key Providers ──
   const apiProviders: ApiKeyProvider[] =
     watch("imageHosting.apiProviders") ?? [];
+  const apiEnabled = apiProviders.some((p) => p.articleEnabled || p.commentEnabled);
 
   // ── Connection Status ──
   const [s3Status, setS3Status] = useState<ConnectionStatus>("IDLE");
@@ -242,6 +243,10 @@ export function ImageHostingSettingsSection({
     };
     const updated = [...apiProviders, newProvider];
     setValue("imageHosting.apiProviders", updated, { shouldDirty: true });
+    setValue("imageHosting.r2Native.commentEnabled", false, { shouldDirty: true });
+    setValue("imageHosting.r2Native.articleEnabled", false, { shouldDirty: true });
+    setValue("imageHosting.s3.commentEnabled", false, { shouldDirty: true });
+    setValue("imageHosting.s3.articleEnabled", false, { shouldDirty: true });
     setEditingId(newProvider.id);
   };
 
@@ -295,6 +300,18 @@ export function ImageHostingSettingsSection({
                 setValue("imageHosting.r2Native.articleEnabled", newEnabled, {
                   shouldDirty: true,
                 });
+                if (newEnabled) {
+                  setValue("imageHosting.s3.commentEnabled", false, { shouldDirty: true });
+                  setValue("imageHosting.s3.articleEnabled", false, { shouldDirty: true });
+                  const currentProviders: ApiKeyProvider[] = watch("imageHosting.apiProviders") ?? [];
+                  if (currentProviders.length > 0) {
+                    setValue(
+                      "imageHosting.apiProviders",
+                      currentProviders.map((p) => ({ ...p, articleEnabled: false, commentEnabled: false })),
+                      { shouldDirty: true },
+                    );
+                  }
+                }
               }}
               className={cn(
                 "inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
@@ -347,6 +364,18 @@ export function ImageHostingSettingsSection({
                 setValue("imageHosting.s3.articleEnabled", newEnabled, {
                   shouldDirty: true,
                 });
+                if (newEnabled) {
+                  setValue("imageHosting.r2Native.commentEnabled", false, { shouldDirty: true });
+                  setValue("imageHosting.r2Native.articleEnabled", false, { shouldDirty: true });
+                  const currentProviders: ApiKeyProvider[] = watch("imageHosting.apiProviders") ?? [];
+                  if (currentProviders.length > 0) {
+                    setValue(
+                      "imageHosting.apiProviders",
+                      currentProviders.map((p) => ({ ...p, articleEnabled: false, commentEnabled: false })),
+                      { shouldDirty: true },
+                    );
+                  }
+                }
               }}
               className={cn(
                 "inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
@@ -586,18 +615,51 @@ export function ImageHostingSettingsSection({
 
         {/* ── API Key 图床 ── */}
         <div className="space-y-6 p-4 md:p-8">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="rounded-sm bg-muted/40 p-2 shrink-0">
-              <KeyRound size={16} className="text-muted-foreground" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="rounded-sm bg-muted/40 p-2 shrink-0">
+                <KeyRound size={16} className="text-muted-foreground" />
+              </div>
+              <div className="space-y-1 min-w-0">
+                <h5 className="text-sm font-medium text-foreground truncate">
+                  {m.settings_image_hosting_api_providers_title()}
+                </h5>
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {m.settings_image_hosting_api_providers_desc()}
+                </p>
+              </div>
             </div>
-            <div className="space-y-1 min-w-0">
-              <h5 className="text-sm font-medium text-foreground truncate">
-                {m.settings_image_hosting_api_providers_title()}
-              </h5>
-              <p className="text-xs text-muted-foreground line-clamp-2">
-                {m.settings_image_hosting_api_providers_desc()}
-              </p>
-            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={apiEnabled}
+              onClick={() => {
+                const newEnabled = !apiEnabled;
+                const updated = apiProviders.map((p) => ({
+                  ...p,
+                  articleEnabled: newEnabled,
+                  commentEnabled: newEnabled,
+                }));
+                setValue("imageHosting.apiProviders", updated, { shouldDirty: true });
+                if (newEnabled) {
+                  setValue("imageHosting.r2Native.commentEnabled", false, { shouldDirty: true });
+                  setValue("imageHosting.r2Native.articleEnabled", false, { shouldDirty: true });
+                  setValue("imageHosting.s3.commentEnabled", false, { shouldDirty: true });
+                  setValue("imageHosting.s3.articleEnabled", false, { shouldDirty: true });
+                }
+              }}
+              className={cn(
+                "inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                apiEnabled ? "bg-foreground" : "bg-muted/50",
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform",
+                  apiEnabled ? "translate-x-5" : "translate-x-0",
+                )}
+              />
+            </button>
           </div>
 
           {/* 已添加的 API Key Providers */}

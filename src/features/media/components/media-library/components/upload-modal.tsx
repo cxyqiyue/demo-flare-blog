@@ -1,20 +1,24 @@
 import { ClientOnly } from "@tanstack/react-router";
-import { FolderPlus, Loader2, X } from "lucide-react";
+import { ChevronDown, FolderPlus, Home, Loader2, X } from "lucide-react";
 import type React from "react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ACCEPTED_IMAGE_TYPES,
   MAX_FILE_SIZE,
 } from "@/features/media/media.schema";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import type { MediaFolder } from "../types";
 import type { UploadItem } from "../types";
 
 interface UploadModalProps {
   isOpen: boolean;
   queue: Array<UploadItem>;
   isDragging: boolean;
-  folderLabel?: string;
+  selectedFolder?: string;
+  folders?: MediaFolder[];
+  onFolderChange?: (folder: string) => void;
   onClose: () => void;
   onFileSelect: (files: Array<File>) => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -26,7 +30,9 @@ function UploadModalInternal({
   isOpen,
   queue,
   isDragging,
-  folderLabel,
+  selectedFolder,
+  folders = [],
+  onFolderChange,
   onClose,
   onFileSelect,
   onDragOver,
@@ -34,6 +40,7 @@ function UploadModalInternal({
   onDrop,
 }: UploadModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [folderDropdownOpen, setFolderDropdownOpen] = useState(false);
   const accept = ACCEPTED_IMAGE_TYPES.join(",");
   const maxSizeMb = Math.floor(MAX_FILE_SIZE / 1024 / 1024);
 
@@ -48,6 +55,10 @@ function UploadModalInternal({
     queue.length > 0 &&
     queue.every((i) => i.status === "COMPLETE" || i.status === "ERROR");
   const hasErrors = queue.some((i) => i.status === "ERROR");
+
+  const folderLabel = selectedFolder
+    ? `/${selectedFolder}`
+    : "/";
 
   return createPortal(
     <div
@@ -100,14 +111,74 @@ function UploadModalInternal({
 
         {/* Body */}
         <div className="px-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 min-h-0 pb-2">
-          {folderLabel && (
-            <div className="flex items-center gap-2 border border-border/30 bg-muted/5 px-3 py-2">
-              <FolderPlus size={12} className="text-muted-foreground" />
-              <span className="text-xs font-mono text-muted-foreground truncate">
-                {folderLabel}
-              </span>
+          {/* Folder Selector */}
+          {onFolderChange && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setFolderDropdownOpen(!folderDropdownOpen)}
+                className="w-full flex items-center gap-2 border border-border/30 bg-muted/5 px-3 py-2 hover:bg-muted/10 transition-colors"
+              >
+                <FolderPlus size={12} className="text-muted-foreground shrink-0" />
+                <span className="text-xs font-mono text-muted-foreground truncate flex-1 text-left">
+                  {m.media_upload_target_folder()}: {folderLabel}
+                </span>
+                <ChevronDown
+                  size={12}
+                  className={cn(
+                    "text-muted-foreground transition-transform shrink-0",
+                    folderDropdownOpen && "rotate-180",
+                  )}
+                />
+              </button>
+
+              {folderDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 z-50 border border-border/30 bg-background shadow-md max-h-48 overflow-y-auto custom-scrollbar">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onFolderChange("");
+                      setFolderDropdownOpen(false);
+                    }}
+                    className={cn(
+                      "flex items-center gap-2 w-full px-3 py-2 text-left text-xs font-mono transition-all",
+                      !selectedFolder
+                        ? "bg-foreground text-background"
+                        : "hover:bg-muted/20 text-foreground",
+                    )}
+                  >
+                    <Home size={10} strokeWidth={1.5} />
+                    <span>/ (根目录)</span>
+                  </button>
+                  {folders.map((folder) => (
+                    <button
+                      key={folder.key}
+                      type="button"
+                      onClick={() => {
+                        onFolderChange(folder.key);
+                        setFolderDropdownOpen(false);
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 w-full px-3 py-2 text-left text-xs font-mono transition-all",
+                        selectedFolder === folder.key
+                          ? "bg-foreground text-background"
+                          : "hover:bg-muted/20 text-foreground",
+                      )}
+                    >
+                      <FolderPlus size={10} strokeWidth={1.5} />
+                      <span className="truncate">/{folder.name}</span>
+                    </button>
+                  ))}
+                  {folders.length === 0 && (
+                    <div className="px-3 py-2 text-xs font-mono text-muted-foreground/60">
+                      {m.media_empty_provider()}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
+
           {/* Drop Zone */}
           <div
             onClick={() => fileInputRef.current?.click()}

@@ -1,5 +1,5 @@
 import { ChevronRight, Folder, Home, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { formatBytes } from "@/lib/utils";
@@ -63,7 +63,6 @@ export function MediaLibrary() {
     isDragging,
     handleDragOver,
     handleDragLeave,
-    handleDrop,
     processFiles,
     reset: resetUpload,
     canUpload,
@@ -76,6 +75,14 @@ export function MediaLibrary() {
   const [previewAsset, setPreviewAsset] = useState<MediaDirectoryFile | null>(null);
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [renameFolderTarget, setRenameFolderTarget] = useState<MediaFolder | null>(null);
+  const [uploadFolder, setUploadFolder] = useState<string>("");
+
+  // Reset upload folder when modal opens
+  useEffect(() => {
+    if (isUploadOpen) {
+      setUploadFolder(currentFolder);
+    }
+  }, [isUploadOpen, currentFolder]);
 
   const isSearching = searchQuery.trim().length > 0;
 
@@ -96,10 +103,6 @@ export function MediaLibrary() {
       confirmDelete(allowed);
     }
   };
-
-  const folderLabel = currentFolder
-    ? `${m.media_upload_target_folder()}: /${currentFolder}`
-    : `${m.media_upload_target_folder()}: /`;
 
   const confirmMessage = deletePreview
     ? deletePreview.folders > 0 && deletePreview.files > 0
@@ -136,17 +139,6 @@ export function MediaLibrary() {
           <span className="hidden sm:inline">{m.media_upload_btn()}</span>
         </Button>
       </div>
-
-      {uploadDisabled && !isExternal && (
-        <div className="border border-amber-500/30 bg-amber-500/5 p-4">
-          <p className="text-xs font-mono uppercase tracking-widest text-amber-600">
-            {m.media_upload_disabled_by_image_hosting_title()}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {m.media_upload_disabled_by_image_hosting_desc()}
-          </p>
-        </div>
-      )}
 
       {/* Provider Selector */}
       <ProviderSelector
@@ -285,12 +277,19 @@ export function MediaLibrary() {
         isOpen={isUploadOpen}
         queue={uploadQueue}
         isDragging={isDragging}
-        folderLabel={uploadDisabled ? undefined : folderLabel}
+        selectedFolder={uploadFolder}
+        folders={folders}
+        onFolderChange={setUploadFolder}
         onClose={resetUpload}
-        onFileSelect={uploadDisabled ? () => {} : (files) => processFiles(files, currentFolder)}
+        onFileSelect={uploadDisabled ? () => {} : (files) => processFiles(files, uploadFolder)}
         onDragOver={uploadDisabled ? () => {} : handleDragOver}
         onDragLeave={uploadDisabled ? () => {} : handleDragLeave}
-        onDrop={uploadDisabled ? () => {} : handleDrop}
+        onDrop={uploadDisabled ? () => {} : (e) => {
+          e.preventDefault();
+          if (e.dataTransfer.files.length > 0) {
+            processFiles(Array.from(e.dataTransfer.files), uploadFolder);
+          }
+        }}
       />
 
       {/* --- New Folder Modal --- */}
