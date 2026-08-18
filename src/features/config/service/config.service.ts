@@ -1,11 +1,13 @@
 import { blogConfig } from "@/blog.config";
 import * as CacheService from "@/features/cache/cache.service";
 import type {
+  AiProviderInstance,
   ChallengeProvider,
   SiteConfig,
   SystemConfig,
   UpdateSystemConfigSectionInput,
 } from "@/features/config/config.schema";
+import type { ApiKeyProvider } from "@/features/image-hosting/image-hosting.schema";
 import {
   CONFIG_CACHE_KEYS,
   DEFAULT_CONFIG,
@@ -90,6 +92,165 @@ function resolveEmailConfig(config: SystemConfig | null | undefined) {
   };
 }
 
+// ── AI 配置旧版迁移 ─────────────────────────────────────────
+function migrateAiConfig(
+  config: SystemConfig | null | undefined,
+): SystemConfig["ai"] {
+  const ai = config?.ai;
+  if (!ai) return DEFAULT_CONFIG.ai;
+
+  // 已是新版格式（有 providers 数组）→ 直接使用
+  if (ai.providers) {
+    return {
+      workersAi: ai.workersAi ?? DEFAULT_CONFIG.ai?.workersAi,
+      activeProviderId: ai.activeProviderId,
+      providers: ai.providers,
+      blogSkillType: ai.blogSkillType ?? DEFAULT_CONFIG.ai?.blogSkillType,
+      writingInstructions: ai.writingInstructions ?? "",
+    };
+  }
+
+  // ── 旧版迁移 ──
+  const providers: AiProviderInstance[] = [];
+
+  // 迁移 openai-compatible
+  const openai = ai.openaiCompatible as
+    | { baseUrl?: string; apiKey?: string; model?: string }
+    | undefined;
+  if (openai?.baseUrl || openai?.apiKey) {
+    providers.push({
+      id: "migrated-openai",
+      name: "OpenAI Compatible",
+      type: "openai-compatible",
+      baseUrl: openai.baseUrl ?? "",
+      apiKey: openai.apiKey ?? "",
+      model: openai.model ?? "",
+    });
+  }
+
+  // 迁移 agnes-ai（本质是 OpenAI 兼容）
+  const agnes = ai.agnesAi as
+    | { baseUrl?: string; apiKey?: string; model?: string }
+    | undefined;
+  if (agnes?.baseUrl || agnes?.apiKey) {
+    providers.push({
+      id: "migrated-agnes",
+      name: "Agnes AI",
+      type: "openai-compatible",
+      baseUrl: agnes.baseUrl ?? "",
+      apiKey: agnes.apiKey ?? "",
+      model: agnes.model ?? "",
+    });
+  }
+
+  // 确定活跃供应商
+  let activeProviderId: string | undefined;
+  const oldProvider = ai.provider as string | undefined;
+  if (oldProvider === "openai-compatible" && openai?.baseUrl) {
+    activeProviderId = "migrated-openai";
+  } else if (oldProvider === "agnes-ai" && agnes?.baseUrl) {
+    activeProviderId = "migrated-agnes";
+  }
+  // workers-ai → activeProviderId 保持 undefined
+
+  const isWorkersAi =
+    !oldProvider ||
+    oldProvider === "workers-ai" ||
+    (!activeProviderId && providers.length === 0);
+
+  return {
+    workersAi: { enabled: isWorkersAi },
+    activeProviderId: isWorkersAi ? undefined : activeProviderId,
+    providers,
+    blogSkillType: ai.blogSkillType ?? "blog",
+    writingInstructions: ai.writingInstructions ?? "",
+  };
+}
+
+// ── 图床配置旧版迁移 ─────────────────────────────────────────
+function migrateImageHostingConfig(
+  config: SystemConfig | null | undefined,
+): SystemConfig["imageHosting"] {
+  const ih = config?.imageHosting;
+  if (!ih) return DEFAULT_CONFIG.imageHosting;
+
+  // 已是新版格式 → 直接使用
+  if (ih.r2Native || ih.apiProviders) {
+    return {
+      r2Native: ih.r2Native ?? DEFAULT_CONFIG.imageHosting?.r2Native,
+      s3: { ...DEFAULT_CONFIG.imageHosting?.s3, ...ih.s3 },
+      apiProviders: ih.apiProviders ?? [],
+    };
+  }
+
+  // ── 旧版迁移 ──
+  const apiProviders: ApiKeyProvider[] = [];
+
+  // 迁移 imgbb
+  const imgbb = ih.imgbb as
+    | {
+        apiKey?: string;
+        articleEnabled?: boolean;
+        commentEnabled?: boolean;
+      }
+    | undefined;
+  if (imgbb?.apiKey) {
+    apiProviders.push({
+      id: "migrated-imgbb",
+      name: "ImgBB",
+      type: "imgbb",
+      apiKey: imgbb.apiKey,
+      articleEnabled: !!imgbb.articleEnabled,
+      commentEnabled: !!imgbb.commentEnabled,
+    });
+  }
+
+  // 迁移 ffsky
+  const ffsky = ih.ffsky as
+    | { apiKey?: string; apiEndpoint?: string; articleEnabled?: boolean }
+    | undefined;
+  if (ffsky?.apiKey) {
+    apiProviders.push({
+      id: "migrated-ffsky",
+      name: "Ffsky",
+      type: "ffsky",
+      apiKey: ffsky.apiKey,
+      apiEndpoint: ffsky.apiEndpoint,
+      articleEnabled: !!ffsky.articleEnabled,
+      commentEnabled: false,
+    });
+  }
+
+  // 迁移 S3（保持不变，但移除 cloudflare-r2 preset 的特殊处理）
+  const s3 = ih.s3;
+
+  // 默认启用 R2 原生
+  const hasExternalHosting =
+    apiProviders.length > 0 || !!s3?.articleEnabled;
+
+  return {
+    r2Native: {
+      articleEnabled: !hasExternalHosting,
+      commentEnabled: !s3?.commentEnabled && !apiProviders.some((p) => p.commentEnabled),
+    },
+    s3: s3
+      ? {
+          articleEnabled: !!s3.articleEnabled,
+          commentEnabled: !!s3.commentEnabled,
+          provider: s3.provider ?? "aws",
+          endpoint: s3.endpoint ?? "",
+          bucket: s3.bucket ?? "",
+          region: s3.region ?? "",
+          accessKeyId: s3.accessKeyId ?? "",
+          secretAccessKey: s3.secretAccessKey ?? "",
+          pathPrefix: s3.pathPrefix ?? "",
+          publicUrl: s3.publicUrl ?? "",
+        }
+      : DEFAULT_CONFIG.imageHosting?.s3,
+    apiProviders,
+  };
+}
+
 export function resolveSystemConfig(
   config: SystemConfig | null | undefined,
 ): SystemConfig {
@@ -115,34 +276,8 @@ export function resolveSystemConfig(
       webhooks:
         config?.notification?.webhooks ?? DEFAULT_CONFIG.notification?.webhooks,
     },
-    ai: {
-      ...DEFAULT_CONFIG.ai,
-      ...config?.ai,
-      openaiCompatible: {
-        ...DEFAULT_CONFIG.ai?.openaiCompatible,
-        ...config?.ai?.openaiCompatible,
-      },
-      agnesAi: {
-        ...DEFAULT_CONFIG.ai?.agnesAi,
-        ...config?.ai?.agnesAi,
-      },
-    },
-    imageHosting: {
-      ...DEFAULT_CONFIG.imageHosting,
-      ...config?.imageHosting,
-      imgbb: {
-        ...DEFAULT_CONFIG.imageHosting?.imgbb,
-        ...config?.imageHosting?.imgbb,
-      },
-      ffsky: {
-        ...DEFAULT_CONFIG.imageHosting?.ffsky,
-        ...config?.imageHosting?.ffsky,
-      },
-      s3: {
-        ...DEFAULT_CONFIG.imageHosting?.s3,
-        ...config?.imageHosting?.s3,
-      },
-    },
+    ai: migrateAiConfig(config),
+    imageHosting: migrateImageHostingConfig(config),
     challenge: resolveChallengeConfig(config),
     usage: {
       ...DEFAULT_CONFIG.usage,
@@ -157,10 +292,8 @@ export function resolveSystemConfig(
 }
 
 function migrateSocial(social: unknown): SocialLink[] {
-  // New format — already an array
   if (Array.isArray(social)) return social;
 
-  // Old format — { github?: string, email?: string }
   if (social && typeof social === "object") {
     const old = social as { github?: string; email?: string };
     const migrated: SocialLink[] = [];
@@ -170,7 +303,6 @@ function migrateSocial(social: unknown): SocialLink[] {
     return migrated;
   }
 
-  // Fallback to blogConfig defaults
   return [...blogConfig.social];
 }
 

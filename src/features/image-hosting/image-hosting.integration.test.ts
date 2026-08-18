@@ -33,11 +33,14 @@ describe("ImageHostingService", () => {
   });
 
   async function seedImageHosting(
-    imageHosting: typeof DEFAULT_CONFIG.imageHosting,
+    imageHosting: Partial<typeof DEFAULT_CONFIG.imageHosting>,
   ) {
     await ConfigRepo.upsertSystemConfig(adminContext.db, {
       ...DEFAULT_CONFIG,
-      imageHosting,
+      imageHosting: {
+        ...DEFAULT_CONFIG.imageHosting,
+        ...imageHosting,
+      },
     });
   }
 
@@ -81,7 +84,7 @@ describe("ImageHostingService", () => {
       await seedImageHosting({});
 
       const formData = new FormData();
-      formData.append("image", makeFile());
+      formData.append("image", makeFile("article.png"));
 
       const result = await ImageHostingService.uploadForArticle(
         adminContext,
@@ -92,16 +95,21 @@ describe("ImageHostingService", () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it("should upload to ImgBB when imgbb article is enabled", async () => {
+    it("should upload to imgbb when only imgbb article is enabled", async () => {
       const fetchMock = stubFetch({
-        body: {
-          data: { url: "https://i.ibb.co/xyz/file.png" },
-          success: true,
-          status: 200,
-        },
+        body: { data: { url: "https://i.ibb.co/xyz/file.png" }, success: true },
+        status: 200,
       });
       await seedImageHosting({
-        imgbb: { articleEnabled: true, apiKey: "imgbb-key" },
+        apiProviders: [
+          {
+            id: "imgbb-1",
+            name: "ImgBB",
+            type: "imgbb",
+            apiKey: "imgbb-key",
+            articleEnabled: true,
+          },
+        ],
       });
 
       const formData = new FormData();
@@ -134,11 +142,16 @@ describe("ImageHostingService", () => {
         },
       });
       await seedImageHosting({
-        ffsky: {
-          articleEnabled: true,
-          apiKey: "ffsky-key",
-          apiEndpoint: DEFAULT_FFSKY_API_ENDPOINT,
-        },
+        apiProviders: [
+          {
+            id: "ffsky-1",
+            name: "Ffsky",
+            type: "ffsky",
+            apiKey: "ffsky-key",
+            apiEndpoint: DEFAULT_FFSKY_API_ENDPOINT,
+            articleEnabled: true,
+          },
+        ],
       });
 
       const formData = new FormData();
@@ -167,8 +180,22 @@ describe("ImageHostingService", () => {
         body: { data: { url: "https://i.ibb.co/imgbb.png" }, success: true },
       });
       await seedImageHosting({
-        imgbb: { articleEnabled: true, apiKey: "imgbb-key" },
-        ffsky: { articleEnabled: true, apiKey: "ffsky-key" },
+        apiProviders: [
+          {
+            id: "imgbb-1",
+            name: "ImgBB",
+            type: "imgbb",
+            apiKey: "imgbb-key",
+            articleEnabled: true,
+          },
+          {
+            id: "ffsky-1",
+            name: "Ffsky",
+            type: "ffsky",
+            apiKey: "ffsky-key",
+            articleEnabled: true,
+          },
+        ],
       });
 
       const formData = new FormData();
@@ -208,8 +235,22 @@ describe("ImageHostingService", () => {
       });
       vi.stubGlobal("fetch", fetchMock);
       await seedImageHosting({
-        imgbb: { articleEnabled: true, apiKey: "imgbb-key" },
-        ffsky: { articleEnabled: true, apiKey: "ffsky-key" },
+        apiProviders: [
+          {
+            id: "imgbb-1",
+            name: "ImgBB",
+            type: "imgbb",
+            apiKey: "imgbb-key",
+            articleEnabled: true,
+          },
+          {
+            id: "ffsky-1",
+            name: "Ffsky",
+            type: "ffsky",
+            apiKey: "ffsky-key",
+            articleEnabled: true,
+          },
+        ],
       });
 
       const formData = new FormData();
@@ -240,8 +281,22 @@ describe("ImageHostingService", () => {
       );
       vi.stubGlobal("fetch", fetchMock);
       await seedImageHosting({
-        imgbb: { articleEnabled: true, apiKey: "imgbb-key" },
-        ffsky: { articleEnabled: true, apiKey: "ffsky-key" },
+        apiProviders: [
+          {
+            id: "imgbb-1",
+            name: "ImgBB",
+            type: "imgbb",
+            apiKey: "imgbb-key",
+            articleEnabled: true,
+          },
+          {
+            id: "ffsky-1",
+            name: "Ffsky",
+            type: "ffsky",
+            apiKey: "ffsky-key",
+            articleEnabled: true,
+          },
+        ],
       });
 
       const formData = new FormData();
@@ -263,7 +318,15 @@ describe("ImageHostingService", () => {
         body: { data: { url: "https://i.ibb.co/imgbb.png" }, success: true },
       });
       await seedImageHosting({
-        imgbb: { articleEnabled: true, apiKey: "" },
+        apiProviders: [
+          {
+            id: "imgbb-1",
+            name: "ImgBB",
+            type: "imgbb",
+            apiKey: "",
+            articleEnabled: true,
+          },
+        ],
       });
 
       const formData = new FormData();
@@ -288,7 +351,15 @@ describe("ImageHostingService", () => {
         }),
       });
       await seedImageHosting({
-        imgbb: { articleEnabled: true, apiKey: "wrong-key" },
+        apiProviders: [
+          {
+            id: "imgbb-1",
+            name: "ImgBB",
+            type: "imgbb",
+            apiKey: "wrong-key",
+            articleEnabled: true,
+          },
+        ],
       });
 
       const formData = new FormData();
@@ -312,7 +383,15 @@ describe("ImageHostingService", () => {
         }),
       );
       await seedImageHosting({
-        imgbb: { articleEnabled: true, apiKey: "imgbb-key" },
+        apiProviders: [
+          {
+            id: "imgbb-1",
+            name: "ImgBB",
+            type: "imgbb",
+            apiKey: "imgbb-key",
+            articleEnabled: true,
+          },
+        ],
       });
 
       const formData = new FormData();
@@ -337,7 +416,8 @@ describe("ImageHostingService", () => {
       vi.stubGlobal("fetch", fetchMock);
 
       const result = await ImageHostingService.testConnection({
-        provider: "imgbb",
+        category: "api-key",
+        apiKeyProviderType: "imgbb",
         apiKey: "  ",
       });
 
@@ -351,7 +431,8 @@ describe("ImageHostingService", () => {
       });
 
       const result = await ImageHostingService.testConnection({
-        provider: "imgbb",
+        category: "api-key",
+        apiKeyProviderType: "imgbb",
         apiKey: "imgbb-key",
       });
 
@@ -375,7 +456,8 @@ describe("ImageHostingService", () => {
       });
 
       const result = await ImageHostingService.testConnection({
-        provider: "ffsky",
+        category: "api-key",
+        apiKeyProviderType: "ffsky",
         apiKey: "ffsky-key",
         apiEndpoint: "https://custom.example/api/1/upload",
       });
@@ -393,26 +475,36 @@ describe("ImageHostingService", () => {
   // 评论配置 (Comment Image Hosting Config)
   // ============================================
   describe("getCommentImageHostingConfig", () => {
-    it("should enable imgbb comments when commentEnabled is on", async () => {
+    it("should enable s3 comments when s3 commentEnabled is on", async () => {
       await seedImageHosting({
-        imgbb: { commentEnabled: true, apiKey: "imgbb-key" },
+        s3: {
+          commentEnabled: true,
+          provider: "aws",
+          endpoint: "https://s3.example.com",
+          bucket: "test-bucket",
+          region: "auto",
+          accessKeyId: "key",
+          secretAccessKey: "secret",
+        },
       });
 
       const result =
         await ImageHostingService.getCommentImageHostingConfig(adminContext);
 
-      expect(result).toEqual({ enabled: true, provider: "imgbb" });
+      expect(result.enabled).toBe(true);
+      expect(result.providerCategory).toBe("s3");
     });
 
-    it("should be disabled when imgbb comments are off", async () => {
+    it("should enable r2-native comments when r2Native commentEnabled is on", async () => {
       await seedImageHosting({
-        imgbb: { commentEnabled: false },
+        r2Native: { commentEnabled: true },
       });
 
       const result =
         await ImageHostingService.getCommentImageHostingConfig(adminContext);
 
-      expect(result).toEqual({ enabled: false, provider: null });
+      expect(result.enabled).toBe(true);
+      expect(result.providerCategory).toBe("r2-native");
     });
 
     it("should be disabled when no image hosting is configured", async () => {
@@ -421,7 +513,8 @@ describe("ImageHostingService", () => {
       const result =
         await ImageHostingService.getCommentImageHostingConfig(adminContext);
 
-      expect(result).toEqual({ enabled: false, provider: null });
+      expect(result.enabled).toBe(false);
+      expect(result.providerCategory).toBeNull();
     });
   });
 
@@ -429,9 +522,18 @@ describe("ImageHostingService", () => {
   // 文章配置 (Article Image Hosting Config)
   // ============================================
   describe("getArticleImageHostingConfig", () => {
-    it("should enable when imgbb article is on", async () => {
+    it("should enable when s3 article is on", async () => {
       await seedImageHosting({
-        imgbb: { articleEnabled: true, apiKey: "imgbb-key" },
+        s3: {
+          articleEnabled: true,
+          commentEnabled: false,
+          provider: "aws",
+          endpoint: "https://s3.example.com",
+          bucket: "test-bucket",
+          region: "auto",
+          accessKeyId: "key",
+          secretAccessKey: "secret",
+        },
       });
 
       const result =
@@ -440,9 +542,17 @@ describe("ImageHostingService", () => {
       expect(result).toEqual({ enabled: true });
     });
 
-    it("should enable when ffsky article is on", async () => {
+    it("should enable when api key provider article is on", async () => {
       await seedImageHosting({
-        ffsky: { articleEnabled: true, apiKey: "ffsky-key" },
+        apiProviders: [
+          {
+            id: "imgbb-1",
+            name: "ImgBB",
+            type: "imgbb",
+            apiKey: "imgbb-key",
+            articleEnabled: true,
+          },
+        ],
       });
 
       const result =
@@ -451,9 +561,9 @@ describe("ImageHostingService", () => {
       expect(result).toEqual({ enabled: true });
     });
 
-    it("should be disabled when only comments are enabled", async () => {
+    it("should be disabled when only r2-native is on", async () => {
       await seedImageHosting({
-        imgbb: { commentEnabled: true, apiKey: "imgbb-key" },
+        r2Native: { commentEnabled: true },
       });
 
       const result =

@@ -8,4 +8,6 @@ export const testAiConnectionFn = createServerFn({
 })
   .middleware([adminMiddleware])
   .inputValidator(TestAiConnectionInputSchema)
-  .handler(({ data, context }) => AiService.testAiConnection(context, data));
+  .handler(({ data, context }) =>
+    AiService.testAiConnection(context, data),
+  );

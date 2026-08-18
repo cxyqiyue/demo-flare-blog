@@ -6,6 +6,7 @@ import type {
   AiBlogSkillType,
   SystemConfig,
 } from "@/features/config/config.schema";
+import type { AiCompatType } from "@/features/config/config.schema";
 import * as ConfigService from "@/features/config/service/config.service";
 import { markdownToJsonContent } from "@/features/import-export/utils/markdown-parser";
 import { err, ok } from "@/lib/errors";
@@ -25,64 +26,39 @@ type WorkersAITextModel = Parameters<ReturnType<typeof createWorkersAI>>[0];
 
 const TEXT_MODEL = "@cf/zai-org/glm-4.7-flash" satisfies WorkersAITextModel;
 
-export const AI_PROVIDER_NAMES = [
-  "workers-ai",
-  "openai-compatible",
-  "agnes-ai",
-] as const;
-export type AiProviderName = (typeof AI_PROVIDER_NAMES)[number];
+// ── 兼容接口类型标签 ─────────────────────────────────────────
+export const AI_COMPAT_LABELS: Record<AiCompatType, () => string> = {
+  "openai-compatible": () => "OpenAI",
+  "claude-compatible": () => "Claude",
+  "gemini-compatible": () => "Gemini",
+};
 
-// Agnes AI 官方推荐端点（OpenAI 兼容，无限期免费）
-export const AGNES_AI_ENDPOINTS = [
-  {
-    value: "https://apihub.agnes-ai.com/v1",
-    region: "international",
-  },
-  {
-    value: "https://apihub.agnes-ai.cn/v1",
-    region: "international-cn",
-  },
-  {
-    value: "https://api.agnes-ai.cn/v1",
-    region: "china",
-  },
-] as const;
+// ── 兼容接口默认端点提示 ─────────────────────────────────────
+export const AI_COMPAT_DEFAULT_ENDPOINTS: Record<AiCompatType, string> = {
+  "openai-compatible": "https://api.openai.com/v1",
+  "claude-compatible": "https://api.anthropic.com/v1",
+  "gemini-compatible":
+    "https://generativelanguage.googleapis.com/v1beta/openai",
+};
 
 function buildTextModel(
   env: Env,
   ai: AiProviderConfig | undefined,
 ): LanguageModel {
-  const openai = ai?.openaiCompatible;
-  const agnes = ai?.agnesAi;
-
-  if (
-    ai?.provider === "agnes-ai" &&
-    agnes?.baseUrl?.trim() &&
-    agnes?.model?.trim()
-  ) {
-    const provider = createOpenAICompatible({
-      name: "agnes-ai",
-      baseURL: agnes.baseUrl.trim().replace(/\/+$/, ""),
-      apiKey: agnes.apiKey?.trim() || undefined,
-    });
-
-    return provider(agnes.model.trim()) as unknown as LanguageModel;
+  // 有活跃的第三方供应商 → 使用第三方
+  if (ai?.activeProviderId && ai.providers) {
+    const active = ai.providers.find((p) => p.id === ai.activeProviderId);
+    if (active?.baseUrl?.trim() && active.model?.trim()) {
+      const provider = createOpenAICompatible({
+        name: `blog-ai-${active.id}`,
+        baseURL: active.baseUrl.trim().replace(/\/+$/, ""),
+        apiKey: active.apiKey?.trim() || undefined,
+      });
+      return provider(active.model.trim()) as unknown as LanguageModel;
+    }
   }
 
-  if (
-    ai?.provider === "openai-compatible" &&
-    openai?.baseUrl?.trim() &&
-    openai?.model?.trim()
-  ) {
-    const provider = createOpenAICompatible({
-      name: "demo-flare-blog-ai",
-      baseURL: openai.baseUrl.trim().replace(/\/+$/, ""),
-      apiKey: openai.apiKey?.trim() || undefined,
-    });
-
-    return provider(openai.model.trim()) as unknown as LanguageModel;
-  }
-
+  // 兜底：Cloudflare Workers AI
   return createWorkersAI({ binding: env.AI })(TEXT_MODEL);
 }
 
@@ -123,10 +99,36 @@ function buildSkillDirective(skill: AiBlogSkillType | undefined): string {
 
 export async function testAiConnection(
   context: { env: Env },
-  config: AiProviderConfig,
+  input: {
+    category: "workers-ai" | "third-party";
+    compatType?: AiCompatType;
+    baseUrl?: string;
+    apiKey?: string;
+    model?: string;
+  },
 ) {
   try {
-    const model = buildTextModel(context.env, config);
+    // 构建用于测试的临时配置
+    const testConfig: AiProviderConfig = {
+      workersAi: { enabled: input.category === "workers-ai" },
+      activeProviderId:
+        input.category === "third-party" ? "test-temp" : undefined,
+      providers:
+        input.category === "third-party" && input.compatType
+          ? [
+              {
+                id: "test-temp",
+                name: "Test",
+                type: input.compatType,
+                baseUrl: input.baseUrl,
+                apiKey: input.apiKey,
+                model: input.model,
+              },
+            ]
+          : [],
+    };
+
+    const model = buildTextModel(context.env, testConfig);
 
     const result = await generateText({
       model,

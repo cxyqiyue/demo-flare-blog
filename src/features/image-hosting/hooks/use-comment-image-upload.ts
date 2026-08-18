@@ -29,7 +29,7 @@ const ALLOWED_IMAGE_MIME_TYPES = [
 ];
 
 /**
- * 服务端上传（S3 兼容存储 / 图床代理）：文件选择器上传，返回图片 URL。
+ * 服务端上传（S3 / R2 原生 / 图床代理）：文件选择器上传，返回图片 URL。
  */
 function uploadViaFileInput(): Promise<string | null> {
   return new Promise((resolve) => {
@@ -88,18 +88,22 @@ export function useCommentImageUploader() {
   });
 
   const enabled = data?.enabled ?? false;
-  const provider = data?.provider ?? null;
+  const providerCategory = data?.providerCategory ?? null;
+  const providerType = data?.providerType;
 
   const openUpload = useCallback(async (): Promise<string | null> => {
-    if (provider === "s3") {
+    // R2 原生 / S3 / api-key 中非 imgbb 的 → 使用文件选择器
+    if (
+      providerCategory === "r2-native" ||
+      providerCategory === "s3" ||
+      (providerCategory === "api-key" && providerType !== "imgbb")
+    ) {
       return await uploadViaFileInput();
     }
 
+    // ImgBB → 弹窗上传
     const winName = generateWindowName();
 
-    // Chevereto Upload Plugin (PUP) protocol: register the auto-insert target
-    // on our own window before opening the popup. The popup reads
-    // `window.opener.uploadPlugin[window.name]` and posts back the embed code.
     const hostWindow = window as UploadPluginWindow;
     hostWindow.uploadPlugin = {
       ...hostWindow.uploadPlugin,
@@ -158,7 +162,7 @@ export function useCommentImageUploader() {
 
       window.addEventListener("message", onMessage);
     });
-  }, [provider]);
+  }, [providerCategory, providerType]);
 
-  return { enabled, provider, openUpload };
+  return { enabled, providerCategory, openUpload };
 }

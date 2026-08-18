@@ -5,7 +5,9 @@ import {
   type SiteConfigInput,
   SiteConfigInputSchema,
 } from "@/features/config/site-config.schema";
-import { S3_PROVIDERS } from "@/features/image-hosting/image-hosting.schema";
+import {
+  ApiKeyProviderSchema,
+} from "@/features/image-hosting/image-hosting.schema";
 import {
   createWebhookEndpointFormSchema,
   webhookEndpointSchema,
@@ -13,7 +15,6 @@ import {
 import type { Messages } from "@/lib/i18n";
 
 export const AI_BLOG_SKILL_TYPES = ["blog", "docs", "newsletter"] as const;
-export type AiBlogSkillType = (typeof AI_BLOG_SKILL_TYPES)[number];
 
 export const EmailConfigSchema = z.object({
   apiKey: z.string().optional(),
@@ -43,47 +44,57 @@ export const NotificationConfigSchema = z.object({
     .optional(),
   webhooks: z.array(webhookEndpointSchema).optional(),
 });
+export type AiBlogSkillType = (typeof AI_BLOG_SKILL_TYPES)[number];
 
+// ── AI 第三方兼容接口类型 ───────────────────────────────────
+export const AI_COMPAT_TYPES = [
+  "openai-compatible",
+  "claude-compatible",
+  "gemini-compatible",
+] as const;
+export type AiCompatType = (typeof AI_COMPAT_TYPES)[number];
+
+// ── AI 第三方供应商实例 ─────────────────────────────────────
+export const AiProviderInstanceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.enum(AI_COMPAT_TYPES),
+  baseUrl: z.string().optional(),
+  apiKey: z.string().optional(),
+  model: z.string().optional(),
+});
+export type AiProviderInstance = z.infer<typeof AiProviderInstanceSchema>;
+
+// ── AI 配置 Schema ──────────────────────────────────────────
 export const AiConfigSchema = z.object({
-  provider: z.enum(["workers-ai", "openai-compatible", "agnes-ai"]).optional(),
+  workersAi: z
+    .object({
+      enabled: z.boolean().optional(),
+    })
+    .optional(),
+  activeProviderId: z.string().optional(),
+  providers: z.array(AiProviderInstanceSchema).optional(),
   blogSkillType: z.enum(AI_BLOG_SKILL_TYPES).optional(),
-  openaiCompatible: z
-    .object({
-      baseUrl: z.string().optional(),
-      apiKey: z.string().optional(),
-      model: z.string().optional(),
-    })
-    .optional(),
-  agnesAi: z
-    .object({
-      baseUrl: z.string().optional(),
-      apiKey: z.string().optional(),
-      model: z.string().optional(),
-    })
-    .optional(),
   writingInstructions: z.string().optional(),
+  // ── 兼容旧版迁移字段（读取后自动转换，不再写入） ──
+  provider: z.any().optional(),
+  openaiCompatible: z.any().optional(),
+  agnesAi: z.any().optional(),
 });
 
+// ── 图床配置 Schema ─────────────────────────────────────────
 export const ImageHostingConfigSchema = z.object({
-  imgbb: z
+  r2Native: z
     .object({
+      articleEnabled: z.boolean().optional(),
       commentEnabled: z.boolean().optional(),
-      articleEnabled: z.boolean().optional(),
-      apiKey: z.string().optional(),
-    })
-    .optional(),
-  ffsky: z
-    .object({
-      articleEnabled: z.boolean().optional(),
-      apiKey: z.string().optional(),
-      apiEndpoint: z.string().optional(),
     })
     .optional(),
   s3: z
     .object({
-      commentEnabled: z.boolean().optional(),
       articleEnabled: z.boolean().optional(),
-      provider: z.enum(S3_PROVIDERS).optional(),
+      commentEnabled: z.boolean().optional(),
+      provider: z.string().optional(),
       endpoint: z.string().optional(),
       bucket: z.string().optional(),
       region: z.string().optional(),
@@ -93,6 +104,10 @@ export const ImageHostingConfigSchema = z.object({
       publicUrl: z.string().optional(),
     })
     .optional(),
+  apiProviders: z.array(ApiKeyProviderSchema).optional(),
+  // ── 兼容旧版迁移字段（读取后自动转换，不再写入） ──
+  imgbb: z.any().optional(),
+  ffsky: z.any().optional(),
 });
 
 export const CHALLENGE_PROVIDERS = ["none", "altcha", "turnstile"] as const;
@@ -100,9 +115,7 @@ export const ChallengeProviderSchema = z.enum(CHALLENGE_PROVIDERS);
 export type ChallengeProvider = z.infer<typeof ChallengeProviderSchema>;
 
 export const TurnstileFallbackConfigSchema = z.object({
-  /** 连续失败多少次后切换到 ALTCHA PoW 兜底 */
   maxFailures: z.number().int().min(1).max(20).optional(),
-  /** 超过多少毫秒未通过 Turnstile 则切换到 ALTCHA PoW 兜底 */
   timeoutMs: z.number().int().min(5000).max(120000).optional(),
 });
 
@@ -115,7 +128,6 @@ export const TurnstileConfigSchema = z.object({
 
 export const AltchaConfigSchema = z.object({
   enabled: z.boolean().optional(),
-  /** ALTCHA PoW 难度（maxNumber），越大越难，默认 50000 */
   difficulty: z.number().int().min(10000).max(1000000).optional(),
 });
 
@@ -123,7 +135,6 @@ export const AltchaConfigSchema = z.object({
 export const PowConfigSchema = AltchaConfigSchema;
 
 export const ChallengeConfigSchema = z.object({
-  /** 人机验证方案："none" | "altcha" | "turnstile"，默认 "none" */
   provider: ChallengeProviderSchema.optional(),
   pow: PowConfigSchema.optional(),
   altcha: AltchaConfigSchema.optional(),
@@ -131,18 +142,13 @@ export const ChallengeConfigSchema = z.object({
 });
 
 export const UsageConfigSchema = z.object({
-  /** 是否启用资源用量后台模块（含路由与侧边栏入口） */
   enabled: z.boolean().optional(),
-  /** 是否启用自报用量采集（D1 持久化，不依赖 GraphQL） */
   selfReported: z.boolean().optional(),
-  /** 是否启用 Cloudflare GraphQL Analytics 用量数据（开启时默认顺带开启自报兜底） */
   graphql: z.boolean().optional(),
 });
 
 export const WechatVerifyConfigSchema = z.object({
-  /** 微信部署验证文件名（如 xxx.txt），仅存于数据库，不提交到仓库 */
   fileName: z.string().optional(),
-  /** 微信部署验证文件内容 */
   fileContent: z.string().optional(),
 });
 
@@ -219,6 +225,7 @@ export type {
   SiteConfigInput,
 } from "@/features/config/site-config.schema";
 
+// ── 默认配置 ─────────────────────────────────────────────────
 export const DEFAULT_CONFIG: SystemConfig = {
   email: {
     host: "",
@@ -241,35 +248,21 @@ export const DEFAULT_CONFIG: SystemConfig = {
     webhooks: [],
   },
   ai: {
-    provider: "workers-ai",
+    workersAi: { enabled: true },
+    activeProviderId: undefined,
+    providers: [],
     blogSkillType: "blog",
-    openaiCompatible: {
-      baseUrl: "",
-      apiKey: "",
-      model: "",
-    },
-    agnesAi: {
-      baseUrl: "https://apihub.agnes-ai.com/v1",
-      apiKey: "",
-      model: "",
-    },
     writingInstructions: "",
   },
   imageHosting: {
-    imgbb: {
-      commentEnabled: false,
-      articleEnabled: false,
-      apiKey: "",
-    },
-    ffsky: {
-      articleEnabled: false,
-      apiKey: "",
-      apiEndpoint: "https://pic.ffsky.net/api/1/upload",
+    r2Native: {
+      articleEnabled: true,
+      commentEnabled: true,
     },
     s3: {
-      commentEnabled: false,
       articleEnabled: false,
-      provider: "cloudflare-r2",
+      commentEnabled: false,
+      provider: "aws",
       endpoint: "",
       bucket: "",
       region: "",
@@ -278,6 +271,7 @@ export const DEFAULT_CONFIG: SystemConfig = {
       pathPrefix: "",
       publicUrl: "",
     },
+    apiProviders: [],
   },
   challenge: {
     provider: "none",

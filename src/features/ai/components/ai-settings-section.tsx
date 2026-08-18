@@ -1,4 +1,12 @@
-import { Cpu, KeyRound, PenLine, PlugZap, Server } from "lucide-react";
+import {
+  Cpu,
+  KeyRound,
+  PenLine,
+  PlugZap,
+  Plus,
+  Server,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
@@ -6,15 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { TestAiConnectionInput } from "@/features/ai/ai.schema";
-import {
-  AGNES_AI_ENDPOINTS,
-  AI_PROVIDER_NAMES,
-  type AiProviderName,
-} from "@/features/ai/ai.service";
 import type { SystemConfig } from "@/features/config/config.schema";
 import {
   AI_BLOG_SKILL_TYPES,
+  AI_COMPAT_TYPES,
   type AiBlogSkillType,
+  type AiCompatType,
+  type AiProviderInstance,
 } from "@/features/config/config.schema";
 import type { Result } from "@/lib/errors";
 import { cn } from "@/lib/utils";
@@ -33,29 +39,17 @@ interface AiSettingsSectionProps {
   >;
 }
 
-function providerLabel(name: AiProviderName): string {
-  if (name === "workers-ai") return m.settings_ai_provider_workers_ai();
-  if (name === "agnes-ai") return m.settings_ai_provider_agnes_ai();
-  return m.settings_ai_provider_openai_compatible();
-}
+const COMPAT_TYPE_LABELS: Record<AiCompatType, string> = {
+  "openai-compatible": "OpenAI Compatible",
+  "claude-compatible": "Claude Compatible",
+  "gemini-compatible": "Gemini Compatible",
+};
 
-function providerDescription(name: AiProviderName): string {
-  if (name === "workers-ai") return m.settings_ai_provider_workers_ai_desc();
-  if (name === "agnes-ai") return m.settings_ai_provider_agnes_ai_desc();
-  return m.settings_ai_provider_openai_compatible_desc();
-}
-
-function agnesEndpointLabel(
-  region: (typeof AGNES_AI_ENDPOINTS)[number]["region"],
-): string {
-  if (region === "international") {
-    return m.settings_ai_agnes_endpoint_international();
-  }
-  if (region === "international-cn") {
-    return m.settings_ai_agnes_endpoint_international_cn();
-  }
-  return m.settings_ai_agnes_endpoint_china();
-}
+const COMPAT_TYPE_DESCS: Record<AiCompatType, () => string> = {
+  "openai-compatible": () => m.settings_ai_compat_openai(),
+  "claude-compatible": () => m.settings_ai_compat_claude(),
+  "gemini-compatible": () => m.settings_ai_compat_gemini(),
+};
 
 function skillLabel(name: AiBlogSkillType): string {
   if (name === "docs") return m.settings_ai_skill_docs();
@@ -69,56 +63,109 @@ function skillDescription(name: AiBlogSkillType): string {
   return m.settings_ai_skill_blog_desc();
 }
 
+function generateId(): string {
+  try {
+    return crypto.randomUUID().slice(0, 8);
+  } catch {
+    return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+}
+
 export function AiSettingsSection({
   testAiConnection,
 }: AiSettingsSectionProps) {
   const [status, setStatus] = useState<ConnectionStatus>("IDLE");
   const [echo, setEcho] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const {
     register,
     setValue,
     watch,
-    formState: { errors },
   } = useFormContext<SystemConfig>();
 
   const aiConfig = watch("ai");
-  const provider = aiConfig?.provider ?? "workers-ai";
-  const isOpenAiCompatible = provider === "openai-compatible";
-  const isAgnesAi = provider === "agnes-ai";
-  const openai = aiConfig?.openaiCompatible;
-  const agnes = aiConfig?.agnesAi;
+  const activeProviderId = aiConfig?.activeProviderId;
+  const providers: AiProviderInstance[] = aiConfig?.providers ?? [];
 
-  const isOpenAiConfigured =
-    !!openai?.baseUrl?.trim() && !!openai?.model?.trim();
-  const isAgnesConfigured = !!agnes?.baseUrl?.trim() && !!agnes?.model?.trim();
-  const canTest = isOpenAiCompatible
-    ? isOpenAiConfigured
-    : isAgnesAi
-      ? isAgnesConfigured
-      : true;
+  const activeProvider = providers.find((p) => p.id === activeProviderId);
+  const isUsingThirdParty = !!activeProviderId && !!activeProvider;
 
+  // ── 切换到 Cloudflare AI ──
+  const handleSelectWorkersAi = () => {
+    setValue("ai.workersAi", { enabled: true }, { shouldDirty: true });
+    setValue("ai.activeProviderId", undefined, { shouldDirty: true });
+    setStatus("IDLE");
+  };
+
+  // ── 切换到第三方供应商 ──
+  const handleSelectProvider = (id: string) => {
+    setValue("ai.workersAi", { enabled: false }, { shouldDirty: true });
+    setValue("ai.activeProviderId", id, { shouldDirty: true });
+    setStatus("IDLE");
+  };
+
+  // ── 新增第三方供应商 ──
+  const handleAddProvider = (type: AiCompatType) => {
+    const newProvider: AiProviderInstance = {
+      id: generateId(),
+      name: COMPAT_TYPE_LABELS[type],
+      type,
+      baseUrl: "",
+      apiKey: "",
+      model: "",
+    };
+    const updated = [...providers, newProvider];
+    setValue("ai.providers", updated, { shouldDirty: true });
+    setEditingId(newProvider.id);
+  };
+
+  // ── 删除第三方供应商 ──
+  const handleDeleteProvider = (id: string) => {
+    const updated = providers.filter((p) => p.id !== id);
+    setValue("ai.providers", updated, { shouldDirty: true });
+    if (activeProviderId === id) {
+      handleSelectWorkersAi();
+    }
+    if (editingId === id) {
+      setEditingId(null);
+    }
+  };
+
+  // ── 更新供应商字段 ──
+  const updateProvider = (
+    id: string,
+    field: keyof AiProviderInstance,
+    value: string,
+  ) => {
+    const updated = providers.map((p) =>
+      p.id === id ? { ...p, [field]: value } : p,
+    );
+    setValue("ai.providers", updated, { shouldDirty: true });
+  };
+
+  // ── 测试连接 ──
   const handleTest = async () => {
-    if (!canTest) return;
     setStatus("TESTING");
     setEcho("");
 
     try {
-      const result = await testAiConnection({
-        data: {
-          provider,
-          openaiCompatible: {
-            baseUrl: openai?.baseUrl || "",
-            apiKey: openai?.apiKey || "",
-            model: openai?.model || "",
+      let result;
+      if (isUsingThirdParty && activeProvider) {
+        result = await testAiConnection({
+          data: {
+            category: "third-party",
+            compatType: activeProvider.type,
+            baseUrl: activeProvider.baseUrl,
+            apiKey: activeProvider.apiKey,
+            model: activeProvider.model,
           },
-          agnesAi: {
-            baseUrl: agnes?.baseUrl || "",
-            apiKey: agnes?.apiKey || "",
-            model: agnes?.model || "",
-          },
-        },
-      });
+        });
+      } else {
+        result = await testAiConnection({
+          data: { category: "workers-ai" },
+        });
+      }
 
       if (!result.error) {
         setStatus("SUCCESS");
@@ -140,82 +187,256 @@ export function AiSettingsSection({
     }
   };
 
+  const canTest = isUsingThirdParty
+    ? !!activeProvider?.baseUrl?.trim() && !!activeProvider?.model?.trim()
+    : true;
+
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
       <div className="border border-border/30 bg-background/50 overflow-hidden divide-y divide-border/20">
-        {/* Provider Selection */}
-        <div className="space-y-8 p-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="rounded-sm bg-muted/40 p-2">
-                <Cpu size={16} className="text-muted-foreground" />
-              </div>
+        {/* ── 内置 Cloudflare AI ── */}
+        <div className="space-y-6 p-6 md:p-8">
+          <div className="flex items-center gap-4">
+            <div className="rounded-sm bg-muted/40 p-2">
+              <Cpu size={16} className="text-muted-foreground" />
+            </div>
+            <div className="space-y-1">
               <h5 className="text-sm font-medium text-foreground">
-                {m.settings_ai_provider_title()}
+                {m.settings_ai_builtin_title()}
               </h5>
+              <p className="text-xs text-muted-foreground">
+                {m.settings_ai_builtin_desc()}
+              </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 px-2 md:grid-cols-2">
-            {AI_PROVIDER_NAMES.map((name) => (
-              <button
-                key={name}
-                type="button"
-                onClick={() => {
-                  setValue("ai.provider", name as AiProviderName, {
-                    shouldDirty: true,
-                    shouldTouch: true,
-                    shouldValidate: true,
-                  });
-                  setStatus("IDLE");
-                }}
+          <button
+            type="button"
+            onClick={handleSelectWorkersAi}
+            className={cn(
+              "w-full flex items-center justify-between border p-4 text-left transition-all",
+              !isUsingThirdParty
+                ? "border-foreground bg-muted/20"
+                : "border-border/30 hover:border-border/60",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div
                 className={cn(
-                  "flex items-start gap-3 border p-4 text-left transition-all",
-                  provider === name
-                    ? "border-foreground bg-muted/20"
-                    : "border-border/30 hover:border-border/60",
+                  "h-3 w-3 shrink-0 rounded-full border",
+                  !isUsingThirdParty
+                    ? "border-foreground bg-foreground"
+                    : "border-border/60",
                 )}
-              >
-                <div
-                  className={cn(
-                    "mt-1 h-3 w-3 shrink-0 rounded-full border",
-                    provider === name
-                      ? "border-foreground bg-foreground"
-                      : "border-border/60",
-                  )}
-                />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {providerLabel(name)}
-                  </p>
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    {providerDescription(name)}
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
+              />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  Cloudflare Workers AI
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {m.settings_ai_builtin_desc_full()}
+                </p>
+              </div>
+            </div>
+          </button>
         </div>
 
-        {/* Blog Writing Skill */}
-        <div className="space-y-8 p-8">
+        {/* ── 第三方 AI 供应商列表 ── */}
+        <div className="space-y-6 p-6 md:p-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="rounded-sm bg-muted/40 p-2">
-                <PenLine size={16} className="text-muted-foreground" />
+                <Server size={16} className="text-muted-foreground" />
               </div>
               <div className="space-y-1">
                 <h5 className="text-sm font-medium text-foreground">
-                  {m.settings_ai_skill_title()}
+                  {m.settings_ai_third_party_title()}
                 </h5>
                 <p className="text-xs text-muted-foreground">
-                  {m.settings_ai_skill_desc()}
+                  {m.settings_ai_third_party_desc()}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 px-2 md:grid-cols-3">
+          {/* 已添加的供应商列表 */}
+          {providers.length > 0 && (
+            <div className="space-y-3">
+              {providers.map((p) => {
+                const isActive = activeProviderId === p.id;
+                const isExpanded = editingId === p.id;
+                return (
+                  <div key={p.id} className="border border-border/30">
+                    {/* 供应商头部 */}
+                    <div className="flex items-center gap-3 p-4">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          isActive
+                            ? handleSelectWorkersAi()
+                            : handleSelectProvider(p.id)
+                        }
+                        className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                      >
+                        <div
+                          className={cn(
+                            "h-3 w-3 shrink-0 rounded-full border",
+                            isActive
+                              ? "border-foreground bg-foreground"
+                              : "border-border/60",
+                          )}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {p.name || COMPAT_TYPE_LABELS[p.type]}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {COMPAT_TYPE_DESCS[p.type]()} · {p.model || m.settings_ai_provider_model_unconfigured()}
+                          </p>
+                        </div>
+                      </button>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-muted/50 text-muted-foreground shrink-0">
+                        {COMPAT_TYPE_LABELS[p.type]}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingId(isExpanded ? null : p.id)
+                        }
+                        className="shrink-0 p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <svg
+                          className={cn(
+                            "w-4 h-4 transition-transform",
+                            isExpanded && "rotate-180",
+                          )}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteProvider(p.id)}
+                        className="shrink-0 p-1.5 text-muted-foreground hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+
+                    {/* 展开的配置表单 */}
+                    {isExpanded && (
+                      <div className="border-t border-border/20 p-4 space-y-4 bg-muted/5">
+                        <div className="space-y-4">
+                          <label className="text-xs text-muted-foreground">
+                            {m.settings_ai_provider_name_label()}
+                          </label>
+                          <Input
+                            value={p.name}
+                            onChange={(e) =>
+                              updateProvider(p.id, "name", e.target.value)
+                            }
+                            className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                          <div className="space-y-4">
+                            <label className="text-xs text-muted-foreground">
+                              Base URL
+                            </label>
+                            <Input
+                              value={p.baseUrl ?? ""}
+                              onChange={(e) =>
+                                updateProvider(p.id, "baseUrl", e.target.value)
+                              }
+                              placeholder={`https://...`}
+                              className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground"
+                            />
+                          </div>
+                          <div className="space-y-4">
+                            <label className="text-xs text-muted-foreground">
+                              Model
+                            </label>
+                            <Input
+                              value={p.model ?? ""}
+                              onChange={(e) =>
+                                updateProvider(p.id, "model", e.target.value)
+                              }
+                              placeholder="gpt-4o-mini"
+                              className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                          <label className="text-xs text-muted-foreground">
+                            API Key
+                          </label>
+                          <div className="relative">
+                            <Input
+                              type="password"
+                              value={p.apiKey ?? ""}
+                              onChange={(e) =>
+                                updateProvider(p.id, "apiKey", e.target.value)
+                              }
+                              placeholder="sk-..."
+                              className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground pr-10"
+                            />
+                            <KeyRound
+                              size={14}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 新增按钮 */}
+          <div className="flex flex-wrap gap-2">
+            {(AI_COMPAT_TYPES as readonly AiCompatType[]).map((type) => (
+              <Button
+                key={type}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleAddProvider(type)}
+                className="rounded-none border-border/30 text-xs font-mono"
+              >
+                <Plus size={12} className="mr-2" />
+                {COMPAT_TYPE_LABELS[type]}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Blog Writing Skill ── */}
+        <div className="space-y-6 p-6 md:p-8">
+          <div className="flex items-center gap-4">
+            <div className="rounded-sm bg-muted/40 p-2">
+              <PenLine size={16} className="text-muted-foreground" />
+            </div>
+            <div className="space-y-1">
+              <h5 className="text-sm font-medium text-foreground">
+                {m.settings_ai_skill_title()}
+              </h5>
+              <p className="text-xs text-muted-foreground">
+                {m.settings_ai_skill_desc()}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             {AI_BLOG_SKILL_TYPES.map((name) => {
               const isActive = aiConfig?.blogSkillType === name;
               return (
@@ -225,8 +446,6 @@ export function AiSettingsSection({
                   onClick={() => {
                     setValue("ai.blogSkillType", name, {
                       shouldDirty: true,
-                      shouldTouch: true,
-                      shouldValidate: true,
                     });
                   }}
                   className={cn(
@@ -258,242 +477,23 @@ export function AiSettingsSection({
           </div>
         </div>
 
-        {/* OpenAI-Compatible Credentials */}
-        {isOpenAiCompatible && (
-          <div className="space-y-8 p-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="rounded-sm bg-muted/40 p-2">
-                  <Server size={16} className="text-muted-foreground" />
-                </div>
-                <h5 className="text-sm font-medium text-foreground">
-                  {m.settings_ai_creds_title()}
-                </h5>
-              </div>
+        {/* ── Writing Instructions ── */}
+        <div className="space-y-6 p-6 md:p-8">
+          <div className="flex items-center gap-4">
+            <div className="rounded-sm bg-muted/40 p-2">
+              <PenLine size={16} className="text-muted-foreground" />
             </div>
-
-            <div className="grid grid-cols-1 gap-x-16 gap-y-10 px-2 xl:grid-cols-2">
-              <div className="space-y-4">
-                <label
-                  htmlFor="ai-base-url"
-                  className="text-sm text-muted-foreground"
-                >
-                  {m.settings_ai_creds_base_url_label()}
-                </label>
-                <Input
-                  id="ai-base-url"
-                  placeholder={m.settings_ai_creds_base_url_ph()}
-                  {...register("ai.openaiCompatible.baseUrl", {
-                    onChange: () => setStatus("IDLE"),
-                  })}
-                  className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
-                />
-                {errors.ai?.openaiCompatible?.baseUrl?.message && (
-                  <p className="text-xs text-red-500">
-                    ! {errors.ai.openaiCompatible.baseUrl.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <label
-                  htmlFor="ai-model"
-                  className="text-sm text-muted-foreground"
-                >
-                  {m.settings_ai_creds_model_label()}
-                </label>
-                <Input
-                  id="ai-model"
-                  placeholder={m.settings_ai_creds_model_ph()}
-                  {...register("ai.openaiCompatible.model", {
-                    onChange: () => setStatus("IDLE"),
-                  })}
-                  className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
-                />
-                {errors.ai?.openaiCompatible?.model?.message && (
-                  <p className="text-xs text-red-500">
-                    ! {errors.ai.openaiCompatible.model.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-4 xl:col-span-2">
-                <label
-                  htmlFor="ai-api-key"
-                  className="text-sm text-muted-foreground"
-                >
-                  {m.settings_ai_creds_api_key_label()}
-                </label>
-                <div className="relative group/input">
-                  <Input
-                    id="ai-api-key"
-                    type="password"
-                    placeholder={m.settings_ai_creds_api_key_ph()}
-                    {...register("ai.openaiCompatible.apiKey", {
-                      onChange: () => setStatus("IDLE"),
-                    })}
-                    className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
-                  />
-                  <KeyRound
-                    size={14}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
-                  />
-                </div>
-                {errors.ai?.openaiCompatible?.apiKey?.message && (
-                  <p className="text-xs text-red-500">
-                    ! {errors.ai.openaiCompatible.apiKey.message}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Agnes AI Credentials */}
-        {isAgnesAi && (
-          <div className="space-y-8 p-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="rounded-sm bg-muted/40 p-2">
-                  <Server size={16} className="text-muted-foreground" />
-                </div>
-                <h5 className="text-sm font-medium text-foreground">
-                  {m.settings_ai_creds_title()}
-                </h5>
-              </div>
-            </div>
-
-            <div className="space-y-4 px-2">
-              <label className="text-sm text-muted-foreground">
-                {m.settings_ai_agnes_endpoint_label()}
-              </label>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                {AGNES_AI_ENDPOINTS.map((endpoint) => (
-                  <button
-                    key={endpoint.value}
-                    type="button"
-                    onClick={() => {
-                      setValue("ai.agnesAi.baseUrl", endpoint.value, {
-                        shouldDirty: true,
-                        shouldTouch: true,
-                        shouldValidate: true,
-                      });
-                      setStatus("IDLE");
-                    }}
-                    className={cn(
-                      "flex items-center justify-between gap-2 border p-3 text-left transition-all",
-                      agnes?.baseUrl?.trim() === endpoint.value
-                        ? "border-foreground bg-muted/20"
-                        : "border-border/30 hover:border-border/60",
-                    )}
-                  >
-                    <span className="text-xs font-medium text-foreground">
-                      {agnesEndpointLabel(endpoint.region)}
-                    </span>
-                    <span className="font-mono text-[10px] text-muted-foreground">
-                      {endpoint.value.replace("https://", "")}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-x-16 gap-y-10 px-2 xl:grid-cols-2">
-              <div className="space-y-4">
-                <label
-                  htmlFor="ai-agnes-base-url"
-                  className="text-sm text-muted-foreground"
-                >
-                  {m.settings_ai_creds_base_url_label()}
-                </label>
-                <Input
-                  id="ai-agnes-base-url"
-                  placeholder={m.settings_ai_creds_base_url_ph()}
-                  {...register("ai.agnesAi.baseUrl", {
-                    onChange: () => setStatus("IDLE"),
-                  })}
-                  className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
-                />
-                {errors.ai?.agnesAi?.baseUrl?.message && (
-                  <p className="text-xs text-red-500">
-                    ! {errors.ai.agnesAi.baseUrl.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <label
-                  htmlFor="ai-agnes-model"
-                  className="text-sm text-muted-foreground"
-                >
-                  {m.settings_ai_creds_model_label()}
-                </label>
-                <Input
-                  id="ai-agnes-model"
-                  placeholder={m.settings_ai_creds_model_ph()}
-                  {...register("ai.agnesAi.model", {
-                    onChange: () => setStatus("IDLE"),
-                  })}
-                  className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
-                />
-                {errors.ai?.agnesAi?.model?.message && (
-                  <p className="text-xs text-red-500">
-                    ! {errors.ai.agnesAi.model.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-4 xl:col-span-2">
-                <label
-                  htmlFor="ai-agnes-api-key"
-                  className="text-sm text-muted-foreground"
-                >
-                  {m.settings_ai_creds_api_key_label()}
-                </label>
-                <div className="relative group/input">
-                  <Input
-                    id="ai-agnes-api-key"
-                    type="password"
-                    placeholder={m.settings_ai_creds_api_key_ph()}
-                    {...register("ai.agnesAi.apiKey", {
-                      onChange: () => setStatus("IDLE"),
-                    })}
-                    className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
-                  />
-                  <KeyRound
-                    size={14}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
-                  />
-                </div>
-                {errors.ai?.agnesAi?.apiKey?.message && (
-                  <p className="text-xs text-red-500">
-                    ! {errors.ai.agnesAi.apiKey.message}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Writing Instructions */}
-        <div className="space-y-8 p-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="rounded-sm bg-muted/40 p-2">
-                <PenLine size={16} className="text-muted-foreground" />
-              </div>
-              <div className="space-y-1">
-                <h5 className="text-sm font-medium text-foreground">
-                  {m.settings_ai_writing_instructions_title()}
-                </h5>
-                <p className="text-xs text-muted-foreground">
-                  {m.settings_ai_writing_instructions_desc()}
-                </p>
-              </div>
+            <div className="space-y-1">
+              <h5 className="text-sm font-medium text-foreground">
+                {m.settings_ai_writing_instructions_title()}
+              </h5>
+              <p className="text-xs text-muted-foreground">
+                {m.settings_ai_writing_instructions_desc()}
+              </p>
             </div>
           </div>
 
-          <div className="space-y-4 px-2">
+          <div className="space-y-4">
             <Textarea
               rows={7}
               placeholder={m.settings_ai_writing_instructions_ph()}
@@ -503,7 +503,7 @@ export function AiSettingsSection({
           </div>
         </div>
 
-        {/* Test Toolbar */}
+        {/* ── Test Toolbar ── */}
         <div className="flex flex-col items-center justify-between gap-6 bg-muted/10 p-6 px-10 sm:flex-row">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">

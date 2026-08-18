@@ -3,7 +3,7 @@ import * as ConfigService from "@/features/config/service/config.service";
 import type {
   ArticleImageHostingConfig,
   CommentImageHostingConfig,
-  ImageHostingProvider,
+  ImageHostingProviderLabel,
   TestImageHostingConnectionInput,
 } from "@/features/image-hosting/image-hosting.schema";
 import {
@@ -16,11 +16,10 @@ import {
   uploadToS3,
 } from "@/features/image-hosting/s3/s3-upload";
 import { parseUploadMediaInput } from "@/features/media/media.schema";
+import * as MediaStorage from "@/features/media/data/media.storage";
 import { getImageDimensions } from "@/features/media/utils/image-dimensions";
 import { err, ok, type Result } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
-
-const ARTICLE_PROVIDER_ORDER: Array<ImageHostingProvider> = ["imgbb", "ffsky"];
 
 const MIME_EXTENSIONS: Record<string, string> = {
   "image/png": "png",
@@ -31,40 +30,9 @@ const MIME_EXTENSIONS: Record<string, string> = {
   "image/svg+xml": "svg",
 };
 
-interface ProviderRuntimeConfig {
-  enabled: boolean;
-  apiKey: string;
-  apiEndpoint: string;
-  fieldName: "image" | "source";
-}
-
 interface S3RuntimeConfig {
   enabled: boolean;
   config: S3UploadConfig;
-}
-
-function resolveProviderRuntimeConfig(
-  config: SystemConfig | undefined,
-  provider: ImageHostingProvider,
-): ProviderRuntimeConfig {
-  if (provider === "imgbb") {
-    const providerConfig = config?.imageHosting?.imgbb;
-    return {
-      enabled: !!providerConfig?.articleEnabled,
-      apiKey: providerConfig?.apiKey?.trim() ?? "",
-      apiEndpoint: IMGBB_API_ENDPOINT,
-      fieldName: "image",
-    };
-  }
-
-  const providerConfig = config?.imageHosting?.ffsky;
-  return {
-    enabled: !!providerConfig?.articleEnabled,
-    apiKey: providerConfig?.apiKey?.trim() ?? "",
-    apiEndpoint:
-      providerConfig?.apiEndpoint?.trim() || DEFAULT_FFSKY_API_ENDPOINT,
-    fieldName: "source",
-  };
 }
 
 /**
@@ -241,10 +209,20 @@ async function uploadToEndpoint(
   }
 }
 
+function getApiKeyProviderFieldInfo(type: string): {
+  fieldName: "image" | "source";
+  defaultEndpoint: string;
+} {
+  if (type === "ffsky") {
+    return { fieldName: "source", defaultEndpoint: DEFAULT_FFSKY_API_ENDPOINT };
+  }
+  return { fieldName: "image", defaultEndpoint: IMGBB_API_ENDPOINT };
+}
+
 export type ArticleUploadResult =
   | {
       mode: "image-hosting";
-      provider: ImageHostingProvider;
+      provider: ImageHostingProviderLabel;
       url: string;
       width?: number;
       height?: number;
@@ -261,10 +239,33 @@ export async function uploadForArticle(
   >
 > {
   const { file } = parseUploadMediaInput(formData, m);
-
   const config = await ConfigService.getSystemConfig(context);
+  const ih = config?.imageHosting;
 
-  // S3 兼容存储优先（配置了 s3 文章通道则使用，不再尝试第三方图床）
+  // ── 1. R2 原生优先 ──
+  if (ih?.r2Native?.articleEnabled) {
+    const ext = extensionFromMime(file.type);
+    const key = buildObjectKey("articles", ext);
+    try {
+      await MediaStorage.putToR2(context.env, file, key);
+      const dimensions = getImageDimensions(await file.arrayBuffer());
+      const url = `/images/${key}`;
+      return ok({
+        mode: "image-hosting",
+        provider: "r2-native",
+        url,
+        width: dimensions?.width,
+        height: dimensions?.height,
+      });
+    } catch (error) {
+      return err({
+        reason: "IMAGE_HOSTING_UPLOAD_FAILED",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  // ── 2. S3 兼容存储 ──
   const s3Runtime = resolveS3RuntimeConfig(config, "article");
   if (s3Runtime?.enabled) {
     const result = await uploadToS3ForFile(s3Runtime.config, file);
@@ -274,7 +275,6 @@ export async function uploadForArticle(
         message: result.error.message,
       });
     }
-
     const dimensions = getImageDimensions(await file.arrayBuffer());
     return ok({
       mode: "image-hosting",
@@ -285,40 +285,46 @@ export async function uploadForArticle(
     });
   }
 
-  // 第三方图床已启用时，R2 不作为回退目标：逐个尝试已启用且配了 key 的
-  // 图床，仅当全部失败才返回错误；只有「未启用或未配置 key」才回退到 R2。
-  let lastProviderError: { message: string } | null = null;
-  for (const provider of ARTICLE_PROVIDER_ORDER) {
-    const runtime = resolveProviderRuntimeConfig(config, provider);
-    if (!runtime.enabled || !runtime.apiKey) continue;
+  // ── 3. API Key 图床 ──
+  const apiProviders = ih?.apiProviders ?? [];
+  let lastError: { message: string } | null = null;
+
+  for (const p of apiProviders) {
+    if (!p.articleEnabled || !p.apiKey?.trim()) continue;
+
+    const { fieldName, defaultEndpoint } = getApiKeyProviderFieldInfo(p.type);
+    const endpoint =
+      p.type === "ffsky"
+        ? (p.apiEndpoint?.trim() || defaultEndpoint)
+        : defaultEndpoint;
 
     const base64 = arrayBufferToBase64(await file.arrayBuffer());
     const result = await uploadToEndpoint(
-      runtime.apiEndpoint,
-      runtime.apiKey,
+      endpoint,
+      p.apiKey.trim(),
       base64,
-      runtime.fieldName,
+      fieldName,
     );
 
     if (result.error) {
-      lastProviderError = result.error;
+      lastError = result.error;
       continue;
     }
 
     const dimensions = getImageDimensions(await file.arrayBuffer());
     return ok({
       mode: "image-hosting",
-      provider,
+      provider: p.type,
       url: result.data.url,
       width: dimensions?.width,
       height: dimensions?.height,
     });
   }
 
-  if (lastProviderError) {
+  if (lastError) {
     return err({
       reason: "IMAGE_HOSTING_UPLOAD_FAILED",
-      message: lastProviderError.message,
+      message: lastError.message,
     });
   }
 
@@ -335,9 +341,25 @@ export async function uploadCommentImage(
   >
 > {
   const { file } = parseUploadMediaInput(formData, m);
-
   const config = await ConfigService.getSystemConfig(context);
+  const ih = config?.imageHosting;
 
+  // ── 1. R2 原生 ──
+  if (ih?.r2Native?.commentEnabled) {
+    const ext = extensionFromMime(file.type);
+    const key = buildObjectKey("comments", ext);
+    try {
+      await MediaStorage.putToR2(context.env, file, key);
+      return ok({ url: `/images/${key}` });
+    } catch (error) {
+      return err({
+        reason: "COMMENT_IMAGE_UPLOAD_FAILED",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  // ── 2. S3 兼容存储 ──
   const s3Runtime = resolveS3RuntimeConfig(config, "comment");
   if (s3Runtime?.enabled) {
     const result = await uploadToS3ForFile(s3Runtime.config, file);
@@ -350,15 +372,25 @@ export async function uploadCommentImage(
     return ok({ url: result.data.url });
   }
 
-  const imgbb = config?.imageHosting?.imgbb;
-  if (imgbb?.commentEnabled && imgbb.apiKey?.trim()) {
+  // ── 3. API Key 图床（仅支持 commentEnabled 的） ──
+  const apiProviders = ih?.apiProviders ?? [];
+  for (const p of apiProviders) {
+    if (!p.commentEnabled || !p.apiKey?.trim()) continue;
+
+    const { fieldName, defaultEndpoint } = getApiKeyProviderFieldInfo(p.type);
+    const endpoint =
+      p.type === "ffsky"
+        ? (p.apiEndpoint?.trim() || defaultEndpoint)
+        : defaultEndpoint;
+
     const base64 = arrayBufferToBase64(await file.arrayBuffer());
     const result = await uploadToEndpoint(
-      IMGBB_API_ENDPOINT,
-      imgbb.apiKey.trim(),
+      endpoint,
+      p.apiKey.trim(),
       base64,
-      "image",
+      fieldName,
     );
+
     if (result.error) {
       return err({
         reason: "COMMENT_IMAGE_UPLOAD_FAILED",
@@ -382,7 +414,7 @@ export async function testConnection(
     { reason: "IMAGE_HOSTING_TEST_FAILED"; message: string }
   >
 > {
-  if (input.provider === "s3") {
+  if (input.category === "s3") {
     const s3 = input.s3;
     if (!s3) {
       return err({
@@ -436,6 +468,7 @@ export async function testConnection(
     return ok({ success: true, url: result.data.url });
   }
 
+  // API Key 图床
   const apiKey = input.apiKey?.trim() ?? "";
   if (!apiKey) {
     return err({
@@ -444,18 +477,14 @@ export async function testConnection(
     });
   }
 
+  const providerType = input.apiKeyProviderType ?? "imgbb";
+  const { fieldName, defaultEndpoint } = getApiKeyProviderFieldInfo(providerType);
   const apiEndpoint =
-    input.provider === "imgbb"
-      ? IMGBB_API_ENDPOINT
-      : input.apiEndpoint?.trim() || DEFAULT_FFSKY_API_ENDPOINT;
-  const fieldName = input.provider === "imgbb" ? "image" : "source";
+    providerType === "imgbb"
+      ? defaultEndpoint
+      : input.apiEndpoint?.trim() || defaultEndpoint;
 
-  const result = await uploadToEndpoint(
-    apiEndpoint,
-    apiKey,
-    TEST_IMAGE_BASE64,
-    fieldName,
-  );
+  const result = await uploadToEndpoint(apiEndpoint, apiKey, TEST_IMAGE_BASE64, fieldName);
   if (result.error) {
     return err({
       reason: "IMAGE_HOSTING_TEST_FAILED",
@@ -470,27 +499,38 @@ export async function getCommentImageHostingConfig(
   context: DbContext & { executionCtx: ExecutionContext },
 ): Promise<CommentImageHostingConfig> {
   const config = await ConfigService.getSystemConfig(context);
+  const ih = config?.imageHosting;
 
-  if (config?.imageHosting?.s3?.commentEnabled) {
-    return { enabled: true, provider: "s3" };
+  if (ih?.r2Native?.commentEnabled) {
+    return { enabled: true, providerCategory: "r2-native" };
   }
 
-  if (config?.imageHosting?.imgbb?.commentEnabled) {
-    return { enabled: true, provider: "imgbb" };
+  if (ih?.s3?.commentEnabled) {
+    return { enabled: true, providerCategory: "s3" };
   }
 
-  return { enabled: false, provider: null };
+  const activeApiProvider = ih?.apiProviders?.find((p) => p.commentEnabled);
+  if (activeApiProvider) {
+    return {
+      enabled: true,
+      providerCategory: "api-key",
+      providerType: activeApiProvider.type,
+    };
+  }
+
+  return { enabled: false, providerCategory: null };
 }
 
 export async function getArticleImageHostingConfig(
   context: DbContext & { executionCtx: ExecutionContext },
 ): Promise<ArticleImageHostingConfig> {
   const config = await ConfigService.getSystemConfig(context);
+  const ih = config?.imageHosting;
 
-  const enabled =
-    !!config?.imageHosting?.imgbb?.articleEnabled ||
-    !!config?.imageHosting?.ffsky?.articleEnabled ||
-    !!config?.imageHosting?.s3?.articleEnabled;
+  // 仅当外部图床（非 R2 原生）启用时返回 enabled=true
+  // R2 原生不视为"外部图床"，不禁用媒体库上传
+  const s3Enabled = !!ih?.s3?.articleEnabled;
+  const apiKeyEnabled = !!ih?.apiProviders?.some((p) => p.articleEnabled);
 
-  return { enabled };
+  return { enabled: s3Enabled || apiKeyEnabled };
 }
