@@ -225,7 +225,7 @@ export async function listS3Objects(
     });
 
     const canonicalQueryString = params.toString().split("&").sort().join("&");
-    const canonicalUri = `/${encodeURIComponent(cfg.bucket)}/`;
+    const canonicalUri = `/${encodeURIComponent(cfg.bucket)}`;
 
     const authorization = await signRequestV4({
       method: "GET",
@@ -272,16 +272,6 @@ function parseListObjectsXml(
     return match ? match[1] : null;
   };
 
-  const getAllTags = (tag: string, xml: string): string[] => {
-    const results: string[] = [];
-    const regex = new RegExp(`<${tag}>([^<]*)</${tag}>`, "g");
-    let match;
-    while ((match = regex.exec(xml)) !== null) {
-      results.push(match[1]);
-    }
-    return results;
-  };
-
   const parseObjects = (xmlChunk: string): Array<{ key: string; size: number; lastModified: string }> => {
     const contents = xmlChunk.split("<Contents>").slice(1);
     return contents.map((chunk) => {
@@ -294,14 +284,21 @@ function parseListObjectsXml(
     });
   };
 
+  const parseCommonPrefixes = (xmlChunk: string): string[] => {
+    const chunks = xmlChunk.split("<CommonPrefixes>").slice(1);
+    return chunks
+      .map((chunk) => {
+        const block = chunk.split("</CommonPrefixes>")[0];
+        return getTag("Prefix", block) ?? "";
+      })
+      .filter(Boolean);
+  };
+
   const isTruncated = getTag("IsTruncated", xml) === "true";
   const nextToken = getTag("NextContinuationToken", xml);
   const objects = parseObjects(xml);
-  const prefixes = getAllTags("CommonPrefixes", xml)
-    .map((p) => getTag("Prefix", p) ?? "")
-    .filter(Boolean);
+  const prefixes = parseCommonPrefixes(xml);
 
-  // Strip bucket prefix from keys
   const normalizedPrefix = prefix.replace(/\/+$/, "");
   const strippedPrefix = normalizedPrefix ? `${normalizedPrefix}/` : "";
   const stripPrefix = (key: string) => key.startsWith(strippedPrefix) ? key.slice(strippedPrefix.length) : key;
@@ -390,7 +387,7 @@ export async function uploadToS3ForMediaLibrary(
   try {
     const ext = file.name.split(".").pop() || "bin";
     const baseName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const objectKey = [folder, baseName].filter(Boolean).join("/");
+    const objectKey = [cfg.pathPrefix?.trim(), folder, baseName].filter(Boolean).join("/");
 
     const result = await uploadToS3(cfg, {
       key: objectKey,

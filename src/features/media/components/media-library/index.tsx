@@ -53,6 +53,7 @@ export function MediaLibrary() {
     linkedMediaIds,
     createFolder,
     renameFolder,
+    externalError,
   } = useMediaLibrary(providers);
 
   const {
@@ -228,9 +229,20 @@ export function MediaLibrary() {
           </div>
         ) : mediaItems.length === 0 && folders.length === 0 && isExternal ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
-              {m.media_empty_provider()}
-            </p>
+            {externalError ? (
+              <>
+                <p className="text-xs font-mono uppercase tracking-widest text-destructive">
+                  {externalError}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  {m.media_empty_provider()}
+                </p>
+              </>
+            ) : (
+              <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+                {m.media_empty_provider()}
+              </p>
+            )}
           </div>
         ) : view === "table" ? (
           <MediaTable

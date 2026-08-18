@@ -532,6 +532,7 @@ export interface ExternalDirectoryResult {
   files: ExternalDirectoryFile[];
   folders: Array<{ key: string; name: string }>;
   nextContinuationToken: string | null;
+  error?: string;
 }
 
 export async function listExternalDirectory(
@@ -541,7 +542,7 @@ export async function listExternalDirectory(
   if (data.providerId === "s3") {
     const config = await ConfigService.getSystemConfig(context);
     const s3Config = resolveS3ConfigForMedia(config);
-    if (!s3Config) return { files: [], folders: [], nextContinuationToken: null };
+    if (!s3Config) return { files: [], folders: [], nextContinuationToken: null, error: "S3 未配置或缺少必要字段" };
 
     const prefix = normalizeFolderPath(data.folder);
     const result = await listS3Objects(s3Config, {
@@ -552,7 +553,7 @@ export async function listExternalDirectory(
 
     if (result.error) {
       console.error(JSON.stringify({ message: "s3 list failed", error: result.error.message }));
-      return { files: [], folders: [], nextContinuationToken: null };
+      return { files: [], folders: [], nextContinuationToken: null, error: result.error.message };
     }
 
     const files: ExternalDirectoryFile[] = result.data.objects.map((o) => ({
@@ -596,11 +597,12 @@ export async function deleteExternalFiles(
 }
 
 function buildS3PublicUrl(cfg: S3Config, key: string): string {
+  const fullKey = [cfg.pathPrefix?.trim(), key].filter(Boolean).join("/");
   const base = (
     cfg.publicUrl?.trim() ||
     `${cfg.endpoint.replace(/\/+$/, "")}/${cfg.bucket}`
   ).replace(/\/+$/, "");
-  const encoded = key.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  const encoded = fullKey.split("/").filter(Boolean).map(encodeURIComponent).join("/");
   return `${base}/${encoded}`;
 }
 

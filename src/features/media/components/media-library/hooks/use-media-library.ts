@@ -412,6 +412,12 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     setDeletePreview(null);
   };
 
+  const externalError = useMemo(() => {
+    if (!isExternal) return undefined;
+    const lastPage = externalQuery.data?.pages[externalQuery.data.pages.length - 1];
+    return lastPage?.error;
+  }, [isExternal, externalQuery.data]);
+
   return {
     // Provider
     currentProviderId,
@@ -454,5 +460,7 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     updateAsset,
     createFolder,
     renameFolder,
+    // External errors
+    externalError,
   };
 }
