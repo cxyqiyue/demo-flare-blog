@@ -125,6 +125,7 @@ interface SignGetRequestParams {
   canonicalUri: string;
   canonicalQueryString?: string;
   host: string;
+  payloadHash: string;
   amzDate: string;
   region: string;
   accessKeyId: string;
@@ -135,14 +136,15 @@ async function signGetRequest({
   canonicalUri,
   canonicalQueryString = "",
   host,
+  payloadHash,
   amzDate,
   region,
   accessKeyId,
   secretAccessKey,
 }: SignGetRequestParams): Promise<string> {
-  const canonicalHeaders = `host:${host}\nx-amz-date:${amzDate}\n`;
-  const signedHeaders = "host;x-amz-date";
-  const canonicalRequest = `GET\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${EMPTY_PAYLOAD_HASH}`;
+  const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+  const canonicalRequest = `GET\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
 
   const dateStamp = amzDate.slice(0, 8);
   const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
@@ -161,6 +163,7 @@ async function signGetRequest({
 interface SignDeleteRequestParams {
   canonicalUri: string;
   host: string;
+  payloadHash: string;
   amzDate: string;
   region: string;
   accessKeyId: string;
@@ -170,14 +173,15 @@ interface SignDeleteRequestParams {
 async function signDeleteRequest({
   canonicalUri,
   host,
+  payloadHash,
   amzDate,
   region,
   accessKeyId,
   secretAccessKey,
 }: SignDeleteRequestParams): Promise<string> {
-  const canonicalHeaders = `host:${host}\nx-amz-date:${amzDate}\n`;
-  const signedHeaders = "host;x-amz-date";
-  const canonicalRequest = `DELETE\n${canonicalUri}\n\n${canonicalHeaders}\n${signedHeaders}\n${EMPTY_PAYLOAD_HASH}`;
+  const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+  const canonicalRequest = `DELETE\n${canonicalUri}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
 
   const dateStamp = amzDate.slice(0, 8);
   const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
@@ -303,6 +307,7 @@ export async function listS3Objects(
       canonicalUri,
       canonicalQueryString,
       host,
+      payloadHash: EMPTY_PAYLOAD_HASH,
       amzDate,
       region,
       accessKeyId: cfg.accessKeyId,
@@ -313,6 +318,7 @@ export async function listS3Objects(
     const response = await fetch(url, {
       method: "GET",
       headers: {
+        "x-amz-content-sha256": EMPTY_PAYLOAD_HASH,
         "x-amz-date": amzDate,
         Authorization: authorization,
       },
@@ -396,6 +402,7 @@ export async function deleteS3Object(
     const authorization = await signDeleteRequest({
       canonicalUri,
       host,
+      payloadHash: EMPTY_PAYLOAD_HASH,
       amzDate,
       region,
       accessKeyId: cfg.accessKeyId,
@@ -405,6 +412,7 @@ export async function deleteS3Object(
     const response = await fetch(`${endpoint.origin}${canonicalUri}`, {
       method: "DELETE",
       headers: {
+        "x-amz-content-sha256": EMPTY_PAYLOAD_HASH,
         "x-amz-date": amzDate,
         Authorization: authorization,
       },
