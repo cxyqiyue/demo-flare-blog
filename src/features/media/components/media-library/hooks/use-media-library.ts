@@ -49,7 +49,11 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     from: "/admin/media/",
   });
 
-  const currentProviderId = providerParam ?? "r2";
+  const currentProviderId = useMemo(() => {
+    if (providerParam) return providerParam;
+    const listable = providers.find((p) => p.canList);
+    return listable?.id ?? "r2";
+  }, [providerParam, providers]);
   const currentProvider = findProvider(providers, currentProviderId);
   const isExternal = currentProviderId !== "r2";
   const canList = currentProvider?.canList ?? false;

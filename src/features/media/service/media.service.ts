@@ -491,18 +491,15 @@ export async function getMediaProviders(
   // S3
   const s3Config = resolveS3ConfigForMedia(config);
   if (s3Config) {
-    const s3Enabled = ih?.s3?.articleEnabled || ih?.s3?.commentEnabled;
-    if (s3Enabled) {
-      providers.push({
-        id: "s3",
-        name: ih?.s3?.provider ? `${ih.s3.provider} (S3)` : "S3",
-        type: "s3",
-        canList: true,
-        canDelete: true,
-        canUpload: true,
-        canCreateFolder: false,
-      });
-    }
+    providers.push({
+      id: "s3",
+      name: ih?.s3?.provider ? `${ih.s3.provider} (S3)` : "S3",
+      type: "s3",
+      canList: true,
+      canDelete: true,
+      canUpload: true,
+      canCreateFolder: false,
+    });
   }
 
   // API Key providers — upload only
