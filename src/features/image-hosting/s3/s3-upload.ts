@@ -83,9 +83,7 @@ function encodeObjectKey(key: string): string {
  * encodeURIComponent 会将 / 编码为 %2F，但 AWS S3 期望 / 保持原样。
  */
 function encodeS3QueryParam(value: string): string {
-  return encodeURIComponent(value)
-    .toLowerCase()
-    .replace(/%2f/g, "/");
+  return encodeURIComponent(value).replace(/%2f/g, "/");
 }
 
 interface SignRequestParams {
@@ -113,7 +111,7 @@ async function signRequestV4({
   accessKeyId,
   secretAccessKey,
 }: SignRequestParams): Promise<string> {
-  const canonicalHeaders = `content-type:${contentType}\nhost:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const canonicalHeaders = `content-type:${contentType}\nhost:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}`;
   const signedHeaders = "content-type;host;x-amz-content-sha256;x-amz-date";
   const canonicalRequest = `${method}\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
 
@@ -152,7 +150,7 @@ async function signGetRequest({
   accessKeyId,
   secretAccessKey,
 }: SignGetRequestParams): Promise<string> {
-  const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}`;
   const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
   const canonicalRequest = `GET\n${canonicalUri}\n${canonicalQueryString}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
 
@@ -189,7 +187,7 @@ async function signDeleteRequest({
   accessKeyId,
   secretAccessKey,
 }: SignDeleteRequestParams): Promise<string> {
-  const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}`;
   const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
   const canonicalRequest = `DELETE\n${canonicalUri}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
 
@@ -252,11 +250,11 @@ export async function uploadToS3(
     });
 
     if (!response.ok) {
-      const responseText = (await response.text()).slice(0, 300);
+      const responseText = await response.text();
       return err({
         reason: "PROVIDER_REQUEST_FAILED",
         message:
-          responseText || `S3 upload failed with status ${response.status}`,
+          extractS3ErrorMessage(responseText) || `S3 upload failed with status ${response.status}`,
       });
     }
 
@@ -272,6 +270,19 @@ export async function uploadToS3(
       message: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+/**
+ * 从 S3 XML 错误响应中提取可读的错误信息。
+ * 例如 <Code>SignatureDoesNotMatch</Code><Message>The request signature ...</Message>
+ */
+function extractS3ErrorMessage(xml: string): string {
+  const code = xml.match(/<Code>([^<]*)<\/Code>/)?.[1];
+  const message = xml.match(/<Message>([^<]*)<\/Message>/)?.[1];
+  if (code && message) return `${code}: ${message}`;
+  if (message) return message;
+  if (code) return code;
+  return xml.slice(0, 500);
 }
 
 // ── S3 List Objects ──────────────────────────────────────────
@@ -337,8 +348,8 @@ export async function listS3Objects(
     });
 
     if (!response.ok) {
-      const text = (await response.text()).slice(0, 300);
-      return err({ reason: "S3_LIST_FAILED", message: text || `S3 list failed: ${response.status}` });
+      const text = await response.text();
+      return err({ reason: "S3_LIST_FAILED", message: extractS3ErrorMessage(text) || `S3 list failed: ${response.status}` });
     }
 
     const xml = await response.text();
@@ -431,8 +442,8 @@ export async function deleteS3Object(
     });
 
     if (!response.ok && response.status !== 404) {
-      const text = (await response.text()).slice(0, 300);
-      return err({ reason: "S3_DELETE_FAILED", message: text || `S3 delete failed: ${response.status}` });
+      const text = await response.text();
+      return err({ reason: "S3_DELETE_FAILED", message: extractS3ErrorMessage(text) || `S3 delete failed: ${response.status}` });
     }
 
     return ok({ success: true });

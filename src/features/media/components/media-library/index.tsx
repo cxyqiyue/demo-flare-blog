@@ -220,10 +220,10 @@ export function MediaLibrary() {
             ))}
           </div>
         ) : mediaItems.length === 0 && folders.length === 0 && isExternal ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
             {externalError ? (
               <>
-                <p className="text-xs font-mono uppercase tracking-widest text-destructive">
+                <p className="text-xs font-mono text-destructive break-all leading-relaxed">
                   {externalError}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-2">
