@@ -43,10 +43,17 @@ const config = defineConfig(({ mode }) => {
         name: "fix-aws-sdk-loadconfig",
         enforce: "pre",
         resolveId(source) {
-          if (source === "@smithy/core/config") {
+          const nodeModulesMap: Record<string, string> = {
+            "@smithy/core/config": "submodules/config/index.js",
+            "@smithy/core/serde": "submodules/serde/index.js",
+            "@smithy/core/checksum": "submodules/checksum/index.js",
+            "@smithy/core/retry": "submodules/retry/index.js",
+          };
+          const subPath = nodeModulesMap[source];
+          if (subPath) {
             return path.resolve(
               __dirname,
-              "node_modules/@smithy/core/dist-es/submodules/config/index.js",
+              `node_modules/@smithy/core/dist-es/${subPath}`,
             );
           }
         },
