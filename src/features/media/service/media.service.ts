@@ -122,7 +122,7 @@ export async function uploadToProvider(
     if (!dcConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
     const result = await uploadToDiscordDirect(dcConfig, file);
     if (result.error) return err({ reason: "DISCORD_UPLOAD_FAILED" });
-    uploadResult = ok(result.data);
+    uploadResult = ok({ ...result.data, key: result.data.key ?? `discord/${folder ? `${folder}/` : ""}${Date.now()}-${crypto.randomUUID()}` });
   } else if (provider === "huggingface") {
     const config = await ConfigService.getSystemConfig(context);
     const hfConfig = resolveHuggingFaceConfig(config);
@@ -604,7 +604,11 @@ async function uploadToTelegramDirect(
   const chatId = config.chatId!.trim();
 
   try {
-    const apiUrl = `https://api.telegram.org/bot${botToken}/sendPhoto`;
+    const proxyDomain = config.proxyUrl?.trim();
+    const baseUrl = proxyDomain
+      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+      : "https://api.telegram.org";
+    const apiUrl = `${baseUrl}/bot${botToken}/sendPhoto`;
     const form = new FormData();
     form.append("chat_id", chatId);
     form.append("photo", file);
@@ -629,7 +633,7 @@ async function uploadToTelegramDirect(
       return err({ reason: "TELEGRAM_UPLOAD_FAILED", message: "No file_id returned from Telegram" });
     }
 
-    const getFileResp = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
+    const getFileResp = await fetch(`${baseUrl}/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
     const fileText = await getFileResp.text();
     let fileParsed: unknown = null;
     try { fileParsed = fileText ? JSON.parse(fileText) : null; } catch { fileParsed = null; }
@@ -641,7 +645,10 @@ async function uploadToTelegramDirect(
       return err({ reason: "TELEGRAM_UPLOAD_FAILED", message: "No file_path returned from Telegram" });
     }
 
-    return ok({ url: `https://api.telegram.org/file/bot${botToken}/${filePath}` });
+    const fileDomain = proxyDomain
+      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+      : "https://api.telegram.org";
+    return ok({ url: `${fileDomain}/file/bot${botToken}/${filePath}` });
   } catch (error) {
     return err({ reason: "TELEGRAM_UPLOAD_FAILED", message: error instanceof Error ? error.message : String(error) });
   }
@@ -650,7 +657,7 @@ async function uploadToTelegramDirect(
 async function uploadToDiscordDirect(
   config: DiscordChannel,
   file: File,
-): Promise<Result<{ url: string }, { reason: string; message: string }>> {
+): Promise<Result<{ url: string; key?: string }, { reason: string; message: string }>> {
   const botToken = config.botToken!.trim();
   const channelId = config.channelId!.trim();
 
@@ -660,7 +667,11 @@ async function uploadToDiscordDirect(
   }
 
   try {
-    const apiUrl = `https://discord.com/api/v10/channels/${channelId}/messages`;
+    const proxyDomain = config.proxyUrl?.trim();
+    const apiBase = proxyDomain
+      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+      : "https://discord.com/api/v10";
+    const apiUrl = `${apiBase}/channels/${channelId}/messages`;
     const form = new FormData();
     form.append("files[0]", file, file.name || "image.png");
 
@@ -679,12 +690,13 @@ async function uploadToDiscordDirect(
     }
 
     const msg = parsed as Record<string, unknown>;
+    const messageId = msg.id as string | undefined;
     const attachments = msg.attachments as Array<Record<string, unknown>> | undefined;
     if (!attachments || attachments.length === 0) {
       return err({ reason: "DISCORD_UPLOAD_FAILED", message: "No attachments returned from Discord" });
     }
 
-    return ok({ url: attachments[0].url as string });
+    return ok({ url: attachments[0].url as string, key: messageId });
   } catch (error) {
     return err({ reason: "DISCORD_UPLOAD_FAILED", message: error instanceof Error ? error.message : String(error) });
   }
@@ -838,14 +850,14 @@ export async function getMediaProviders(
     });
   }
 
-  // Discord — listable via D1 index
+  // Discord — listable via D1 index, deletable via Discord API
   if (ih?.discord?.botToken?.trim() && ih?.discord?.channelId?.trim()) {
     providers.push({
       id: "discord",
       name: "Discord",
       type: "discord",
       canList: true,
-      canDelete: false,
+      canDelete: true,
       canUpload: true,
       canCreateFolder: false,
       isDefault: isActive("discord"),
@@ -1118,18 +1130,22 @@ export async function deleteExternalFiles(
     if (!hfConfig) return { deleted: data.keys.length, skipped: 0 };
     const token = hfConfig.token!.trim();
     const repo = hfConfig.repo!.trim();
-    const repoType = hfConfig.isPrivate ? "private" : "model";
 
     for (const filePath of data.keys) {
       try {
-        await fetch(
-          `https://huggingface.co/api/repos/${repoType}/${repo}/main/${filePath}`,
-          {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ commitMessage: `Delete ${filePath} via media library` }),
+        const commitUrl = `https://huggingface.co/api/datasets/${repo}/commit/main`;
+        const body = [
+          JSON.stringify({ key: "header", value: { summary: `Delete ${filePath} via media library` } }),
+          JSON.stringify({ key: "deletedFile", value: { path: filePath } }),
+        ].join("\n");
+        await fetch(commitUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/x-ndjson",
           },
-        );
+          body,
+        });
       } catch (e) {
         console.error(JSON.stringify({ message: "huggingface delete failed", file: filePath, error: e instanceof Error ? e.message : String(e) }));
       }
@@ -1157,7 +1173,31 @@ export async function deleteExternalFiles(
     return { deleted: data.keys.length, skipped: 0 };
   }
 
-  // Telegram, Discord — cannot delete from remote, but D1 record is already removed
+  if (provider === "discord") {
+    const config = await ConfigService.getSystemConfig(context);
+    const dcConfig = resolveDiscordConfig(config);
+    if (!dcConfig) return { deleted: data.keys.length, skipped: 0 };
+    const botToken = dcConfig.botToken!.trim();
+    const channelId = dcConfig.channelId!.trim();
+    const proxyDomain = dcConfig.proxyUrl?.trim();
+    const apiBase = proxyDomain
+      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+      : "https://discord.com/api/v10";
+
+    for (const messageId of data.keys) {
+      try {
+        await fetch(`${apiBase}/channels/${channelId}/messages/${messageId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bot ${botToken}` },
+        });
+      } catch (e) {
+        console.error(JSON.stringify({ message: "discord delete failed", messageId, error: e instanceof Error ? e.message : String(e) }));
+      }
+    }
+    return { deleted: data.keys.length, skipped: 0 };
+  }
+
+  // Telegram — cannot delete from remote, but D1 record is already removed
   return { deleted: data.keys.length, skipped: 0 };
 }
 

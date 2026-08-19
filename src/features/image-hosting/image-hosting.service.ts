@@ -246,7 +246,10 @@ async function uploadToTelegram(
   }
 
   try {
-    const baseUrl = "https://api.telegram.org";
+    const proxyDomain = config.proxyUrl?.trim();
+    const baseUrl = proxyDomain
+      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+      : "https://api.telegram.org";
     const apiUrl = `${baseUrl}/bot${botToken}/sendPhoto`;
 
     const form = new FormData();
@@ -314,7 +317,10 @@ async function uploadToTelegram(
       });
     }
 
-    const fileUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`;
+    const fileDomain = proxyDomain
+      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+      : "https://api.telegram.org";
+    const fileUrl = `${fileDomain}/file/bot${botToken}/${filePath}`;
     return ok({ url: fileUrl });
   } catch (error) {
     return err({
@@ -353,7 +359,11 @@ async function uploadToDiscord(
   }
 
   try {
-    const apiUrl = `https://discord.com/api/v10/channels/${channelId}/messages`;
+    const proxyDomain = config.proxyUrl?.trim();
+    const apiBase = proxyDomain
+      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+      : "https://discord.com/api/v10";
+    const apiUrl = `${apiBase}/channels/${channelId}/messages`;
 
     const form = new FormData();
     form.append("files[0]", file, file.name || "image.png");
