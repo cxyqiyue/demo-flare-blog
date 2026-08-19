@@ -35,6 +35,22 @@ const config = defineConfig(({ mode }) => {
       },
     },
     plugins: [
+      // Force @smithy/core/config to resolve to the Node variant instead of
+      // the browser stub (which exports a Symbol instead of loadConfig).
+      // The Cloudflare vite-plugin includes "browser" in its SSR conditions,
+      // causing @smithy/core/config → index.browser.js → loadConfig = Symbol.
+      {
+        name: "fix-aws-sdk-loadconfig",
+        enforce: "pre",
+        resolveId(source) {
+          if (source === "@smithy/core/config") {
+            return path.resolve(
+              __dirname,
+              "node_modules/@smithy/core/dist-es/submodules/config/index.js",
+            );
+          }
+        },
+      },
       paraglideVitePlugin({
         project: "./project.inlang",
         outdir: "./src/paraglide",

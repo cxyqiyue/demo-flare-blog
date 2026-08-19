@@ -1,7 +1,7 @@
 import {
   Brain,
   Circle,
-  CircleCheckBig,
+  CircleDot,
   Database,
   Globe,
   KeyRound,
@@ -277,6 +277,7 @@ export function ImageHostingSettingsSection({
   const [wdEcho, setWdEcho] = useState("");
 
   const [editingApiId, setEditingApiId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<ProviderId | null>(null);
 
   // ── Select Provider ──
   const selectProvider = (id: ProviderId | null) => {
@@ -597,7 +598,7 @@ export function ImageHostingSettingsSection({
                 )}
               >
                 <div className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")}>
-                  {isActive ? <CircleCheckBig size={20} /> : <Circle size={20} />}
+                  {isActive ? <CircleDot size={20} /> : <Circle size={20} />}
                 </div>
                 <div className="rounded-sm bg-muted/40 p-2 shrink-0">
                   <Icon size={16} className="text-muted-foreground" />
@@ -608,8 +609,27 @@ export function ImageHostingSettingsSection({
                 </div>
               </button>
 
-              {/* ── Expanded Config ── */}
+              {/* ── Expand Toggle ── */}
               {isActive && (
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(expandedId === def.id ? null : def.id)}
+                  className="w-full flex items-center justify-center py-1 text-muted-foreground hover:text-foreground transition-colors text-xs"
+                >
+                  <svg
+                    className={cn("w-4 h-4 transition-transform", expandedId === def.id && "rotate-180")}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              )}
+
+              {/* ── Expanded Config ── */}
+              {expandedId === def.id && (
                 <div className="border-t border-border/20 p-4 md:p-8 md:pl-20 space-y-6 bg-muted/5 animate-in fade-in slide-in-from-top-1 duration-300">
 
                   {/* ── R2 Native Config ── */}
