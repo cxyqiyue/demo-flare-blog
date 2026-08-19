@@ -177,9 +177,14 @@ function migrateImageHostingConfig(
   // 已是新版格式 → 直接使用
   if (ih.r2Native || ih.apiProviders) {
     return {
+      activeProvider: ih.activeProvider ?? null,
       r2Native: ih.r2Native ?? DEFAULT_CONFIG.imageHosting?.r2Native,
       s3: { ...DEFAULT_CONFIG.imageHosting?.s3, ...ih.s3 },
       apiProviders: ih.apiProviders ?? [],
+      telegram: ih.telegram ?? DEFAULT_CONFIG.imageHosting?.telegram,
+      discord: ih.discord ?? DEFAULT_CONFIG.imageHosting?.discord,
+      huggingface: ih.huggingface ?? DEFAULT_CONFIG.imageHosting?.huggingface,
+      webdav: ih.webdav ?? DEFAULT_CONFIG.imageHosting?.webdav,
     };
   }
 
@@ -229,6 +234,7 @@ function migrateImageHostingConfig(
     apiProviders.length > 0 || !!s3?.articleEnabled;
 
   return {
+    activeProvider: ih.activeProvider ?? null,
     r2Native: {
       articleEnabled: !hasExternalHosting,
       commentEnabled: !s3?.commentEnabled && !apiProviders.some((p) => p.commentEnabled),
@@ -248,6 +254,10 @@ function migrateImageHostingConfig(
         }
       : DEFAULT_CONFIG.imageHosting?.s3,
     apiProviders,
+    telegram: ih.telegram ?? DEFAULT_CONFIG.imageHosting?.telegram,
+    discord: ih.discord ?? DEFAULT_CONFIG.imageHosting?.discord,
+    huggingface: ih.huggingface ?? DEFAULT_CONFIG.imageHosting?.huggingface,
+    webdav: ih.webdav ?? DEFAULT_CONFIG.imageHosting?.webdav,
   };
 }
 

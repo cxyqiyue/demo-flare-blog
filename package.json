@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.64",
-    "@aws-sdk/client-s3": "^3.1113.0",
+    "@aws-sdk/client-s3": "3.726.1",
     "@better-auth/core": "1.5.5",
     "@better-auth/utils": "0.3.1",
     "@cloudflare/workers-oauth-provider": "^0.6.0",

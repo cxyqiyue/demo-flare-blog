@@ -1,3 +1,17 @@
+// Cloudflare Workers polyfill — AWS SDK v3 calls process.emitWarning
+// which does not exist in the Workers runtime.
+if (typeof globalThis.process === "undefined") {
+  (globalThis as unknown as Record<string, unknown>).process = {
+    emitWarning() {},
+  };
+} else if (typeof globalThis.process.emitWarning !== "function") {
+  Object.defineProperty(globalThis.process, "emitWarning", {
+    value: () => {},
+    writable: true,
+    configurable: true,
+  });
+}
+
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
