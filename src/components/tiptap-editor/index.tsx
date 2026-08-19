@@ -192,12 +192,18 @@ export const Editor = memo(function Editor({
         if (!hosted.error && hosted.data.mode === "image-hosting") {
           return hosted.data.url;
         }
-        const result = await uploadImageFn({ data: formData });
-        if (result.error) {
-          toast.error("上传失败");
-          return null;
+        if (!hosted.error && hosted.data.mode === "none") {
+          const result = await uploadImageFn({ data: formData });
+          if (result.error) {
+            toast.error("上传失败");
+            return null;
+          }
+          return result.data.url;
         }
-        return result.data.url;
+        toast.error("图床上传失败", {
+          description: hosted.error?.message ?? "请检查图床配置",
+        });
+        return null;
       } catch {
         toast.error("上传失败");
         return null;

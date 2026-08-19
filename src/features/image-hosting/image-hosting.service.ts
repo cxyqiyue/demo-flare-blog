@@ -21,6 +21,7 @@ import {
   uploadToS3,
 } from "@/features/image-hosting/s3/s3-upload";
 import { parseUploadMediaInput } from "@/features/media/media.schema";
+import * as MediaRepo from "@/features/media/data/media.data";
 import * as MediaStorage from "@/features/media/data/media.storage";
 import { getImageDimensions } from "@/features/media/utils/image-dimensions";
 import { err, ok, type Result } from "@/lib/errors";
@@ -56,8 +57,38 @@ function resolveS3RuntimeConfig(
   const secretAccessKey = s3.secretAccessKey?.trim();
   if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
 
+  const hasEnabledFlag =
+    pathway === "article" ? !!s3.articleEnabled : !!s3.commentEnabled;
+
   return {
-    enabled: pathway === "article" ? !!s3.articleEnabled : !!s3.commentEnabled,
+    enabled: hasEnabledFlag,
+    config: {
+      endpoint: endpoint.replace(/\/+$/, ""),
+      bucket,
+      region: s3.region?.trim() || "",
+      accessKeyId,
+      secretAccessKey,
+      pathPrefix: s3.pathPrefix?.trim() || "",
+      publicUrl: s3.publicUrl?.trim() || "",
+      pathStyle: s3.pathStyle ?? false,
+    },
+  };
+}
+
+function resolveS3Config(
+  config: SystemConfig | undefined,
+): S3RuntimeConfig | null {
+  const s3 = config?.imageHosting?.s3;
+  if (!s3) return null;
+
+  const endpoint = s3.endpoint?.trim();
+  const bucket = s3.bucket?.trim();
+  const accessKeyId = s3.accessKeyId?.trim();
+  const secretAccessKey = s3.secretAccessKey?.trim();
+  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
+
+  return {
+    enabled: true,
     config: {
       endpoint: endpoint.replace(/\/+$/, ""),
       bucket,
@@ -566,9 +597,9 @@ async function uploadToActiveProvider(
 
   switch (provider) {
     case "s3": {
-      const s3Runtime = resolveS3RuntimeConfig(config, pathway);
-      if (s3Runtime?.enabled) {
-        return uploadToS3ForFile(s3Runtime.config, file);
+      const s3Config = resolveS3Config(config);
+      if (s3Config) {
+        return uploadToS3ForFile(s3Config.config, file);
       }
       return null;
     }
@@ -576,9 +607,7 @@ async function uploadToActiveProvider(
     case "api-key": {
       const apiProviders = ih?.apiProviders ?? [];
       for (const p of apiProviders) {
-        const enabled =
-          pathway === "article" ? p.articleEnabled : p.commentEnabled;
-        if (!enabled || !p.apiKey?.trim()) continue;
+        if (!p.apiKey?.trim()) continue;
 
         const { fieldName, defaultEndpoint } = getApiKeyProviderFieldInfo(p.type);
         const endpoint =
@@ -658,6 +687,103 @@ function getProviderLabel(
   return provider as ImageHostingProviderLabel;
 }
 
+function buildProviderKey(
+  provider: ActiveImageHostingProvider,
+  apiProviderType: string | undefined,
+  ext: string,
+): string {
+  const ts = Date.now();
+  let uuid = "";
+  try {
+    uuid = crypto.randomUUID();
+  } catch {
+    uuid = `${ts.toString(36)}_${Math.random().toString(36).slice(2)}`;
+  }
+  const base = `${ts}-${uuid}.${ext}`;
+
+  switch (provider) {
+    case "r2-native":
+      return `articles/${base}`;
+    case "s3":
+      return `articles/${base}`;
+    case "api-key":
+      return `api-key/${apiProviderType ?? "unknown"}/${base}`;
+    case "telegram":
+      return `telegram/${base}`;
+    case "discord":
+      return `discord/${base}`;
+    case "huggingface":
+      return `huggingface/${base}`;
+    case "webdav":
+      return `webdav/${base}`;
+    default:
+      return `uploads/${base}`;
+  }
+}
+
+function buildCommentProviderKey(
+  provider: ActiveImageHostingProvider,
+  apiProviderType: string | undefined,
+  ext: string,
+): string {
+  const ts = Date.now();
+  let uuid = "";
+  try {
+    uuid = crypto.randomUUID();
+  } catch {
+    uuid = `${ts.toString(36)}_${Math.random().toString(36).slice(2)}`;
+  }
+  const base = `${ts}-${uuid}.${ext}`;
+
+  switch (provider) {
+    case "r2-native":
+      return `comments/${base}`;
+    case "s3":
+      return `comments/${base}`;
+    case "api-key":
+      return `api-key/${apiProviderType ?? "unknown"}/${base}`;
+    case "telegram":
+      return `telegram/${base}`;
+    case "discord":
+      return `discord/${base}`;
+    case "huggingface":
+      return `huggingface/${base}`;
+    case "webdav":
+      return `webdav/${base}`;
+    default:
+      return `uploads/${base}`;
+  }
+}
+
+async function trackMediaUpload(
+  db: DB,
+  data: {
+    provider: string;
+    key: string;
+    url: string;
+    fileName: string;
+    mimeType: string;
+    sizeInBytes: number;
+    width?: number | null;
+    height?: number | null;
+  },
+) {
+  try {
+    await MediaRepo.insertMedia(db, {
+      provider: data.provider,
+      key: data.key,
+      url: data.url,
+      fileName: data.fileName,
+      mimeType: data.mimeType,
+      sizeInBytes: data.sizeInBytes,
+      width: data.width ?? null,
+      height: data.height ?? null,
+    });
+  } catch {
+    // D1 insert failure should not block the upload result
+  }
+}
+
 // ── 文章上传 ───────────────────────────────────────────────────
 
 export type ArticleUploadResult =
@@ -707,9 +833,24 @@ export async function uploadForArticle(
       });
     }
     const dimensions = await getImageDimensionsResult();
+    const providerLabel = getProviderLabel(activeProvider);
+    const ext = extensionFromMime(file.type);
+    const providerKey = buildProviderKey(activeProvider, undefined, ext);
+
+    await trackMediaUpload(context.db, {
+      provider: providerLabel,
+      key: providerKey,
+      url: result.data.url,
+      fileName: file.name,
+      mimeType: file.type,
+      sizeInBytes: file.size,
+      width: dimensions?.width,
+      height: dimensions?.height,
+    });
+
     return ok({
       mode: "image-hosting",
-      provider: getProviderLabel(activeProvider),
+      provider: providerLabel,
       url: result.data.url,
       width: dimensions?.width,
       height: dimensions?.height,
@@ -729,6 +870,20 @@ export async function uploadForArticle(
       });
     }
     const dimensions = await getImageDimensionsResult();
+    const ext = extensionFromMime(file.type);
+    const key = buildObjectKey("articles", ext);
+
+    await trackMediaUpload(context.db, {
+      provider: "s3",
+      key,
+      url: result.data.url,
+      fileName: file.name,
+      mimeType: file.type,
+      sizeInBytes: file.size,
+      width: dimensions?.width,
+      height: dimensions?.height,
+    });
+
     return ok({
       mode: "image-hosting",
       provider: "s3",
@@ -743,7 +898,7 @@ export async function uploadForArticle(
   let lastError: { message: string } | null = null;
 
   for (const p of apiProviders) {
-    if (!p.articleEnabled || !p.apiKey?.trim()) continue;
+    if (!p.apiKey?.trim()) continue;
 
     const { fieldName, defaultEndpoint } = getApiKeyProviderFieldInfo(p.type);
     const endpoint =
@@ -765,6 +920,20 @@ export async function uploadForArticle(
     }
 
     const dimensions = await getImageDimensionsResult();
+    const ext = extensionFromMime(file.type);
+    const key = buildProviderKey("api-key", p.type, ext);
+
+    await trackMediaUpload(context.db, {
+      provider: p.type,
+      key,
+      url: result.data.url,
+      fileName: file.name,
+      mimeType: file.type,
+      sizeInBytes: file.size,
+      width: dimensions?.width,
+      height: dimensions?.height,
+    });
+
     return ok({
       mode: "image-hosting",
       provider: p.type,
@@ -781,7 +950,123 @@ export async function uploadForArticle(
     });
   }
 
-  // ── 3. R2 原生（兜底） ──
+  // ── 3. Telegram ──
+  if (ih?.telegram?.botToken && ih?.telegram?.chatId) {
+    const result = await uploadToTelegram(ih.telegram, file);
+    if (!result.error) {
+      const dimensions = await getImageDimensionsResult();
+      const ext = extensionFromMime(file.type);
+      const key = buildProviderKey("telegram", undefined, ext);
+
+      await trackMediaUpload(context.db, {
+        provider: "telegram",
+        key,
+        url: result.data.url,
+        fileName: file.name,
+        mimeType: file.type,
+        sizeInBytes: file.size,
+        width: dimensions?.width,
+        height: dimensions?.height,
+      });
+
+      return ok({
+        mode: "image-hosting",
+        provider: "telegram",
+        url: result.data.url,
+        width: dimensions?.width,
+        height: dimensions?.height,
+      });
+    }
+  }
+
+  // ── 4. Discord ──
+  if (ih?.discord?.botToken && ih?.discord?.channelId) {
+    const result = await uploadToDiscord(ih.discord, file);
+    if (!result.error) {
+      const dimensions = await getImageDimensionsResult();
+      const ext = extensionFromMime(file.type);
+      const key = buildProviderKey("discord", undefined, ext);
+
+      await trackMediaUpload(context.db, {
+        provider: "discord",
+        key,
+        url: result.data.url,
+        fileName: file.name,
+        mimeType: file.type,
+        sizeInBytes: file.size,
+        width: dimensions?.width,
+        height: dimensions?.height,
+      });
+
+      return ok({
+        mode: "image-hosting",
+        provider: "discord",
+        url: result.data.url,
+        width: dimensions?.width,
+        height: dimensions?.height,
+      });
+    }
+  }
+
+  // ── 5. HuggingFace ──
+  if (ih?.huggingface?.token && ih?.huggingface?.repo) {
+    const result = await uploadToHuggingFace(ih.huggingface, file);
+    if (!result.error) {
+      const dimensions = await getImageDimensionsResult();
+      const ext = extensionFromMime(file.type);
+      const key = buildProviderKey("huggingface", undefined, ext);
+
+      await trackMediaUpload(context.db, {
+        provider: "huggingface",
+        key,
+        url: result.data.url,
+        fileName: file.name,
+        mimeType: file.type,
+        sizeInBytes: file.size,
+        width: dimensions?.width,
+        height: dimensions?.height,
+      });
+
+      return ok({
+        mode: "image-hosting",
+        provider: "huggingface",
+        url: result.data.url,
+        width: dimensions?.width,
+        height: dimensions?.height,
+      });
+    }
+  }
+
+  // ── 6. WebDAV ──
+  if (ih?.webdav?.baseUrl) {
+    const result = await uploadToWebDAV(ih.webdav, file);
+    if (!result.error) {
+      const dimensions = await getImageDimensionsResult();
+      const ext = extensionFromMime(file.type);
+      const key = buildProviderKey("webdav", undefined, ext);
+
+      await trackMediaUpload(context.db, {
+        provider: "webdav",
+        key,
+        url: result.data.url,
+        fileName: file.name,
+        mimeType: file.type,
+        sizeInBytes: file.size,
+        width: dimensions?.width,
+        height: dimensions?.height,
+      });
+
+      return ok({
+        mode: "image-hosting",
+        provider: "webdav",
+        url: result.data.url,
+        width: dimensions?.width,
+        height: dimensions?.height,
+      });
+    }
+  }
+
+  // ── 7. R2 原生（兜底） ──
   if (ih?.r2Native?.articleEnabled) {
     const ext = extensionFromMime(file.type);
     const key = buildObjectKey("articles", ext);
@@ -789,6 +1074,18 @@ export async function uploadForArticle(
       await MediaStorage.putToR2(context.env, file, key);
       const dimensions = await getImageDimensionsResult();
       const url = `/images/${key}`;
+
+      await trackMediaUpload(context.db, {
+        provider: "r2-native",
+        key,
+        url,
+        fileName: file.name,
+        mimeType: file.type,
+        sizeInBytes: file.size,
+        width: dimensions?.width,
+        height: dimensions?.height,
+      });
+
       return ok({
         mode: "image-hosting",
         provider: "r2-native",
@@ -843,6 +1140,18 @@ export async function uploadCommentImage(
         message: result.error.message,
       });
     }
+
+    const ext = extensionFromMime(file.type);
+    const providerKey = buildCommentProviderKey(activeProvider, undefined, ext);
+    await trackMediaUpload(context.db, {
+      provider: getProviderLabel(activeProvider),
+      key: providerKey,
+      url: result.data.url,
+      fileName: file.name,
+      mimeType: file.type,
+      sizeInBytes: file.size,
+    });
+
     return ok({ url: result.data.url });
   }
 
@@ -858,13 +1167,25 @@ export async function uploadCommentImage(
         message: result.error.message,
       });
     }
+
+    const ext = extensionFromMime(file.type);
+    const key = buildObjectKey("comments", ext);
+    await trackMediaUpload(context.db, {
+      provider: "s3",
+      key,
+      url: result.data.url,
+      fileName: file.name,
+      mimeType: file.type,
+      sizeInBytes: file.size,
+    });
+
     return ok({ url: result.data.url });
   }
 
-  // ── 2. API Key 图床（第三方优先，仅支持 commentEnabled 的） ──
+  // ── 2. API Key 图床（第三方优先） ──
   const apiProviders = ih?.apiProviders ?? [];
   for (const p of apiProviders) {
-    if (!p.commentEnabled || !p.apiKey?.trim()) continue;
+    if (!p.apiKey?.trim()) continue;
 
     const { fieldName, defaultEndpoint } = getApiKeyProviderFieldInfo(p.type);
     const endpoint =
@@ -886,15 +1207,109 @@ export async function uploadCommentImage(
         message: result.error.message,
       });
     }
+
+    const ext = extensionFromMime(file.type);
+    const key = buildCommentProviderKey("api-key", p.type, ext);
+    await trackMediaUpload(context.db, {
+      provider: p.type,
+      key,
+      url: result.data.url,
+      fileName: file.name,
+      mimeType: file.type,
+      sizeInBytes: file.size,
+    });
+
     return ok({ url: result.data.url });
   }
 
-  // ── 3. R2 原生（兜底） ──
+  // ── 3. Telegram ──
+  if (ih?.telegram?.botToken && ih?.telegram?.chatId) {
+    const result = await uploadToTelegram(ih.telegram, file);
+    if (!result.error) {
+      const ext = extensionFromMime(file.type);
+      const key = buildCommentProviderKey("telegram", undefined, ext);
+      await trackMediaUpload(context.db, {
+        provider: "telegram",
+        key,
+        url: result.data.url,
+        fileName: file.name,
+        mimeType: file.type,
+        sizeInBytes: file.size,
+      });
+      return ok({ url: result.data.url });
+    }
+  }
+
+  // ── 4. Discord ──
+  if (ih?.discord?.botToken && ih?.discord?.channelId) {
+    const result = await uploadToDiscord(ih.discord, file);
+    if (!result.error) {
+      const ext = extensionFromMime(file.type);
+      const key = buildCommentProviderKey("discord", undefined, ext);
+      await trackMediaUpload(context.db, {
+        provider: "discord",
+        key,
+        url: result.data.url,
+        fileName: file.name,
+        mimeType: file.type,
+        sizeInBytes: file.size,
+      });
+      return ok({ url: result.data.url });
+    }
+  }
+
+  // ── 5. HuggingFace ──
+  if (ih?.huggingface?.token && ih?.huggingface?.repo) {
+    const result = await uploadToHuggingFace(ih.huggingface, file);
+    if (!result.error) {
+      const ext = extensionFromMime(file.type);
+      const key = buildCommentProviderKey("huggingface", undefined, ext);
+      await trackMediaUpload(context.db, {
+        provider: "huggingface",
+        key,
+        url: result.data.url,
+        fileName: file.name,
+        mimeType: file.type,
+        sizeInBytes: file.size,
+      });
+      return ok({ url: result.data.url });
+    }
+  }
+
+  // ── 6. WebDAV ──
+  if (ih?.webdav?.baseUrl) {
+    const result = await uploadToWebDAV(ih.webdav, file);
+    if (!result.error) {
+      const ext = extensionFromMime(file.type);
+      const key = buildCommentProviderKey("webdav", undefined, ext);
+      await trackMediaUpload(context.db, {
+        provider: "webdav",
+        key,
+        url: result.data.url,
+        fileName: file.name,
+        mimeType: file.type,
+        sizeInBytes: file.size,
+      });
+      return ok({ url: result.data.url });
+    }
+  }
+
+  // ── 7. R2 原生（兜底） ──
   if (ih?.r2Native?.commentEnabled) {
     const ext = extensionFromMime(file.type);
     const key = buildObjectKey("comments", ext);
     try {
       await MediaStorage.putToR2(context.env, file, key);
+
+      await trackMediaUpload(context.db, {
+        provider: "r2-native",
+        key,
+        url: `/images/${key}`,
+        fileName: file.name,
+        mimeType: file.type,
+        sizeInBytes: file.size,
+      });
+
       return ok({ url: `/images/${key}` });
     } catch (error) {
       return err({

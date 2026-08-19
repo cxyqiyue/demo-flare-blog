@@ -35,7 +35,6 @@ async function handleImageUpload(file: File): Promise<ImageUploadResult> {
   const formData = new FormData();
   formData.append("image", file);
 
-  // 优先走第三方图床（服务端代理，API key 不接触浏览器）
   const hosted = await uploadToImageHostingFn({ data: formData });
   if (hosted.error) {
     throw new Error(m.image_hosting_upload_failed());
@@ -52,20 +51,22 @@ async function handleImageUpload(file: File): Promise<ImageUploadResult> {
     };
   }
 
-  // 未启用第三方图床时回退到默认存储 (R2)
-  const result = await uploadImageFn({ data: formData });
-  if (result.error) {
-    throw new Error(m.media_upload_error_db());
+  if (hosted.data.mode === "none") {
+    const result = await uploadImageFn({ data: formData });
+    if (result.error) {
+      throw new Error(m.media_upload_error_db());
+    }
+    toast.success(m.media_upload_success({ name: file.name }), {
+      description: m.editor_image_upload_success_desc({ name: file.name }),
+    });
+    return {
+      url: result.data.url,
+      width: result.data.width || undefined,
+      height: result.data.height || undefined,
+    };
   }
-  toast.success(m.media_upload_success({ name: file.name }), {
-    description: m.editor_image_upload_success_desc({ name: file.name }),
-  });
 
-  return {
-    url: result.data.url,
-    width: result.data.width || undefined,
-    height: result.data.height || undefined,
-  };
+  throw new Error(m.image_hosting_upload_failed());
 }
 
 function handleFileDrop(editor: TiptapEditor, files: Array<File>, pos: number) {
