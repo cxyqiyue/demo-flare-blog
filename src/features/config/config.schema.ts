@@ -7,6 +7,10 @@ import {
 } from "@/features/config/site-config.schema";
 import {
   ApiKeyProviderSchema,
+  DiscordChannelSchema,
+  HuggingFaceChannelSchema,
+  TelegramChannelSchema,
+  WebDAVChannelSchema,
 } from "@/features/image-hosting/image-hosting.schema";
 import {
   createWebhookEndpointFormSchema,
@@ -84,6 +88,19 @@ export const AiConfigSchema = z.object({
 
 // ── 图床配置 Schema ─────────────────────────────────────────
 export const ImageHostingConfigSchema = z.object({
+  // 单选互斥：当前激活的图床渠道（null = 使用旧版优先级链兼容模式）
+  activeProvider: z
+    .enum([
+      "r2-native",
+      "s3",
+      "api-key",
+      "telegram",
+      "discord",
+      "huggingface",
+      "webdav",
+    ])
+    .nullable()
+    .optional(),
   r2Native: z
     .object({
       articleEnabled: z.boolean().optional(),
@@ -102,9 +119,14 @@ export const ImageHostingConfigSchema = z.object({
       secretAccessKey: z.string().optional(),
       pathPrefix: z.string().optional(),
       publicUrl: z.string().optional(),
+      pathStyle: z.boolean().optional(),
     })
     .optional(),
   apiProviders: z.array(ApiKeyProviderSchema).optional(),
+  telegram: TelegramChannelSchema.optional(),
+  discord: DiscordChannelSchema.optional(),
+  huggingface: HuggingFaceChannelSchema.optional(),
+  webdav: WebDAVChannelSchema.optional(),
   // ── 兼容旧版迁移字段（读取后自动转换，不再写入） ──
   imgbb: z.any().optional(),
   ffsky: z.any().optional(),
@@ -255,6 +277,7 @@ export const DEFAULT_CONFIG: SystemConfig = {
     writingInstructions: "",
   },
   imageHosting: {
+    activeProvider: null,
     r2Native: {
       articleEnabled: true,
       commentEnabled: true,
@@ -270,8 +293,32 @@ export const DEFAULT_CONFIG: SystemConfig = {
       secretAccessKey: "",
       pathPrefix: "",
       publicUrl: "",
+      pathStyle: false,
     },
     apiProviders: [],
+    telegram: {
+      botToken: "",
+      chatId: "",
+      proxyUrl: "",
+    },
+    discord: {
+      botToken: "",
+      channelId: "",
+      proxyUrl: "",
+      isNitro: false,
+    },
+    huggingface: {
+      token: "",
+      repo: "",
+      isPrivate: false,
+    },
+    webdav: {
+      baseUrl: "",
+      username: "",
+      password: "",
+      publicUrl: "",
+      createDirectory: true,
+    },
   },
   challenge: {
     provider: "none",

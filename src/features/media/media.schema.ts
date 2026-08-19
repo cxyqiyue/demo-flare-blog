@@ -11,7 +11,15 @@ export const ACCEPTED_IMAGE_TYPES = [
 ];
 
 // ── Media Provider Types ─────────────────────────────────────
-export const MEDIA_PROVIDER_TYPES = ["r2", "s3", "api-key"] as const;
+export const MEDIA_PROVIDER_TYPES = [
+  "r2",
+  "s3",
+  "api-key",
+  "telegram",
+  "discord",
+  "huggingface",
+  "webdav",
+] as const;
 export type MediaProviderType = (typeof MEDIA_PROVIDER_TYPES)[number];
 
 export interface MediaProvider {

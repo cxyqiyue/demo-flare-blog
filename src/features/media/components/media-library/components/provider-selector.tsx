@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Cloud, Database, Globe, Upload } from "lucide-react";
+import { Check, ChevronDown, Cloud, Database, Globe, MessageSquare, Send, Upload, Brain, FolderGit2 } from "lucide-react";
 import { useState } from "react";
 import type { MediaProvider } from "@/features/media/media.schema";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,10 @@ const PROVIDER_ICONS: Record<string, typeof Cloud> = {
   r2: Cloud,
   s3: Database,
   "api-key": Globe,
+  telegram: Send,
+  discord: MessageSquare,
+  huggingface: Brain,
+  webdav: FolderGit2,
 };
 
 export function ProviderSelector({

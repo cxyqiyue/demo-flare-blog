@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+// ── 图床供应商类别（单选互斥） ─────────────────────────────
+export const IMAGE_HOSTING_ACTIVE_PROVIDER = [
+  "r2-native",
+  "s3",
+  "api-key",
+  "telegram",
+  "discord",
+  "huggingface",
+  "webdav",
+] as const;
+export type ActiveImageHostingProvider = (typeof IMAGE_HOSTING_ACTIVE_PROVIDER)[number];
+
 // ── API Key 图床类型 ──────────────────────────────────────────
 export const API_KEY_PROVIDER_TYPES = ["imgbb", "ffsky"] as const;
 export type ApiKeyProviderType = (typeof API_KEY_PROVIDER_TYPES)[number];
@@ -53,11 +65,19 @@ export const S3ConnectionConfigSchema = z.object({
   secretAccessKey: z.string().optional(),
   pathPrefix: z.string().optional(),
   publicUrl: z.string().optional(),
+  pathStyle: z.boolean().optional(),
 });
 export type S3ConnectionConfig = z.infer<typeof S3ConnectionConfigSchema>;
 
-// ── 图床供应商类别 ───────────────────────────────────────────
-export type ImageHostingProviderCategory = "r2-native" | "s3" | "api-key";
+// ── 图床供应商类别（用于旧逻辑兼容） ───────────────────────
+export type ImageHostingProviderCategory =
+  | "r2-native"
+  | "s3"
+  | "api-key"
+  | "telegram"
+  | "discord"
+  | "huggingface"
+  | "webdav";
 
 // ── API Key 图床实例 ─────────────────────────────────────────
 export const ApiKeyProviderSchema = z.object({
@@ -71,17 +91,56 @@ export const ApiKeyProviderSchema = z.object({
 });
 export type ApiKeyProvider = z.infer<typeof ApiKeyProviderSchema>;
 
+// ── Telegram 渠道配置 ───────────────────────────────────────
+export const TelegramChannelSchema = z.object({
+  botToken: z.string().optional(),
+  chatId: z.string().optional(),
+  proxyUrl: z.string().optional(),
+});
+export type TelegramChannel = z.infer<typeof TelegramChannelSchema>;
+
+// ── Discord 渠道配置 ────────────────────────────────────────
+export const DiscordChannelSchema = z.object({
+  botToken: z.string().optional(),
+  channelId: z.string().optional(),
+  proxyUrl: z.string().optional(),
+  isNitro: z.boolean().optional(),
+});
+export type DiscordChannel = z.infer<typeof DiscordChannelSchema>;
+
+// ── HuggingFace 渠道配置 ────────────────────────────────────
+export const HuggingFaceChannelSchema = z.object({
+  token: z.string().optional(),
+  repo: z.string().optional(),
+  isPrivate: z.boolean().optional(),
+});
+export type HuggingFaceChannel = z.infer<typeof HuggingFaceChannelSchema>;
+
+// ── WebDAV 渠道配置 ─────────────────────────────────────────
+export const WebDAVChannelSchema = z.object({
+  baseUrl: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  publicUrl: z.string().optional(),
+  createDirectory: z.boolean().optional(),
+});
+export type WebDAVChannel = z.infer<typeof WebDAVChannelSchema>;
+
 // ── 上传输入 ─────────────────────────────────────────────────
 export const UploadImageHostingInputSchema = z.instanceof(FormData);
 export type UploadImageHostingInput = FormData;
 
 // ── 测试连接输入 ─────────────────────────────────────────────
 export const TestImageHostingConnectionInputSchema = z.object({
-  category: z.enum(["s3", "api-key"]),
+  category: z.enum(["s3", "api-key", "telegram", "discord", "huggingface", "webdav"]),
   s3: S3ConnectionConfigSchema.optional(),
   apiKeyProviderType: z.enum(API_KEY_PROVIDER_TYPES).optional(),
   apiKey: z.string().optional(),
   apiEndpoint: z.string().optional(),
+  telegram: TelegramChannelSchema.optional(),
+  discord: DiscordChannelSchema.optional(),
+  huggingface: HuggingFaceChannelSchema.optional(),
+  webdav: WebDAVChannelSchema.optional(),
 });
 export type TestImageHostingConnectionInput = z.infer<
   typeof TestImageHostingConnectionInputSchema
@@ -104,4 +163,8 @@ export type ImageHostingProviderLabel =
   | "r2-native"
   | "s3"
   | "imgbb"
-  | "ffsky";
+  | "ffsky"
+  | "telegram"
+  | "discord"
+  | "huggingface"
+  | "webdav";

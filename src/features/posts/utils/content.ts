@@ -16,7 +16,7 @@ export function slugify(text: string | null | undefined) {
     // ^      : 取反
     // a-z0-9 : 英文和数字
     // \-     : 横杠
-    .replace(/[^a-z0-9\-]+/g, "")
+    .replace(/[^a-z0-9-]+/g, "")
 
     // 3. 处理连续的横杠 (比如 "Hello... World" 会变成 "hello---world"，这里修正为 "hello-world")
     .replace(/-{2,}/g, "-")

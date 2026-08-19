@@ -28,6 +28,12 @@ import {
   uploadToS3ForMediaLibrary,
   type S3Config,
 } from "@/features/image-hosting/s3/s3-upload";
+import type {
+  DiscordChannel,
+  HuggingFaceChannel,
+  TelegramChannel,
+  WebDAVChannel,
+} from "@/features/image-hosting/image-hosting.schema";
 import * as ConfigService from "@/features/config/service/config.service";
 import * as PostMediaRepo from "@/features/posts/data/post-media.data";
 import { CACHE_CONTROL } from "@/lib/constants";
@@ -103,6 +109,42 @@ export async function uploadToProvider(
     if (result.error) {
       return err({ reason: "S3_UPLOAD_FAILED" });
     }
+    return ok(result.data);
+  }
+
+  if (data.providerId === "telegram") {
+    const config = await ConfigService.getSystemConfig(context);
+    const tgConfig = resolveTelegramConfig(config);
+    if (!tgConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+    const result = await uploadToTelegramDirect(tgConfig, file);
+    if (result.error) return err({ reason: "TELEGRAM_UPLOAD_FAILED" });
+    return ok(result.data);
+  }
+
+  if (data.providerId === "discord") {
+    const config = await ConfigService.getSystemConfig(context);
+    const dcConfig = resolveDiscordConfig(config);
+    if (!dcConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+    const result = await uploadToDiscordDirect(dcConfig, file);
+    if (result.error) return err({ reason: "DISCORD_UPLOAD_FAILED" });
+    return ok(result.data);
+  }
+
+  if (data.providerId === "huggingface") {
+    const config = await ConfigService.getSystemConfig(context);
+    const hfConfig = resolveHuggingFaceConfig(config);
+    if (!hfConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+    const result = await uploadToHuggingFaceDirect(hfConfig, file, folder);
+    if (result.error) return err({ reason: "HUGGINGFACE_UPLOAD_FAILED" });
+    return ok(result.data);
+  }
+
+  if (data.providerId === "webdav") {
+    const config = await ConfigService.getSystemConfig(context);
+    const davConfig = resolveWebDAVConfig(config);
+    if (!davConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+    const result = await uploadToWebDAVDirect(davConfig, file, folder);
+    if (result.error) return err({ reason: "WEBDAV_UPLOAD_FAILED" });
     return ok(result.data);
   }
 
@@ -471,6 +513,248 @@ function resolveS3ConfigForMedia(
   };
 }
 
+function resolveTelegramConfig(
+  config: Awaited<ReturnType<typeof ConfigService.getSystemConfig>>,
+): TelegramChannel | null {
+  const ch = config?.imageHosting?.telegram;
+  if (!ch?.botToken?.trim() || !ch?.chatId?.trim()) return null;
+  return ch;
+}
+
+function resolveDiscordConfig(
+  config: Awaited<ReturnType<typeof ConfigService.getSystemConfig>>,
+) {
+  const ch = config?.imageHosting?.discord;
+  if (!ch?.botToken?.trim() || !ch?.channelId?.trim()) return null;
+  return ch;
+}
+
+function resolveHuggingFaceConfig(
+  config: Awaited<ReturnType<typeof ConfigService.getSystemConfig>>,
+): HuggingFaceChannel | null {
+  const ch = config?.imageHosting?.huggingface;
+  if (!ch?.token?.trim() || !ch?.repo?.trim()) return null;
+  return ch;
+}
+
+function resolveWebDAVConfig(
+  config: Awaited<ReturnType<typeof ConfigService.getSystemConfig>>,
+): WebDAVChannel | null {
+  const ch = config?.imageHosting?.webdav;
+  if (!ch?.baseUrl?.trim()) return null;
+  return ch;
+}
+
+// ── Direct upload functions for media library ─────────────────
+
+function extensionFromMime(mime: string): string {
+  const map: Record<string, string> = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/gif": "gif",
+    "image/webp": "webp",
+    "image/svg+xml": "svg",
+  };
+  return map[mime] ?? "png";
+}
+
+function extractErrorMessage(parsed: unknown, responseText: string): string {
+  if (typeof parsed === "object" && parsed !== null) {
+    const body = parsed as Record<string, unknown>;
+    const error = body.error;
+    if (error && typeof error === "object") {
+      const errorData = error as Record<string, unknown>;
+      const message =
+        typeof errorData.message === "string" && errorData.message
+          ? errorData.message
+          : typeof errorData.code === "string" && errorData.code
+            ? errorData.code
+            : undefined;
+      if (message) return message;
+    }
+    if (typeof body.status_txt === "string" && body.status_txt) {
+      return body.status_txt;
+    }
+  }
+  if (responseText) return responseText.slice(0, 300);
+  return "Request failed";
+}
+
+async function uploadToTelegramDirect(
+  config: TelegramChannel,
+  file: File,
+): Promise<Result<{ url: string }, { reason: string; message: string }>> {
+  const botToken = config.botToken!.trim();
+  const chatId = config.chatId!.trim();
+
+  try {
+    const apiUrl = `https://api.telegram.org/bot${botToken}/sendPhoto`;
+    const form = new FormData();
+    form.append("chat_id", chatId);
+    form.append("photo", file);
+
+    const response = await fetch(apiUrl, { method: "POST", body: form });
+    const responseText = await response.text();
+    let parsed: unknown = null;
+    try { parsed = responseText ? JSON.parse(responseText) : null; } catch { parsed = null; }
+
+    if (typeof parsed !== "object" || parsed === null || !(parsed as Record<string, unknown>).ok) {
+      return err({ reason: "TELEGRAM_UPLOAD_FAILED", message: extractErrorMessage(parsed, responseText) });
+    }
+
+    const result = parsed as Record<string, unknown>;
+    const msg = result.result as Record<string, unknown> | undefined;
+    const photo = msg?.photo as Array<Record<string, unknown>> | undefined;
+    const fileId = photo && photo.length > 0
+      ? (photo[photo.length - 1].file_id as string)
+      : undefined;
+
+    if (!fileId) {
+      return err({ reason: "TELEGRAM_UPLOAD_FAILED", message: "No file_id returned from Telegram" });
+    }
+
+    const getFileResp = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
+    const fileText = await getFileResp.text();
+    let fileParsed: unknown = null;
+    try { fileParsed = fileText ? JSON.parse(fileText) : null; } catch { fileParsed = null; }
+
+    const fileResult = fileParsed as Record<string, unknown>;
+    const fileInfo = fileResult?.result as Record<string, unknown> | undefined;
+    const filePath = fileInfo?.file_path as string | undefined;
+    if (!filePath) {
+      return err({ reason: "TELEGRAM_UPLOAD_FAILED", message: "No file_path returned from Telegram" });
+    }
+
+    return ok({ url: `https://api.telegram.org/file/bot${botToken}/${filePath}` });
+  } catch (error) {
+    return err({ reason: "TELEGRAM_UPLOAD_FAILED", message: error instanceof Error ? error.message : String(error) });
+  }
+}
+
+async function uploadToDiscordDirect(
+  config: DiscordChannel,
+  file: File,
+): Promise<Result<{ url: string }, { reason: string; message: string }>> {
+  const botToken = config.botToken!.trim();
+  const channelId = config.channelId!.trim();
+
+  const MAX_SIZE = config.isNitro ? 25 * 1024 * 1024 : 10 * 1024 * 1024;
+  if (file.size > MAX_SIZE) {
+    return err({ reason: "DISCORD_UPLOAD_FAILED", message: `File exceeds Discord limit of ${config.isNitro ? "25" : "10"}MB` });
+  }
+
+  try {
+    const apiUrl = `https://discord.com/api/v10/channels/${channelId}/messages`;
+    const form = new FormData();
+    form.append("files[0]", file, file.name || "image.png");
+
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: { Authorization: `Bot ${botToken}` },
+      body: form,
+    });
+
+    const responseText = await response.text();
+    let parsed: unknown = null;
+    try { parsed = responseText ? JSON.parse(responseText) : null; } catch { parsed = null; }
+
+    if (!response.ok) {
+      return err({ reason: "DISCORD_UPLOAD_FAILED", message: extractErrorMessage(parsed, responseText) });
+    }
+
+    const msg = parsed as Record<string, unknown>;
+    const attachments = msg.attachments as Array<Record<string, unknown>> | undefined;
+    if (!attachments || attachments.length === 0) {
+      return err({ reason: "DISCORD_UPLOAD_FAILED", message: "No attachments returned from Discord" });
+    }
+
+    return ok({ url: attachments[0].url as string });
+  } catch (error) {
+    return err({ reason: "DISCORD_UPLOAD_FAILED", message: error instanceof Error ? error.message : String(error) });
+  }
+}
+
+async function uploadToHuggingFaceDirect(
+  config: HuggingFaceChannel,
+  file: File,
+  folder: string,
+): Promise<Result<{ url: string }, { reason: string; message: string }>> {
+  const token = config.token!.trim();
+  const repo = config.repo!.trim();
+
+  try {
+    const ext = extensionFromMime(file.type);
+    const fileName = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    const filePath = folder ? `${folder}/${fileName}` : `media/${fileName}`;
+    const repoType = config.isPrivate ? "private" : "model";
+    const apiUrl = `https://huggingface.co/api/repos/${repoType}/${repo}/upload/main`;
+
+    const body = await file.arrayBuffer();
+    const response = await fetch(apiUrl, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": file.type || "application/octet-stream",
+      },
+      body,
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      let parsed: unknown = null;
+      try { parsed = responseText ? JSON.parse(responseText) : null; } catch { parsed = null; }
+      return err({ reason: "HUGGINGFACE_UPLOAD_FAILED", message: extractErrorMessage(parsed, responseText) });
+    }
+
+    return ok({ url: `https://huggingface.co/${repo}/resolve/main/${filePath}` });
+  } catch (error) {
+    return err({ reason: "HUGGINGFACE_UPLOAD_FAILED", message: error instanceof Error ? error.message : String(error) });
+  }
+}
+
+async function uploadToWebDAVDirect(
+  config: WebDAVChannel,
+  file: File,
+  folder: string,
+): Promise<Result<{ url: string }, { reason: string; message: string }>> {
+  const baseUrl = config.baseUrl!.trim().replace(/\/+$/, "");
+
+  try {
+    const ext = extensionFromMime(file.type);
+    const fileName = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    const filePath = folder ? `${folder}/${fileName}` : `media/${fileName}`;
+    const uploadUrl = `${baseUrl}/${filePath}`;
+
+    const headers: Record<string, string> = {};
+    if (config.username) {
+      headers.Authorization = `Basic ${btoa(`${config.username}:${config.password || ""}`)}`;
+    }
+
+    if (config.createDirectory) {
+      const dirUrl = folder ? `${baseUrl}/${folder}` : baseUrl;
+      await fetch(dirUrl, { method: "MKCOL", headers }).catch(() => {});
+    }
+
+    const body = await file.arrayBuffer();
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { ...headers, "Content-Type": file.type || "application/octet-stream" },
+      body,
+    });
+
+    if (!response.ok && response.status !== 201 && response.status !== 204) {
+      const responseText = await response.text();
+      return err({ reason: "WEBDAV_UPLOAD_FAILED", message: `WebDAV upload failed with status ${response.status}: ${responseText.slice(0, 300)}` });
+    }
+
+    const publicBase = config.publicUrl?.trim() || baseUrl;
+    return ok({ url: `${publicBase.replace(/\/+$/, "")}/${filePath}` });
+  } catch (error) {
+    return err({ reason: "WEBDAV_UPLOAD_FAILED", message: error instanceof Error ? error.message : String(error) });
+  }
+}
+
 export async function getMediaProviders(
   context: DbContext & { executionCtx: ExecutionContext },
 ): Promise<MediaProvider[]> {
@@ -523,6 +807,58 @@ export async function getMediaProviders(
       canDelete: false,
       canUpload: true,
       canCreateFolder: false,
+    });
+  }
+
+  // Telegram — upload only
+  if (ih?.telegram?.botToken?.trim() && ih?.telegram?.chatId?.trim()) {
+    providers.push({
+      id: "telegram",
+      name: "Telegram",
+      type: "telegram",
+      canList: false,
+      canDelete: false,
+      canUpload: true,
+      canCreateFolder: false,
+    });
+  }
+
+  // Discord — upload only
+  if (ih?.discord?.botToken?.trim() && ih?.discord?.channelId?.trim()) {
+    providers.push({
+      id: "discord",
+      name: "Discord",
+      type: "discord",
+      canList: false,
+      canDelete: false,
+      canUpload: true,
+      canCreateFolder: false,
+    });
+  }
+
+  // HuggingFace — full CRUD
+  if (ih?.huggingface?.token?.trim() && ih?.huggingface?.repo?.trim()) {
+    providers.push({
+      id: "huggingface",
+      name: "HuggingFace",
+      type: "huggingface",
+      canList: true,
+      canDelete: true,
+      canUpload: true,
+      canCreateFolder: true,
+    });
+  }
+
+  // WebDAV — full CRUD
+  if (ih?.webdav?.baseUrl?.trim()) {
+    providers.push({
+      id: "webdav",
+      name: "WebDAV",
+      type: "webdav",
+      canList: true,
+      canDelete: true,
+      canUpload: true,
+      canCreateFolder: true,
     });
   }
 
@@ -582,6 +918,121 @@ export async function listExternalDirectory(
     };
   }
 
+  if (data.providerId === "huggingface") {
+    const config = await ConfigService.getSystemConfig(context);
+    const hfConfig = resolveHuggingFaceConfig(config);
+    if (!hfConfig) return { files: [], folders: [], nextContinuationToken: null, error: "HuggingFace 未配置" };
+
+    const token = hfConfig.token!.trim();
+    const repo = hfConfig.repo!.trim();
+    const folder = normalizeFolderPath(data.folder);
+    const path = folder || "";
+    const repoType = hfConfig.isPrivate ? "private" : "model";
+
+    try {
+      const url = `https://huggingface.co/api/repos/${repoType}/${repo}/tree/main/${path}`;
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        return { files: [], folders: [], nextContinuationToken: null, error: text.slice(0, 300) };
+      }
+
+      const entries: Array<{ path: string; type: string; size?: number }> = await response.json();
+      const files: ExternalDirectoryFile[] = [];
+      const folders: Array<{ key: string; name: string }> = [];
+
+      for (const entry of entries) {
+        const entryName = getBasename(entry.path);
+        if (entryName.startsWith(".")) continue;
+
+        if (entry.type === "file" || entry.type === "regular_file") {
+          files.push({
+            key: entry.path,
+            name: entryName,
+            url: `https://huggingface.co/${repo}/resolve/main/${entry.path}`,
+            mimeType: guessMimeFromKey(entry.path),
+            sizeInBytes: entry.size ?? 0,
+          });
+        } else if (entry.type === "directory" || entry.type === "tree") {
+          folders.push({ key: entry.path, name: entryName });
+        }
+      }
+
+      return { files, folders, nextContinuationToken: null };
+    } catch (e) {
+      return { files: [], folders: [], nextContinuationToken: null, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  if (data.providerId === "webdav") {
+    const config = await ConfigService.getSystemConfig(context);
+    const davConfig = resolveWebDAVConfig(config);
+    if (!davConfig) return { files: [], folders: [], nextContinuationToken: null, error: "WebDAV 未配置" };
+
+    const baseUrl = davConfig.baseUrl!.trim().replace(/\/+$/, "");
+    const folder = normalizeFolderPath(data.folder);
+    const targetUrl = folder ? `${baseUrl}/${folder}` : baseUrl;
+
+    const headers: Record<string, string> = { Depth: "1" };
+    if (davConfig.username) {
+      headers.Authorization = `Basic ${btoa(`${davConfig.username}:${davConfig.password || ""}`)}`;
+    }
+
+    try {
+      const response = await fetch(targetUrl, {
+        method: "PROPFIND",
+        headers,
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        return { files: [], folders: [], nextContinuationToken: null, error: text.slice(0, 300) };
+      }
+
+      const xml = await response.text();
+      const files: ExternalDirectoryFile[] = [];
+      const folders: Array<{ key: string; name: string }> = [];
+
+      const responses = xml.split("<d:response>").slice(1);
+      for (const block of responses) {
+        const hrefMatch = block.match(/<d?:href>([^<]+)<\/d?:href>/);
+        if (!hrefMatch) continue;
+
+        const href = decodeURIComponent(hrefMatch[1]);
+        const hrefPath = href.replace(/\/+$/, "");
+        const entryName = getBasename(hrefPath);
+        if (!entryName || entryName === getBasename(targetUrl.replace(/\/+$/, ""))) continue;
+
+        const isCollection = /<d?:resourcetype>\s*<d?:collection\s*\/?>/.test(block);
+        const contentLengthMatch = block.match(/<d?:getcontentlength>(\d+)<\/d?:getcontentlength>/);
+        const contentTypeMatch = block.match(/<d?:getcontenttype>([^<]+)<\/d?:getcontenttype>/);
+
+        const relKey = folder ? `${folder}/${entryName}` : entryName;
+
+        if (isCollection) {
+          folders.push({ key: relKey, name: entryName });
+        } else {
+          files.push({
+            key: relKey,
+            name: entryName,
+            url: davConfig.publicUrl?.trim()
+              ? `${davConfig.publicUrl.trim().replace(/\/+$/, "")}/${relKey}`
+              : href,
+            mimeType: contentTypeMatch?.[1] || guessMimeFromKey(entryName),
+            sizeInBytes: parseInt(contentLengthMatch?.[1] ?? "0", 10) || 0,
+          });
+        }
+      }
+
+      return { files, folders, nextContinuationToken: null };
+    } catch (e) {
+      return { files: [], folders: [], nextContinuationToken: null, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
   return { files: [], folders: [], nextContinuationToken: null };
 }
 
@@ -600,6 +1051,66 @@ export async function deleteExternalFiles(
       return { deleted: 0, skipped: data.keys.length };
     }
     return { deleted: result.data.deleted, skipped: 0 };
+  }
+
+  if (data.providerId === "huggingface") {
+    const config = await ConfigService.getSystemConfig(context);
+    const hfConfig = resolveHuggingFaceConfig(config);
+    if (!hfConfig) return { deleted: 0, skipped: data.keys.length };
+
+    const token = hfConfig.token!.trim();
+    const repo = hfConfig.repo!.trim();
+    const repoType = hfConfig.isPrivate ? "private" : "model";
+
+    let deleted = 0;
+    for (const filePath of data.keys) {
+      try {
+        const response = await fetch(
+          `https://huggingface.co/api/repos/${repoType}/${repo}/main/${filePath}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              commitMessage: `Delete ${filePath} via media library`,
+            }),
+          },
+        );
+        if (response.ok) deleted++;
+      } catch (e) {
+        console.error(JSON.stringify({ message: "huggingface delete failed", file: filePath, error: e instanceof Error ? e.message : String(e) }));
+      }
+    }
+
+    return { deleted, skipped: data.keys.length - deleted };
+  }
+
+  if (data.providerId === "webdav") {
+    const config = await ConfigService.getSystemConfig(context);
+    const davConfig = resolveWebDAVConfig(config);
+    if (!davConfig) return { deleted: 0, skipped: data.keys.length };
+
+    const baseUrl = davConfig.baseUrl!.trim().replace(/\/+$/, "");
+
+    const headers: Record<string, string> = {};
+    if (davConfig.username) {
+      headers.Authorization = `Basic ${btoa(`${davConfig.username}:${davConfig.password || ""}`)}`;
+    }
+
+    let deleted = 0;
+    for (const filePath of data.keys) {
+      try {
+        const fileUrl = `${baseUrl}/${filePath}`;
+        const response = await fetch(fileUrl, { method: "DELETE", headers });
+        if (response.ok || response.status === 204 || response.status === 404) deleted++;
+      } catch (e) {
+        console.error(JSON.stringify({ message: "webdav delete failed", file: filePath, error: e instanceof Error ? e.message : String(e) }));
+      }
+    }
+
+    return { deleted, skipped: data.keys.length - deleted };
   }
 
   return { deleted: 0, skipped: data.keys.length };
@@ -632,6 +1143,83 @@ export async function createExternalFolder(
     }
 
     return ok({ key: folderKey, name });
+  }
+
+  if (data.providerId === "huggingface") {
+    const config = await ConfigService.getSystemConfig(context);
+    const hfConfig = resolveHuggingFaceConfig(config);
+    if (!hfConfig) return err({ reason: "HuggingFace 未配置" });
+
+    const name = data.name.replace(/^\/+|\/+$/g, "").trim();
+    if (!name || name.includes("/")) return err({ reason: "MEDIA_INVALID_FOLDER_NAME" });
+
+    const parent = normalizeFolderPath(data.parent ?? "");
+    const folderPath = joinFolderKey(parent, name);
+
+    const token = hfConfig.token!.trim();
+    const repo = hfConfig.repo!.trim();
+    const repoType = hfConfig.isPrivate ? "private" : "model";
+
+    try {
+      const gitkeepPath = `${folderPath}/.gitkeep`;
+      const response = await fetch(
+        `https://huggingface.co/api/repos/${repoType}/${repo}/upload/main`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "text/plain",
+            "X-Content-Type": gitkeepPath,
+          },
+          body: new TextEncoder().encode(""),
+        },
+      );
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error(JSON.stringify({ message: "huggingface create folder failed", error: text.slice(0, 300) }));
+        return err({ reason: "HUGGINGFACE_FOLDER_CREATE_FAILED" });
+      }
+
+      return ok({ key: folderPath, name });
+    } catch (e) {
+      console.error(JSON.stringify({ message: "huggingface create folder failed", error: e instanceof Error ? e.message : String(e) }));
+      return err({ reason: "HUGGINGFACE_FOLDER_CREATE_FAILED" });
+    }
+  }
+
+  if (data.providerId === "webdav") {
+    const config = await ConfigService.getSystemConfig(context);
+    const davConfig = resolveWebDAVConfig(config);
+    if (!davConfig) return err({ reason: "WebDAV 未配置" });
+
+    const name = data.name.replace(/^\/+|\/+$/g, "").trim();
+    if (!name || name.includes("/")) return err({ reason: "MEDIA_INVALID_FOLDER_NAME" });
+
+    const parent = normalizeFolderPath(data.parent ?? "");
+    const folderPath = joinFolderKey(parent, name);
+    const baseUrl = davConfig.baseUrl!.trim().replace(/\/+$/, "");
+    const folderUrl = `${baseUrl}/${folderPath}`;
+
+    const headers: Record<string, string> = {};
+    if (davConfig.username) {
+      headers.Authorization = `Basic ${btoa(`${davConfig.username}:${davConfig.password || ""}`)}`;
+    }
+
+    try {
+      const response = await fetch(folderUrl, { method: "MKCOL", headers });
+
+      if (!response.ok && response.status !== 201 && response.status !== 405) {
+        const text = await response.text();
+        console.error(JSON.stringify({ message: "webdav create folder failed", error: text.slice(0, 300) }));
+        return err({ reason: "WEBDAV_FOLDER_CREATE_FAILED" });
+      }
+
+      return ok({ key: folderPath, name });
+    } catch (e) {
+      console.error(JSON.stringify({ message: "webdav create folder failed", error: e instanceof Error ? e.message : String(e) }));
+      return err({ reason: "WEBDAV_FOLDER_CREATE_FAILED" });
+    }
   }
 
   return err({ reason: "UNSUPPORTED_PROVIDER" });

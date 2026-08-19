@@ -8,6 +8,7 @@ export interface S3Config {
   secretAccessKey: string;
   pathPrefix: string;
   publicUrl: string;
+  pathStyle?: boolean;
 }
 
 /** @deprecated Use S3Config */
@@ -222,7 +223,10 @@ export async function uploadToS3(
     const endpoint = new URL(cfg.endpoint);
     const host = endpoint.host;
     const region = cfg.region?.trim() || "us-east-1";
-    const canonicalUri = `/${encodeObjectKey(`${cfg.bucket}/${input.key}`)}`;
+    const usePathStyle = cfg.pathStyle ?? true;
+    const canonicalUri = usePathStyle
+      ? `/${encodeObjectKey(`${cfg.bucket}/${input.key}`)}`
+      : `/${encodeObjectKey(input.key)}`;
     const payloadHash = await sha256Hex(input.body);
     const amzDate = formatAmzDate(new Date());
 
@@ -238,7 +242,10 @@ export async function uploadToS3(
       secretAccessKey: cfg.secretAccessKey,
     });
 
-    const response = await fetch(`${endpoint.origin}${canonicalUri}`, {
+    const requestHost = usePathStyle ? host : `${cfg.bucket}.${host}`;
+    const requestUrl = `${endpoint.protocol}//${requestHost}${canonicalUri}`;
+
+    const response = await fetch(requestUrl, {
       method: "PUT",
       headers: {
         "Content-Type": input.contentType,
@@ -309,6 +316,7 @@ export async function listS3Objects(
     const endpoint = new URL(cfg.endpoint);
     const host = endpoint.host;
     const region = cfg.region?.trim() || "us-east-1";
+    const usePathStyle = cfg.pathStyle ?? true;
     const amzDate = formatAmzDate(new Date());
 
     const bucketPrefix = [cfg.pathPrefix?.trim(), options.prefix].filter(Boolean).join("/");
@@ -324,7 +332,9 @@ export async function listS3Objects(
       .map(([k, v]) => `${encodeS3QueryParam(k)}=${encodeS3QueryParam(v)}`)
       .sort()
       .join("&");
-    const canonicalUri = `/${encodeURIComponent(cfg.bucket)}`;
+    const canonicalUri = usePathStyle
+      ? `/${encodeURIComponent(cfg.bucket)}`
+      : "/";
 
     const authorization = await signGetRequest({
       canonicalUri,
@@ -337,7 +347,8 @@ export async function listS3Objects(
       secretAccessKey: cfg.secretAccessKey,
     });
 
-    const url = `${endpoint.origin}${canonicalUri}?${canonicalQueryString}`;
+    const requestHost = usePathStyle ? host : `${cfg.bucket}.${host}`;
+    const url = `${endpoint.protocol}//${requestHost}${canonicalUri}?${canonicalQueryString}`;
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -417,10 +428,13 @@ export async function deleteS3Object(
     const endpoint = new URL(cfg.endpoint);
     const host = endpoint.host;
     const region = cfg.region?.trim() || "us-east-1";
+    const usePathStyle = cfg.pathStyle ?? true;
     const amzDate = formatAmzDate(new Date());
 
     const fullKey = [cfg.pathPrefix?.trim(), key].filter(Boolean).join("/");
-    const canonicalUri = `/${encodeURIComponent(cfg.bucket)}/${encodeObjectKey(fullKey)}`;
+    const canonicalUri = usePathStyle
+      ? `/${encodeURIComponent(cfg.bucket)}/${encodeObjectKey(fullKey)}`
+      : `/${encodeObjectKey(fullKey)}`;
 
     const authorization = await signDeleteRequest({
       canonicalUri,
@@ -432,7 +446,8 @@ export async function deleteS3Object(
       secretAccessKey: cfg.secretAccessKey,
     });
 
-    const response = await fetch(`${endpoint.origin}${canonicalUri}`, {
+    const requestHost = usePathStyle ? host : `${cfg.bucket}.${host}`;
+    const response = await fetch(`${endpoint.protocol}//${requestHost}${canonicalUri}`, {
       method: "DELETE",
       headers: {
         "x-amz-content-sha256": EMPTY_PAYLOAD_HASH,
