@@ -23,6 +23,7 @@ import {
 } from "@/features/media/utils/media.utils";
 import {
   deleteS3Objects,
+  listS3Objects,
   uploadToS3,
   uploadToS3ForMediaLibrary,
   type S3Config,
@@ -904,25 +905,190 @@ export async function listExternalDirectory(
   const provider = data.providerId;
   const search = data.search?.trim();
 
+  // 1. Query D1 index for this provider
   const { items, nextCursor } = await MediaRepo.getMediaByProvider(context.db, provider, {
     limit: DEFAULT_DIRECTORY_LIMIT,
     search,
     cursor: data.continuationToken ? Number(data.continuationToken) : undefined,
   });
 
-  const files: ExternalDirectoryFile[] = items.map((item) => ({
-    key: item.key,
-    name: item.fileName,
-    url: item.url,
-    mimeType: item.mimeType,
-    sizeInBytes: item.sizeInBytes,
-  }));
+  // 2. If D1 has records for this provider, return them
+  if (items.length > 0) {
+    const files: ExternalDirectoryFile[] = items.map((item) => ({
+      key: item.key,
+      name: item.fileName,
+      url: item.url,
+      mimeType: item.mimeType,
+      sizeInBytes: item.sizeInBytes,
+    }));
+    return {
+      files,
+      folders: [],
+      nextContinuationToken: nextCursor ? String(nextCursor) : null,
+    };
+  }
 
-  return {
-    files,
-    folders: [],
-    nextContinuationToken: nextCursor ? String(nextCursor) : null,
-  };
+  // 3. D1 empty — fallback to direct provider API listing
+  //    (covers files uploaded before the provider index was introduced)
+  return listExternalDirectoryDirect(context, data);
+}
+
+async function listExternalDirectoryDirect(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: ListExternalDirectoryInput,
+): Promise<ExternalDirectoryResult> {
+  const provider = data.providerId;
+
+  if (provider === "s3") {
+    const config = await ConfigService.getSystemConfig(context);
+    const s3Config = resolveS3ConfigForMedia(config);
+    if (!s3Config) return { files: [], folders: [], nextContinuationToken: null, error: "S3 未配置或缺少必要字段" };
+
+    const prefix = normalizeFolderPath(data.folder);
+    const result = await listS3Objects(s3Config, {
+      prefix: prefix ? `${prefix}/` : "",
+      delimiter: "/",
+      continuationToken: data.continuationToken,
+    });
+
+    if (result.error) {
+      console.error(JSON.stringify({ message: "s3 list failed", error: result.error.message }));
+      return { files: [], folders: [], nextContinuationToken: null, error: result.error.message };
+    }
+
+    const files: ExternalDirectoryFile[] = result.data.objects.map((o) => ({
+      key: o.key,
+      name: getBasename(o.key),
+      url: buildS3PublicUrl(s3Config, o.key),
+      mimeType: guessMimeFromKey(o.key),
+      sizeInBytes: o.size,
+    }));
+
+    return {
+      files,
+      folders: result.data.prefixes.map((p) => ({ key: p, name: getBasename(p) })),
+      nextContinuationToken: result.data.isTruncated
+        ? (result.data.nextContinuationToken ?? null)
+        : null,
+    };
+  }
+
+  if (provider === "huggingface") {
+    const config = await ConfigService.getSystemConfig(context);
+    const hfConfig = resolveHuggingFaceConfig(config);
+    if (!hfConfig) return { files: [], folders: [], nextContinuationToken: null, error: "HuggingFace 未配置" };
+
+    const token = hfConfig.token!.trim();
+    const repo = hfConfig.repo!.trim();
+    const folder = normalizeFolderPath(data.folder);
+    const path = folder || "";
+    const repoType = hfConfig.isPrivate ? "private" : "model";
+
+    try {
+      const url = `https://huggingface.co/api/repos/${repoType}/${repo}/tree/main/${path}`;
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        return { files: [], folders: [], nextContinuationToken: null, error: text.slice(0, 300) };
+      }
+
+      const entries: Array<{ path: string; type: string; size?: number }> = await response.json();
+      const files: ExternalDirectoryFile[] = [];
+      const folders: Array<{ key: string; name: string }> = [];
+
+      for (const entry of entries) {
+        const entryName = getBasename(entry.path);
+        if (entryName.startsWith(".")) continue;
+
+        if (entry.type === "file" || entry.type === "regular_file") {
+          files.push({
+            key: entry.path,
+            name: entryName,
+            url: `https://huggingface.co/${repo}/resolve/main/${entry.path}`,
+            mimeType: guessMimeFromKey(entry.path),
+            sizeInBytes: entry.size ?? 0,
+          });
+        } else if (entry.type === "directory" || entry.type === "tree") {
+          folders.push({ key: entry.path, name: entryName });
+        }
+      }
+
+      return { files, folders, nextContinuationToken: null };
+    } catch (e) {
+      return { files: [], folders: [], nextContinuationToken: null, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  if (provider === "webdav") {
+    const config = await ConfigService.getSystemConfig(context);
+    const davConfig = resolveWebDAVConfig(config);
+    if (!davConfig) return { files: [], folders: [], nextContinuationToken: null, error: "WebDAV 未配置" };
+
+    const baseUrl = davConfig.baseUrl!.trim().replace(/\/+$/, "");
+    const folder = normalizeFolderPath(data.folder);
+    const targetUrl = folder ? `${baseUrl}/${folder}` : baseUrl;
+
+    const headers: Record<string, string> = { Depth: "1" };
+    if (davConfig.username) {
+      headers.Authorization = `Basic ${btoa(`${davConfig.username}:${davConfig.password || ""}`)}`;
+    }
+
+    try {
+      const response = await fetch(targetUrl, {
+        method: "PROPFIND",
+        headers,
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        return { files: [], folders: [], nextContinuationToken: null, error: text.slice(0, 300) };
+      }
+
+      const xml = await response.text();
+      const files: ExternalDirectoryFile[] = [];
+      const folders: Array<{ key: string; name: string }> = [];
+
+      const responses = xml.split("<d:response>").slice(1);
+      for (const block of responses) {
+        const hrefMatch = block.match(/<d?:href>([^<]+)<\/d?:href>/);
+        if (!hrefMatch) continue;
+
+        const href = decodeURIComponent(hrefMatch[1]);
+        const hrefPath = href.replace(/\/+$/, "");
+        const entryName = getBasename(hrefPath);
+        if (!entryName || entryName === getBasename(targetUrl.replace(/\/+$/, ""))) continue;
+
+        const isCollection = /<d?:resourcetype>\s*<d?:collection\s*\/?>/.test(block);
+        const contentLengthMatch = block.match(/<d?:getcontentlength>(\d+)<\/d?:getcontentlength>/);
+        const contentTypeMatch = block.match(/<d?:getcontenttype>([^<]+)<\/d?:getcontenttype>/);
+
+        const relKey = folder ? `${folder}/${entryName}` : entryName;
+
+        if (isCollection) {
+          folders.push({ key: relKey, name: entryName });
+        } else {
+          files.push({
+            key: relKey,
+            name: entryName,
+            url: davConfig.publicUrl?.trim()
+              ? `${davConfig.publicUrl.trim().replace(/\/+$/, "")}/${relKey}`
+              : href,
+            mimeType: contentTypeMatch?.[1] || guessMimeFromKey(entryName),
+            sizeInBytes: parseInt(contentLengthMatch?.[1] ?? "0", 10) || 0,
+          });
+        }
+      }
+
+      return { files, folders, nextContinuationToken: null };
+    } catch (e) {
+      return { files: [], folders: [], nextContinuationToken: null, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  return { files: [], folders: [], nextContinuationToken: null };
 }
 
 export async function deleteExternalFiles(
@@ -1102,4 +1268,27 @@ export async function createExternalFolder(
   }
 
   return err({ reason: "UNSUPPORTED_PROVIDER" });
+}
+
+function buildS3PublicUrl(cfg: S3Config, key: string): string {
+  const fullKey = [cfg.pathPrefix?.trim(), key].filter(Boolean).join("/");
+  const base = (
+    cfg.publicUrl?.trim() ||
+    `${cfg.endpoint.replace(/\/+$/, "")}/${cfg.bucket}`
+  ).replace(/\/+$/, "");
+  const encoded = fullKey.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  return `${base}/${encoded}`;
+}
+
+function guessMimeFromKey(key: string): string {
+  const ext = key.split(".").pop()?.toLowerCase() ?? "";
+  const map: Record<string, string> = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    webp: "image/webp",
+    svg: "image/svg+xml",
+  };
+  return map[ext] ?? "application/octet-stream";
 }
