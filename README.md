@@ -29,24 +29,62 @@
 
 ## 核心功能
 
+### 内容管理
 - **文章管理** — 富文本编辑器（代码高亮 / 表格 / 数学公式 / 目录），图片上传，草稿 / 发布 / 定时发布流程，自动保存
 - **版本历史** — 编辑器自动快照与文章版本回溯，误改可一键恢复
+- **置顶文章** — 支持将文章置顶到列表顶部
+- **批量操作** — 支持批量发布/下架文章
+- **前后文章导航** — 文章详情页自动显示上一篇/下一篇导航
 - **标签系统** — 灵活的文章归类
-- **评论系统** — 嵌套回复、邮件通知、AI 辅助审核与上下文化审核，违规评论自动拦截并通知管理员；文章与动态评论统一存储在评论区，同一套体系管理与审核
-- **动态（Moments）** — 富文本（TipTap）分享即时内容，支持图片图床上传，点赞、评论与删除，评论区与文章共用一套评论系统
-- **关于页** — 通过后台创建 slug 为 `about` 的文章即可填充；未创建时展示空状态与管理员创建入口
-- **友情链接** — 访客申请、后台审核、邮件通知
-- **通知系统** — 邮件 + Webhook 多通道通知，可按事件订阅
-- **全文搜索** — 基于 Orama 的高性能站内搜索
-- **媒体库** — R2 对象存储，图片上传与优化
-- **第三方图床** — 后台设置 → 图床可启用 ImgBB / 幻域图床（ffsky）：文章图片走后端服务端代理上传（key 不下发浏览器、绕开无 CORS 限制），评论区使用 ImgBB 官方上传弹窗；未启用或未配置 Key 时回退到 R2，图床启用后自动关闭 R2 上传入口
+- **技能管理** — 文章技能分类（与标签不同维度），支持 Markdown 批量导入
+- **动态（Moments）** — 富文本（TipTap）分享即时内容，支持图片上传（最多 9 张）、点赞、评论与删除
+- **关于页** — 管理员可直接在页面上内联编辑 Markdown 内容
+
+### 互动与社区
+- **评论系统** — 嵌套回复（两层）、邮件通知、AI 辅助审核与上下文化审核，违规评论自动拦截并通知管理员；文章、动态、关于页共用同一套评论体系
+- **友情链接** — 访客申请、后台审批（通过/拒绝）、邮件通知、频率限制
+- **导航页** — 搜索引擎集合展示、书签管理（仅管理员，支持文件夹层级组织）、支持导入 Netscape 格式浏览器书签、服务端 Favicon 代理
+
+### 图床与媒体
+- **媒体库** — R2 / S3 / 外部图床统一管理，支持目录浏览、文件夹创建/重命名/删除、文件重命名、使用状态追踪
+- **7 种图床方案** — 后台设置 → 图床，支持：
+  - **S3 兼容存储** — AWS S3 / Cloudflare R2 / 阿里云 OSS / 腾讯云 COS / 自定义
+  - **API Key 图床** — ImgBB / 幻域图床（ffsky），文章走服务端代理上传
+  - **Telegram Bot** — 通过 Bot API 上传到频道
+  - **Discord Bot** — 通过频道附件上传（Nitro 支持 25MB）
+  - **HuggingFace** — 上传到 HF 仓库
+  - **WebDAV** — 支持自动创建目录
+  - **R2 原生** — 兜底方案
+  - 媒体库支持从所有已配置图床拉取完整文件列表（包括非博客上传的文件）
+  - 图床启用后自动关闭 R2 上传入口，未启用或未配置时回退到 R2
+
+### 用户与认证
 - **用户认证** — GitHub OAuth + 邮箱密码注册/登录，`ADMIN_EMAIL` 自动授予管理员
-- **MCP Server** — 通过 OAuth 连接 AI 客户端（Claude / Cursor 等），管理文章、评论、标签、友链、媒体与统计
-- **数据统计** — 站内浏览量统计（Queue + D1）+ Umami 可选集成
-- **SEO 增强** — Canonical URL、Schema.org 结构化数据、RSS / Sitemap / Robots.txt
-- **AI 辅助** — 支持 Cloudflare Workers AI、Agnes AI（无限期免费，国际站/国内站双端点）或任意 OpenAI 兼容接口（可自选 Base URL / 模型 / API Key），提供文章摘要、评论审核、标签推荐与 AI 一键生文
+- **用户管理** — 角色管理（admin/user）、封禁/解封（可附带理由和到期时间）、评论统计
+
+### AI 与自动化
+- **AI 辅助** — 支持 Cloudflare Workers AI、Agnes AI（无限期免费，国际站/国内站双端点）或任意 OpenAI 兼容接口（OpenAI / Claude / Gemini），提供：
+  - 文章摘要生成（200 字以内）
+  - 标签自动提取（1-3 个）
+  - AI 一键生文（支持博客/技术文档/通讯三种写作风格 + 自定义写作指令）
+  - 评论内容审核（三段式裁决：放行/拦截/人工审核）
+- **MCP Server** — 通过 OAuth 连接 AI 客户端（Claude / Cursor 等），暴露 25+ 个工具和 4 个提示词模板，管理文章、评论、标签、友链、媒体与统计
+- **导入导出** — ZIP 打包导出、Markdown / 原生格式导入，通过 Cloudflare Workflow 异步处理
+
+### 通知与安全
+- **通知系统** — 邮件（SMTP）+ Webhook（通用 HMAC 签名 / 企业微信）多通道通知，8 种事件类型可按需订阅，支持邮件退订
+- **人机验证** — 支持 ALTCHA PoW（工作量证明）/ Cloudflare Turnstile，Turnstile 可自动回退到 PoW 兜底
+- **SEO 增强** — Canonical URL、Schema.org 结构化数据、Open Graph、RSS / Atom / Sitemap / Robots.txt
+- **PWA 支持** — 自动生成 Web App Manifest
+
+### 运营与维护
+- **数据统计** — 站内浏览量统计（Queue + D1 去重）+ Umami 代理集成（`/stats.js`、`/api/send`），24h / 7d / 30d / 90d 多维度流量分析
+- **全文搜索** — 基于 Orama 的高性能站内搜索，支持中文分词、模糊匹配、高亮显示
 - **主题系统** — 可扩展主题契约，完整替换页面与布局（内置 `default` / `fuwari` 两套主题）
-- **导入导出** — Markdown 导入/导出，保留图片与 Frontmatter
+- **微信公众号验证** — 后台配置验证文件名和内容
+- **版本更新检查** — 对比 GitHub Release，后台提示新版本
+- **缓存管理** — KV 缓存 + CDN 缓存清除，后台一键操作
+- **搜索索引维护** — 管理员可手动重建 Orama 搜索索引
 
 ## 技术栈
 
@@ -58,7 +96,7 @@
 | D1              | SQLite 数据库                  |
 | R2              | 对象存储（媒体文件）           |
 | KV              | 缓存层                         |
-| Durable Objects | 分布式限流 / 密码哈希          |
+| Durable Objects | 分布式限流 / Argon2id 密码哈希          |
 | Workflows       | 异步任务（内容审核、定时发布） |
 | Queues          | 消息队列（邮件通知）           |
 | Workers AI      | AI 能力（或接入 Agnes AI / OpenAI 兼容接口） |
@@ -96,29 +134,45 @@ src/
 │   │   ├── components/         # 功能专属组件
 │   │   ├── queries/            # TanStack Query Hooks
 │   │   └── workflows/          # Cloudflare Workflows
-│   ├── comments/    # 评论、嵌套回复、审核
+│   ├── comments/    # 评论、嵌套回复、AI 审核
 │   ├── moments/     # 动态（TipTap 编辑器、图床上传）
 │   ├── tags/        # 标签管理
+│   ├── skills/      # 技能管理（Markdown 批量导入）
+│   ├── about/       # 关于页（内联 Markdown 编辑）
 │   ├── media/       # 媒体上传、R2 存储
 │   ├── search/      # Orama 全文搜索
 │   ├── auth/        # 认证、权限控制
+│   ├── users/       # 用户管理（角色、封禁）
 │   ├── dashboard/   # 管理后台数据统计
 │   ├── email/       # 邮件通知（SMTP）
+│   ├── notification/# 通知系统（邮件 + Webhook）
+│   ├── webhook/     # Webhook（HMAC 签名 / 企业微信）
 │   ├── cache/       # KV 缓存服务
-│   ├── config/      # 博客配置
+│   ├── config/      # 博客配置（8 个配置分区）
 │   ├── friend-links/# 友情链接（申请、审核）
+│   ├── navigation/  # 导航页（搜索引擎、书签管理）
 │   ├── import-export/# Markdown 导入导出
 │   ├── version/     # 版本更新检查
 │   ├── theme/       # 主题系统（契约、注册表、各主题实现）
-│   └── ai/          # AI 集成（Workers AI / Agnes AI / OpenAI 兼容接口）
+│   ├── ai/          # AI 集成（Workers AI / Agnes AI / OpenAI 兼容接口）
+│   ├── mcp/         # MCP Server（25+ 工具、4 个提示词模板）
+│   ├── image-hosting/# 7 种图床方案
+│   ├── challenge/   # 人机验证（ALTCHA PoW / Turnstile）
+│   ├── pageview/    # 浏览量统计（Queue + D1）
+│   ├── site-documents/ # RSS / Atom / Sitemap / Robots / PWA Manifest
+│   ├── wechat-verify/  # 微信公众号验证
+│   ├── about/       # 关于页
+│   ├── oauth-provider/ # OAuth Provider（MCP 连接）
+│   └── oauth-clients/  # OAuth 客户端管理
 ├── routes/
-│   ├── _public/     # 公开页面（首页、文章列表/详情、搜索、友链、动态、关于）
-│   ├── _auth/       # 登录/注册/找回密码
+│   ├── _public/     # 公开页面（首页、文章列表/详情、搜索、友链、动态、导航、关于）
+│   ├── _auth/       # 登录/注册/找回密码/邮箱验证
 │   ├── _user/       # 个人中心、友链申请
-│   ├── admin/       # 管理后台（仪表盘、文章、评论、媒体、标签、友链、设置）
-│   ├── rss[.]xml.ts     # RSS Feed
+│   ├── admin/       # 管理后台（仪表盘、文章、评论、媒体、标签、技能、友链、用户、导航、设置）
+│   ├── rss[.]xml.ts     # RSS / Atom Feed
 │   ├── sitemap[.]xml.ts # Sitemap
-│   └── robots[.]txt.ts  # Robots.txt
+│   ├── robots[.]txt.ts  # Robots.txt
+│   └── manifest[.]webmanifest.ts # PWA Web App Manifest
 ├── components/      # UI 组件（ui/, common/, layout/, tiptap-editor/）
 ├── lib/             # 基础设施（db/, auth/, hono/, middlewares）
 └── hooks/           # 自定义 Hooks
@@ -238,7 +292,7 @@ src/
 
 部署成功后按以下清单确认，即可正式对外：
 
-- [ ] 访问你的域名，确认首页、文章页、RSS（`/rss.xml`）、Sitemap（`/sitemap.xml`）、Robots（`/robots.txt`）正常
+- [ ] 访问你的域名，确认首页、文章页、RSS（`/rss.xml`）、Atom Feed、Sitemap（`/sitemap.xml`）、Robots（`/robots.txt`）、PWA Manifest 正常
 - [ ] 打开 `/admin`，用 `ADMIN_EMAIL` 注册账号，系统自动赋予管理员权限
 - [ ] 在后台 **设置** 中完善站点标题、描述、头像、favicon、社交链接、SEO 信息
 - [ ] 上传一张图片验证媒体库（R2）可用
@@ -332,7 +386,7 @@ bun dev
 | `bun db:migrate:local` | 安全应用本地 D1 迁移，校验失败自动恢复 |
 | `bun db:migrate:unsafe` | 直接应用远程 D1 迁移，不做校验 |
 
-> `bun db:migrate` 会复用 schema 中的状态常量，迁移前后校验 `posts`、`comments` 的关键计数；远程模式默认记录 D1 Time Travel bookmark，校验失败自动 restore。
+> `bun db:migrate` 会复用 schema 中的状态常量，迁移前后校验 `posts`、`comments` 的关键计数；远程模式默认记录 D1 Time Travel bookmark，校验失败自动 restore。安全迁移脚本位于 `scripts/safe-d1-migrate/`。
 
 ### 本地模拟 Cloudflare 资源
 

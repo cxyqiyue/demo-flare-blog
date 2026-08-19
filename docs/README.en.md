@@ -29,21 +29,63 @@ Deeply integrated with D1, R2, KV, Workflows, and other Serverless services — 
 
 ## Core Features
 
-- **Post Management** — Rich text editor (syntax highlighting / tables / math / TOC), image uploads, draft / publish / scheduled publishing, auto-save.
-- **Version History** — Automatic editor snapshots and post version rollback for safe recovery.
-- **Tagging System** — Flexible post categorization.
-- **Comment System** — Nested replies, email notifications, AI-assisted and context-aware moderation; violating comments are auto-blocked and reported to admins.
-- **Friend Links** — Visitor applications, admin moderation, email notifications.
-- **Notification System** — Email + webhook channels with per-event subscriptions.
-- **Full-Text Search** — High-performance on-site search powered by Orama.
-- **Media Library** — R2 object storage for image upload and optimization.
-- **Authentication** — GitHub OAuth + email/password registration and login; `ADMIN_EMAIL` is granted admin automatically.
-- **MCP Server** — Connect AI clients (Claude, Cursor, etc.) via OAuth to manage posts, comments, tags, friend links, media, and analytics.
-- **Analytics** — Built-in pageview stats (Queue + D1) with optional Umami integration.
-- **SEO Enhancements** — Canonical URLs, Schema.org structured data, RSS / Sitemap / Robots.txt.
-- **AI Integration** — Cloudflare Workers AI or any OpenAI-compatible endpoint (custom Base URL / model / API key), powering summarization, comment moderation, tag suggestions, and one-click article generation.
-- **Theme System** — Extensible theme contracts that fully replace pages and layouts (`default` and `fuwari` built in).
-- **Import / Export** — Markdown import/export preserving images and frontmatter.
+### Content Management
+- **Post Management** — Rich text editor (syntax highlighting / tables / math formulas / TOC), image uploads, draft / publish / scheduled publishing flow, auto-save
+- **Version History** — Automatic editor snapshots and post version rollback for safe recovery
+- **Pinned Posts** — Pin posts to the top of listings
+- **Batch Operations** — Bulk publish/unpublish posts
+- **Adjacent Post Navigation** — Auto-display previous/next post navigation on post detail pages
+- **Tagging System** — Flexible post categorization
+- **Skills Management** — Article skill classification (different dimension from tags), supports Markdown batch import
+- **Moments** — Rich text (TipTap) for sharing instant content, supports image uploads (up to 9), likes, comments, and deletion
+- **About Page** — Admin can directly edit Markdown content inline on the page
+
+### Interaction & Community
+- **Comment System** — Nested replies (two-level), email notifications, AI-assisted and context-aware moderation, violating comments auto-blocked and admin notified; posts, moments, and about page share the same comment infrastructure
+- **Friend Links** — Visitor applications, admin review (approve/reject), email notifications, frequency limiting
+- **Navigation Page** — Search engine collection display, bookmark management (admin only, with folder hierarchy), Netscape bookmark import, server-side Favicon proxy
+
+### Image Hosting & Media
+- **Media Library** — R2 / S3 / external image hosting unified management, directory browsing, folder create/rename/delete, file rename, usage status tracking
+- **7 Image Hosting Providers** — Settings → Image Hosting:
+  - **S3-Compatible Storage** — AWS S3 / Cloudflare R2 / Alibaba OSS / Tencent COS / Custom
+  - **API Key Providers** — ImgBB / ffsky (server-side proxy upload)
+  - **Telegram Bot** — Upload via Bot API to channel
+  - **Discord Bot** — Upload as channel attachments (Nitro supports 25MB)
+  - **HuggingFace** — Upload to HF repositories
+  - **WebDAV** — Auto directory creation
+  - **R2 Native** — Fallback solution
+  - Media library pulls complete file lists from all configured providers
+  - When enabled, R2 upload entry is automatically closed; falls back to R2 when disabled or unconfigured
+
+### User & Authentication
+- **User Authentication** — GitHub OAuth + email/password registration/login, `ADMIN_EMAIL` auto-grants admin
+- **User Management** — Role management (admin/user), ban/unban (with reason and expiry), comment statistics
+
+### AI & Automation
+- **AI Integration** — Supports Cloudflare Workers AI, Agnes AI (free forever, international/domestic dual endpoints), or any OpenAI-compatible interface (OpenAI / Claude / Gemini):
+  - Article summary generation (200 chars)
+  - Tag auto-extraction (1-3 tags)
+  - AI one-click article generation (3 writing styles: blog/docs/newsletter + custom instructions)
+  - Comment content moderation (three-segment verdict: approve/block/review)
+- **MCP Server** — Connect AI clients (Claude / Cursor etc.) via OAuth, exposes 25+ tools and 4 prompt templates, manages posts, comments, tags, friend links, media, and analytics
+- **Import/Export** — ZIP packaged export, Markdown / native format import, processed asynchronously via Cloudflare Workflows
+
+### Notification & Security
+- **Notification System** — Email (SMTP) + Webhook (generic HMAC-signed / WeChat Work) multi-channel notifications, 8 event types with per-event subscription, email unsubscribe support
+- **Human Verification** — ALTCHA PoW (Proof of Work) / Cloudflare Turnstile; Turnstile can auto-fallback to PoW on timeout or repeated failures
+- **SEO Enhancements** — Canonical URL, Schema.org structured data, Open Graph, RSS / Atom / Sitemap / Robots.txt
+- **PWA Support** — Auto-generated Web App Manifest
+
+### Operations & Maintenance
+- **Analytics** — Built-in pageview stats (Queue + D1 dedup) + Umami proxy integration (`/stats.js`, `/api/send`), 24h / 7d / 30d / 90d multi-range traffic analysis
+- **Full-Text Search** — Orama-powered high-performance on-site search, supports Chinese tokenization, fuzzy matching, and highlighted results
+- **Theme System** — Extensible theme contracts, complete page and layout replacement (built-in `default` / `fuwari` themes)
+- **WeChat Verification** — Configurable verification file name and content in admin settings
+- **Version Update Check** — Compare against GitHub Release, admin panel prompts for new versions
+- **Cache Management** — KV cache + CDN cache purge, one-click operation from admin panel
+- **Search Index Maintenance** — Admin can manually rebuild Orama search index
+- **Safe D1 Migration** — Pre/post validation with automatic rollback on failure
 
 ## Tech Stack
 
@@ -55,7 +97,7 @@ Deeply integrated with D1, R2, KV, Workflows, and other Serverless services — 
 | D1              | SQLite database                                               |
 | R2              | Object storage (media files)                                  |
 | KV              | Caching layer                                                 |
-| Durable Objects | Distributed rate limiting / password hashing                  |
+| Durable Objects | Distributed rate limiting / Argon2id password hashing |
 | Workflows       | Asynchronous tasks (content moderation, scheduled publishing) |
 | Queues          | Message queues (email notifications)                          |
 | Workers AI      | AI capabilities (or a compatible OpenAI endpoint)             |
@@ -93,28 +135,44 @@ src/
 │   │   ├── components/         # Feature-specific components
 │   │   ├── queries/            # TanStack Query Hooks
 │   │   └── workflows/          # Cloudflare Workflows
-│   ├── comments/    # Comments, nested replies, moderation
+│   ├── comments/    # Comments, nested replies, AI moderation
+│   ├── moments/     # Moments (TipTap editor, image hosting uploads)
 │   ├── tags/        # Tag management
+│   ├── skills/      # Skills management (Markdown batch import)
+│   ├── about/       # About page (inline Markdown editor)
 │   ├── media/       # Media uploads, R2 storage
 │   ├── search/      # Orama full-text search
 │   ├── auth/        # Authentication, permission control
+│   ├── users/       # User management (roles, ban/unban)
 │   ├── dashboard/   # Admin dashboard statistics
 │   ├── email/       # Email notifications (SMTP)
+│   ├── notification/# Notification system (email + webhook)
+│   ├── webhook/     # Webhooks (HMAC-signed / WeChat Work)
 │   ├── cache/       # KV caching services
-│   ├── config/      # Blog configurations
+│   ├── config/      # Blog configurations (8 config sections)
 │   ├── friend-links/# Friend links (applications, moderation)
+│   ├── navigation/  # Navigation page (search engines, bookmarks)
 │   ├── import-export/# Markdown importing/exporting
 │   ├── version/     # Version update checker
-│   ├── theme/       # Theme system (Contracts, registry, theme implementations)
-│   └── ai/          # AI integration (Workers AI / OpenAI-compatible)
+│   ├── theme/       # Theme system (contracts, registry, theme implementations)
+│   ├── ai/          # AI integration (Workers AI / Agnes AI / OpenAI-compatible)
+│   ├── mcp/         # MCP Server (25+ tools, 4 prompt templates)
+│   ├── image-hosting/# 7 image hosting providers
+│   ├── challenge/   # Human verification (ALTCHA PoW / Turnstile)
+│   ├── pageview/    # Pageview analytics (Queue + D1)
+│   ├── site-documents/ # RSS / Atom / Sitemap / Robots / PWA Manifest
+│   ├── wechat-verify/  # WeChat verification
+│   ├── oauth-provider/ # OAuth Provider (MCP connection)
+│   └── oauth-clients/  # OAuth client management
 ├── routes/
-│   ├── _public/     # Public pages (Home, post lists/details, search, friend links)
-│   ├── _auth/       # Login/registration/password reset
+│   ├── _public/     # Public pages (Home, post lists/details, search, friend links, moments, navigation, about)
+│   ├── _auth/       # Login/registration/password reset/email verification
 │   ├── _user/       # Profile, friend-link submission
-│   ├── admin/       # Admin backend (dashboard, posts, comments, media, tags, friend links, settings)
-│   ├── rss[.]xml.ts     # RSS Feed
+│   ├── admin/       # Admin backend (dashboard, posts, comments, media, tags, skills, friend links, users, navigation, settings)
+│   ├── rss[.]xml.ts     # RSS / Atom Feed
 │   ├── sitemap[.]xml.ts # Sitemap
-│   └── robots[.]txt.ts  # Robots.txt
+│   ├── robots[.]txt.ts  # Robots.txt
+│   └── manifest[.]webmanifest.ts # PWA Web App Manifest
 ├── components/      # UI components (ui/, common/, layout/, tiptap-editor/)
 ├── lib/             # Infrastructure (db/, auth/, hono/, middlewares)
 └── hooks/           # Custom React Hooks
@@ -234,10 +292,11 @@ The deployment script (`bun run wrangler:prepare`) generates the `routes` block 
 
 Run through the following after deployment:
 
-- [ ] Visit your domain and confirm the homepage, post pages, RSS (`/rss.xml`), Sitemap (`/sitemap.xml`), and Robots (`/robots.txt`) work
+- [ ] Visit your domain and confirm the homepage, post pages, RSS (`/rss.xml`), Atom Feed, Sitemap (`/sitemap.xml`), Robots (`/robots.txt`), and PWA Manifest work
 - [ ] Open `/admin`, register with `ADMIN_EMAIL`, and the system grants admin automatically
 - [ ] In admin **Settings**, fill in site title, description, avatar, favicon, social links, and SEO info
 - [ ] Upload an image to verify the media library (R2) works
+- [ ] (Optional) Configure third-party image hosting: admin Settings → Image Hosting, enable ImgBB (articles + comments) or ffsky (articles), enter API key and click "Test connection"; when article image hosting is enabled, R2 upload entry is automatically closed
 - [ ] (Optional) Configure SMTP email in admin Settings → Email for code login and comment-reply notifications
 - [ ] (Optional) Configure webhook notifications in admin Settings → Webhook with per-event subscriptions
 - [ ] (Optional) Enable human verification in admin Settings → Challenge: pick a provider (None / **ALTCHA PoW** / **Cloudflare Turnstile**). Turnstile can auto-fall back to ALTCHA PoW on timeout or repeated failures. Also enable Umami analytics
@@ -327,7 +386,7 @@ bun dev
 | `bun db:migrate:local` | Safely applies local D1 migrations, auto-restores local state |
 | `bun db:migrate:unsafe`| Applies remote D1 migrations directly without verification |
 
-> `bun db:migrate` validates `posts` and `comments` key counts before and after migration; in remote mode it records a D1 Time Travel bookmark and auto-restores on failure.
+> `bun db:migrate` validates `posts` and `comments` key counts before and after migration; in remote mode it records a D1 Time Travel bookmark and auto-restores on failure. The safe migration script is located at `scripts/safe-d1-migrate/`.
 
 ### Simulating Cloudflare Resources Locally
 
@@ -408,6 +467,25 @@ This happens when `ZONE_NAME` is inferred incorrectly. For example, if your `DOM
 | `ZONE_NAME` | Your Cloudflare Zone name (e.g. `qyfy.kdns.fr`) |
 
 > How to find it: In the Cloudflare Dashboard, open your domain — the Zone name is shown in the page title.
+
+### 9. How do I configure third-party image hosting?
+
+Admin Settings → Image Hosting, supports multiple providers that can be enabled simultaneously:
+
+- **ImgBB**: Separately enable for "Comments" and "Articles". Comments: clicking the image button in the comment editor opens ImgBB's official upload window (no API Key needed). Articles: article editor uploads go through server-side proxy to ImgBB. Get your API Key at [imgbb.com](https://imgbb.com).
+- **ffsky**: Articles only, uploads via server-side proxy (API has no CORS, cannot be called directly from browser), default endpoint `https://pic.ffsky.net/api/1/upload` can be modified in settings.
+- **R2 fallback**: Article images only fall back to R2 when image hosting is disabled or no valid key is configured; once article image hosting is enabled with a key, only the third-party provider is used.
+- **R2 upload closure**: When article image hosting is enabled, the media library upload entry (upload button, drag/paste upload) is automatically disabled; existing R2 images can still be browsed, renamed, and deleted.
+- **Multi-provider switching**: Article uploads try providers in order (ImgBB → ffsky); if one fails, the next is tried automatically.
+
+### 10. How do I integrate Agnes AI (International / Domestic)?
+
+Agnes AI is free forever and uses the OpenAI-compatible protocol. In admin Settings → AI, select **Agnes AI** and pick an endpoint:
+
+- **International**: `https://apihub.agnes-ai.com/v1` (default); for users in mainland China with poor connectivity, use **International (China accelerated)** `https://apihub.agnes-ai.cn/v1` (still uses the international API Key).
+- **Domestic**: `https://api.agnes-ai.cn/v1`, requires separate registration at [agnes-ai.cn](https://agnes-ai.cn) for a domestic API Key.
+
+Note: International and domestic accounts/API Keys/data are **not interoperable**. Enter the endpoint and model (e.g. `deepseek-chat`), then click "Test connection" to verify.
 
 ---
 
