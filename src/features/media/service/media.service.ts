@@ -23,7 +23,9 @@ import {
 } from "@/features/media/utils/media.utils";
 import {
   deleteS3Objects,
+  listAllS3Keys,
   listS3Objects,
+  moveS3Objects,
   uploadToS3,
   uploadToS3ForMediaLibrary,
   type S3Config,
@@ -339,6 +341,30 @@ export async function renameFolder(
     return ok({ key: folderKey });
   }
 
+  // S3 folder rename
+  if (data.providerId === "s3") {
+    const config = await ConfigService.getSystemConfig(context);
+    const s3Config = resolveS3ConfigForMedia(config);
+    if (!s3Config) return err({ reason: "S3_NOT_CONFIGURED" });
+
+    const keysResult = await listAllS3Keys(s3Config, folderKey);
+    if (keysResult.error) return err({ reason: "S3_RENAME_FAILED" });
+
+    const keys = keysResult.data;
+    if (keys.length > 0) {
+      const operations = keys.map((sourceKey) => ({
+        oldKey: sourceKey,
+        newKey: `${newKey}${sourceKey.slice(folderKey.length)}`,
+      }));
+      const moveResult = await moveS3Objects(s3Config, operations);
+      if (moveResult.error) return err({ reason: "S3_RENAME_FAILED" });
+    }
+
+    await MediaRepo.updateMediaKeyPrefix(context.db, folderKey, newKey);
+    return ok({ key: newKey });
+  }
+
+  // R2 folder rename (default)
   const keys = await Storage.listAllKeys(context.env, folderKey);
   for (const sourceKey of keys) {
     const targetKey = `${newKey}${sourceKey.slice(folderKey.length)}`;
@@ -359,6 +385,38 @@ export async function deleteFolders(
   let deletedFiles = 0;
   let skippedFiles = 0;
 
+  // S3 folder delete
+  if (data.providerId === "s3") {
+    const config = await ConfigService.getSystemConfig(context);
+    const s3Config = resolveS3ConfigForMedia(config);
+    if (!s3Config) return err({ reason: "S3_NOT_CONFIGURED" });
+
+    for (const folder of data.keys) {
+      const folderKey = Storage.normalizeFolderKey(folder);
+      if (!folderKey) continue;
+
+      const keysResult = await listAllS3Keys(s3Config, folderKey);
+      if (keysResult.error) continue;
+
+      const fileKeys = keysResult.data.filter((k) => !k.endsWith("/"));
+      const linkedKeys = new Set(
+        await PostMediaRepo.getLinkedMediaKeys(context.db, fileKeys),
+      );
+
+      const toDelete = fileKeys.filter((k) => !linkedKeys.has(k));
+      if (toDelete.length > 0) {
+        await deleteS3Objects(s3Config, toDelete);
+      }
+      await MediaRepo.deleteMediaByKeys(context.db, toDelete);
+
+      deletedFiles += toDelete.length;
+      skippedFiles += fileKeys.length - toDelete.length;
+    }
+
+    return ok({ deletedFolders: data.keys.length, deletedFiles, skippedFiles });
+  }
+
+  // R2 folder delete (default)
   for (const folder of data.keys) {
     const folderKey = Storage.normalizeFolderKey(folder);
     if (!folderKey) continue;

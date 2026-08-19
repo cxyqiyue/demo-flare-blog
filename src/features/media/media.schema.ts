@@ -94,10 +94,12 @@ export const CreateMediaFolderInputSchema = z.object({
 export const RenameMediaFolderInputSchema = z.object({
   key: z.string().min(1),
   name: z.string().min(1).max(200),
+  providerId: z.string().optional(),
 });
 
 export const DeleteMediaFoldersInputSchema = z.object({
   keys: z.array(z.string().min(1)).min(1).max(500),
+  providerId: z.string().optional(),
 });
 
 export type UpdateMediaNameInput = z.infer<typeof UpdateMediaNameInputSchema>;

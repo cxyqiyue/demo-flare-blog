@@ -1,4 +1,5 @@
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -182,6 +183,122 @@ export async function deleteS3Objects(
     deleted++;
   }
   return ok({ deleted });
+}
+
+// ── Rename Object (Copy + Delete) ────────────────────────────
+
+export async function renameS3Object(
+  cfg: S3Config,
+  oldKey: string,
+  newKey: string,
+): Promise<Result<{ success: boolean }, { reason: "S3_RENAME_FAILED"; message: string }>> {
+  try {
+    const client = createS3Client(cfg);
+    const fullOldKey = [cfg.pathPrefix?.trim(), oldKey].filter(Boolean).join("/");
+    const fullNewKey = [cfg.pathPrefix?.trim(), newKey].filter(Boolean).join("/");
+
+    await client.send(
+      new CopyObjectCommand({
+        Bucket: cfg.bucket,
+        CopySource: `/${cfg.bucket}/${fullOldKey}`,
+        Key: fullNewKey,
+      }),
+    );
+
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: cfg.bucket,
+        Key: fullOldKey,
+      }),
+    );
+
+    return ok({ success: true });
+  } catch (error) {
+    return err({
+      reason: "S3_RENAME_FAILED",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// ── Move Object (Copy + Delete) ──────────────────────────────
+
+export async function moveS3Object(
+  cfg: S3Config,
+  oldKey: string,
+  newKey: string,
+): Promise<Result<{ success: boolean }, { reason: "S3_MOVE_FAILED"; message: string }>> {
+  try {
+    const client = createS3Client(cfg);
+    const fullOldKey = [cfg.pathPrefix?.trim(), oldKey].filter(Boolean).join("/");
+    const fullNewKey = [cfg.pathPrefix?.trim(), newKey].filter(Boolean).join("/");
+
+    await client.send(
+      new CopyObjectCommand({
+        Bucket: cfg.bucket,
+        CopySource: `/${cfg.bucket}/${fullOldKey}`,
+        Key: fullNewKey,
+      }),
+    );
+
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: cfg.bucket,
+        Key: fullOldKey,
+      }),
+    );
+
+    return ok({ success: true });
+  } catch (error) {
+    return err({
+      reason: "S3_MOVE_FAILED",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// ── List All Keys (for folder operations) ─────────────────────
+
+export async function listAllS3Keys(
+  cfg: S3Config,
+  prefix: string,
+): Promise<Result<string[], { reason: "S3_LIST_FAILED"; message: string }>> {
+  try {
+    const allKeys: string[] = [];
+    let continuationToken: string | undefined;
+
+    do {
+      const result = await listS3Objects(cfg, {
+        prefix,
+        continuationToken,
+      });
+      if (result.error) return err({ reason: "S3_LIST_FAILED", message: result.error.message });
+      allKeys.push(...result.data.objects.map((o) => o.key));
+      continuationToken = result.data.nextContinuationToken;
+    } while (continuationToken);
+
+    return ok(allKeys);
+  } catch (error) {
+    return err({
+      reason: "S3_LIST_FAILED",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// ── Batch Move Objects ────────────────────────────────────────
+
+export async function moveS3Objects(
+  cfg: S3Config,
+  keys: Array<{ oldKey: string; newKey: string }>,
+): Promise<Result<{ moved: number }, { reason: "S3_MOVE_FAILED"; message: string }>> {
+  let moved = 0;
+  for (const { oldKey, newKey } of keys) {
+    const result = await moveS3Object(cfg, oldKey, newKey);
+    if (result.error) return err({ reason: "S3_MOVE_FAILED", message: result.error.message });
+    moved++;
+  }
+  return ok({ moved });
 }
 
 // ── Upload for Media Library ──────────────────────────────────
