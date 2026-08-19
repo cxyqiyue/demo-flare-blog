@@ -84,7 +84,7 @@ function encodeObjectKey(key: string): string {
  * encodeURIComponent 会将 / 编码为 %2F，但 AWS S3 期望 / 保持原样。
  */
 function encodeS3QueryParam(value: string): string {
-  return encodeURIComponent(value).replace(/%2f/g, "/");
+  return encodeURIComponent(value);
 }
 
 interface SignRequestParams {

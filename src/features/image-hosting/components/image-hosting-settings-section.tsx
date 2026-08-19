@@ -1,7 +1,7 @@
 import {
   Brain,
   Circle,
-  CircleDot,
+  CircleCheckBig,
   Database,
   Globe,
   KeyRound,
@@ -592,12 +592,12 @@ export function ImageHostingSettingsSection({
                 className={cn(
                   "flex w-full items-center gap-3 md:gap-4 p-4 md:p-8 text-left transition-colors",
                   isActive
-                    ? "bg-muted/20 border-l-2 border-l-foreground/60"
-                    : "hover:bg-muted/10",
+                    ? "bg-primary/5 border-l-[3px] border-l-primary"
+                    : "hover:bg-muted/10 border-l-[3px] border-l-transparent",
                 )}
               >
                 <div className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")}>
-                  {isActive ? <CircleDot size={18} /> : <Circle size={18} />}
+                  {isActive ? <CircleCheckBig size={20} /> : <Circle size={20} />}
                 </div>
                 <div className="rounded-sm bg-muted/40 p-2 shrink-0">
                   <Icon size={16} className="text-muted-foreground" />
