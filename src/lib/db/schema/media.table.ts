@@ -12,6 +12,7 @@ export const MediaTable = sqliteTable(
   "media",
   {
     id,
+    provider: text().notNull().default("r2"),
     key: text().notNull().unique(),
     url: text().notNull(),
     fileName: text("file_name").notNull(),
@@ -21,7 +22,10 @@ export const MediaTable = sqliteTable(
     sizeInBytes: integer("size_in_bytes").notNull(),
     createdAt,
   },
-  (table) => [index("created_at_idx_media").on(table.createdAt)],
+  (table) => [
+    index("created_at_idx_media").on(table.createdAt),
+    index("provider_idx_media").on(table.provider),
+  ],
 );
 
 export const PostMediaTable = sqliteTable(

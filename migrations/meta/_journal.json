@@ -127,6 +127,13 @@
       "when": 1786701471511,
       "tag": "0017_remove_defunct_search_engines",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1787184000000,
+      "tag": "0018_add_media_provider",
+      "breakpoints": true
     }
   ]
 }

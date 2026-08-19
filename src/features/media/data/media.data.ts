@@ -129,6 +129,37 @@ export async function getMediaByKeys(
     .where(inArray(MediaTable.key, keys));
 }
 
+export async function getMediaByProvider(
+  db: DB,
+  provider: string,
+  options?: { limit?: number; search?: string; cursor?: number },
+): Promise<{ items: Array<Media>; nextCursor: number | null }> {
+  const { limit = 50, search, cursor } = options ?? {};
+  const conditions: Array<SQL> = [eq(MediaTable.provider, provider)];
+  if (cursor) {
+    conditions.push(lt(MediaTable.id, cursor));
+  }
+  if (search) {
+    const pattern = `%${escapeLikeString(search)}%`;
+    conditions.push(sql`${MediaTable.fileName} LIKE ${pattern} ESCAPE '\\'`);
+  }
+
+  const items = await db
+    .select()
+    .from(MediaTable)
+    .where(and(...conditions))
+    .orderBy(desc(MediaTable.id))
+    .limit(limit + 1);
+
+  const hasMore = items.length > limit;
+  if (hasMore) {
+    items.pop();
+  }
+  const nextCursor = hasMore ? (items[items.length - 1]?.id ?? null) : null;
+
+  return { items, nextCursor };
+}
+
 export async function deleteMediaByKeys(db: DB, keys: string[]) {
   if (keys.length === 0) return;
   await db.delete(MediaTable).where(inArray(MediaTable.key, keys));

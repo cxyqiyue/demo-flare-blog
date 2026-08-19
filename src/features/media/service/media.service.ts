@@ -23,7 +23,6 @@ import {
 } from "@/features/media/utils/media.utils";
 import {
   deleteS3Objects,
-  listS3Objects,
   uploadToS3,
   uploadToS3ForMediaLibrary,
   type S3Config,
@@ -56,6 +55,7 @@ export async function upload(
 
   try {
     const mediaRecord = await MediaRepo.insertMedia(context.db, {
+      provider: "r2",
       key: uploaded.key,
       url: uploaded.url,
       fileName: uploaded.fileName,
@@ -97,58 +97,71 @@ export async function uploadToProvider(
   file: File,
 ) {
   const folder = normalizeFolderPath(data.folder ?? "");
+  const provider = data.providerId;
 
-  if (data.providerId === "s3") {
+  let uploadResult: Result<{ url: string; key?: string; fileName?: string; mimeType?: string; sizeInBytes?: number }, { reason: string }>;
+
+  if (provider === "s3") {
     const config = await ConfigService.getSystemConfig(context);
     const s3Config = resolveS3ConfigForMedia(config);
-    if (!s3Config) {
-      return err({ reason: "PROVIDER_NOT_CONFIGURED" });
-    }
-
+    if (!s3Config) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
     const result = await uploadToS3ForMediaLibrary(s3Config, file, folder);
-    if (result.error) {
-      return err({ reason: "S3_UPLOAD_FAILED" });
-    }
-    return ok(result.data);
-  }
-
-  if (data.providerId === "telegram") {
+    if (result.error) return err({ reason: "S3_UPLOAD_FAILED" });
+    uploadResult = ok(result.data);
+  } else if (provider === "telegram") {
     const config = await ConfigService.getSystemConfig(context);
     const tgConfig = resolveTelegramConfig(config);
     if (!tgConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
     const result = await uploadToTelegramDirect(tgConfig, file);
     if (result.error) return err({ reason: "TELEGRAM_UPLOAD_FAILED" });
-    return ok(result.data);
-  }
-
-  if (data.providerId === "discord") {
+    uploadResult = ok(result.data);
+  } else if (provider === "discord") {
     const config = await ConfigService.getSystemConfig(context);
     const dcConfig = resolveDiscordConfig(config);
     if (!dcConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
     const result = await uploadToDiscordDirect(dcConfig, file);
     if (result.error) return err({ reason: "DISCORD_UPLOAD_FAILED" });
-    return ok(result.data);
-  }
-
-  if (data.providerId === "huggingface") {
+    uploadResult = ok(result.data);
+  } else if (provider === "huggingface") {
     const config = await ConfigService.getSystemConfig(context);
     const hfConfig = resolveHuggingFaceConfig(config);
     if (!hfConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
     const result = await uploadToHuggingFaceDirect(hfConfig, file, folder);
     if (result.error) return err({ reason: "HUGGINGFACE_UPLOAD_FAILED" });
-    return ok(result.data);
-  }
-
-  if (data.providerId === "webdav") {
+    uploadResult = ok(result.data);
+  } else if (provider === "webdav") {
     const config = await ConfigService.getSystemConfig(context);
     const davConfig = resolveWebDAVConfig(config);
     if (!davConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
     const result = await uploadToWebDAVDirect(davConfig, file, folder);
     if (result.error) return err({ reason: "WEBDAV_UPLOAD_FAILED" });
-    return ok(result.data);
+    uploadResult = ok(result.data);
+  } else {
+    return err({ reason: "UNSUPPORTED_PROVIDER" });
   }
 
-  return err({ reason: "UNSUPPORTED_PROVIDER" });
+  if (uploadResult.error) return err({ reason: uploadResult.error.reason });
+
+  const data_ = uploadResult.data;
+  const key = data_.key ?? `${provider}/${folder ? `${folder}/` : ""}${Date.now()}-${crypto.randomUUID()}`;
+  const url = data_.url;
+
+  try {
+    await MediaRepo.insertMedia(context.db, {
+      provider,
+      key,
+      url,
+      fileName: data_.fileName ?? file.name,
+      mimeType: data_.mimeType ?? file.type,
+      sizeInBytes: data_.sizeInBytes ?? file.size,
+      width: null,
+      height: null,
+    });
+  } catch (e) {
+    console.error(JSON.stringify({ message: "media db insert failed after provider upload", provider, key, error: e instanceof Error ? e.message : String(e) }));
+  }
+
+  return ok({ url });
 }
 
 export async function deleteImage(
@@ -510,6 +523,7 @@ function resolveS3ConfigForMedia(
     secretAccessKey,
     pathPrefix: s3.pathPrefix?.trim() || "",
     publicUrl: s3.publicUrl?.trim() || "",
+    pathStyle: s3.pathStyle ?? false,
   };
 }
 
@@ -760,13 +774,11 @@ export async function getMediaProviders(
 ): Promise<MediaProvider[]> {
   const config = await ConfigService.getSystemConfig(context);
   const ih = config?.imageHosting;
+  const activeProvider = ih?.activeProvider ?? null;
   const providers: MediaProvider[] = [];
 
-  // Determine which provider should be default based on image hosting config
-  const s3Enabled =
-    (ih?.s3?.articleEnabled ?? false) || (ih?.s3?.commentEnabled ?? false);
-  const r2NativeEnabled =
-    (ih?.r2Native?.articleEnabled ?? true) || (ih?.r2Native?.commentEnabled ?? true);
+  const isActive = (id: string) =>
+    activeProvider === null ? false : activeProvider === id;
 
   // R2 Native — always available
   providers.push({
@@ -777,7 +789,7 @@ export async function getMediaProviders(
     canDelete: true,
     canUpload: true,
     canCreateFolder: true,
-    isDefault: !s3Enabled && r2NativeEnabled,
+    isDefault: activeProvider === null || activeProvider === "r2-native",
   });
 
   // S3
@@ -791,11 +803,11 @@ export async function getMediaProviders(
       canDelete: true,
       canUpload: true,
       canCreateFolder: true,
-      isDefault: s3Enabled,
+      isDefault: isActive("s3"),
     });
   }
 
-  // API Key providers — upload only
+  // API Key providers
   const apiProviders = ih?.apiProviders ?? [];
   for (const p of apiProviders) {
     if (!p.apiKey?.trim()) continue;
@@ -807,32 +819,35 @@ export async function getMediaProviders(
       canDelete: false,
       canUpload: true,
       canCreateFolder: false,
+      isDefault: isActive("api-key"),
     });
   }
 
-  // Telegram — upload only
+  // Telegram — listable via D1 index
   if (ih?.telegram?.botToken?.trim() && ih?.telegram?.chatId?.trim()) {
     providers.push({
       id: "telegram",
       name: "Telegram",
       type: "telegram",
-      canList: false,
+      canList: true,
       canDelete: false,
       canUpload: true,
       canCreateFolder: false,
+      isDefault: isActive("telegram"),
     });
   }
 
-  // Discord — upload only
+  // Discord — listable via D1 index
   if (ih?.discord?.botToken?.trim() && ih?.discord?.channelId?.trim()) {
     providers.push({
       id: "discord",
       name: "Discord",
       type: "discord",
-      canList: false,
+      canList: true,
       canDelete: false,
       canUpload: true,
       canCreateFolder: false,
+      isDefault: isActive("discord"),
     });
   }
 
@@ -846,6 +861,7 @@ export async function getMediaProviders(
       canDelete: true,
       canUpload: true,
       canCreateFolder: true,
+      isDefault: isActive("huggingface"),
     });
   }
 
@@ -859,6 +875,7 @@ export async function getMediaProviders(
       canDelete: true,
       canUpload: true,
       canCreateFolder: true,
+      isDefault: isActive("webdav"),
     });
   }
 
@@ -884,236 +901,98 @@ export async function listExternalDirectory(
   context: DbContext & { executionCtx: ExecutionContext },
   data: ListExternalDirectoryInput,
 ): Promise<ExternalDirectoryResult> {
-  if (data.providerId === "s3") {
-    const config = await ConfigService.getSystemConfig(context);
-    const s3Config = resolveS3ConfigForMedia(config);
-    if (!s3Config) return { files: [], folders: [], nextContinuationToken: null, error: "S3 未配置或缺少必要字段" };
+  const provider = data.providerId;
+  const search = data.search?.trim();
 
-    const prefix = normalizeFolderPath(data.folder);
-    const result = await listS3Objects(s3Config, {
-      prefix: prefix ? `${prefix}/` : "",
-      delimiter: "/",
-      continuationToken: data.continuationToken,
-    });
+  const { items, nextCursor } = await MediaRepo.getMediaByProvider(context.db, provider, {
+    limit: DEFAULT_DIRECTORY_LIMIT,
+    search,
+    cursor: data.continuationToken ? Number(data.continuationToken) : undefined,
+  });
 
-    if (result.error) {
-      console.error(JSON.stringify({ message: "s3 list failed", error: result.error.message }));
-      return { files: [], folders: [], nextContinuationToken: null, error: result.error.message };
-    }
+  const files: ExternalDirectoryFile[] = items.map((item) => ({
+    key: item.key,
+    name: item.fileName,
+    url: item.url,
+    mimeType: item.mimeType,
+    sizeInBytes: item.sizeInBytes,
+  }));
 
-    const files: ExternalDirectoryFile[] = result.data.objects.map((o) => ({
-      key: o.key,
-      name: getBasename(o.key),
-      url: buildS3PublicUrl(s3Config, o.key),
-      mimeType: guessMimeFromKey(o.key),
-      sizeInBytes: o.size,
-    }));
-
-    return {
-      files,
-      folders: result.data.prefixes.map((p) => ({ key: p, name: getBasename(p) })),
-      nextContinuationToken: result.data.isTruncated
-        ? (result.data.nextContinuationToken ?? null)
-        : null,
-    };
-  }
-
-  if (data.providerId === "huggingface") {
-    const config = await ConfigService.getSystemConfig(context);
-    const hfConfig = resolveHuggingFaceConfig(config);
-    if (!hfConfig) return { files: [], folders: [], nextContinuationToken: null, error: "HuggingFace 未配置" };
-
-    const token = hfConfig.token!.trim();
-    const repo = hfConfig.repo!.trim();
-    const folder = normalizeFolderPath(data.folder);
-    const path = folder || "";
-    const repoType = hfConfig.isPrivate ? "private" : "model";
-
-    try {
-      const url = `https://huggingface.co/api/repos/${repoType}/${repo}/tree/main/${path}`;
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        return { files: [], folders: [], nextContinuationToken: null, error: text.slice(0, 300) };
-      }
-
-      const entries: Array<{ path: string; type: string; size?: number }> = await response.json();
-      const files: ExternalDirectoryFile[] = [];
-      const folders: Array<{ key: string; name: string }> = [];
-
-      for (const entry of entries) {
-        const entryName = getBasename(entry.path);
-        if (entryName.startsWith(".")) continue;
-
-        if (entry.type === "file" || entry.type === "regular_file") {
-          files.push({
-            key: entry.path,
-            name: entryName,
-            url: `https://huggingface.co/${repo}/resolve/main/${entry.path}`,
-            mimeType: guessMimeFromKey(entry.path),
-            sizeInBytes: entry.size ?? 0,
-          });
-        } else if (entry.type === "directory" || entry.type === "tree") {
-          folders.push({ key: entry.path, name: entryName });
-        }
-      }
-
-      return { files, folders, nextContinuationToken: null };
-    } catch (e) {
-      return { files: [], folders: [], nextContinuationToken: null, error: e instanceof Error ? e.message : String(e) };
-    }
-  }
-
-  if (data.providerId === "webdav") {
-    const config = await ConfigService.getSystemConfig(context);
-    const davConfig = resolveWebDAVConfig(config);
-    if (!davConfig) return { files: [], folders: [], nextContinuationToken: null, error: "WebDAV 未配置" };
-
-    const baseUrl = davConfig.baseUrl!.trim().replace(/\/+$/, "");
-    const folder = normalizeFolderPath(data.folder);
-    const targetUrl = folder ? `${baseUrl}/${folder}` : baseUrl;
-
-    const headers: Record<string, string> = { Depth: "1" };
-    if (davConfig.username) {
-      headers.Authorization = `Basic ${btoa(`${davConfig.username}:${davConfig.password || ""}`)}`;
-    }
-
-    try {
-      const response = await fetch(targetUrl, {
-        method: "PROPFIND",
-        headers,
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        return { files: [], folders: [], nextContinuationToken: null, error: text.slice(0, 300) };
-      }
-
-      const xml = await response.text();
-      const files: ExternalDirectoryFile[] = [];
-      const folders: Array<{ key: string; name: string }> = [];
-
-      const responses = xml.split("<d:response>").slice(1);
-      for (const block of responses) {
-        const hrefMatch = block.match(/<d?:href>([^<]+)<\/d?:href>/);
-        if (!hrefMatch) continue;
-
-        const href = decodeURIComponent(hrefMatch[1]);
-        const hrefPath = href.replace(/\/+$/, "");
-        const entryName = getBasename(hrefPath);
-        if (!entryName || entryName === getBasename(targetUrl.replace(/\/+$/, ""))) continue;
-
-        const isCollection = /<d?:resourcetype>\s*<d?:collection\s*\/?>/.test(block);
-        const contentLengthMatch = block.match(/<d?:getcontentlength>(\d+)<\/d?:getcontentlength>/);
-        const contentTypeMatch = block.match(/<d?:getcontenttype>([^<]+)<\/d?:getcontenttype>/);
-
-        const relKey = folder ? `${folder}/${entryName}` : entryName;
-
-        if (isCollection) {
-          folders.push({ key: relKey, name: entryName });
-        } else {
-          files.push({
-            key: relKey,
-            name: entryName,
-            url: davConfig.publicUrl?.trim()
-              ? `${davConfig.publicUrl.trim().replace(/\/+$/, "")}/${relKey}`
-              : href,
-            mimeType: contentTypeMatch?.[1] || guessMimeFromKey(entryName),
-            sizeInBytes: parseInt(contentLengthMatch?.[1] ?? "0", 10) || 0,
-          });
-        }
-      }
-
-      return { files, folders, nextContinuationToken: null };
-    } catch (e) {
-      return { files: [], folders: [], nextContinuationToken: null, error: e instanceof Error ? e.message : String(e) };
-    }
-  }
-
-  return { files: [], folders: [], nextContinuationToken: null };
+  return {
+    files,
+    folders: [],
+    nextContinuationToken: nextCursor ? String(nextCursor) : null,
+  };
 }
 
 export async function deleteExternalFiles(
   context: DbContext & { executionCtx: ExecutionContext },
   data: DeleteExternalFilesInput,
 ): Promise<{ deleted: number; skipped: number }> {
-  if (data.providerId === "s3") {
+  const provider = data.providerId;
+
+  // Delete from D1 index
+  await MediaRepo.deleteMediaByKeys(context.db, data.keys);
+
+  // Delete from remote provider
+  if (provider === "s3") {
     const config = await ConfigService.getSystemConfig(context);
     const s3Config = resolveS3ConfigForMedia(config);
-    if (!s3Config) return { deleted: 0, skipped: data.keys.length };
-
+    if (!s3Config) return { deleted: data.keys.length, skipped: 0 };
     const result = await deleteS3Objects(s3Config, data.keys);
     if (result.error) {
       console.error(JSON.stringify({ message: "s3 delete failed", error: result.error.message }));
-      return { deleted: 0, skipped: data.keys.length };
     }
-    return { deleted: result.data.deleted, skipped: 0 };
+    return { deleted: data.keys.length, skipped: 0 };
   }
 
-  if (data.providerId === "huggingface") {
+  if (provider === "huggingface") {
     const config = await ConfigService.getSystemConfig(context);
     const hfConfig = resolveHuggingFaceConfig(config);
-    if (!hfConfig) return { deleted: 0, skipped: data.keys.length };
-
+    if (!hfConfig) return { deleted: data.keys.length, skipped: 0 };
     const token = hfConfig.token!.trim();
     const repo = hfConfig.repo!.trim();
     const repoType = hfConfig.isPrivate ? "private" : "model";
 
-    let deleted = 0;
     for (const filePath of data.keys) {
       try {
-        const response = await fetch(
+        await fetch(
           `https://huggingface.co/api/repos/${repoType}/${repo}/main/${filePath}`,
           {
             method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              commitMessage: `Delete ${filePath} via media library`,
-            }),
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ commitMessage: `Delete ${filePath} via media library` }),
           },
         );
-        if (response.ok) deleted++;
       } catch (e) {
         console.error(JSON.stringify({ message: "huggingface delete failed", file: filePath, error: e instanceof Error ? e.message : String(e) }));
       }
     }
-
-    return { deleted, skipped: data.keys.length - deleted };
+    return { deleted: data.keys.length, skipped: 0 };
   }
 
-  if (data.providerId === "webdav") {
+  if (provider === "webdav") {
     const config = await ConfigService.getSystemConfig(context);
     const davConfig = resolveWebDAVConfig(config);
-    if (!davConfig) return { deleted: 0, skipped: data.keys.length };
-
+    if (!davConfig) return { deleted: data.keys.length, skipped: 0 };
     const baseUrl = davConfig.baseUrl!.trim().replace(/\/+$/, "");
-
     const headers: Record<string, string> = {};
     if (davConfig.username) {
       headers.Authorization = `Basic ${btoa(`${davConfig.username}:${davConfig.password || ""}`)}`;
     }
 
-    let deleted = 0;
     for (const filePath of data.keys) {
       try {
-        const fileUrl = `${baseUrl}/${filePath}`;
-        const response = await fetch(fileUrl, { method: "DELETE", headers });
-        if (response.ok || response.status === 204 || response.status === 404) deleted++;
+        await fetch(`${baseUrl}/${filePath}`, { method: "DELETE", headers });
       } catch (e) {
         console.error(JSON.stringify({ message: "webdav delete failed", file: filePath, error: e instanceof Error ? e.message : String(e) }));
       }
     }
-
-    return { deleted, skipped: data.keys.length - deleted };
+    return { deleted: data.keys.length, skipped: 0 };
   }
 
-  return { deleted: 0, skipped: data.keys.length };
+  // Telegram, Discord — cannot delete from remote, but D1 record is already removed
+  return { deleted: data.keys.length, skipped: 0 };
 }
 
 export async function createExternalFolder(
@@ -1223,27 +1102,4 @@ export async function createExternalFolder(
   }
 
   return err({ reason: "UNSUPPORTED_PROVIDER" });
-}
-
-function buildS3PublicUrl(cfg: S3Config, key: string): string {
-  const fullKey = [cfg.pathPrefix?.trim(), key].filter(Boolean).join("/");
-  const base = (
-    cfg.publicUrl?.trim() ||
-    `${cfg.endpoint.replace(/\/+$/, "")}/${cfg.bucket}`
-  ).replace(/\/+$/, "");
-  const encoded = fullKey.split("/").filter(Boolean).map(encodeURIComponent).join("/");
-  return `${base}/${encoded}`;
-}
-
-function guessMimeFromKey(key: string): string {
-  const ext = key.split(".").pop()?.toLowerCase() ?? "";
-  const map: Record<string, string> = {
-    png: "image/png",
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    gif: "image/gif",
-    webp: "image/webp",
-    svg: "image/svg+xml",
-  };
-  return map[ext] ?? "application/octet-stream";
 }
