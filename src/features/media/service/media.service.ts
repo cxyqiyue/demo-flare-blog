@@ -973,34 +973,76 @@ export async function listExternalDirectory(
   data: ListExternalDirectoryInput,
 ): Promise<ExternalDirectoryResult> {
   const provider = data.providerId;
+
+  // Telegram & API-Key: D1 index only (no remote listing API available)
+  if (provider === "telegram" || provider === "api-key") {
+    return listExternalDirectoryFromD1(context, data);
+  }
+
+  // S3, HuggingFace, WebDAV, Discord: merge remote API + D1 records
+  return listExternalDirectoryMerged(context, data);
+}
+
+async function listExternalDirectoryFromD1(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: ListExternalDirectoryInput,
+): Promise<ExternalDirectoryResult> {
+  const provider = data.providerId;
   const search = data.search?.trim();
 
-  // 1. Query D1 index for this provider
   const { items, nextCursor } = await MediaRepo.getMediaByProvider(context.db, provider, {
     limit: DEFAULT_DIRECTORY_LIMIT,
     search,
     cursor: data.continuationToken ? Number(data.continuationToken) : undefined,
   });
 
-  // 2. If D1 has records for this provider, return them
-  if (items.length > 0) {
-    const files: ExternalDirectoryFile[] = items.map((item) => ({
-      key: item.key,
-      name: item.fileName,
-      url: item.url,
-      mimeType: item.mimeType,
-      sizeInBytes: item.sizeInBytes,
-    }));
-    return {
-      files,
-      folders: [],
-      nextContinuationToken: nextCursor ? String(nextCursor) : null,
-    };
-  }
+  const files: ExternalDirectoryFile[] = items.map((item) => ({
+    key: item.key,
+    name: item.fileName,
+    url: item.url,
+    mimeType: item.mimeType,
+    sizeInBytes: item.sizeInBytes,
+  }));
 
-  // 3. D1 empty — fallback to direct provider API listing
-  //    (covers files uploaded before the provider index was introduced)
-  return listExternalDirectoryDirect(context, data);
+  return {
+    files,
+    folders: [],
+    nextContinuationToken: nextCursor ? String(nextCursor) : null,
+  };
+}
+
+async function listExternalDirectoryMerged(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: ListExternalDirectoryInput,
+): Promise<ExternalDirectoryResult> {
+  const provider = data.providerId;
+
+  // 1. Fetch remote file listing (primary source of truth)
+  const remoteResult = await listExternalDirectoryDirect(context, data);
+
+  // 2. Fetch D1 records for this provider (to include blog-uploaded files not yet in remote)
+  const { items: d1Records } = await MediaRepo.getMediaByProvider(context.db, provider, {
+    limit: 10000,
+  });
+
+  // 3. Merge: remote files first, then D1-only files (uploaded via blog but not in remote listing)
+  const remoteKeys = new Set(remoteResult.files.map((f) => f.key));
+  const d1OnlyFiles: ExternalDirectoryFile[] = d1Records
+    .filter((r) => !remoteKeys.has(r.key))
+    .map((r) => ({
+      key: r.key,
+      name: r.fileName,
+      url: r.url,
+      mimeType: r.mimeType,
+      sizeInBytes: r.sizeInBytes,
+    }));
+
+  return {
+    files: [...remoteResult.files, ...d1OnlyFiles],
+    folders: remoteResult.folders,
+    nextContinuationToken: remoteResult.nextContinuationToken,
+    error: remoteResult.error,
+  };
 }
 
 async function listExternalDirectoryDirect(
@@ -1041,6 +1083,66 @@ async function listExternalDirectoryDirect(
         ? (result.data.nextContinuationToken ?? null)
         : null,
     };
+  }
+
+  if (provider === "discord") {
+    const config = await ConfigService.getSystemConfig(context);
+    const discordConfig = resolveDiscordConfig(config);
+    if (!discordConfig) return { files: [], folders: [], nextContinuationToken: null, error: "Discord 未配置" };
+
+    const botToken = discordConfig.botToken!.trim();
+    const channelId = discordConfig.channelId!.trim();
+    const proxyDomain = discordConfig.proxyUrl?.trim();
+    const apiBase = proxyDomain
+      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
+      : "https://discord.com/api/v10";
+
+    try {
+      const url = `${apiBase}/channels/${channelId}/messages?limit=100${data.continuationToken ? `&before=${data.continuationToken}` : ""}`;
+      const response = await fetch(url, {
+        headers: { Authorization: `Bot ${botToken}` },
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        return { files: [], folders: [], nextContinuationToken: null, error: text.slice(0, 300) };
+      }
+
+      const messages: Array<{
+        id: string;
+        attachments: Array<{
+          id: string;
+          filename: string;
+          url: string;
+          content_type: string;
+          size: number;
+        }>;
+      }> = await response.json();
+
+      const files: ExternalDirectoryFile[] = [];
+      for (const msg of messages) {
+        for (const att of msg.attachments) {
+          files.push({
+            key: att.id,
+            name: att.filename,
+            url: att.url,
+            mimeType: att.content_type || guessMimeFromKey(att.filename),
+            sizeInBytes: att.size,
+          });
+        }
+      }
+
+      const hasMore = messages.length === 100;
+      const nextToken = hasMore ? messages[messages.length - 1]?.id : null;
+
+      return {
+        files,
+        folders: [],
+        nextContinuationToken: nextToken,
+      };
+    } catch (e) {
+      return { files: [], folders: [], nextContinuationToken: null, error: e instanceof Error ? e.message : String(e) };
+    }
   }
 
   if (provider === "huggingface") {
