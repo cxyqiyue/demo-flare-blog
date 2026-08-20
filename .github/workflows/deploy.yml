@@ -115,7 +115,9 @@ jobs:
             "UMAMI_SRC": "$UMAMI_SRC",
             "PAGEVIEW_SALT": "$PAGEVIEW_SALT",
             "TURNSTILE_SECRET_KEY": "$TURNSTILE_SECRET_KEY",
-            "GITHUB_TOKEN": "$GITHUB_TOKEN"
+            "GITHUB_TOKEN": "$GITHUB_TOKEN",
+            "CLOUDFLARE_ACCOUNT_ID": "$CLOUDFLARE_ACCOUNT_ID",
+            "CLOUDFLARE_ANALYTICS_API_TOKEN": "$CLOUDFLARE_ANALYTICS_API_TOKEN"
           }
           EOF
           jq 'del(.[] | select(. == ""))' secrets.json > secrets.clean.json && mv secrets.clean.json secrets.json
