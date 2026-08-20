@@ -33,7 +33,7 @@ export async function getCloudflareUsage(
   const ca = config.cloudflareAnalytics;
   const accountId = context.env.CLOUDFLARE_ACCOUNT_ID ?? "";
 
-  if (!ca?.enabled || !accountId || !ca.apiToken) {
+  if (!accountId || !ca?.apiToken) {
     return {
       services: [],
       fetchedAt: Date.now(),
@@ -42,11 +42,12 @@ export async function getCloudflareUsage(
   }
 
   const fetcher = async (): Promise<CfUsageData> => {
+    const apiToken = ca!.apiToken!;
     const env = context.env;
     const results = await fetchAllUsage(
       env,
       accountId,
-      ca.apiToken!,
+      apiToken,
       "30d",
     );
 
