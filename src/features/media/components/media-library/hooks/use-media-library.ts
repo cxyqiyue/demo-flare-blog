@@ -47,7 +47,13 @@ export interface MediaFileItem {
 export function useMediaLibrary(providers: MediaProvider[]) {
   const queryClient = useQueryClient();
   const navigate = useNavigate({ from: "/admin/media/" });
-  const { search, unused, folder, view, provider: providerParam } = useSearch({
+  const {
+    search,
+    unused,
+    folder,
+    view,
+    provider: providerParam,
+  } = useSearch({
     from: "/admin/media/",
   });
 
@@ -100,10 +106,13 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     });
   };
 
-  const setSearchQuery = (term: string) => navigateSearch({ search: term, folder: "" });
+  const setSearchQuery = (term: string) =>
+    navigateSearch({ search: term, folder: "" });
   const setUnusedOnly = (val: boolean) => navigateSearch({ unused: val });
-  const setFolder = (nextFolder: string) => navigateSearch({ folder: nextFolder });
-  const setView = (nextView: "grid" | "table") => navigateSearch({ view: nextView });
+  const setFolder = (nextFolder: string) =>
+    navigateSearch({ folder: nextFolder });
+  const setView = (nextView: "grid" | "table") =>
+    navigateSearch({ view: nextView });
 
   const setProvider = (id: string) => {
     navigate({
@@ -120,7 +129,9 @@ export function useMediaLibrary(providers: MediaProvider[]) {
   const debouncedSearch = useDebounce(search ?? "", 300);
 
   // Selection & Deletion State
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [deleteTarget, setDeleteTarget] = useState<Array<string> | null>(null);
   const [deletePreview, setDeletePreview] = useState<{
     folders: number;
@@ -165,7 +176,9 @@ export function useMediaLibrary(providers: MediaProvider[]) {
 
   const mediaItems: MediaFileItem[] = useMemo(() => {
     if (isExternal) {
-      const files = (externalQuery.data?.pages.flatMap((page) => page.files) ?? []).map((f) => ({
+      const files = (
+        externalQuery.data?.pages.flatMap((page) => page.files) ?? []
+      ).map((f) => ({
         key: f.key,
         fileName: f.name,
         url: f.url,
@@ -183,10 +196,12 @@ export function useMediaLibrary(providers: MediaProvider[]) {
       }
       return files;
     }
-    return (r2Query.data?.pages.flatMap((page) => page.files) ?? []).map((file) => ({
-      ...file,
-      fileName: file.name,
-    }));
+    return (r2Query.data?.pages.flatMap((page) => page.files) ?? []).map(
+      (file) => ({
+        ...file,
+        fileName: file.name,
+      }),
+    );
   }, [isExternal, externalQuery.data, r2Query.data, debouncedSearch]);
 
   const folders = useMemo(() => {
@@ -197,14 +212,20 @@ export function useMediaLibrary(providers: MediaProvider[]) {
   }, [isExternal, externalQuery.data, r2Query.data]);
 
   // Linked media keys — only for R2
-  const mediaKeys = useMemo(() => mediaItems.map((item) => item.key), [mediaItems]);
+  const mediaKeys = useMemo(
+    () => mediaItems.map((item) => item.key),
+    [mediaItems],
+  );
   const { data: linkedKeysData } = useQuery({
     ...linkedMediaKeysQuery(mediaKeys),
     enabled: mediaKeys.length > 0 && !isExternal,
   });
   const { data: totalMediaSize } = useQuery(totalMediaSizeQuery);
 
-  const linkedMediaIds = useMemo(() => new Set<string>(linkedKeysData ?? []), [linkedKeysData]);
+  const linkedMediaIds = useMemo(
+    () => new Set<string>(linkedKeysData ?? []),
+    [linkedKeysData],
+  );
 
   // Breadcrumbs
   const breadcrumbs = useMemo(() => {
@@ -229,7 +250,13 @@ export function useMediaLibrary(providers: MediaProvider[]) {
   const createFolder = useMutation({
     mutationFn: (name: string) =>
       isExternal && currentProviderId
-        ? createExternalFolderFn({ data: { providerId: currentProviderId, name, parent: currentFolder } })
+        ? createExternalFolderFn({
+            data: {
+              providerId: currentProviderId,
+              name,
+              parent: currentFolder,
+            },
+          })
         : createMediaFolderFn({ data: { name, parent: currentFolder } }),
     onSuccess: (result) => {
       if (result.error) {
@@ -240,7 +267,9 @@ export function useMediaLibrary(providers: MediaProvider[]) {
       }
       queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
       toast.success(m.media_toast_folder_create_success(), {
-        description: m.media_toast_folder_create_success_desc({ name: result.data.name }),
+        description: m.media_toast_folder_create_success_desc({
+          name: result.data.name,
+        }),
       });
     },
   });
@@ -257,7 +286,9 @@ export function useMediaLibrary(providers: MediaProvider[]) {
       }
       queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
       toast.success(m.media_toast_folder_rename_success(), {
-        description: m.media_toast_folder_rename_success_desc({ name: variables.name }),
+        description: m.media_toast_folder_rename_success_desc({
+          name: variables.name,
+        }),
       });
     },
   });
@@ -270,13 +301,45 @@ export function useMediaLibrary(providers: MediaProvider[]) {
 
       // External provider (S3)
       if (isExternal && currentProvider?.canDelete) {
-        const result = await deleteExternalFilesFn({
-          data: { providerId: currentProviderId, keys: fileKeys },
-        });
+        let deletedFiles = 0;
+        let skippedFiles = 0;
+
+        if (fileKeys.length > 0) {
+          const result = await deleteExternalFilesFn({
+            data: { providerId: currentProviderId, keys: fileKeys },
+          });
+          deletedFiles = result.deleted;
+          skippedFiles = result.skipped;
+        }
+
+        let deletedFolders = 0;
+        if (folderKeys.length > 0) {
+          const result = (await deleteMediaFoldersFn({
+            data: { keys: folderKeys, providerId: currentProviderId },
+          })) as unknown as {
+            data: {
+              deletedFolders: number;
+              deletedFiles: number;
+              skippedFiles: number;
+            };
+            error: { reason: string } | null;
+          };
+          if (result.error) {
+            return {
+              deletedFiles: [],
+              deletedFolders: 0,
+              skippedFiles: 0,
+              error: result.error,
+            };
+          }
+          deletedFolders = result.data.deletedFolders;
+          skippedFiles += result.data.skippedFiles;
+        }
+
         return {
-          deletedFiles: fileKeys.slice(0, result.deleted),
-          deletedFolders: 0,
-          skippedFiles: result.skipped,
+          deletedFiles: fileKeys.slice(0, deletedFiles),
+          deletedFolders,
+          skippedFiles,
           error: null,
         };
       }
@@ -286,7 +349,12 @@ export function useMediaLibrary(providers: MediaProvider[]) {
       for (const key of fileKeys) {
         const result = await deleteImageFn({ data: { key } });
         if (result.error) {
-          return { deletedFiles, deletedFolders: 0, skippedFiles: 0, error: result.error };
+          return {
+            deletedFiles,
+            deletedFolders: 0,
+            skippedFiles: 0,
+            error: result.error,
+          };
         }
         deletedFiles.push(key);
       }
@@ -294,12 +362,23 @@ export function useMediaLibrary(providers: MediaProvider[]) {
       let deletedFolders = 0;
       let skippedFiles = 0;
       if (folderKeys.length > 0) {
-        const result = (await deleteMediaFoldersFn({ data: { keys: folderKeys } })) as unknown as {
-          data: { deletedFolders: number; deletedFiles: number; skippedFiles: number };
+        const result = (await deleteMediaFoldersFn({
+          data: { keys: folderKeys },
+        })) as unknown as {
+          data: {
+            deletedFolders: number;
+            deletedFiles: number;
+            skippedFiles: number;
+          };
           error: { reason: string } | null;
         };
         if (result.error) {
-          return { deletedFiles, deletedFolders, skippedFiles, error: result.error };
+          return {
+            deletedFiles,
+            deletedFolders,
+            skippedFiles,
+            error: result.error,
+          };
         }
         deletedFolders = result.data.deletedFolders;
         skippedFiles = result.data.skippedFiles;
@@ -308,7 +387,9 @@ export function useMediaLibrary(providers: MediaProvider[]) {
       return { deletedFiles, deletedFolders, skippedFiles, error: null };
     },
     onSuccess: (result) => {
-      const totalDeleted = result.deletedFiles.length + (result.deletedFolders > 0 ? result.deletedFolders : 0);
+      const totalDeleted =
+        result.deletedFiles.length +
+        (result.deletedFolders > 0 ? result.deletedFolders : 0);
       if (totalDeleted > 0) {
         queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
         setSelectedKeys((prev) => {
@@ -320,10 +401,14 @@ export function useMediaLibrary(providers: MediaProvider[]) {
       if (result.error) {
         if (totalDeleted > 0) {
           toast.warning(m.media_toast_partial_delete(), {
-            description: m.media_toast_partial_delete_desc({ count: totalDeleted }),
+            description: m.media_toast_partial_delete_desc({
+              count: totalDeleted,
+            }),
           });
         } else {
-          toast.warning(m.media_toast_delete_fail(), { description: m.media_toast_delete_fail_desc() });
+          toast.warning(m.media_toast_delete_fail(), {
+            description: m.media_toast_delete_fail_desc(),
+          });
         }
         return;
       }
@@ -332,7 +417,9 @@ export function useMediaLibrary(providers: MediaProvider[]) {
       });
       if (result.skippedFiles > 0) {
         toast.warning(m.media_toast_folder_delete_skipped(), {
-          description: m.media_toast_folder_delete_skipped_desc({ count: result.skippedFiles }),
+          description: m.media_toast_folder_delete_skipped_desc({
+            count: result.skippedFiles,
+          }),
         });
       }
     },
@@ -347,13 +434,17 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     mutationFn: (payload: Parameters<typeof updateMediaNameFn>[0]) => {
       if (isExternal && currentProviderId) {
         const data = payload.data as { key: string; name: string };
-        return updateMediaNameFn({ data: { ...data, providerId: currentProviderId } });
+        return updateMediaNameFn({
+          data: { ...data, providerId: currentProviderId },
+        });
       }
       return updateMediaNameFn(payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
-      toast.success(m.media_toast_metadata_updated(), { description: m.media_toast_metadata_updated_desc() });
+      toast.success(m.media_toast_metadata_updated(), {
+        description: m.media_toast_metadata_updated_desc(),
+      });
     },
   });
 
@@ -368,24 +459,32 @@ export function useMediaLibrary(providers: MediaProvider[]) {
       }),
     onSuccess: (result) => {
       if (result.error) {
-        toast.error(m.media_toast_move_fail(), { description: m.media_toast_move_fail_desc() });
+        toast.error(m.media_toast_move_fail(), {
+          description: m.media_toast_move_fail_desc(),
+        });
         return;
       }
       queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
-      toast.success(m.media_toast_move_success(), { description: m.media_toast_move_success_desc() });
+      toast.success(m.media_toast_move_success(), {
+        description: m.media_toast_move_success_desc(),
+      });
     },
   });
 
   // Load more
   const loadMore = useCallback(() => {
     if (isExternal) {
-      if (!externalQuery.isFetchingNextPage && externalQuery.hasNextPage) externalQuery.fetchNextPage();
+      if (!externalQuery.isFetchingNextPage && externalQuery.hasNextPage)
+        externalQuery.fetchNextPage();
     } else {
-      if (!r2Query.isFetchingNextPage && r2Query.hasNextPage) r2Query.fetchNextPage();
+      if (!r2Query.isFetchingNextPage && r2Query.hasNextPage)
+        r2Query.fetchNextPage();
     }
   }, [isExternal, r2Query, externalQuery]);
 
-  const isLoadingMore = isExternal ? externalQuery.isFetchingNextPage : r2Query.isFetchingNextPage;
+  const isLoadingMore = isExternal
+    ? externalQuery.isFetchingNextPage
+    : r2Query.isFetchingNextPage;
   const hasMore = isExternal ? externalQuery.hasNextPage : r2Query.hasNextPage;
 
   const refetch = useCallback(() => {
@@ -404,7 +503,10 @@ export function useMediaLibrary(providers: MediaProvider[]) {
   };
 
   const selectAll = () => {
-    const allKeys = [...folders.map((f) => f.key), ...mediaItems.map((item) => item.key)];
+    const allKeys = [
+      ...folders.map((f) => f.key),
+      ...mediaItems.map((item) => item.key),
+    ];
     if (selectedKeys.size === allKeys.length && allKeys.length > 0) {
       setSelectedKeys(new Set());
     } else {
@@ -415,11 +517,17 @@ export function useMediaLibrary(providers: MediaProvider[]) {
   // Request delete — skip linked check for external providers
   const requestDelete = (keys: Array<string>) => {
     if (!isExternal) {
-      const blockedKeys = keys.filter((key) => !isFolderKey(key) && linkedMediaIds.has(key));
-      const allowedKeys = keys.filter((key) => isFolderKey(key) || !linkedMediaIds.has(key));
+      const blockedKeys = keys.filter(
+        (key) => !isFolderKey(key) && linkedMediaIds.has(key),
+      );
+      const allowedKeys = keys.filter(
+        (key) => isFolderKey(key) || !linkedMediaIds.has(key),
+      );
       if (blockedKeys.length > 0) {
         toast.warning(m.media_toast_protected_delete(), {
-          description: m.media_toast_protected_delete_desc({ count: blockedKeys.length }),
+          description: m.media_toast_protected_delete_desc({
+            count: blockedKeys.length,
+          }),
         });
       }
       if (allowedKeys.length > 0) {
@@ -453,7 +561,8 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     if (externalQuery.error) {
       return externalQuery.error.message || "S3 request failed";
     }
-    const lastPage = externalQuery.data?.pages[externalQuery.data.pages.length - 1];
+    const lastPage =
+      externalQuery.data?.pages[externalQuery.data.pages.length - 1];
     return lastPage?.error;
   }, [isExternal, externalQuery.data, externalQuery.error]);
 
