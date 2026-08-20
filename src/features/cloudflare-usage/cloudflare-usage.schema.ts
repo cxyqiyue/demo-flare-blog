@@ -67,7 +67,6 @@ export type CfAlertStatus = z.infer<typeof CfAlertStatusSchema>;
 
 // ── 测试连接输入 ─────────────────────────────────────────────
 export const TestCloudflareConnectionInputSchema = z.object({
-  accountId: z.string(),
   apiToken: z.string(),
 });
 

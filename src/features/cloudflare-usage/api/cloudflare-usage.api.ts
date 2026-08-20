@@ -24,6 +24,9 @@ export const testCloudflareConnectionFn = createServerFn({
 })
   .inputValidator(TestCloudflareConnectionInputSchema)
   .middleware([adminMiddleware])
-  .handler(({ data }) =>
-    testCloudflareConnection(data.accountId, data.apiToken),
+  .handler(({ data, context }) =>
+    testCloudflareConnection(
+      context.env.CLOUDFLARE_ACCOUNT_ID ?? "",
+      data.apiToken,
+    ),
   );

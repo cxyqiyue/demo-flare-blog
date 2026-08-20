@@ -196,7 +196,6 @@ export const CloudflareAnalyticsAlertSchema = z.object({
 
 export const CloudflareAnalyticsConfigSchema = z.object({
   enabled: z.boolean().optional(),
-  accountId: z.string().optional(),
   apiToken: z.string().optional(),
   alert: CloudflareAnalyticsAlertSchema.optional(),
 });
@@ -385,7 +384,6 @@ export const DEFAULT_CONFIG: SystemConfig = {
   },
   cloudflareAnalytics: {
     enabled: false,
-    accountId: "",
     apiToken: "",
     alert: {
       enabled: false,

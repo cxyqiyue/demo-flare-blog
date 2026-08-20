@@ -388,7 +388,6 @@ function resolveCloudflareAnalyticsConfig(
   const ca = config?.cloudflareAnalytics;
   return {
     enabled: ca?.enabled ?? false,
-    accountId: ca?.accountId ?? "",
     apiToken: ca?.apiToken ?? "",
     alert: {
       enabled: ca?.alert?.enabled ?? false,

@@ -22,15 +22,14 @@ export function CloudflareAnalyticsSettingsSection() {
     useState<ConnectionStatus>("idle");
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  const accountId = watch("cloudflareAnalytics.accountId") ?? "";
   const apiToken = watch("cloudflareAnalytics.apiToken") ?? "";
 
-  const isConfigured = accountId.length > 0 && apiToken.length > 0;
+  const isConfigured = apiToken.length > 0;
 
   const testMutation = useMutation({
     mutationFn: () =>
       testCloudflareConnectionFn({
-        data: { accountId, apiToken },
+        data: { apiToken },
       }),
     onMutate: () => {
       setConnectionStatus("testing");
@@ -79,21 +78,13 @@ export function CloudflareAnalyticsSettingsSection() {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <label
-            htmlFor="cf-analytics-account-id"
-            className="text-sm text-muted-foreground"
-          >
-            Account ID
-          </label>
-          <Input
-            id="cf-analytics-account-id"
-            placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-            {...register("cloudflareAnalytics.accountId")}
-            className={inputClassName}
-          />
+        <div className="space-y-2 rounded-none border border-border/20 bg-muted/20 p-4">
           <p className="text-xs text-muted-foreground">
-            在 Cloudflare Dashboard → 右侧边栏获取
+            Account ID 已从 GitHub Secrets 的{" "}
+            <code className="font-mono text-foreground/80">
+              CLOUDFLARE_ACCOUNT_ID
+            </code>{" "}
+            自动读取，无需在此重复填写
           </p>
         </div>
 
@@ -231,7 +222,13 @@ export function CloudflareAnalyticsSettingsSection() {
             2. 选择 "Account Analytics" 模板，确保权限为 Account → Account
             Analytics → Read
           </p>
-          <p>3. Account ID 在 Cloudflare Dashboard 右侧边栏可见</p>
+          <p>
+            3. Account ID 已由{" "}
+            <code className="font-mono text-foreground/80">
+              CLOUDFLARE_ACCOUNT_ID
+            </code>{" "}
+            环境变量提供，无需额外配置
+          </p>
           <p>4. 数据有 10-30 分钟延迟，每小时缓存一次</p>
         </div>
       </div>

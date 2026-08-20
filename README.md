@@ -252,7 +252,6 @@ src/
 | `TURNSTILE_SECRET_KEY` | （旧版，可留空）Turnstile Secret Key 已改为在后台「人机验证」设置中配置 |
 | `UMAMI_SRC` | Umami 埋点代理 URL |
 | `LOCALE` | 默认语言 `zh` / `en`，默认 `zh` |
-| `CLOUDFLARE_ACCOUNT_ID` | （可选）Cloudflare Account ID，用于用量监控 |
 | `CLOUDFLARE_ANALYTICS_API_TOKEN` | （可选）Analytics API Token，需要 Account Analytics 读取权限，用于用量监控 |
 
 **D. Variables（构建时 / CI/CD）** —— 这些放 **Variables** 标签页
