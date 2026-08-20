@@ -49,6 +49,7 @@ export function MediaLibrary() {
     isPending,
     totalMediaSize,
     updateAsset,
+    moveFile,
     refetch,
     linkedMediaIds,
     createFolder,
@@ -246,7 +247,7 @@ export function MediaLibrary() {
             onOpenFolder={setFolder}
             onRenameFolder={currentProvider?.canCreateFolder ? setRenameFolderTarget : undefined}
             onDeleteFolder={currentProvider?.canDelete ? handleFolderDelete : undefined}
-            onRenameFile={!isExternal ? setPreviewAsset : undefined}
+            onRenameFile={currentProvider?.canRename !== false ? setPreviewAsset : undefined}
             onDeleteFile={currentProvider?.canDelete ? handleFileDelete : undefined}
             onLoadMore={loadMore}
             hasMore={hasMore}
@@ -333,11 +334,16 @@ export function MediaLibrary() {
       <MediaPreviewModal
         asset={previewAsset}
         onClose={() => setPreviewAsset(null)}
-        onUpdateName={!isExternal ? async (key, name) => { await updateAsset.mutateAsync({ data: { key, name } }); } : undefined}
+        onUpdateName={currentProvider?.canRename !== false ? async (key, name) => { await updateAsset.mutateAsync({ data: { key, name } }); } : undefined}
+        onMove={currentProvider?.canMove !== false ? async (key, targetFolder) => {
+          await moveFile.mutateAsync({ key, targetFolder });
+        } : undefined}
         onDelete={currentProvider?.canDelete ? async (key) => {
           const allowed = requestDelete([key]);
           if (allowed.length > 0) confirmDelete(allowed);
         } : undefined}
+        folders={folders}
+        currentFolder={currentFolder}
       />
     </div>
   );

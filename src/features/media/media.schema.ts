@@ -30,6 +30,8 @@ export interface MediaProvider {
   canDelete: boolean;
   canUpload: boolean;
   canCreateFolder: boolean;
+  canRename?: boolean;
+  canMove?: boolean;
   isDefault?: boolean;
 }
 
@@ -69,6 +71,7 @@ export function assertMediaKey(key: string, messages: Messages) {
 export const UpdateMediaNameInputSchema = z.object({
   key: z.string().min(1),
   name: z.string().min(1),
+  providerId: z.string().optional(),
 });
 
 export const GetMediaListInputSchema = z.object({
@@ -135,6 +138,12 @@ export const DeleteExternalFilesInputSchema = z.object({
   keys: z.array(z.string().min(1)).min(1).max(100),
 });
 
+export const MoveMediaFileInputSchema = z.object({
+  key: z.string().min(1),
+  targetFolder: z.string(),
+  providerId: z.string().optional(),
+});
+
 export type ListExternalDirectoryInput = z.infer<
   typeof ListExternalDirectoryInputSchema
 >;
@@ -142,3 +151,4 @@ export type UploadToProviderInput = z.infer<typeof UploadToProviderInputSchema>;
 export type DeleteExternalFilesInput = z.infer<
   typeof DeleteExternalFilesInputSchema
 >;
+export type MoveMediaFileInput = z.infer<typeof MoveMediaFileInputSchema>;

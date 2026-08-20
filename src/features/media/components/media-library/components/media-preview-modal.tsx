@@ -7,6 +7,7 @@ import {
   Download,
   ExternalLink,
   FileText,
+  FolderInput,
   HardDrive,
   Layout,
   Link2,
@@ -20,7 +21,7 @@ import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getLinkedPostsFn } from "@/features/media/api/media.api";
-import type { MediaDirectoryFile } from "@/features/media/components/media-library/types";
+import type { MediaDirectoryFile, MediaFolder } from "@/features/media/components/media-library/types";
 import { MEDIA_KEYS } from "@/features/media/queries";
 import { useDelayUnmount } from "@/hooks/use-delay-unmount";
 import { cn, formatBytes } from "@/lib/utils";
@@ -30,14 +31,20 @@ interface MediaPreviewModalProps {
   asset: MediaDirectoryFile | null;
   onClose: () => void;
   onUpdateName?: (key: string, name: string) => Promise<void>;
+  onMove?: (key: string, targetFolder: string) => Promise<void>;
   onDelete?: (key: string) => Promise<void>;
+  folders?: MediaFolder[];
+  currentFolder?: string;
 }
 
 export function MediaPreviewModal({
   asset,
   onClose,
   onUpdateName,
+  onMove,
   onDelete,
+  folders = [],
+  currentFolder = "",
 }: MediaPreviewModalProps) {
   const isMounted = !!asset;
   const shouldRender = useDelayUnmount(isMounted, 200);
@@ -53,12 +60,17 @@ export function MediaPreviewModal({
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Move state
+  const [isMoving, setIsMoving] = useState(false);
+  const [targetFolder, setTargetFolder] = useState(currentFolder);
+
   useEffect(() => {
     if (asset) {
       setActiveAsset(asset);
       setEditName(asset.fileName);
       setIsEditing(false);
       setIsDeleting(false);
+      setTargetFolder(currentFolder);
     }
   }, [asset]);
   const handleSaveName = async () => {
@@ -114,6 +126,19 @@ export function MediaPreviewModal({
       toast.error(m.media_preview_copy_fail(), {
         description: m.media_preview_copy_fail_desc(),
       });
+    }
+  };
+
+  const handleMove = async () => {
+    if (!activeAsset || !onMove) return;
+    setIsMoving(true);
+    try {
+      await onMove(activeAsset.key, targetFolder);
+      onClose();
+    } catch (error) {
+      console.error("Move failed:", error);
+    } finally {
+      setIsMoving(false);
     }
   };
 
@@ -349,6 +374,36 @@ export function MediaPreviewModal({
                 <span>[ {m.media_preview_btn_copy()} ]</span>
               </Button>
             </div>
+
+            {onMove && folders.length > 0 && (
+              <div className="flex gap-2">
+                <select
+                  value={targetFolder}
+                  onChange={(e) => setTargetFolder(e.target.value)}
+                  className="flex-1 h-10 text-xs font-mono bg-muted/10 border border-border/50 rounded-none px-3 uppercase tracking-wider"
+                >
+                  <option value="">{m.media_move_root()}</option>
+                  {folders.map((f) => (
+                    <option key={f.key} value={f.key}>
+                      /{f.key}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="outline"
+                  onClick={handleMove}
+                  disabled={isMoving || targetFolder === currentFolder}
+                  className="h-10 text-xs uppercase tracking-widest font-medium hover:bg-foreground hover:text-background transition-all rounded-none gap-2 border-foreground/20"
+                >
+                  {isMoving ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <FolderInput size={12} />
+                  )}
+                  <span>[ {m.media_move_btn()} ]</span>
+                </Button>
+              </div>
+            )}
 
             {onDelete && (
               <Button

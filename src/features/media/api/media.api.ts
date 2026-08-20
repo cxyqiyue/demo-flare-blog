@@ -9,6 +9,7 @@ import {
   GetMediaListInputSchema,
   ListExternalDirectoryInputSchema,
   MediaKeyInputSchema,
+  MoveMediaFileInputSchema,
   parseUploadMediaInput,
   RenameMediaFolderInputSchema,
   UpdateMediaNameInputSchema,
@@ -141,3 +142,10 @@ export const createExternalFolderFn = createServerFn({
     }),
   )
   .handler(({ data, context }) => MediaService.createExternalFolder(context, data));
+
+export const moveMediaFileFn = createServerFn({
+  method: "POST",
+})
+  .middleware([adminMiddleware])
+  .inputValidator(MoveMediaFileInputSchema)
+  .handler(({ data, context }) => MediaService.moveMediaFile(context, data));

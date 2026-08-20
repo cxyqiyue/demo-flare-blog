@@ -8,6 +8,7 @@ import type {
   GetMediaListInput,
   ListExternalDirectoryInput,
   MediaProvider,
+  MoveMediaFileInput,
   RenameMediaFolderInput,
   UpdateMediaNameInput,
   UploadToProviderInput,
@@ -26,6 +27,8 @@ import {
   listAllS3Keys,
   listS3Objects,
   moveS3Objects,
+  moveS3Object,
+  renameS3Object,
   uploadToS3,
   uploadToS3ForMediaLibrary,
   type S3Config,
@@ -223,10 +226,103 @@ export async function getTotalMediaSize(context: DbContext) {
 }
 
 export async function updateMediaName(
-  context: DbContext,
+  context: DbContext & { executionCtx: ExecutionContext },
   data: UpdateMediaNameInput,
 ) {
+  // S3: rename the actual file in remote storage
+  if (data.providerId === "s3") {
+    const config = await ConfigService.getSystemConfig(context);
+    const s3Config = resolveS3ConfigForMedia(config);
+    if (!s3Config) return err({ reason: "S3_NOT_CONFIGURED" });
+
+    const media = await MediaRepo.getMediaByKey(context.db, data.key);
+    if (!media) return err({ reason: "MEDIA_NOT_FOUND" });
+
+    const oldKey = data.key;
+    const lastSlash = oldKey.lastIndexOf("/");
+    const dir = lastSlash >= 0 ? oldKey.substring(0, lastSlash + 1) : "";
+    const newKey = `${dir}${data.name}`;
+
+    if (oldKey === newKey) {
+      return await MediaRepo.updateMediaName(context.db, data.key, data.name);
+    }
+
+    const renameResult = await renameS3Object(s3Config, oldKey, newKey);
+    if (renameResult.error) {
+      console.error(JSON.stringify({ message: "s3 rename failed", error: renameResult.error.message }));
+      return err({ reason: "S3_RENAME_FAILED" });
+    }
+
+    const newUrl = buildS3PublicUrl(s3Config, newKey);
+    await MediaRepo.updateMediaKeyAndName(context.db, oldKey, newKey, data.name, newUrl);
+    return ok({ success: true });
+  }
+
+  // R2 and others: just update display name
   return await MediaRepo.updateMediaName(context.db, data.key, data.name);
+}
+
+export async function moveMediaFile(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: MoveMediaFileInput,
+): Promise<Result<{ success: boolean }, { reason: string }>> {
+  const provider = data.providerId;
+
+  if (provider === "s3") {
+    const config = await ConfigService.getSystemConfig(context);
+    const s3Config = resolveS3ConfigForMedia(config);
+    if (!s3Config) return err({ reason: "S3_NOT_CONFIGURED" });
+
+    const media = await MediaRepo.getMediaByKey(context.db, data.key);
+    if (!media) return err({ reason: "MEDIA_NOT_FOUND" });
+
+    const oldKey = data.key;
+    const fileName = oldKey.split("/").pop() ?? oldKey;
+    const targetFolder = normalizeFolderPath(data.targetFolder);
+    const newKey = targetFolder ? `${targetFolder}/${fileName}` : fileName;
+
+    if (oldKey === newKey) {
+      return ok({ success: true });
+    }
+
+    const moveResult = await moveS3Object(s3Config, oldKey, newKey);
+    if (moveResult.error) {
+      console.error(JSON.stringify({ message: "s3 move failed", error: moveResult.error.message }));
+      return err({ reason: "S3_MOVE_FAILED" });
+    }
+
+    const newUrl = buildS3PublicUrl(s3Config, newKey);
+    await MediaRepo.updateMediaKeyAndName(context.db, oldKey, newKey, media.fileName, newUrl);
+    return ok({ success: true });
+  }
+
+  // R2: copy + delete
+  if (!provider || provider === "r2") {
+    const media = await MediaRepo.getMediaByKey(context.db, data.key);
+    if (!media) return err({ reason: "MEDIA_NOT_FOUND" });
+
+    const oldKey = data.key;
+    const fileName = oldKey.split("/").pop() ?? oldKey;
+    const targetFolder = normalizeFolderPath(data.targetFolder);
+    const newKey = targetFolder ? `${targetFolder}/${fileName}` : fileName;
+
+    if (oldKey === newKey) {
+      return ok({ success: true });
+    }
+
+    await Storage.copyObject(context.env, oldKey, newKey);
+    context.executionCtx.waitUntil(
+      Storage.deleteFromR2(context.env, oldKey).catch((e) =>
+        console.error(JSON.stringify({ message: "r2 move delete failed", key: oldKey, error: e instanceof Error ? e.message : String(e) })),
+      ),
+    );
+
+    const newUrl = `/images/${newKey}`;
+    await MediaRepo.updateMediaKeyAndName(context.db, oldKey, newKey, media.fileName, newUrl);
+    return ok({ success: true });
+  }
+
+  return err({ reason: "UNSUPPORTED_PROVIDER" });
 }
 
 async function enrichDirectoryFiles(
@@ -860,6 +956,8 @@ export async function getMediaProviders(
     canDelete: true,
     canUpload: true,
     canCreateFolder: true,
+    canRename: true,
+    canMove: true,
     isDefault: activeProvider === null || activeProvider === "r2-native",
   });
 
@@ -874,6 +972,8 @@ export async function getMediaProviders(
       canDelete: true,
       canUpload: true,
       canCreateFolder: true,
+      canRename: true,
+      canMove: true,
       isDefault: isActive("s3"),
     });
   }

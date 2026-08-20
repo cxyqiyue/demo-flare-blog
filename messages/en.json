@@ -1163,6 +1163,12 @@
   ],
   "media_toast_metadata_updated": "Metadata Updated",
   "media_toast_metadata_updated_desc": "Metadata changes saved.",
+  "media_move_root": "Root",
+  "media_move_btn": "Move",
+  "media_toast_move_fail": "Move Failed",
+  "media_toast_move_fail_desc": "Could not move file to target location",
+  "media_toast_move_success": "File Moved",
+  "media_toast_move_success_desc": "File has been moved to the target folder.",
   "media_toast_protected_delete": "Cannot Delete Protected Assets",
   "media_toast_protected_delete_desc": [
     {

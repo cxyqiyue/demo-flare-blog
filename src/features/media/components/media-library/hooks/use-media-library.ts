@@ -15,6 +15,7 @@ import {
   deleteMediaFoldersFn,
   getMediaDirectoryFn,
   listExternalDirectoryFn,
+  moveMediaFileFn,
   renameMediaFolderFn,
   updateMediaNameFn,
 } from "@/features/media/api/media.api";
@@ -341,12 +342,37 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     },
   });
 
-  // Update name (R2 only)
+  // Update name (R2 + S3 with sync)
   const updateAsset = useMutation({
-    mutationFn: (payload: Parameters<typeof updateMediaNameFn>[0]) => updateMediaNameFn(payload),
+    mutationFn: (payload: Parameters<typeof updateMediaNameFn>[0]) => {
+      if (isExternal && currentProviderId) {
+        const data = payload.data as { key: string; name: string };
+        return updateMediaNameFn({ data: { ...data, providerId: currentProviderId } });
+      }
+      return updateMediaNameFn(payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
       toast.success(m.media_toast_metadata_updated(), { description: m.media_toast_metadata_updated_desc() });
+    },
+  });
+
+  // Move file to another folder
+  const moveFile = useMutation({
+    mutationFn: (payload: { key: string; targetFolder: string }) =>
+      moveMediaFileFn({
+        data: {
+          ...payload,
+          providerId: isExternal ? currentProviderId : undefined,
+        },
+      }),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast.error(m.media_toast_move_fail(), { description: m.media_toast_move_fail_desc() });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
+      toast.success(m.media_toast_move_success(), { description: m.media_toast_move_success_desc() });
     },
   });
 
@@ -471,6 +497,7 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     linkedMediaIds,
     totalMediaSize,
     updateAsset,
+    moveFile,
     createFolder,
     renameFolder,
     // External errors

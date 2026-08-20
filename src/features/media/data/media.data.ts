@@ -24,6 +24,24 @@ export async function updateMediaName(db: DB, key: string, name: string) {
     .where(eq(MediaTable.key, key));
 }
 
+export async function getMediaByKey(db: DB, key: string): Promise<Media | undefined> {
+  const [row] = await db.select().from(MediaTable).where(eq(MediaTable.key, key)).limit(1);
+  return row;
+}
+
+export async function updateMediaKeyAndName(
+  db: DB,
+  oldKey: string,
+  newKey: string,
+  fileName: string,
+  url: string,
+) {
+  await db
+    .update(MediaTable)
+    .set({ key: newKey, fileName, url })
+    .where(eq(MediaTable.key, oldKey));
+}
+
 const DEFAULT_PAGE_SIZE = 20;
 
 /**
