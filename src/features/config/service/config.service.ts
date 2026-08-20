@@ -230,14 +230,14 @@ function migrateImageHostingConfig(
   const s3 = ih.s3;
 
   // 默认启用 R2 原生
-  const hasExternalHosting =
-    apiProviders.length > 0 || !!s3?.articleEnabled;
+  const hasExternalHosting = apiProviders.length > 0 || !!s3?.articleEnabled;
 
   return {
     activeProvider: ih.activeProvider ?? null,
     r2Native: {
       articleEnabled: !hasExternalHosting,
-      commentEnabled: !s3?.commentEnabled && !apiProviders.some((p) => p.commentEnabled),
+      commentEnabled:
+        !s3?.commentEnabled && !apiProviders.some((p) => p.commentEnabled),
     },
     s3: s3
       ? {
@@ -297,6 +297,7 @@ export function resolveSystemConfig(
       ...DEFAULT_CONFIG.wechatVerify,
       ...config?.wechatVerify,
     },
+    cloudflareAnalytics: resolveCloudflareAnalyticsConfig(config),
     site: resolveSiteConfig(config),
   };
 }
@@ -379,6 +380,36 @@ function hasSiteConfigChanged(
     JSON.stringify(resolveSiteConfig(currentConfig)) !==
     JSON.stringify(resolveSiteConfig(nextConfig))
   );
+}
+
+function resolveCloudflareAnalyticsConfig(
+  config: SystemConfig | null | undefined,
+) {
+  const ca = config?.cloudflareAnalytics;
+  return {
+    enabled: ca?.enabled ?? false,
+    accountId: ca?.accountId ?? "",
+    apiToken: ca?.apiToken ?? "",
+    alert: {
+      enabled: ca?.alert?.enabled ?? false,
+      emailEnabled: ca?.alert?.emailEnabled ?? true,
+      webhookEnabled: ca?.alert?.webhookEnabled ?? true,
+      thresholds: {
+        workersRequestsPct: ca?.alert?.thresholds?.workersRequestsPct ?? 80,
+        workersCpuPct: ca?.alert?.thresholds?.workersCpuPct ?? 80,
+        d1RowsReadPct: ca?.alert?.thresholds?.d1RowsReadPct ?? 80,
+        r2StoragePct: ca?.alert?.thresholds?.r2StoragePct ?? 80,
+        kvReadPct: ca?.alert?.thresholds?.kvReadPct ?? 80,
+        kvWritePct: ca?.alert?.thresholds?.kvWritePct ?? 80,
+        queuesMessagesPct: ca?.alert?.thresholds?.queuesMessagesPct ?? 80,
+        workflowsInvocationsPct:
+          ca?.alert?.thresholds?.workflowsInvocationsPct ?? 80,
+        workersAiPct: ca?.alert?.thresholds?.workersAiPct ?? 80,
+        durableObjectsRequestsPct:
+          ca?.alert?.thresholds?.durableObjectsRequestsPct ?? 80,
+      },
+    },
+  };
 }
 
 export async function getSystemConfig(

@@ -30,6 +30,8 @@ const serverEnvSchema = z.object({
   PAGEVIEW_SALT: z.string().optional(),
   TURNSTILE_SECRET_KEY: z.string().optional(),
   GITHUB_TOKEN: z.string().optional(),
+  CLOUDFLARE_ACCOUNT_ID: z.string().optional(),
+  CLOUDFLARE_ANALYTICS_API_TOKEN: z.string().optional(),
 });
 
 export function serverEnv(env: Env) {

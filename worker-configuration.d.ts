@@ -22,6 +22,8 @@ interface __BaseEnv_Env {
 	PAGEVIEW_SALT: string;
 	TURNSTILE_SECRET_KEY: string;
 	GITHUB_TOKEN: string;
+	CLOUDFLARE_ACCOUNT_ID: string;
+	CLOUDFLARE_ANALYTICS_API_TOKEN: string;
 	RATE_LIMITER: DurableObjectNamespace<import("./src/server").RateLimiter>;
 	PASSWORD_HASHER: DurableObjectNamespace<import("./src/server").PasswordHasher>;
 	POST_PROCESS_WORKFLOW: Workflow<Parameters<import("./src/server").PostProcessWorkflow['run']>[0]['payload']>;
@@ -57,6 +59,8 @@ declare namespace Cloudflare {
 		PAGEVIEW_SALT: string;
 		TURNSTILE_SECRET_KEY: string;
 		GITHUB_TOKEN: string;
+		CLOUDFLARE_ACCOUNT_ID: string;
+		CLOUDFLARE_ANALYTICS_API_TOKEN: string;
 		RATE_LIMITER: DurableObjectNamespace<import("./src/server").RateLimiter>;
 		PASSWORD_HASHER: DurableObjectNamespace<import("./src/server").PasswordHasher>;
 		POST_PROCESS_WORKFLOW: Workflow<Parameters<import("./src/server").PostProcessWorkflow['run']>[0]['payload']>;
@@ -73,7 +77,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "BETTER_AUTH_SECRET" | "BETTER_AUTH_URL" | "ADMIN_EMAIL" | "GITHUB_CLIENT_ID" | "GITHUB_CLIENT_SECRET" | "CLOUDFLARE_ZONE_ID" | "CLOUDFLARE_PURGE_API_TOKEN" | "DOMAIN" | "VITE_UMAMI_WEBSITE_ID" | "UMAMI_SRC" | "PAGEVIEW_SALT" | "TURNSTILE_SECRET_KEY" | "GITHUB_TOKEN">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "BETTER_AUTH_SECRET" | "BETTER_AUTH_URL" | "ADMIN_EMAIL" | "GITHUB_CLIENT_ID" | "GITHUB_CLIENT_SECRET" | "CLOUDFLARE_ZONE_ID" | "CLOUDFLARE_PURGE_API_TOKEN" | "DOMAIN" | "VITE_UMAMI_WEBSITE_ID" | "UMAMI_SRC" | "PAGEVIEW_SALT" | "TURNSTILE_SECRET_KEY" | "GITHUB_TOKEN" | "CLOUDFLARE_ACCOUNT_ID" | "CLOUDFLARE_ANALYTICS_API_TOKEN">> {}
 }
 
 // Begin runtime types

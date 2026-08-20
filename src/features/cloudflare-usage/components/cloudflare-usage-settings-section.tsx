@@ -1,0 +1,240 @@
+import { useMutation } from "@tanstack/react-query";
+import {
+  CheckCircle2,
+  ExternalLink,
+  KeyRound,
+  Loader2,
+  XCircle,
+} from "lucide-react";
+import { useState } from "react";
+import { useFormContext } from "react-hook-form";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { testCloudflareConnectionFn } from "@/features/cloudflare-usage/api/cloudflare-usage.api";
+import type { SystemConfig } from "@/features/config/config.schema";
+
+type ConnectionStatus = "idle" | "testing" | "success" | "error";
+
+export function CloudflareAnalyticsSettingsSection() {
+  const { register, watch } = useFormContext<SystemConfig>();
+  const [connectionStatus, setConnectionStatus] =
+    useState<ConnectionStatus>("idle");
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  const accountId = watch("cloudflareAnalytics.accountId") ?? "";
+  const apiToken = watch("cloudflareAnalytics.apiToken") ?? "";
+
+  const isConfigured = accountId.length > 0 && apiToken.length > 0;
+
+  const testMutation = useMutation({
+    mutationFn: () =>
+      testCloudflareConnectionFn({
+        data: { accountId, apiToken },
+      }),
+    onMutate: () => {
+      setConnectionStatus("testing");
+      setConnectionError(null);
+    },
+    onSuccess: (result: { error?: string }) => {
+      if (result.error) {
+        setConnectionStatus("error");
+        setConnectionError(result.error);
+      } else {
+        setConnectionStatus("success");
+        toast.success("Cloudflare Analytics API 连接成功");
+      }
+    },
+    onError: (error: unknown) => {
+      setConnectionStatus("error");
+      setConnectionError(
+        error instanceof Error ? error.message : String(error),
+      );
+    },
+  });
+
+  const handleTest = () => {
+    if (!isConfigured) return;
+    testMutation.mutate();
+  };
+
+  const inputClassName =
+    "w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10";
+
+  return (
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
+      {/* General Settings */}
+      <div className="space-y-6 p-8">
+        <div className="flex items-center gap-4">
+          <div className="rounded-sm bg-muted/40 p-2">
+            <ExternalLink size={16} className="text-muted-foreground" />
+          </div>
+          <div className="space-y-1">
+            <h5 className="text-sm font-medium text-foreground">
+              Cloudflare Analytics API 配置
+            </h5>
+            <p className="text-xs text-muted-foreground">
+              用于查询 Cloudflare 账户用量数据，需要 Account Analytics 读取权限
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <label
+            htmlFor="cf-analytics-account-id"
+            className="text-sm text-muted-foreground"
+          >
+            Account ID
+          </label>
+          <Input
+            id="cf-analytics-account-id"
+            placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            {...register("cloudflareAnalytics.accountId")}
+            className={inputClassName}
+          />
+          <p className="text-xs text-muted-foreground">
+            在 Cloudflare Dashboard → 右侧边栏获取
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <label
+            htmlFor="cf-analytics-api-token"
+            className="text-sm text-muted-foreground"
+          >
+            API Token
+          </label>
+          <div className="relative group/input">
+            <Input
+              id="cf-analytics-api-token"
+              type="password"
+              placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              {...register("cloudflareAnalytics.apiToken")}
+              className={inputClassName}
+            />
+            <KeyRound
+              size={14}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            需要 Account → Account Analytics → Read 权限
+          </p>
+        </div>
+
+        {/* Test Connection */}
+        <div className="flex items-center gap-4 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!isConfigured || connectionStatus === "testing"}
+            onClick={handleTest}
+            className="rounded-none border-border/30 text-xs font-mono uppercase tracking-wider"
+          >
+            {connectionStatus === "testing" ? (
+              <>
+                <Loader2 size={12} className="animate-spin mr-2" />
+                测试中...
+              </>
+            ) : (
+              "测试连接"
+            )}
+          </Button>
+
+          {connectionStatus === "success" && (
+            <div className="flex items-center gap-2 text-xs text-green-600">
+              <CheckCircle2 size={12} />
+              连接成功
+            </div>
+          )}
+          {connectionStatus === "error" && (
+            <div className="flex items-center gap-2 text-xs text-red-500">
+              <XCircle size={12} />
+              {connectionError ?? "连接失败"}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Alert Settings */}
+      <div className="space-y-6 p-8 border-t border-border/20">
+        <div className="flex items-center gap-4">
+          <div className="rounded-sm bg-muted/40 p-2">
+            <CheckCircle2 size={16} className="text-muted-foreground" />
+          </div>
+          <div className="space-y-1">
+            <h5 className="text-sm font-medium text-foreground">告警通知</h5>
+            <p className="text-xs text-muted-foreground">
+              当用量超过阈值时发送邮件和 Webhook 通知
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              {...register("cloudflareAnalytics.alert.enabled")}
+              className="rounded-none border-border/30"
+            />
+            <span className="text-sm text-foreground">启用用量告警</span>
+          </label>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                {...register("cloudflareAnalytics.alert.emailEnabled")}
+                className="rounded-none border-border/30"
+              />
+              <span className="text-sm text-muted-foreground">邮件通知</span>
+            </label>
+          </div>
+          <div className="space-y-2">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                {...register("cloudflareAnalytics.alert.webhookEnabled")}
+                className="rounded-none border-border/30"
+              />
+              <span className="text-sm text-muted-foreground">
+                Webhook 通知
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Doc Panel */}
+      <div className="space-y-3 p-8">
+        <div className="flex items-center gap-3">
+          <h5 className="text-sm font-medium text-foreground">配置说明</h5>
+          <ExternalLink size={12} className="text-muted-foreground" />
+        </div>
+        <div className="text-sm text-muted-foreground leading-relaxed space-y-2">
+          <p>
+            1. 前往{" "}
+            <a
+              href="https://dash.cloudflare.com/profile/api-tokens"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              Cloudflare API Tokens
+            </a>{" "}
+            创建 Token
+          </p>
+          <p>
+            2. 选择 "Account Analytics" 模板，确保权限为 Account → Account
+            Analytics → Read
+          </p>
+          <p>3. Account ID 在 Cloudflare Dashboard 右侧边栏可见</p>
+          <p>4. 数据有 10-30 分钟延迟，每小时缓存一次</p>
+        </div>
+      </div>
+    </div>
+  );
+}

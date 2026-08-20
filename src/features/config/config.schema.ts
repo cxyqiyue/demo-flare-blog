@@ -174,6 +174,33 @@ export const WechatVerifyConfigSchema = z.object({
   fileContent: z.string().optional(),
 });
 
+export const CloudflareAnalyticsAlertSchema = z.object({
+  enabled: z.boolean().optional(),
+  emailEnabled: z.boolean().optional(),
+  webhookEnabled: z.boolean().optional(),
+  thresholds: z
+    .object({
+      workersRequestsPct: z.number().min(0).max(100).optional(),
+      workersCpuPct: z.number().min(0).max(100).optional(),
+      d1RowsReadPct: z.number().min(0).max(100).optional(),
+      r2StoragePct: z.number().min(0).max(100).optional(),
+      kvReadPct: z.number().min(0).max(100).optional(),
+      kvWritePct: z.number().min(0).max(100).optional(),
+      queuesMessagesPct: z.number().min(0).max(100).optional(),
+      workflowsInvocationsPct: z.number().min(0).max(100).optional(),
+      workersAiPct: z.number().min(0).max(100).optional(),
+      durableObjectsRequestsPct: z.number().min(0).max(100).optional(),
+    })
+    .optional(),
+});
+
+export const CloudflareAnalyticsConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  accountId: z.string().optional(),
+  apiToken: z.string().optional(),
+  alert: CloudflareAnalyticsAlertSchema.optional(),
+});
+
 export const CONFIG_SECTIONS = [
   "email",
   "notification",
@@ -183,6 +210,7 @@ export const CONFIG_SECTIONS = [
   "usage",
   "wechatVerify",
   "site",
+  "cloudflareAnalytics",
 ] as const;
 export type ConfigSection = (typeof CONFIG_SECTIONS)[number];
 
@@ -206,6 +234,10 @@ export const UpdateSystemConfigSectionInputSchema = z.discriminatedUnion(
       data: WechatVerifyConfigSchema,
     }),
     z.object({ section: z.literal("site"), data: SiteConfigInputSchema }),
+    z.object({
+      section: z.literal("cloudflareAnalytics"),
+      data: CloudflareAnalyticsConfigSchema,
+    }),
   ],
 );
 export type UpdateSystemConfigSectionInput = z.infer<
@@ -221,6 +253,7 @@ export const SystemConfigSchema = z.object({
   usage: UsageConfigSchema.optional(),
   wechatVerify: WechatVerifyConfigSchema.optional(),
   site: SiteConfigInputSchema.optional(),
+  cloudflareAnalytics: CloudflareAnalyticsConfigSchema.optional(),
 });
 
 export const createSystemConfigFormSchema = (messages: Messages) =>
@@ -239,6 +272,7 @@ export const createSystemConfigFormSchema = (messages: Messages) =>
     usage: SystemConfigSchema.shape.usage,
     wechatVerify: SystemConfigSchema.shape.wechatVerify,
     site: createSiteConfigInputFormSchema(messages).optional(),
+    cloudflareAnalytics: SystemConfigSchema.shape.cloudflareAnalytics,
   });
 
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
@@ -348,6 +382,28 @@ export const DEFAULT_CONFIG: SystemConfig = {
   wechatVerify: {
     fileName: "",
     fileContent: "",
+  },
+  cloudflareAnalytics: {
+    enabled: false,
+    accountId: "",
+    apiToken: "",
+    alert: {
+      enabled: false,
+      emailEnabled: true,
+      webhookEnabled: true,
+      thresholds: {
+        workersRequestsPct: 80,
+        workersCpuPct: 80,
+        d1RowsReadPct: 80,
+        r2StoragePct: 80,
+        kvReadPct: 80,
+        kvWritePct: 80,
+        queuesMessagesPct: 80,
+        workflowsInvocationsPct: 80,
+        workersAiPct: 80,
+        durableObjectsRequestsPct: 80,
+      },
+    },
   },
   site: blogConfig satisfies SiteConfigInput,
 };

@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute, useBlocker } from "@tanstack/react-router";
 import {
   Check,
+  Cloud,
   Cpu,
   Hammer,
   Image as ImageIcon,
@@ -22,6 +23,7 @@ import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { AiSettingsSection } from "@/features/ai/components/ai-settings-section";
 import { useAiConnection } from "@/features/ai/hooks/use-ai-connection";
 import { ChallengeSettingsSection } from "@/features/challenge/components/challenge-settings-section";
+import { CloudflareAnalyticsSettingsSection } from "@/features/cloudflare-usage/components/cloudflare-usage-settings-section";
 import { MaintenanceSection } from "@/features/config/components/maintenance-section";
 import { SectionSkeleton } from "@/features/config/components/settings-skeleton";
 import { SiteSettingsSection } from "@/features/config/components/site-settings-section";
@@ -102,6 +104,11 @@ function RouteComponent() {
       label: m.settings_tab_webhook(),
     },
     {
+      value: "cloudflare",
+      icon: Cloud,
+      label: "Cloudflare",
+    },
+    {
       value: "maintenance",
       icon: Hammer,
       label: m.settings_tab_maintenance(),
@@ -130,6 +137,7 @@ function RouteComponent() {
     challenge: "challenge",
     "wechat-verify": "wechatVerify",
     webhook: "notification",
+    cloudflare: "cloudflareAnalytics",
   };
 
   const methods = useForm<SystemConfig>({
@@ -432,6 +440,18 @@ function RouteComponent() {
                 </p>
               </div>
               <WebhookSettingsSection />
+            </TabsContent>
+
+            <TabsContent value="cloudflare" className="mt-0 space-y-10">
+              <div className="space-y-2 pb-6 border-b border-border/30">
+                <h2 className="text-2xl font-serif font-medium tracking-tight">
+                  Cloudflare 用量监控
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  监控 Cloudflare 免费额度使用情况，支持告警通知
+                </p>
+              </div>
+              <CloudflareAnalyticsSettingsSection />
             </TabsContent>
 
             <TabsContent value="maintenance" className="mt-0 space-y-10">

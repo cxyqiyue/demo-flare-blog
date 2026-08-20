@@ -252,6 +252,8 @@ Open **Settings → Secrets and variables → Actions** in your repository and c
 | `TURNSTILE_SECRET_KEY` | (legacy, can be empty) Turnstile Secret Key is now configured in admin Settings → Challenge |
 | `UMAMI_SRC` | Umami tracking proxy URL |
 | `LOCALE` | Default language `zh` / `en`, default `zh` |
+| `CLOUDFLARE_ACCOUNT_ID` | (optional) Cloudflare Account ID for usage monitoring |
+| `CLOUDFLARE_ANALYTICS_API_TOKEN` | (optional) Analytics API Token with Account Analytics read permission for usage monitoring |
 
 **D. Variables (build-time / CI/CD)** — put these in the **Variables** tab
 
