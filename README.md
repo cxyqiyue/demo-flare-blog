@@ -63,12 +63,12 @@
 - **用户管理** — 角色管理（admin/user）、封禁/解封（可附带理由和到期时间）、评论统计
 
 ### AI 与自动化
-- **AI 辅助** — 支持 Cloudflare Workers AI、Agnes AI（无限期免费，国际站/国内站双端点）或任意 OpenAI 兼容接口（OpenAI / Claude / Gemini），提供：
+- **AI 辅助** — 支持 Cloudflare Workers AI、Agnes AI（无限期免费，国际站/国内站双端点）或第三方 AI（支持 OpenAI / Claude / Gemini 三种独立兼容类型，可配置多个 Provider 实例并切换），提供：
   - 文章摘要生成（200 字以内）
   - 标签自动提取（1-3 个）
   - AI 一键生文（支持博客/技术文档/通讯三种写作风格 + 自定义写作指令）
   - 评论内容审核（三段式裁决：放行/拦截/人工审核）
-- **MCP Server** — 通过 OAuth 连接 AI 客户端（Claude / Cursor 等），暴露 25+ 个工具和 4 个提示词模板，管理文章、评论、标签、友链、媒体与统计
+- **MCP Server** — 通过 OAuth 连接 AI 客户端（Claude / Cursor 等），暴露 23 个工具和 4 个提示词模板，管理文章、评论、标签、友链、媒体与统计
 - **导入导出** — ZIP 打包导出、Markdown / 原生格式导入，通过 Cloudflare Workflow 异步处理
 
 ### 通知与安全
@@ -81,6 +81,7 @@
 - **数据统计** — 站内浏览量统计（Queue + D1 去重）+ Umami 代理集成（`/stats.js`、`/api/send`），24h / 7d / 30d / 90d 多维度流量分析
 - **全文搜索** — 基于 Orama 的高性能站内搜索，支持中文分词、模糊匹配、高亮显示
 - **主题系统** — 可扩展主题契约，完整替换页面与布局（内置 `default` / `fuwari` 两套主题）
+- **Cloudflare 用量监控** — 监控 Workers / D1 / R2 / KV / Queues / Workflows / Workers AI / Durable Objects 八大服务用量，支持可配置阈值告警（邮件 + Webhook）
 - **微信公众号验证** — 后台配置验证文件名和内容
 - **版本更新检查** — 对比 GitHub Release，后台提示新版本
 - **缓存管理** — KV 缓存 + CDN 缓存清除，后台一键操作
@@ -148,31 +149,28 @@ src/
 │   ├── notification/# 通知系统（邮件 + Webhook）
 │   ├── webhook/     # Webhook（HMAC 签名 / 企业微信）
 │   ├── cache/       # KV 缓存服务
-│   ├── config/      # 博客配置（8 个配置分区）
+│   ├── config/      # 博客配置（9 个配置分区）
 │   ├── friend-links/# 友情链接（申请、审核）
 │   ├── navigation/  # 导航页（搜索引擎、书签管理）
 │   ├── import-export/# Markdown 导入导出
 │   ├── version/     # 版本更新检查
 │   ├── theme/       # 主题系统（契约、注册表、各主题实现）
-│   ├── ai/          # AI 集成（Workers AI / Agnes AI / OpenAI 兼容接口）
-│   ├── mcp/         # MCP Server（25+ 工具、4 个提示词模板）
+│   ├── ai/          # AI 集成（Workers AI / Agnes AI / OpenAI·Claude·Gemini 兼容）
+│   ├── mcp/         # MCP Server（23 个工具、4 个提示词模板）
 │   ├── image-hosting/# 7 种图床方案
 │   ├── challenge/   # 人机验证（ALTCHA PoW / Turnstile）
 │   ├── pageview/    # 浏览量统计（Queue + D1）
-│   ├── site-documents/ # RSS / Atom / Sitemap / Robots / PWA Manifest
+│   ├── site-documents/ # RSS / Atom / Sitemap / Robots / PWA Manifest（Hono 路由）
+│   ├── cloudflare-usage/ # Cloudflare 用量监控与告警
 │   ├── wechat-verify/  # 微信公众号验证
-│   ├── about/       # 关于页
 │   ├── oauth-provider/ # OAuth Provider（MCP 连接）
 │   └── oauth-clients/  # OAuth 客户端管理
 ├── routes/
-│   ├── _public/     # 公开页面（首页、文章列表/详情、搜索、友链、动态、导航、关于）
-│   ├── _auth/       # 登录/注册/找回密码/邮箱验证
+│   ├── _public/     # 公开页面（首页、文章列表/详情、搜索、友链、动态、导航、关于、邮件退订）
+│   ├── _auth/       # 登录/注册/找回密码/重置密码/邮箱验证
 │   ├── _user/       # 个人中心、友链申请
 │   ├── admin/       # 管理后台（仪表盘、文章、评论、媒体、标签、技能、友链、用户、导航、设置）
-│   ├── rss[.]xml.ts     # RSS / Atom Feed
-│   ├── sitemap[.]xml.ts # Sitemap
-│   ├── robots[.]txt.ts  # Robots.txt
-│   └── manifest[.]webmanifest.ts # PWA Web App Manifest
+│   └── oauth/       # OAuth 授权页（MCP 客户端连接）
 ├── components/      # UI 组件（ui/, common/, layout/, tiptap-editor/）
 ├── lib/             # 基础设施（db/, auth/, hono/, middlewares）
 └── hooks/           # 自定义 Hooks
@@ -302,6 +300,7 @@ src/
 - [ ] （可选）配置 Webhook 通知：后台设置 → 通知，按事件订阅
 - [ ] （可选）开启人机验证：后台设置 → 人机验证，选择验证方案（不启用 / **ALTCHA PoW** / **Cloudflare Turnstile**）。Turnstile 可在超时或连续失败后自动回退到 ALTCHA PoW 兜底；再配合 Umami 统计
 - [ ] （可选）后台设置 → AI 配置 AI 服务：默认 Workers AI，也可切换到 **Agnes AI**（无限期免费，一键选择国际站/国内站端点）或 OpenAI 兼容接口（填写 Base URL / 模型 / API Key 后点「测试连接」）
+- [ ] （可选）后台设置 → Cloudflare，配置用量监控与告警阈值（Workers / D1 / R2 / KV 等八大服务用量百分比，支持邮件和 Webhook 告警通道）
 - [ ] 若页面样式异常，在后台设置页手动 **清除 CDN 缓存** 或到 Cloudflare Dashboard 清理
 
 ### 方案二：Cloudflare Dashboard 手动部署

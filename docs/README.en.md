@@ -63,12 +63,12 @@ Deeply integrated with D1, R2, KV, Workflows, and other Serverless services — 
 - **User Management** — Role management (admin/user), ban/unban (with reason and expiry), comment statistics
 
 ### AI & Automation
-- **AI Integration** — Supports Cloudflare Workers AI, Agnes AI (free forever, international/domestic dual endpoints), or any OpenAI-compatible interface (OpenAI / Claude / Gemini):
+- **AI Integration** — Supports Cloudflare Workers AI, Agnes AI (free forever, international/domestic dual endpoints), or third-party AI (3 independent compat types: OpenAI / Claude / Gemini, with multiple configurable Provider instances and switching):
   - Article summary generation (200 chars)
   - Tag auto-extraction (1-3 tags)
   - AI one-click article generation (3 writing styles: blog/docs/newsletter + custom instructions)
   - Comment content moderation (three-segment verdict: approve/block/review)
-- **MCP Server** — Connect AI clients (Claude / Cursor etc.) via OAuth, exposes 25+ tools and 4 prompt templates, manages posts, comments, tags, friend links, media, and analytics
+- **MCP Server** — Connect AI clients (Claude / Cursor etc.) via OAuth, exposes 23 tools and 4 prompt templates, manages posts, comments, tags, friend links, media, and analytics
 - **Import/Export** — ZIP packaged export, Markdown / native format import, processed asynchronously via Cloudflare Workflows
 
 ### Notification & Security
@@ -81,6 +81,7 @@ Deeply integrated with D1, R2, KV, Workflows, and other Serverless services — 
 - **Analytics** — Built-in pageview stats (Queue + D1 dedup) + Umami proxy integration (`/stats.js`, `/api/send`), 24h / 7d / 30d / 90d multi-range traffic analysis
 - **Full-Text Search** — Orama-powered high-performance on-site search, supports Chinese tokenization, fuzzy matching, and highlighted results
 - **Theme System** — Extensible theme contracts, complete page and layout replacement (built-in `default` / `fuwari` themes)
+- **Cloudflare Usage Monitoring** — Monitors 8 services (Workers / D1 / R2 / KV / Queues / Workflows / Workers AI / Durable Objects), configurable threshold alerts (email + Webhook)
 - **WeChat Verification** — Configurable verification file name and content in admin settings
 - **Version Update Check** — Compare against GitHub Release, admin panel prompts for new versions
 - **Cache Management** — KV cache + CDN cache purge, one-click operation from admin panel
@@ -149,30 +150,28 @@ src/
 │   ├── notification/# Notification system (email + webhook)
 │   ├── webhook/     # Webhooks (HMAC-signed / WeChat Work)
 │   ├── cache/       # KV caching services
-│   ├── config/      # Blog configurations (8 config sections)
+│   ├── config/      # Blog configurations (9 config sections)
 │   ├── friend-links/# Friend links (applications, moderation)
 │   ├── navigation/  # Navigation page (search engines, bookmarks)
 │   ├── import-export/# Markdown importing/exporting
 │   ├── version/     # Version update checker
 │   ├── theme/       # Theme system (contracts, registry, theme implementations)
-│   ├── ai/          # AI integration (Workers AI / Agnes AI / OpenAI-compatible)
-│   ├── mcp/         # MCP Server (25+ tools, 4 prompt templates)
+│   ├── ai/          # AI integration (Workers AI / Agnes AI / OpenAI·Claude·Gemini compat)
+│   ├── mcp/         # MCP Server (23 tools, 4 prompt templates)
 │   ├── image-hosting/# 7 image hosting providers
 │   ├── challenge/   # Human verification (ALTCHA PoW / Turnstile)
 │   ├── pageview/    # Pageview analytics (Queue + D1)
-│   ├── site-documents/ # RSS / Atom / Sitemap / Robots / PWA Manifest
+│   ├── site-documents/ # RSS / Atom / Sitemap / Robots / PWA Manifest (Hono routes)
+│   ├── cloudflare-usage/ # Cloudflare usage monitoring & alerts
 │   ├── wechat-verify/  # WeChat verification
 │   ├── oauth-provider/ # OAuth Provider (MCP connection)
 │   └── oauth-clients/  # OAuth client management
 ├── routes/
-│   ├── _public/     # Public pages (Home, post lists/details, search, friend links, moments, navigation, about)
-│   ├── _auth/       # Login/registration/password reset/email verification
+│   ├── _public/     # Public pages (Home, post lists/details, search, friend links, moments, navigation, about, email unsubscribe)
+│   ├── _auth/       # Login/registration/forgot password/reset password/email verification
 │   ├── _user/       # Profile, friend-link submission
 │   ├── admin/       # Admin backend (dashboard, posts, comments, media, tags, skills, friend links, users, navigation, settings)
-│   ├── rss[.]xml.ts     # RSS / Atom Feed
-│   ├── sitemap[.]xml.ts # Sitemap
-│   ├── robots[.]txt.ts  # Robots.txt
-│   └── manifest[.]webmanifest.ts # PWA Web App Manifest
+│   └── oauth/       # OAuth consent page (MCP client connection)
 ├── components/      # UI components (ui/, common/, layout/, tiptap-editor/)
 ├── lib/             # Infrastructure (db/, auth/, hono/, middlewares)
 └── hooks/           # Custom React Hooks
@@ -302,6 +301,7 @@ Run through the following after deployment:
 - [ ] (Optional) Configure webhook notifications in admin Settings → Webhook with per-event subscriptions
 - [ ] (Optional) Enable human verification in admin Settings → Challenge: pick a provider (None / **ALTCHA PoW** / **Cloudflare Turnstile**). Turnstile can auto-fall back to ALTCHA PoW on timeout or repeated failures. Also enable Umami analytics
 - [ ] (Optional) Configure AI in admin Settings → AI: Workers AI by default, or switch to an OpenAI-compatible endpoint (fill in Base URL / model / API key and hit "Test connection")
+- [ ] (Optional) Configure Cloudflare usage monitoring in admin Settings → Cloudflare: set alert thresholds for 8 services (Workers / D1 / R2 / KV / Queues / Workflows / Workers AI / Durable Objects) with email and Webhook alert channels
 - [ ] If styles look broken, manually **Clear CDN Cache** from the admin Settings page or the Cloudflare Dashboard
 
 ### Option 2: Deploy via Cloudflare Dashboard
