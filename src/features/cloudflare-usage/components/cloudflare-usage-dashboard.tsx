@@ -2,7 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { Button } from "@/components/ui/button";
-import { cloudflareUsageQuery } from "@/features/cloudflare-usage/queries";
+import {
+  cloudflareUsageQuery,
+  cloudflareAlertQuery,
+} from "@/features/cloudflare-usage/queries";
 import {
   formatBytes,
   formatNumber,
@@ -97,6 +100,7 @@ function ServiceCard({
 export function CloudflareUsageDashboard() {
   const { data, isLoading, refetch, isFetching } =
     useQuery(cloudflareUsageQuery);
+  const { data: alertData } = useQuery(cloudflareAlertQuery);
 
   if (isLoading) {
     return (
@@ -130,7 +134,7 @@ export function CloudflareUsageDashboard() {
     );
   }
 
-  const alertsCount = services.filter((s) => s.percentage >= 80).length;
+  const alertsCount = alertData?.alerts?.length ?? 0;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
