@@ -23,6 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { refreshDashboardCacheFn } from "@/features/dashboard/api/dashboard.api";
+import { CloudflareUsageDashboard } from "@/features/cloudflare-usage/components/cloudflare-usage-dashboard";
 import { DashboardSkeleton } from "@/features/dashboard/components/dashboard-skeleton";
 import { MetricItem } from "@/features/dashboard/components/metric-item";
 import { StatCard } from "@/features/dashboard/components/stat-card";
@@ -190,6 +191,9 @@ function DashboardOverview() {
           />
         </Link>
       </div>
+
+      {/* Cloudflare Usage */}
+      <CloudflareUsageDashboard />
 
       {/* Main Content Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
