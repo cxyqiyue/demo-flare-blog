@@ -326,7 +326,7 @@ export function CloudflareAnalyticsSettingsSection() {
         {/* Threshold Settings */}
         <div className="space-y-4 pt-4 border-t border-border/20">
           <p className="text-xs text-muted-foreground">
-            各服务告警阈值（默认 90%，用量达到该比例时触发通知）
+            各服务告警阈值（默认 80%，用量达到该比例时触发通知）
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
             {(

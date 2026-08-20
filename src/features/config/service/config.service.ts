@@ -394,18 +394,18 @@ function resolveCloudflareAnalyticsConfig(
       emailEnabled: ca?.alert?.emailEnabled ?? true,
       webhookEnabled: ca?.alert?.webhookEnabled ?? true,
       thresholds: {
-        workersRequestsPct: ca?.alert?.thresholds?.workersRequestsPct ?? 90,
-        workersCpuPct: ca?.alert?.thresholds?.workersCpuPct ?? 90,
-        d1RowsReadPct: ca?.alert?.thresholds?.d1RowsReadPct ?? 90,
-        r2StoragePct: ca?.alert?.thresholds?.r2StoragePct ?? 90,
-        kvReadPct: ca?.alert?.thresholds?.kvReadPct ?? 90,
-        kvWritePct: ca?.alert?.thresholds?.kvWritePct ?? 90,
-        queuesMessagesPct: ca?.alert?.thresholds?.queuesMessagesPct ?? 90,
+        workersRequestsPct: ca?.alert?.thresholds?.workersRequestsPct ?? 80,
+        workersCpuPct: ca?.alert?.thresholds?.workersCpuPct ?? 80,
+        d1RowsReadPct: ca?.alert?.thresholds?.d1RowsReadPct ?? 80,
+        r2StoragePct: ca?.alert?.thresholds?.r2StoragePct ?? 80,
+        kvReadPct: ca?.alert?.thresholds?.kvReadPct ?? 80,
+        kvWritePct: ca?.alert?.thresholds?.kvWritePct ?? 80,
+        queuesMessagesPct: ca?.alert?.thresholds?.queuesMessagesPct ?? 80,
         workflowsInvocationsPct:
-          ca?.alert?.thresholds?.workflowsInvocationsPct ?? 90,
-        workersAiPct: ca?.alert?.thresholds?.workersAiPct ?? 90,
+          ca?.alert?.thresholds?.workflowsInvocationsPct ?? 80,
+        workersAiPct: ca?.alert?.thresholds?.workersAiPct ?? 80,
         durableObjectsRequestsPct:
-          ca?.alert?.thresholds?.durableObjectsRequestsPct ?? 90,
+          ca?.alert?.thresholds?.durableObjectsRequestsPct ?? 80,
       },
     },
   };
