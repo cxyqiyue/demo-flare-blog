@@ -109,7 +109,7 @@ export function CloudflareAnalyticsSettingsSection() {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            需要 Account → Analytics → Read 权限
+            需要 Account → Account Analytics → Read 权限
           </p>
         </div>
 
@@ -221,7 +221,8 @@ export function CloudflareAnalyticsSettingsSection() {
           <p>
             2. 选择{" "}
             <strong className="text-foreground/80">Custom token</strong>
-            ，权限设置为 Account → Analytics → Read
+            ，权限设置为 Account → Account Analytics → Read（注意是
+            "Account Analytics" 不是 "Analytics"）
           </p>
           <p>
             3. Account ID 已由{" "}
