@@ -4,6 +4,8 @@ import {
   ExternalLink,
   KeyRound,
   Loader2,
+  Mail,
+  Send,
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
@@ -11,7 +13,11 @@ import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { testCloudflareConnectionFn } from "@/features/cloudflare-usage/api/cloudflare-usage.api";
+import {
+  testCloudflareConnectionFn,
+  testCloudflareAlertEmailFn,
+  testCloudflareAlertWebhookFn,
+} from "@/features/cloudflare-usage/api/cloudflare-usage.api";
 import type { SystemConfig } from "@/features/config/config.schema";
 
 type ConnectionStatus = "idle" | "testing" | "success" | "error";
@@ -23,6 +29,24 @@ export function CloudflareAnalyticsSettingsSection() {
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const apiToken = watch("cloudflareAnalytics.apiToken") ?? "";
+
+  const emailHost = watch("email.host") ?? "";
+  const emailPort = watch("email.port");
+  const emailUsername = watch("email.username") ?? "";
+  const emailPassword = watch("email.password") ?? "";
+  const emailSender = watch("email.senderAddress") ?? "";
+  const isEmailConfigured = !!(
+    emailHost.trim() &&
+    emailPort &&
+    emailUsername.trim() &&
+    emailPassword.trim() &&
+    emailSender.trim()
+  );
+
+  const webhooks = watch("notification.webhooks") ?? [];
+  const hasEnabledWebhook = webhooks.some(
+    (w: { enabled?: boolean }) => w.enabled,
+  );
 
   const isConfigured = apiToken.length > 0;
 
@@ -49,6 +73,54 @@ export function CloudflareAnalyticsSettingsSection() {
       setConnectionError(
         error instanceof Error ? error.message : String(error),
       );
+    },
+  });
+
+  const testEmailMutation = useMutation({
+    mutationFn: () => testCloudflareAlertEmailFn({ data: undefined }),
+    onSuccess: (result: { success: boolean; error?: string }) => {
+      if (result.success) {
+        toast.success("测试邮件已发送，请检查收件箱");
+      } else {
+        toast.error("邮件发送失败", { description: result.error });
+      }
+    },
+    onError: (error: unknown) => {
+      toast.error("邮件发送失败", {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    },
+  });
+
+  const testWebhookMutation = useMutation({
+    mutationFn: () => testCloudflareAlertWebhookFn({ data: undefined }),
+    onSuccess: (result: {
+      success: boolean;
+      error?: string;
+      results?: Array<{ name: string; success: boolean; error?: string }>;
+    }) => {
+      if (result.success) {
+        toast.success("Webhook 测试消息已发送");
+      } else if (result.results) {
+        const failed = result.results.filter((r) => !r.success);
+        if (failed.length > 0) {
+          toast.error(
+            `${failed.length} 个 Webhook 发送失败`,
+            {
+              description: failed.map((r) => `${r.name}: ${r.error}`).join("\n"),
+            },
+          );
+        } else {
+          toast.success("Webhook 测试消息已发送");
+        }
+      } else {
+        toast.error("Webhook 测试失败", { description: result.error });
+      }
+    },
+    onError: (error: unknown) => {
+      toast.error("Webhook 测试失败", {
+        description: error instanceof Error ? error.message : String(error),
+      });
     },
   });
 
@@ -174,27 +246,80 @@ export function CloudflareAnalyticsSettingsSection() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="flex items-center gap-3 cursor-pointer">
+          {/* Email Notification */}
+          <div className="space-y-3">
+            <label
+              className={`flex items-center gap-3 ${isEmailConfigured ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
+            >
               <input
                 type="checkbox"
                 {...register("cloudflareAnalytics.alert.emailEnabled")}
+                disabled={!isEmailConfigured}
                 className="rounded-none border-border/30"
               />
               <span className="text-sm text-muted-foreground">邮件通知</span>
             </label>
+            {!isEmailConfigured && (
+              <p className="text-[10px] text-muted-foreground pl-6">
+                需先在「邮件服务」中配置 SMTP
+              </p>
+            )}
+            <div className="pl-6">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!isEmailConfigured || testEmailMutation.isPending}
+                onClick={() => testEmailMutation.mutate()}
+                className="rounded-none border-border/30 text-[10px] font-mono uppercase tracking-wider"
+              >
+                {testEmailMutation.isPending ? (
+                  <Loader2 size={10} className="animate-spin mr-1" />
+                ) : (
+                  <Mail size={10} className="mr-1" />
+                )}
+                发送测试邮件
+              </Button>
+            </div>
           </div>
-          <div className="space-y-2">
-            <label className="flex items-center gap-3 cursor-pointer">
+
+          {/* Webhook Notification */}
+          <div className="space-y-3">
+            <label
+              className={`flex items-center gap-3 ${hasEnabledWebhook ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}
+            >
               <input
                 type="checkbox"
                 {...register("cloudflareAnalytics.alert.webhookEnabled")}
+                disabled={!hasEnabledWebhook}
                 className="rounded-none border-border/30"
               />
               <span className="text-sm text-muted-foreground">
                 Webhook 通知
               </span>
             </label>
+            {!hasEnabledWebhook && (
+              <p className="text-[10px] text-muted-foreground pl-6">
+                需先在「通知」中配置 Webhook 端点
+              </p>
+            )}
+            <div className="pl-6">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!hasEnabledWebhook || testWebhookMutation.isPending}
+                onClick={() => testWebhookMutation.mutate()}
+                className="rounded-none border-border/30 text-[10px] font-mono uppercase tracking-wider"
+              >
+                {testWebhookMutation.isPending ? (
+                  <Loader2 size={10} className="animate-spin mr-1" />
+                ) : (
+                  <Send size={10} className="mr-1" />
+                )}
+                测试 Webhook
+              </Button>
+            </div>
           </div>
         </div>
       </div>
