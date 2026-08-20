@@ -328,39 +328,41 @@ export function CloudflareAnalyticsSettingsSection() {
           <p className="text-xs text-muted-foreground">
             各服务告警阈值（默认 90%，用量达到该比例时触发通知）
           </p>
-          {(
-            [
-              { name: "workersRequestsPct", label: "Workers Requests" },
-              { name: "d1RowsReadPct", label: "D1 Rows Read" },
-              { name: "r2StoragePct", label: "R2 Storage" },
-              { name: "kvReadPct", label: "KV Reads" },
-              { name: "queuesMessagesPct", label: "Queues Messages" },
-              { name: "workflowsInvocationsPct", label: "Workflows Invocations" },
-              { name: "workersAiPct", label: "Workers AI" },
-              { name: "durableObjectsRequestsPct", label: "Durable Objects" },
-            ] as const
-          ).map(({ name, label }) => {
-            const fieldPath =
-              `cloudflareAnalytics.alert.thresholds.${name}` as const;
-            return (
-              <div key={name} className="flex items-center gap-4">
-                <label className="text-xs text-muted-foreground w-40 shrink-0">
-                  {label}
-                </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={5}
-                  {...register(fieldPath)}
-                  className="flex-1 h-1 accent-foreground"
-                />
-                <span className="text-xs font-mono text-muted-foreground w-10 text-right">
-                  {watch(fieldPath) ?? 90}%
-                </span>
-              </div>
-            );
-          })}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+            {(
+              [
+                { name: "workersRequestsPct", label: "Workers Requests" },
+                { name: "d1RowsReadPct", label: "D1 Rows Read" },
+                { name: "r2StoragePct", label: "R2 Storage" },
+                { name: "kvReadPct", label: "KV Reads" },
+                { name: "queuesMessagesPct", label: "Queues Messages" },
+                { name: "workflowsInvocationsPct", label: "Workflows Invocations" },
+                { name: "workersAiPct", label: "Workers AI" },
+                { name: "durableObjectsRequestsPct", label: "Durable Objects" },
+              ] as const
+            ).map(({ name, label }) => {
+              const fieldPath =
+                `cloudflareAnalytics.alert.thresholds.${name}` as const;
+              return (
+                <div key={name} className="flex items-center justify-between gap-2">
+                  <label className="text-xs text-muted-foreground">
+                    {label}
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={5}
+                      {...register(fieldPath, { valueAsNumber: true })}
+                      className="w-14 h-7 text-center text-xs font-mono bg-transparent border border-border/30 rounded-sm focus:outline-none focus:border-foreground/50"
+                    />
+                    <span className="text-xs text-muted-foreground">%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
       <div className="space-y-3 p-8">
