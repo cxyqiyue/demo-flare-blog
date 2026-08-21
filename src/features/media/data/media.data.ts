@@ -42,6 +42,35 @@ export async function updateMediaKeyAndName(
     .where(eq(MediaTable.key, oldKey));
 }
 
+export async function updateMediaKeyAndUrl(
+  db: DB,
+  oldKey: string,
+  newKey: string,
+  url: string,
+) {
+  await db
+    .update(MediaTable)
+    .set({ key: newKey, url })
+    .where(eq(MediaTable.key, oldKey));
+}
+
+/**
+ * Return every media record whose key starts with `prefix`
+ * (e.g. all files inside a renamed folder).
+ */
+export async function getMediaByKeyPrefix(
+  db: DB,
+  prefix: string,
+): Promise<Array<Media>> {
+  if (!prefix) return [];
+  return await db
+    .select()
+    .from(MediaTable)
+    .where(
+      sql`substr(${MediaTable.key}, 1, ${prefix.length}) = ${prefix}`,
+    );
+}
+
 const DEFAULT_PAGE_SIZE = 20;
 
 /**

@@ -98,6 +98,9 @@ export async function uploadToS3(
 }
 
 // ── List Objects ──────────────────────────────────────────────
+// NOTE: All keys/prefixes in this module are FULL bucket-relative paths.
+// `cfg.pathPrefix` is treated as a regular visible folder, never prepended
+// implicitly — this keeps the media library in true sync with real storage.
 
 export interface S3ListObjectsResult {
   objects: Array<{ key: string; size: number; lastModified: string }>;
@@ -117,31 +120,25 @@ export async function listS3Objects(
 ): Promise<Result<S3ListObjectsResult, { reason: "S3_LIST_FAILED"; message: string }>> {
   try {
     const client = createS3Client(cfg);
-    const bucketPrefix = [cfg.pathPrefix?.trim(), options.prefix].filter(Boolean).join("/");
 
     const response = await client.send(
       new ListObjectsV2Command({
         Bucket: cfg.bucket,
-        Prefix: bucketPrefix || undefined,
+        Prefix: options.prefix || undefined,
         Delimiter: options.delimiter || undefined,
         ContinuationToken: options.continuationToken || undefined,
         MaxKeys: options.maxKeys ?? 1000,
       }),
     );
 
-    const normalizedPrefix = (bucketPrefix || "").replace(/\/+$/, "");
-    const strippedPrefix = normalizedPrefix ? `${normalizedPrefix}/` : "";
-    const stripPrefix = (key: string) =>
-      key.startsWith(strippedPrefix) ? key.slice(strippedPrefix.length) : key;
-
     const objects = (response.Contents ?? []).map((o) => ({
-      key: stripPrefix(o.Key ?? ""),
+      key: o.Key ?? "",
       size: o.Size ?? 0,
       lastModified: o.LastModified?.toISOString() ?? "",
     }));
 
     const prefixes = (response.CommonPrefixes ?? [])
-      .map((p) => stripPrefix((p.Prefix ?? "").replace(/\/$/, "")))
+      .map((p) => (p.Prefix ?? "").replace(/\/$/, ""))
       .filter(Boolean);
 
     return ok({
@@ -166,12 +163,11 @@ export async function deleteS3Object(
 ): Promise<Result<{ success: boolean }, { reason: "S3_DELETE_FAILED"; message: string }>> {
   try {
     const client = createS3Client(cfg);
-    const fullKey = [cfg.pathPrefix?.trim(), key].filter(Boolean).join("/");
 
     await client.send(
       new DeleteObjectCommand({
         Bucket: cfg.bucket,
-        Key: fullKey,
+        Key: key,
       }),
     );
 
@@ -208,21 +204,19 @@ export async function renameS3Object(
 ): Promise<Result<{ success: boolean }, { reason: "S3_RENAME_FAILED"; message: string }>> {
   try {
     const client = createS3Client(cfg);
-    const fullOldKey = [cfg.pathPrefix?.trim(), oldKey].filter(Boolean).join("/");
-    const fullNewKey = [cfg.pathPrefix?.trim(), newKey].filter(Boolean).join("/");
 
     await client.send(
       new CopyObjectCommand({
         Bucket: cfg.bucket,
-        CopySource: `/${cfg.bucket}/${fullOldKey}`,
-        Key: fullNewKey,
+        CopySource: `/${cfg.bucket}/${encodeObjectKey(oldKey)}`,
+        Key: newKey,
       }),
     );
 
     await client.send(
       new DeleteObjectCommand({
         Bucket: cfg.bucket,
-        Key: fullOldKey,
+        Key: oldKey,
       }),
     );
 
@@ -244,21 +238,19 @@ export async function moveS3Object(
 ): Promise<Result<{ success: boolean }, { reason: "S3_MOVE_FAILED"; message: string }>> {
   try {
     const client = createS3Client(cfg);
-    const fullOldKey = [cfg.pathPrefix?.trim(), oldKey].filter(Boolean).join("/");
-    const fullNewKey = [cfg.pathPrefix?.trim(), newKey].filter(Boolean).join("/");
 
     await client.send(
       new CopyObjectCommand({
         Bucket: cfg.bucket,
-        CopySource: `/${cfg.bucket}/${fullOldKey}`,
-        Key: fullNewKey,
+        CopySource: `/${cfg.bucket}/${encodeObjectKey(oldKey)}`,
+        Key: newKey,
       }),
     );
 
     await client.send(
       new DeleteObjectCommand({
         Bucket: cfg.bucket,
-        Key: fullOldKey,
+        Key: oldKey,
       }),
     );
 
@@ -328,7 +320,8 @@ export async function uploadToS3ForMediaLibrary(
   try {
     const ext = file.name.split(".").pop() || "bin";
     const baseName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const objectKey = [cfg.pathPrefix?.trim(), folder, baseName].filter(Boolean).join("/");
+    // `folder` is the exact destination shown in the media library (bucket-relative).
+    const objectKey = [folder, baseName].filter(Boolean).join("/");
 
     const result = await uploadToS3(cfg, {
       key: objectKey,

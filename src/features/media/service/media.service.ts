@@ -244,7 +244,8 @@ export async function updateMediaName(
     const newKey = `${dir}${data.name}`;
 
     if (oldKey === newKey) {
-      return await MediaRepo.updateMediaName(context.db, data.key, data.name);
+      await MediaRepo.updateMediaName(context.db, data.key, data.name);
+      return ok({ success: true });
     }
 
     const renameResult = await renameS3Object(s3Config, oldKey, newKey);
@@ -259,7 +260,8 @@ export async function updateMediaName(
   }
 
   // R2 and others: just update display name
-  return await MediaRepo.updateMediaName(context.db, data.key, data.name);
+  await MediaRepo.updateMediaName(context.db, data.key, data.name);
+  return ok({ success: true });
 }
 
 export async function moveMediaFile(
@@ -443,6 +445,8 @@ export async function renameFolder(
     const s3Config = resolveS3ConfigForMedia(config);
     if (!s3Config) return err({ reason: "S3_NOT_CONFIGURED" });
 
+    const mediaRecords = await MediaRepo.getMediaByKeyPrefix(context.db, folderKey);
+
     const keysResult = await listAllS3Keys(s3Config, folderKey);
     if (keysResult.error) return err({ reason: "S3_RENAME_FAILED" });
 
@@ -456,7 +460,16 @@ export async function renameFolder(
       if (moveResult.error) return err({ reason: "S3_RENAME_FAILED" });
     }
 
-    await MediaRepo.updateMediaKeyPrefix(context.db, folderKey, newKey);
+    // Rewrite D1 records with the new full key and a rebuilt public URL.
+    for (const record of mediaRecords) {
+      const recordNewKey = `${newKey}${record.key.slice(folderKey.length)}`;
+      await MediaRepo.updateMediaKeyAndUrl(
+        context.db,
+        record.key,
+        recordNewKey,
+        buildS3PublicUrl(s3Config, recordNewKey),
+      );
+    }
     return ok({ key: newKey });
   }
 
@@ -494,19 +507,23 @@ export async function deleteFolders(
       const keysResult = await listAllS3Keys(s3Config, folderKey);
       if (keysResult.error) continue;
 
-      const fileKeys = keysResult.data.filter((k) => !k.endsWith("/"));
+      const allKeys = keysResult.data;
+      const fileKeys = allKeys.filter((k) => !k.endsWith("/"));
       const linkedKeys = new Set(
         await PostMediaRepo.getLinkedMediaKeys(context.db, fileKeys),
       );
 
-      const toDelete = fileKeys.filter((k) => !linkedKeys.has(k));
+      const toDeleteFiles = fileKeys.filter((k) => !linkedKeys.has(k));
+      // Also remove zero-byte folder markers so the folder really disappears.
+      const markers = allKeys.filter((k) => k.endsWith("/"));
+      const toDelete = [...toDeleteFiles, ...markers];
       if (toDelete.length > 0) {
         await deleteS3Objects(s3Config, toDelete);
       }
-      await MediaRepo.deleteMediaByKeys(context.db, toDelete);
+      await MediaRepo.deleteMediaByKeys(context.db, toDeleteFiles);
 
-      deletedFiles += toDelete.length;
-      skippedFiles += fileKeys.length - toDelete.length;
+      deletedFiles += toDeleteFiles.length;
+      skippedFiles += fileKeys.length - toDeleteFiles.length;
     }
 
     return ok({ deletedFolders: data.keys.length, deletedFiles, skippedFiles });
@@ -1117,6 +1134,14 @@ async function listExternalDirectoryMerged(
 ): Promise<ExternalDirectoryResult> {
   const provider = data.providerId;
 
+  // S3: the remote bucket listing is authoritative and complete — anything
+  // inside the bucket (including files uploaded outside the blog) shows up,
+  // and removed objects disappear. No D1 merge, otherwise records whose real
+  // object is gone would linger and duplicates would appear.
+  if (provider === "s3") {
+    return listExternalDirectoryDirect(context, data);
+  }
+
   // 1. Fetch remote file listing (primary source of truth)
   const remoteResult = await listExternalDirectoryDirect(context, data);
 
@@ -1156,9 +1181,11 @@ async function listExternalDirectoryDirect(
     const s3Config = resolveS3ConfigForMedia(config);
     if (!s3Config) return { files: [], folders: [], nextContinuationToken: null, error: "S3 未配置或缺少必要字段" };
 
-    const prefix = normalizeFolderPath(data.folder);
+    // Browse the REAL bucket root: the configured pathPrefix appears as a
+    // regular folder, exactly like the actual S3 storage layout.
+    const folder = normalizeFolderPath(data.folder);
     const result = await listS3Objects(s3Config, {
-      prefix: prefix ? `${prefix}/` : "",
+      prefix: folder ? `${folder}/` : "",
       delimiter: "/",
       continuationToken: data.continuationToken,
     });
@@ -1168,17 +1195,22 @@ async function listExternalDirectoryDirect(
       return { files: [], folders: [], nextContinuationToken: null, error: result.error.message };
     }
 
-    const files: ExternalDirectoryFile[] = result.data.objects.map((o) => ({
-      key: o.key,
-      name: getBasename(o.key),
-      url: buildS3PublicUrl(s3Config, o.key),
-      mimeType: guessMimeFromKey(o.key),
-      sizeInBytes: o.size,
-    }));
+    // Zero-byte keys ending with "/" are folder markers — hide them from files.
+    const files: ExternalDirectoryFile[] = result.data.objects
+      .filter((o) => !o.key.endsWith("/"))
+      .map((o) => ({
+        key: o.key,
+        name: getBasename(o.key),
+        url: buildS3PublicUrl(s3Config, o.key),
+        mimeType: guessMimeFromKey(o.key),
+        sizeInBytes: o.size,
+      }));
 
     return {
       files,
-      folders: result.data.prefixes.map((p) => ({ key: p, name: getBasename(p) })),
+      // Trailing-slash keys keep frontend folder detection (isFolderKey)
+      // consistent with the R2 provider.
+      folders: result.data.prefixes.map((p) => ({ key: `${p}/`, name: getBasename(p) })),
       nextContinuationToken: result.data.isTruncated
         ? (result.data.nextContinuationToken ?? null)
         : null,
@@ -1476,8 +1508,10 @@ export async function createExternalFolder(
     const parent = normalizeFolderPath(data.parent ?? "");
     const folderKey = joinFolderKey(parent, name);
 
+    // joinFolderKey already ends with a single trailing slash — this creates
+    // a real zero-byte folder marker object in the bucket.
     const result = await uploadToS3(s3Config, {
-      key: `${folderKey}/`,
+      key: folderKey,
       body: new ArrayBuffer(0),
       contentType: "application/x-directory",
     });
@@ -1571,12 +1605,11 @@ export async function createExternalFolder(
 }
 
 function buildS3PublicUrl(cfg: S3Config, key: string): string {
-  const fullKey = [cfg.pathPrefix?.trim(), key].filter(Boolean).join("/");
   const base = (
     cfg.publicUrl?.trim() ||
     `${cfg.endpoint.replace(/\/+$/, "")}/${cfg.bucket}`
   ).replace(/\/+$/, "");
-  const encoded = fullKey.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  const encoded = key.split("/").filter(Boolean).map(encodeURIComponent).join("/");
   return `${base}/${encoded}`;
 }
 

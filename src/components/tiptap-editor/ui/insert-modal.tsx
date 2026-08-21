@@ -60,7 +60,11 @@ const MediaItem = memo(
         )}
 
         <img
-          src={getOptimizedImageUrl(media.key)}
+          src={
+            media.url.startsWith("/images/")
+              ? getOptimizedImageUrl(media.key)
+              : media.url
+          }
           alt={media.fileName}
           className={`w-full h-full object-cover transition-all duration-1000 ${
             isLoaded ? "opacity-100" : "opacity-0"
