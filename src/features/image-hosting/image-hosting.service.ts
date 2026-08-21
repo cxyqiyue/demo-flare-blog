@@ -20,6 +20,10 @@ import {
   type S3UploadConfig,
   uploadToS3,
 } from "@/features/image-hosting/s3/s3-upload";
+import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
+import * as DiscordChannelApi from "@/features/image-hosting/channels/discord";
+import * as HuggingFaceChannelApi from "@/features/image-hosting/channels/huggingface";
+import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
 import { parseUploadMediaInput } from "@/features/media/media.schema";
 import * as MediaRepo from "@/features/media/data/media.data";
 import * as MediaStorage from "@/features/media/data/media.storage";
@@ -132,15 +136,18 @@ async function uploadToS3ForFile(
   file: File,
 ): Promise<
   Result<
-    { url: string },
+    { url: string; key: string },
     { reason: "PROVIDER_REQUEST_FAILED"; message: string }
   >
 > {
-  return await uploadToS3(config, {
-    key: buildObjectKey(config.pathPrefix, extensionFromMime(file.type)),
+  const key = buildObjectKey(config.pathPrefix, extensionFromMime(file.type));
+  const result = await uploadToS3(config, {
+    key,
     body: await file.arrayBuffer(),
     contentType: file.type || "application/octet-stream",
   });
+  if (result.error) return result;
+  return ok({ url: result.data.url, key });
 }
 
 function extractImageUrlFromResponse(parsed: unknown): string | null {
@@ -264,333 +271,140 @@ function getApiKeyProviderFieldInfo(type: string): {
   return { fieldName: "image", defaultEndpoint: IMGBB_API_ENDPOINT };
 }
 
+/**
+ * API-Key 图床（imgbb/ffsky）没有可管理的远端对象，仅生成一个稳定的
+ * 索引键用于 D1 媒体库展示。
+ */
+function buildApiKeyTrackingKey(
+  providerType: string,
+  ext: string,
+): string {
+  const ts = Date.now();
+  let uuid = "";
+  try {
+    uuid = crypto.randomUUID();
+  } catch {
+    uuid = `${ts.toString(36)}_${Math.random().toString(36).slice(2)}`;
+  }
+  return `api-key/${providerType}/${ts}-${uuid}.${ext}`;
+}
+
 // ── Telegram 上传 ──────────────────────────────────────────────
 
+/**
+ * Upload via the shared Telegram channel client. The returned key
+ * `telegram/{messageId}` is the durable handle used by the media library
+ * for remote deletion.
+ */
 async function uploadToTelegram(
   config: TelegramChannel,
   file: File,
 ): Promise<
   Result<
-    { url: string },
+    { url: string; key: string },
     { reason: "PROVIDER_REQUEST_FAILED"; message: string }
   >
 > {
-  const botToken = config.botToken?.trim();
-  const chatId = config.chatId?.trim();
-  if (!botToken || !chatId) {
+  const result = await TelegramChannelApi.uploadToTelegramChannel(config, file);
+  if (result.error) {
     return err({
       reason: "PROVIDER_REQUEST_FAILED",
-      message: "Telegram bot token and chat ID are required",
+      message: result.error.message,
     });
   }
-
-  try {
-    const proxyDomain = config.proxyUrl?.trim();
-    const baseUrl = proxyDomain
-      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
-      : "https://api.telegram.org";
-    const apiUrl = `${baseUrl}/bot${botToken}/sendPhoto`;
-
-    const form = new FormData();
-    form.append("chat_id", chatId);
-    form.append("photo", file);
-
-    const fetchOptions: RequestInit = { method: "POST", body: form };
-
-    const response = await fetch(apiUrl, fetchOptions);
-    const responseText = await response.text();
-
-    let parsed: unknown = null;
-    try {
-      parsed = responseText ? JSON.parse(responseText) : null;
-    } catch {
-      parsed = null;
-    }
-
-    if (typeof parsed !== "object" || parsed === null || !(parsed as Record<string, unknown>).ok) {
-      return err({
-        reason: "PROVIDER_REQUEST_FAILED",
-        message: extractErrorMessage(parsed, responseText),
-      });
-    }
-
-    const result = parsed as Record<string, unknown>;
-    const msg = result.result as Record<string, unknown> | undefined;
-    const photo = msg?.photo as Array<Record<string, unknown>> | undefined;
-    const fileId =
-      photo && photo.length > 0
-        ? (photo[photo.length - 1].file_id as string)
-        : undefined;
-
-    if (!fileId) {
-      return err({
-        reason: "PROVIDER_REQUEST_FAILED",
-        message: "No file_id returned from Telegram",
-      });
-    }
-
-    const getFileUrl = `${baseUrl}/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`;
-    const fileResp = await fetch(getFileUrl);
-    const fileText = await fileResp.text();
-    let fileParsed: unknown = null;
-    try {
-      fileParsed = fileText ? JSON.parse(fileText) : null;
-    } catch {
-      fileParsed = null;
-    }
-
-    if (typeof fileParsed !== "object" || fileParsed === null) {
-      return err({
-        reason: "PROVIDER_REQUEST_FAILED",
-        message: "Failed to get file info from Telegram",
-      });
-    }
-
-    const fileResult = fileParsed as Record<string, unknown>;
-    const fileInfo = fileResult.result as Record<string, unknown> | undefined;
-    const filePath = fileInfo?.file_path as string | undefined;
-    if (!filePath) {
-      return err({
-        reason: "PROVIDER_REQUEST_FAILED",
-        message: "No file_path returned from Telegram getFile",
-      });
-    }
-
-    const fileDomain = proxyDomain
-      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
-      : "https://api.telegram.org";
-    const fileUrl = `${fileDomain}/file/bot${botToken}/${filePath}`;
-    return ok({ url: fileUrl });
-  } catch (error) {
-    return err({
-      reason: "PROVIDER_REQUEST_FAILED",
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
+  return ok({
+    url: result.data.url,
+    key: `telegram/${result.data.messageId}`,
+  });
 }
 
 // ── Discord 上传 ───────────────────────────────────────────────
 
+/**
+ * Upload via the shared Discord channel client. The bare messageId is the
+ * key — attachment URLs rotate (~24h signed URLs), message ids do not.
+ */
 async function uploadToDiscord(
   config: DiscordChannel,
   file: File,
 ): Promise<
   Result<
-    { url: string },
+    { url: string; key: string },
     { reason: "PROVIDER_REQUEST_FAILED"; message: string }
   >
 > {
-  const botToken = config.botToken?.trim();
-  const channelId = config.channelId?.trim();
-  if (!botToken || !channelId) {
+  const result = await DiscordChannelApi.uploadToDiscordChannel(config, file);
+  if (result.error) {
     return err({
       reason: "PROVIDER_REQUEST_FAILED",
-      message: "Discord bot token and channel ID are required",
+      message: result.error.message,
     });
   }
-
-  const MAX_SIZE = config.isNitro ? 25 * 1024 * 1024 : 10 * 1024 * 1024;
-  if (file.size > MAX_SIZE) {
-    return err({
-      reason: "PROVIDER_REQUEST_FAILED",
-      message: `File exceeds Discord limit of ${config.isNitro ? "25" : "10"}MB`,
-    });
-  }
-
-  try {
-    const proxyDomain = config.proxyUrl?.trim();
-    const apiBase = proxyDomain
-      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
-      : "https://discord.com/api/v10";
-    const apiUrl = `${apiBase}/channels/${channelId}/messages`;
-
-    const form = new FormData();
-    form.append("files[0]", file, file.name || "image.png");
-
-    const headers: Record<string, string> = {
-      Authorization: `Bot ${botToken}`,
-    };
-
-    const fetchOptions: RequestInit = {
-      method: "POST",
-      headers,
-      body: form,
-    };
-
-    const response = await fetch(apiUrl, fetchOptions);
-    const responseText = await response.text();
-
-    let parsed: unknown = null;
-    try {
-      parsed = responseText ? JSON.parse(responseText) : null;
-    } catch {
-      parsed = null;
-    }
-
-    if (!response.ok) {
-      return err({
-        reason: "PROVIDER_REQUEST_FAILED",
-        message: extractErrorMessage(parsed, responseText),
-      });
-    }
-
-    const msg = parsed as Record<string, unknown>;
-    const attachments = msg.attachments as
-      | Array<Record<string, unknown>>
-      | undefined;
-    if (!attachments || attachments.length === 0) {
-      return err({
-        reason: "PROVIDER_REQUEST_FAILED",
-        message: "No attachments returned from Discord",
-      });
-    }
-
-    const url = attachments[0].url as string;
-    return ok({ url });
-  } catch (error) {
-    return err({
-      reason: "PROVIDER_REQUEST_FAILED",
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
+  return ok({ url: result.data.url, key: result.data.messageId });
 }
 
 // ── HuggingFace 上传 ───────────────────────────────────────────
 
+/**
+ * Upload via the shared HuggingFace datasets client into the
+ * `image-hosting/` folder. The real repo path is the key.
+ */
 async function uploadToHuggingFace(
   config: HuggingFaceChannel,
   file: File,
 ): Promise<
   Result<
-    { url: string },
+    { url: string; key: string },
     { reason: "PROVIDER_REQUEST_FAILED"; message: string }
   >
 > {
-  const token = config.token?.trim();
-  const repo = config.repo?.trim();
-  if (!token || !repo) {
+  const result = await HuggingFaceChannelApi.uploadToHuggingFaceChannel(
+    config,
+    file,
+    "image-hosting",
+  );
+  if (result.error) {
     return err({
       reason: "PROVIDER_REQUEST_FAILED",
-      message: "HuggingFace token and repo are required",
+      message: result.error.message,
     });
   }
-
-  try {
-    const ext = extensionFromMime(file.type);
-    const fileName = `image-hosting/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-    const apiUrl = `https://huggingface.co/api/repos/${config.isPrivate ? "private" : "model"}/${repo}/upload/main`;
-
-    const body = await file.arrayBuffer();
-    const response = await fetch(apiUrl, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": file.type || "application/octet-stream",
-      },
-      body,
-    });
-
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      let parsed: unknown = null;
-      try {
-        parsed = responseText ? JSON.parse(responseText) : null;
-      } catch {
-        parsed = null;
-      }
-      return err({
-        reason: "PROVIDER_REQUEST_FAILED",
-        message: extractErrorMessage(parsed, responseText),
-      });
-    }
-
-    const cdnUrl = `https://huggingface.co/${repo}/resolve/main/${fileName}`;
-    return ok({ url: cdnUrl });
-  } catch (error) {
-    return err({
-      reason: "PROVIDER_REQUEST_FAILED",
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
+  return ok({ url: result.data.url, key: result.data.key });
 }
 
 // ── WebDAV 上传 ────────────────────────────────────────────────
 
+/**
+ * Upload via the shared WebDAV client into the `image-hosting/` folder.
+ * The real server path is the key.
+ */
 async function uploadToWebDAV(
   config: WebDAVChannel,
   file: File,
 ): Promise<
   Result<
-    { url: string },
+    { url: string; key: string },
     { reason: "PROVIDER_REQUEST_FAILED"; message: string }
   >
 > {
-  const baseUrl = config.baseUrl?.trim();
-  if (!baseUrl) {
+  const result = await WebDavChannelApi.uploadToWebDavChannel(
+    config,
+    file,
+    "image-hosting",
+  );
+  if (result.error) {
     return err({
       reason: "PROVIDER_REQUEST_FAILED",
-      message: "WebDAV base URL is required",
+      message: result.error.message,
     });
   }
-
-  try {
-    const ext = extensionFromMime(file.type);
-    const fileName = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
-    const base = baseUrl.replace(/\/+$/, "");
-    const uploadDir = `${base}/image-hosting`;
-    const uploadUrl = `${uploadDir}/${fileName}`;
-
-    const headers: Record<string, string> = {};
-    if (config.username) {
-      const credentials = btoa(
-        `${config.username}:${config.password || ""}`,
-      );
-      headers.Authorization = `Basic ${credentials}`;
-    }
-
-    if (config.createDirectory) {
-      await fetch(uploadDir, {
-        method: "MKCOL",
-        headers,
-      }).catch(() => {
-        // Ignore errors if directory already exists
-      });
-    }
-
-    const body = await file.arrayBuffer();
-    const response = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        ...headers,
-        "Content-Type": file.type || "application/octet-stream",
-      },
-      body,
-    });
-
-    if (!response.ok && response.status !== 201 && response.status !== 204) {
-      const responseText = await response.text();
-      return err({
-        reason: "PROVIDER_REQUEST_FAILED",
-        message: `WebDAV upload failed with status ${response.status}: ${responseText.slice(0, 300)}`,
-      });
-    }
-
-    const publicBase = config.publicUrl?.trim() || base;
-    const publicUrl = `${publicBase.replace(/\/+$/, "")}/image-hosting/${fileName}`;
-    return ok({ url: publicUrl });
-  } catch (error) {
-    return err({
-      reason: "PROVIDER_REQUEST_FAILED",
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
+  return ok({ url: result.data.url, key: result.data.key });
 }
 
 // ── 通用上传路由 ───────────────────────────────────────────────
 
 type ProviderUploadResult = Result<
-  { url: string },
+  { url: string; key: string },
   { reason: "PROVIDER_REQUEST_FAILED"; message: string }
 >;
 
@@ -626,7 +440,10 @@ async function uploadToActiveProvider(
         const base64 = arrayBufferToBase64(await file.arrayBuffer());
         const result = await uploadToEndpoint(endpoint, p.apiKey.trim(), base64, fieldName);
         if (result.error) continue;
-        return result;
+        return ok({
+          url: result.data.url,
+          key: buildApiKeyTrackingKey(p.type, extensionFromMime(file.type)),
+        });
       }
       return null;
     }
@@ -642,7 +459,7 @@ async function uploadToActiveProvider(
         const key = buildObjectKey(folder, ext);
         try {
           await MediaStorage.putToR2(context.env, file, key);
-          return ok({ url: `/images/${key}` });
+          return ok({ url: `/images/${key}`, key });
         } catch (error) {
           return err({
             reason: "PROVIDER_REQUEST_FAILED",
@@ -694,76 +511,6 @@ function getProviderLabel(
     return apiProviderType as ImageHostingProviderLabel;
   }
   return provider as ImageHostingProviderLabel;
-}
-
-function buildProviderKey(
-  provider: ActiveImageHostingProvider,
-  apiProviderType: string | undefined,
-  ext: string,
-  config?: SystemConfig,
-): string {
-  const ts = Date.now();
-  let uuid = "";
-  try {
-    uuid = crypto.randomUUID();
-  } catch {
-    uuid = `${ts.toString(36)}_${Math.random().toString(36).slice(2)}`;
-  }
-  const base = `${ts}-${uuid}.${ext}`;
-
-  switch (provider) {
-    case "r2-native":
-      return `${config?.imageHosting?.r2Native?.pathPrefix?.trim() || "images/blog"}/articles/${base}`;
-    case "s3":
-      return `articles/${base}`;
-    case "api-key":
-      return `api-key/${apiProviderType ?? "unknown"}/${base}`;
-    case "telegram":
-      return `telegram/${base}`;
-    case "discord":
-      return `discord/${base}`;
-    case "huggingface":
-      return `huggingface/${base}`;
-    case "webdav":
-      return `webdav/${base}`;
-    default:
-      return `uploads/${base}`;
-  }
-}
-
-function buildCommentProviderKey(
-  provider: ActiveImageHostingProvider,
-  apiProviderType: string | undefined,
-  ext: string,
-  config?: SystemConfig,
-): string {
-  const ts = Date.now();
-  let uuid = "";
-  try {
-    uuid = crypto.randomUUID();
-  } catch {
-    uuid = `${ts.toString(36)}_${Math.random().toString(36).slice(2)}`;
-  }
-  const base = `${ts}-${uuid}.${ext}`;
-
-  switch (provider) {
-    case "r2-native":
-      return `${config?.imageHosting?.r2Native?.pathPrefix?.trim() || "images/blog"}/comments/${base}`;
-    case "s3":
-      return `comments/${base}`;
-    case "api-key":
-      return `api-key/${apiProviderType ?? "unknown"}/${base}`;
-    case "telegram":
-      return `telegram/${base}`;
-    case "discord":
-      return `discord/${base}`;
-    case "huggingface":
-      return `huggingface/${base}`;
-    case "webdav":
-      return `webdav/${base}`;
-    default:
-      return `uploads/${base}`;
-  }
 }
 
 async function trackMediaUpload(
@@ -845,12 +592,10 @@ export async function uploadForArticle(
     }
     const dimensions = await getImageDimensionsResult();
     const providerLabel = getProviderLabel(activeProvider);
-    const ext = extensionFromMime(file.type);
-    const providerKey = buildProviderKey(activeProvider, undefined, ext, config);
 
     await trackMediaUpload(context.db, {
       provider: providerLabel,
-      key: providerKey,
+      key: result.data.key,
       url: result.data.url,
       fileName: file.name,
       mimeType: file.type,
@@ -881,12 +626,10 @@ export async function uploadForArticle(
       });
     }
     const dimensions = await getImageDimensionsResult();
-    const ext = extensionFromMime(file.type);
-    const key = buildObjectKey("articles", ext);
 
     await trackMediaUpload(context.db, {
       provider: "s3",
-      key,
+      key: result.data.key,
       url: result.data.url,
       fileName: file.name,
       mimeType: file.type,
@@ -931,12 +674,10 @@ export async function uploadForArticle(
     }
 
     const dimensions = await getImageDimensionsResult();
-    const ext = extensionFromMime(file.type);
-    const key = buildProviderKey("api-key", p.type, ext);
 
     await trackMediaUpload(context.db, {
       provider: p.type,
-      key,
+      key: buildApiKeyTrackingKey(p.type, extensionFromMime(file.type)),
       url: result.data.url,
       fileName: file.name,
       mimeType: file.type,
@@ -966,12 +707,10 @@ export async function uploadForArticle(
     const result = await uploadToTelegram(ih.telegram, file);
     if (!result.error) {
       const dimensions = await getImageDimensionsResult();
-      const ext = extensionFromMime(file.type);
-      const key = buildProviderKey("telegram", undefined, ext);
 
       await trackMediaUpload(context.db, {
         provider: "telegram",
-        key,
+        key: result.data.key,
         url: result.data.url,
         fileName: file.name,
         mimeType: file.type,
@@ -995,12 +734,10 @@ export async function uploadForArticle(
     const result = await uploadToDiscord(ih.discord, file);
     if (!result.error) {
       const dimensions = await getImageDimensionsResult();
-      const ext = extensionFromMime(file.type);
-      const key = buildProviderKey("discord", undefined, ext);
 
       await trackMediaUpload(context.db, {
         provider: "discord",
-        key,
+        key: result.data.key,
         url: result.data.url,
         fileName: file.name,
         mimeType: file.type,
@@ -1024,12 +761,10 @@ export async function uploadForArticle(
     const result = await uploadToHuggingFace(ih.huggingface, file);
     if (!result.error) {
       const dimensions = await getImageDimensionsResult();
-      const ext = extensionFromMime(file.type);
-      const key = buildProviderKey("huggingface", undefined, ext);
 
       await trackMediaUpload(context.db, {
         provider: "huggingface",
-        key,
+        key: result.data.key,
         url: result.data.url,
         fileName: file.name,
         mimeType: file.type,
@@ -1053,12 +788,10 @@ export async function uploadForArticle(
     const result = await uploadToWebDAV(ih.webdav, file);
     if (!result.error) {
       const dimensions = await getImageDimensionsResult();
-      const ext = extensionFromMime(file.type);
-      const key = buildProviderKey("webdav", undefined, ext);
 
       await trackMediaUpload(context.db, {
         provider: "webdav",
-        key,
+        key: result.data.key,
         url: result.data.url,
         fileName: file.name,
         mimeType: file.type,
@@ -1153,8 +886,7 @@ export async function uploadCommentImage(
       });
     }
 
-    const ext = extensionFromMime(file.type);
-    const providerKey = buildCommentProviderKey(activeProvider, undefined, ext, config);
+    const providerKey = result.data.key;
     await trackMediaUpload(context.db, {
       provider: getProviderLabel(activeProvider),
       key: providerKey,
@@ -1180,11 +912,9 @@ export async function uploadCommentImage(
       });
     }
 
-    const ext = extensionFromMime(file.type);
-    const key = buildObjectKey("comments", ext);
     await trackMediaUpload(context.db, {
       provider: "s3",
-      key,
+      key: result.data.key,
       url: result.data.url,
       fileName: file.name,
       mimeType: file.type,
@@ -1220,11 +950,9 @@ export async function uploadCommentImage(
       });
     }
 
-    const ext = extensionFromMime(file.type);
-    const key = buildCommentProviderKey("api-key", p.type, ext);
     await trackMediaUpload(context.db, {
       provider: p.type,
-      key,
+      key: buildApiKeyTrackingKey(p.type, extensionFromMime(file.type)),
       url: result.data.url,
       fileName: file.name,
       mimeType: file.type,
@@ -1238,11 +966,9 @@ export async function uploadCommentImage(
   if (ih?.telegram?.botToken && ih?.telegram?.chatId) {
     const result = await uploadToTelegram(ih.telegram, file);
     if (!result.error) {
-      const ext = extensionFromMime(file.type);
-      const key = buildCommentProviderKey("telegram", undefined, ext);
       await trackMediaUpload(context.db, {
         provider: "telegram",
-        key,
+        key: result.data.key,
         url: result.data.url,
         fileName: file.name,
         mimeType: file.type,
@@ -1256,11 +982,9 @@ export async function uploadCommentImage(
   if (ih?.discord?.botToken && ih?.discord?.channelId) {
     const result = await uploadToDiscord(ih.discord, file);
     if (!result.error) {
-      const ext = extensionFromMime(file.type);
-      const key = buildCommentProviderKey("discord", undefined, ext);
       await trackMediaUpload(context.db, {
         provider: "discord",
-        key,
+        key: result.data.key,
         url: result.data.url,
         fileName: file.name,
         mimeType: file.type,
@@ -1274,11 +998,9 @@ export async function uploadCommentImage(
   if (ih?.huggingface?.token && ih?.huggingface?.repo) {
     const result = await uploadToHuggingFace(ih.huggingface, file);
     if (!result.error) {
-      const ext = extensionFromMime(file.type);
-      const key = buildCommentProviderKey("huggingface", undefined, ext);
       await trackMediaUpload(context.db, {
         provider: "huggingface",
-        key,
+        key: result.data.key,
         url: result.data.url,
         fileName: file.name,
         mimeType: file.type,
@@ -1292,11 +1014,9 @@ export async function uploadCommentImage(
   if (ih?.webdav?.baseUrl) {
     const result = await uploadToWebDAV(ih.webdav, file);
     if (!result.error) {
-      const ext = extensionFromMime(file.type);
-      const key = buildCommentProviderKey("webdav", undefined, ext);
       await trackMediaUpload(context.db, {
         provider: "webdav",
-        key,
+        key: result.data.key,
         url: result.data.url,
         fileName: file.name,
         mimeType: file.type,
@@ -1608,10 +1328,8 @@ export async function getCommentImageHostingConfig(
   }
 
   // ── 旧版兼容：按优先级链检查 ──
-  if (ih?.r2Native?.commentEnabled) {
-    return { enabled: true, providerCategory: "r2-native" };
-  }
-
+  // 镜像 uploadCommentImage 的真实回退顺序：S3 → API-Key → Telegram →
+  // Discord → HuggingFace → WebDAV → R2 原生（兜底）。
   if (ih?.s3?.commentEnabled) {
     return { enabled: true, providerCategory: "s3" };
   }
@@ -1639,6 +1357,10 @@ export async function getCommentImageHostingConfig(
 
   if (ih?.webdav && isChannelConfigured(ih.webdav)) {
     return { enabled: true, providerCategory: "webdav" };
+  }
+
+  if (ih?.r2Native?.commentEnabled) {
+    return { enabled: true, providerCategory: "r2-native" };
   }
 
   return { enabled: false, providerCategory: null };
@@ -1672,6 +1394,8 @@ export async function getArticleImageHostingConfig(
   }
 
   // ── 旧版兼容 ──
+  // 镜像 uploadForArticle 的真实回退顺序：S3 → API-Key → Telegram →
+  // Discord → HuggingFace → WebDAV → R2 原生（兜底）。
   const s3Enabled = !!ih?.s3?.articleEnabled;
   const apiKeyEnabled = !!ih?.apiProviders?.some((p) => p.articleEnabled);
   const telegramEnabled = isChannelConfigured(ih?.telegram ?? {});
@@ -1686,6 +1410,7 @@ export async function getArticleImageHostingConfig(
       telegramEnabled ||
       discordEnabled ||
       huggingfaceEnabled ||
-      webdavEnabled,
+      webdavEnabled ||
+      !!ih?.r2Native?.articleEnabled,
   };
 }

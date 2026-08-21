@@ -33,8 +33,11 @@ import {
   uploadToS3ForMediaLibrary,
   type S3Config,
 } from "@/features/image-hosting/s3/s3-upload";
+import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
+import * as DiscordChannelApi from "@/features/image-hosting/channels/discord";
+import * as HuggingFaceChannelApi from "@/features/image-hosting/channels/huggingface";
+import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
 import type {
-  DiscordChannel,
   HuggingFaceChannel,
   TelegramChannel,
   WebDAVChannel,
@@ -105,7 +108,16 @@ export async function uploadToProvider(
   const folder = normalizeFolderPath(data.folder ?? "");
   const provider = data.providerId;
 
-  let uploadResult: Result<{ url: string; key?: string; fileName?: string; mimeType?: string; sizeInBytes?: number }, { reason: string }>;
+  let uploadResult: Result<
+    {
+      key?: string;
+      url: string;
+      fileName?: string;
+      mimeType?: string;
+      sizeInBytes?: number;
+    },
+    { reason: string }
+  >;
 
   if (provider === "s3") {
     const config = await ConfigService.getSystemConfig(context);
@@ -118,28 +130,50 @@ export async function uploadToProvider(
     const config = await ConfigService.getSystemConfig(context);
     const tgConfig = resolveTelegramConfig(config);
     if (!tgConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
-    const result = await uploadToTelegramDirect(tgConfig, file);
+    const result = await TelegramChannelApi.uploadToTelegramChannel(
+      tgConfig,
+      file,
+    );
     if (result.error) return err({ reason: "TELEGRAM_UPLOAD_FAILED" });
-    uploadResult = ok(result.data);
+    // The Telegram message id is the durable handle used for remote delete.
+    uploadResult = ok({
+      ...result.data,
+      key: `telegram/${result.data.messageId}`,
+    });
   } else if (provider === "discord") {
     const config = await ConfigService.getSystemConfig(context);
     const dcConfig = resolveDiscordConfig(config);
     if (!dcConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
-    const result = await uploadToDiscordDirect(dcConfig, file);
+    const result = await DiscordChannelApi.uploadToDiscordChannel(
+      dcConfig,
+      file,
+    );
     if (result.error) return err({ reason: "DISCORD_UPLOAD_FAILED" });
-    uploadResult = ok({ ...result.data, key: result.data.key ?? `discord/${folder ? `${folder}/` : ""}${Date.now()}-${crypto.randomUUID()}` });
+    // The Discord message id is the durable handle used for remote delete.
+    uploadResult = ok({
+      ...result.data,
+      key: result.data.messageId,
+    });
   } else if (provider === "huggingface") {
     const config = await ConfigService.getSystemConfig(context);
     const hfConfig = resolveHuggingFaceConfig(config);
     if (!hfConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
-    const result = await uploadToHuggingFaceDirect(hfConfig, file, folder);
+    const result = await HuggingFaceChannelApi.uploadToHuggingFaceChannel(
+      hfConfig,
+      file,
+      folder,
+    );
     if (result.error) return err({ reason: "HUGGINGFACE_UPLOAD_FAILED" });
     uploadResult = ok(result.data);
   } else if (provider === "webdav") {
     const config = await ConfigService.getSystemConfig(context);
     const davConfig = resolveWebDAVConfig(config);
     if (!davConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
-    const result = await uploadToWebDAVDirect(davConfig, file, folder);
+    const result = await WebDavChannelApi.uploadToWebDavChannel(
+      davConfig,
+      file,
+      folder,
+    );
     if (result.error) return err({ reason: "WEBDAV_UPLOAD_FAILED" });
     uploadResult = ok(result.data);
   } else {
@@ -259,7 +293,94 @@ export async function updateMediaName(
     return ok({ success: true });
   }
 
-  // R2 and others: just update display name
+  // HuggingFace: re-commit the content under the new repo path
+  if (data.providerId === "huggingface") {
+    const config = await ConfigService.getSystemConfig(context);
+    const hfConfig = resolveHuggingFaceConfig(config);
+    if (!hfConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+
+    const media = await MediaRepo.getMediaByKey(context.db, data.key);
+    if (!media) return err({ reason: "MEDIA_NOT_FOUND" });
+
+    const oldPath = data.key;
+    const lastSlash = oldPath.lastIndexOf("/");
+    const dir = lastSlash >= 0 ? oldPath.substring(0, lastSlash + 1) : "";
+    const newPath = `${dir}${data.name}`;
+
+    if (oldPath === newPath) {
+      await MediaRepo.updateMediaName(context.db, data.key, data.name);
+      return ok({ success: true });
+    }
+
+    const moveResult = await HuggingFaceChannelApi.moveHuggingFaceFile(
+      hfConfig,
+      oldPath,
+      newPath,
+    );
+    if (moveResult.error) {
+      console.error(JSON.stringify({ message: "huggingface rename failed", error: moveResult.error.message }));
+      return err({ reason: "HUGGINGFACE_RENAME_FAILED" });
+    }
+
+    await MediaRepo.updateMediaKeyAndName(
+      context.db,
+      oldPath,
+      newPath,
+      data.name,
+      HuggingFaceChannelApi.buildHfResolveUrl(hfConfig.repo!.trim(), newPath),
+    );
+    return ok({ success: true });
+  }
+
+  // WebDAV: MOVE the real object on the server
+  if (data.providerId === "webdav") {
+    const config = await ConfigService.getSystemConfig(context);
+    const davConfig = resolveWebDAVConfig(config);
+    if (!davConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+
+    const media = await MediaRepo.getMediaByKey(context.db, data.key);
+    if (!media) return err({ reason: "MEDIA_NOT_FOUND" });
+
+    const oldPath = data.key;
+    const lastSlash = oldPath.lastIndexOf("/");
+    const dir = lastSlash >= 0 ? oldPath.substring(0, lastSlash + 1) : "";
+    const newPath = `${dir}${data.name}`;
+
+    if (oldPath === newPath) {
+      await MediaRepo.updateMediaName(context.db, data.key, data.name);
+      return ok({ success: true });
+    }
+
+    const moveResult = await WebDavChannelApi.moveWebDavObject(
+      davConfig,
+      oldPath,
+      newPath,
+    );
+    if (moveResult.error) {
+      console.error(JSON.stringify({ message: "webdav rename failed", error: moveResult.error.message }));
+      return err({ reason: "WEBDAV_RENAME_FAILED" });
+    }
+
+    await MediaRepo.updateMediaKeyAndName(
+      context.db,
+      oldPath,
+      newPath,
+      data.name,
+      WebDavChannelApi.buildWebDavPublicUrl(davConfig, newPath),
+    );
+    return ok({ success: true });
+  }
+
+  // Telegram/Discord messages and R2 objects: display-name only for R2;
+  // message-based channels cannot rename remotely.
+  if (
+    data.providerId === "telegram" ||
+    data.providerId === "discord"
+  ) {
+    return err({ reason: "UNSUPPORTED_PROVIDER" });
+  }
+
+  // R2 (default): just update display name
   await MediaRepo.updateMediaName(context.db, data.key, data.name);
   return ok({ success: true });
 }
@@ -280,7 +401,7 @@ export async function moveMediaFile(
 
     const oldKey = data.key;
     const fileName = oldKey.split("/").pop() ?? oldKey;
-    const targetFolder = normalizeFolderPath(data.targetFolder);
+    const targetFolder = normalizeFolderPath(data.targetFolder ?? "");
     const newKey = targetFolder ? `${targetFolder}/${fileName}` : fileName;
 
     if (oldKey === newKey) {
@@ -298,6 +419,87 @@ export async function moveMediaFile(
     return ok({ success: true });
   }
 
+  // HuggingFace: re-commit content under the target folder path
+  if (provider === "huggingface") {
+    const config = await ConfigService.getSystemConfig(context);
+    const hfConfig = resolveHuggingFaceConfig(config);
+    if (!hfConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+
+    const media = await MediaRepo.getMediaByKey(context.db, data.key);
+    if (!media) return err({ reason: "MEDIA_NOT_FOUND" });
+
+    const oldPath = data.key;
+    const fileName = oldPath.split("/").pop() ?? oldPath;
+    const targetFolder = normalizeFolderPath(data.targetFolder ?? "");
+    const newPath = targetFolder ? `${targetFolder}/${fileName}` : fileName;
+
+    if (oldPath === newPath) {
+      return ok({ success: true });
+    }
+
+    const moveResult = await HuggingFaceChannelApi.moveHuggingFaceFile(
+      hfConfig,
+      oldPath,
+      newPath,
+    );
+    if (moveResult.error) {
+      console.error(JSON.stringify({ message: "huggingface move failed", error: moveResult.error.message }));
+      return err({ reason: "HUGGINGFACE_MOVE_FAILED" });
+    }
+
+    await MediaRepo.updateMediaKeyAndName(
+      context.db,
+      oldPath,
+      newPath,
+      media.fileName,
+      HuggingFaceChannelApi.buildHfResolveUrl(hfConfig.repo!.trim(), newPath),
+    );
+    return ok({ success: true });
+  }
+
+  // WebDAV: MOVE the real object on the server
+  if (provider === "webdav") {
+    const config = await ConfigService.getSystemConfig(context);
+    const davConfig = resolveWebDAVConfig(config);
+    if (!davConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+
+    const media = await MediaRepo.getMediaByKey(context.db, data.key);
+    if (!media) return err({ reason: "MEDIA_NOT_FOUND" });
+
+    const oldPath = data.key;
+    const fileName = oldPath.split("/").pop() ?? oldPath;
+    const targetFolder = normalizeFolderPath(data.targetFolder ?? "");
+    const newPath = targetFolder ? `${targetFolder}/${fileName}` : fileName;
+
+    if (oldPath === newPath) {
+      return ok({ success: true });
+    }
+
+    const moveResult = await WebDavChannelApi.moveWebDavObject(
+      davConfig,
+      oldPath,
+      newPath,
+    );
+    if (moveResult.error) {
+      console.error(JSON.stringify({ message: "webdav move failed", error: moveResult.error.message }));
+      return err({ reason: "WEBDAV_MOVE_FAILED" });
+    }
+
+    await MediaRepo.updateMediaKeyAndName(
+      context.db,
+      oldPath,
+      newPath,
+      media.fileName,
+      WebDavChannelApi.buildWebDavPublicUrl(davConfig, newPath),
+    );
+    return ok({ success: true });
+  }
+
+  // Message-based channels have no folder concept to move into.
+  if (provider === "telegram" || provider === "discord") {
+    return err({ reason: "UNSUPPORTED_PROVIDER" });
+  }
+
   // R2: copy + delete
   if (!provider || provider === "r2") {
     const media = await MediaRepo.getMediaByKey(context.db, data.key);
@@ -305,7 +507,7 @@ export async function moveMediaFile(
 
     const oldKey = data.key;
     const fileName = oldKey.split("/").pop() ?? oldKey;
-    const targetFolder = normalizeFolderPath(data.targetFolder);
+    const targetFolder = normalizeFolderPath(data.targetFolder ?? "");
     const newKey = targetFolder ? `${targetFolder}/${fileName}` : fileName;
 
     if (oldKey === newKey) {
@@ -361,7 +563,7 @@ export async function getMediaDirectory(
   context: DbContext,
   data: GetMediaDirectoryInput,
 ) {
-  const folder = normalizeFolderPath(data.folder);
+  const folder = normalizeFolderPath(data.folder ?? "");
   const search = data.search?.trim() ?? "";
   const unusedOnly = data.unusedOnly ?? false;
   const prefix = folder ? `${folder}/` : "";
@@ -473,6 +675,85 @@ export async function renameFolder(
     return ok({ key: newKey });
   }
 
+  // HuggingFace folder rename: re-commit every file under the new prefix
+  if (data.providerId === "huggingface") {
+    const config = await ConfigService.getSystemConfig(context);
+    const hfConfig = resolveHuggingFaceConfig(config);
+    if (!hfConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+
+    const mediaRecords = await MediaRepo.getMediaByKeyPrefix(context.db, folderKey);
+
+    const pathsResult = await HuggingFaceChannelApi.listAllHuggingFacePaths(
+      hfConfig,
+      normalizeFolderPath(folderKey),
+    );
+    if (pathsResult.error) return err({ reason: "HUGGINGFACE_RENAME_FAILED" });
+
+    for (const sourcePath of pathsResult.data) {
+      const targetPath = `${normalizeFolderPath(newKey)}${sourcePath.slice(normalizeFolderPath(folderKey).length)}`;
+      const moveResult = await HuggingFaceChannelApi.moveHuggingFaceFile(
+        hfConfig,
+        sourcePath,
+        targetPath,
+      );
+      if (moveResult.error) {
+        console.error(JSON.stringify({ message: "huggingface folder rename failed", path: sourcePath, error: moveResult.error.message }));
+        return err({ reason: "HUGGINGFACE_RENAME_FAILED" });
+      }
+    }
+
+    // Rewrite D1 records with the new full key and a rebuilt resolve URL.
+    const cleanFolderKey = normalizeFolderPath(folderKey);
+    const cleanNewKey = normalizeFolderPath(newKey);
+    for (const record of mediaRecords) {
+      if (!record.key.startsWith(cleanFolderKey)) continue;
+      const recordNewKey = `${cleanNewKey}${record.key.slice(cleanFolderKey.length)}`;
+      await MediaRepo.updateMediaKeyAndUrl(
+        context.db,
+        record.key,
+        recordNewKey,
+        HuggingFaceChannelApi.buildHfResolveUrl(hfConfig.repo!.trim(), recordNewKey),
+      );
+    }
+    return ok({ key: newKey });
+  }
+
+  // WebDAV folder rename: MOVE the collection on the server
+  if (data.providerId === "webdav") {
+    const config = await ConfigService.getSystemConfig(context);
+    const davConfig = resolveWebDAVConfig(config);
+    if (!davConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+
+    const mediaRecords = await MediaRepo.getMediaByKeyPrefix(context.db, folderKey);
+
+    const moveResult = await WebDavChannelApi.moveWebDavObject(
+      davConfig,
+      normalizeFolderPath(folderKey),
+      normalizeFolderPath(newKey),
+    );
+    if (moveResult.error) {
+      console.error(JSON.stringify({ message: "webdav folder rename failed", error: moveResult.error.message }));
+      return err({ reason: "WEBDAV_RENAME_FAILED" });
+    }
+
+    for (const record of mediaRecords) {
+      if (!record.key.startsWith(folderKey)) continue;
+      const recordNewKey = `${newKey}${record.key.slice(folderKey.length)}`;
+      await MediaRepo.updateMediaKeyAndUrl(
+        context.db,
+        record.key,
+        recordNewKey,
+        WebDavChannelApi.buildWebDavPublicUrl(davConfig, recordNewKey),
+      );
+    }
+    return ok({ key: newKey });
+  }
+
+  // Unknown external providers must never fall through to R2 operations.
+  if (data.providerId && data.providerId !== "r2") {
+    return err({ reason: "UNSUPPORTED_PROVIDER" });
+  }
+
   // R2 folder rename (default)
   const keys = await Storage.listAllKeys(context.env, folderKey);
   for (const sourceKey of keys) {
@@ -527,6 +808,87 @@ export async function deleteFolders(
     }
 
     return ok({ deletedFolders: data.keys.length, deletedFiles, skippedFiles });
+  }
+
+  // HuggingFace folder delete: recursive tree walk + batched deletedFile commits
+  if (data.providerId === "huggingface") {
+    const config = await ConfigService.getSystemConfig(context);
+    const hfConfig = resolveHuggingFaceConfig(config);
+    if (!hfConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+
+    for (const folder of data.keys) {
+      const cleanFolder = normalizeFolderPath(folder);
+      if (!cleanFolder) continue;
+
+      const pathsResult = await HuggingFaceChannelApi.listAllHuggingFacePaths(
+        hfConfig,
+        cleanFolder,
+      );
+      if (pathsResult.error) continue;
+
+      const fileKeys = pathsResult.data;
+      const linkedKeys = new Set(
+        await PostMediaRepo.getLinkedMediaKeys(context.db, fileKeys),
+      );
+
+      const toDeleteFiles = fileKeys.filter((k) => !linkedKeys.has(k));
+      if (toDeleteFiles.length > 0) {
+        const result = await HuggingFaceChannelApi.deleteHuggingFaceFiles(hfConfig, toDeleteFiles);
+        if (result.error) {
+          console.error(JSON.stringify({ message: "huggingface folder delete failed", error: result.error.message }));
+          continue;
+        }
+      }
+      await MediaRepo.deleteMediaByKeys(context.db, toDeleteFiles);
+
+      deletedFiles += toDeleteFiles.length;
+      skippedFiles += fileKeys.length - toDeleteFiles.length;
+    }
+
+    return ok({ deletedFolders: data.keys.length, deletedFiles, skippedFiles });
+  }
+
+  // WebDAV folder delete: enumerate files first so linked files survive
+  if (data.providerId === "webdav") {
+    const config = await ConfigService.getSystemConfig(context);
+    const davConfig = resolveWebDAVConfig(config);
+    if (!davConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+
+    for (const folder of data.keys) {
+      const folderKey = Storage.normalizeFolderKey(folder);
+      if (!folderKey) continue;
+
+      const pathsResult = await WebDavChannelApi.listAllWebDavFilePaths(
+        davConfig,
+        normalizeFolderPath(folderKey),
+      );
+      if (pathsResult.error) continue;
+
+      const fileKeys = pathsResult.data;
+      const linkedKeys = new Set(
+        await PostMediaRepo.getLinkedMediaKeys(context.db, fileKeys),
+      );
+
+      const toDeleteFiles = fileKeys.filter((k) => !linkedKeys.has(k));
+      if (toDeleteFiles.length > 0) {
+        const result = await WebDavChannelApi.deleteWebDavPaths(davConfig, toDeleteFiles);
+        if (result.error) {
+          console.error(JSON.stringify({ message: "webdav folder delete failed", error: result.error.message }));
+          continue;
+        }
+      }
+      await MediaRepo.deleteMediaByKeys(context.db, toDeleteFiles);
+
+      deletedFiles += toDeleteFiles.length;
+      skippedFiles += fileKeys.length - toDeleteFiles.length;
+    }
+
+    return ok({ deletedFolders: data.keys.length, deletedFiles, skippedFiles });
+  }
+
+  // Unknown external providers must never fall through to R2 operations.
+  if (data.providerId && data.providerId !== "r2") {
+    return err({ reason: "UNSUPPORTED_PROVIDER" });
   }
 
   // R2 folder delete (default)
@@ -731,228 +1093,6 @@ function resolveWebDAVConfig(
   return ch;
 }
 
-// ── Direct upload functions for media library ─────────────────
-
-function extensionFromMime(mime: string): string {
-  const map: Record<string, string> = {
-    "image/png": "png",
-    "image/jpeg": "jpg",
-    "image/jpg": "jpg",
-    "image/gif": "gif",
-    "image/webp": "webp",
-    "image/svg+xml": "svg",
-  };
-  return map[mime] ?? "png";
-}
-
-function extractErrorMessage(parsed: unknown, responseText: string): string {
-  if (typeof parsed === "object" && parsed !== null) {
-    const body = parsed as Record<string, unknown>;
-    const error = body.error;
-    if (error && typeof error === "object") {
-      const errorData = error as Record<string, unknown>;
-      const message =
-        typeof errorData.message === "string" && errorData.message
-          ? errorData.message
-          : typeof errorData.code === "string" && errorData.code
-            ? errorData.code
-            : undefined;
-      if (message) return message;
-    }
-    if (typeof body.status_txt === "string" && body.status_txt) {
-      return body.status_txt;
-    }
-  }
-  if (responseText) return responseText.slice(0, 300);
-  return "Request failed";
-}
-
-async function uploadToTelegramDirect(
-  config: TelegramChannel,
-  file: File,
-): Promise<Result<{ url: string }, { reason: string; message: string }>> {
-  const botToken = config.botToken!.trim();
-  const chatId = config.chatId!.trim();
-
-  try {
-    const proxyDomain = config.proxyUrl?.trim();
-    const baseUrl = proxyDomain
-      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
-      : "https://api.telegram.org";
-    const apiUrl = `${baseUrl}/bot${botToken}/sendPhoto`;
-    const form = new FormData();
-    form.append("chat_id", chatId);
-    form.append("photo", file);
-
-    const response = await fetch(apiUrl, { method: "POST", body: form });
-    const responseText = await response.text();
-    let parsed: unknown = null;
-    try { parsed = responseText ? JSON.parse(responseText) : null; } catch { parsed = null; }
-
-    if (typeof parsed !== "object" || parsed === null || !(parsed as Record<string, unknown>).ok) {
-      return err({ reason: "TELEGRAM_UPLOAD_FAILED", message: extractErrorMessage(parsed, responseText) });
-    }
-
-    const result = parsed as Record<string, unknown>;
-    const msg = result.result as Record<string, unknown> | undefined;
-    const photo = msg?.photo as Array<Record<string, unknown>> | undefined;
-    const fileId = photo && photo.length > 0
-      ? (photo[photo.length - 1].file_id as string)
-      : undefined;
-
-    if (!fileId) {
-      return err({ reason: "TELEGRAM_UPLOAD_FAILED", message: "No file_id returned from Telegram" });
-    }
-
-    const getFileResp = await fetch(`${baseUrl}/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
-    const fileText = await getFileResp.text();
-    let fileParsed: unknown = null;
-    try { fileParsed = fileText ? JSON.parse(fileText) : null; } catch { fileParsed = null; }
-
-    const fileResult = fileParsed as Record<string, unknown>;
-    const fileInfo = fileResult?.result as Record<string, unknown> | undefined;
-    const filePath = fileInfo?.file_path as string | undefined;
-    if (!filePath) {
-      return err({ reason: "TELEGRAM_UPLOAD_FAILED", message: "No file_path returned from Telegram" });
-    }
-
-    const fileDomain = proxyDomain
-      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
-      : "https://api.telegram.org";
-    return ok({ url: `${fileDomain}/file/bot${botToken}/${filePath}` });
-  } catch (error) {
-    return err({ reason: "TELEGRAM_UPLOAD_FAILED", message: error instanceof Error ? error.message : String(error) });
-  }
-}
-
-async function uploadToDiscordDirect(
-  config: DiscordChannel,
-  file: File,
-): Promise<Result<{ url: string; key?: string }, { reason: string; message: string }>> {
-  const botToken = config.botToken!.trim();
-  const channelId = config.channelId!.trim();
-
-  const MAX_SIZE = config.isNitro ? 25 * 1024 * 1024 : 10 * 1024 * 1024;
-  if (file.size > MAX_SIZE) {
-    return err({ reason: "DISCORD_UPLOAD_FAILED", message: `File exceeds Discord limit of ${config.isNitro ? "25" : "10"}MB` });
-  }
-
-  try {
-    const proxyDomain = config.proxyUrl?.trim();
-    const apiBase = proxyDomain
-      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
-      : "https://discord.com/api/v10";
-    const apiUrl = `${apiBase}/channels/${channelId}/messages`;
-    const form = new FormData();
-    form.append("files[0]", file, file.name || "image.png");
-
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: { Authorization: `Bot ${botToken}` },
-      body: form,
-    });
-
-    const responseText = await response.text();
-    let parsed: unknown = null;
-    try { parsed = responseText ? JSON.parse(responseText) : null; } catch { parsed = null; }
-
-    if (!response.ok) {
-      return err({ reason: "DISCORD_UPLOAD_FAILED", message: extractErrorMessage(parsed, responseText) });
-    }
-
-    const msg = parsed as Record<string, unknown>;
-    const messageId = msg.id as string | undefined;
-    const attachments = msg.attachments as Array<Record<string, unknown>> | undefined;
-    if (!attachments || attachments.length === 0) {
-      return err({ reason: "DISCORD_UPLOAD_FAILED", message: "No attachments returned from Discord" });
-    }
-
-    return ok({ url: attachments[0].url as string, key: messageId });
-  } catch (error) {
-    return err({ reason: "DISCORD_UPLOAD_FAILED", message: error instanceof Error ? error.message : String(error) });
-  }
-}
-
-async function uploadToHuggingFaceDirect(
-  config: HuggingFaceChannel,
-  file: File,
-  folder: string,
-): Promise<Result<{ url: string }, { reason: string; message: string }>> {
-  const token = config.token!.trim();
-  const repo = config.repo!.trim();
-
-  try {
-    const ext = extensionFromMime(file.type);
-    const fileName = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
-    const filePath = folder ? `${folder}/${fileName}` : `media/${fileName}`;
-    const repoType = config.isPrivate ? "private" : "model";
-    const apiUrl = `https://huggingface.co/api/repos/${repoType}/${repo}/upload/main`;
-
-    const body = await file.arrayBuffer();
-    const response = await fetch(apiUrl, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": file.type || "application/octet-stream",
-      },
-      body,
-    });
-
-    const responseText = await response.text();
-    if (!response.ok) {
-      let parsed: unknown = null;
-      try { parsed = responseText ? JSON.parse(responseText) : null; } catch { parsed = null; }
-      return err({ reason: "HUGGINGFACE_UPLOAD_FAILED", message: extractErrorMessage(parsed, responseText) });
-    }
-
-    return ok({ url: `https://huggingface.co/${repo}/resolve/main/${filePath}` });
-  } catch (error) {
-    return err({ reason: "HUGGINGFACE_UPLOAD_FAILED", message: error instanceof Error ? error.message : String(error) });
-  }
-}
-
-async function uploadToWebDAVDirect(
-  config: WebDAVChannel,
-  file: File,
-  folder: string,
-): Promise<Result<{ url: string }, { reason: string; message: string }>> {
-  const baseUrl = config.baseUrl!.trim().replace(/\/+$/, "");
-
-  try {
-    const ext = extensionFromMime(file.type);
-    const fileName = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
-    const filePath = folder ? `${folder}/${fileName}` : `media/${fileName}`;
-    const uploadUrl = `${baseUrl}/${filePath}`;
-
-    const headers: Record<string, string> = {};
-    if (config.username) {
-      headers.Authorization = `Basic ${btoa(`${config.username}:${config.password || ""}`)}`;
-    }
-
-    if (config.createDirectory) {
-      const dirUrl = folder ? `${baseUrl}/${folder}` : baseUrl;
-      await fetch(dirUrl, { method: "MKCOL", headers }).catch(() => {});
-    }
-
-    const body = await file.arrayBuffer();
-    const response = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { ...headers, "Content-Type": file.type || "application/octet-stream" },
-      body,
-    });
-
-    if (!response.ok && response.status !== 201 && response.status !== 204) {
-      const responseText = await response.text();
-      return err({ reason: "WEBDAV_UPLOAD_FAILED", message: `WebDAV upload failed with status ${response.status}: ${responseText.slice(0, 300)}` });
-    }
-
-    const publicBase = config.publicUrl?.trim() || baseUrl;
-    return ok({ url: `${publicBase.replace(/\/+$/, "")}/${filePath}` });
-  } catch (error) {
-    return err({ reason: "WEBDAV_UPLOAD_FAILED", message: error instanceof Error ? error.message : String(error) });
-  }
-}
-
 export async function getMediaProviders(
   context: DbContext & { executionCtx: ExecutionContext },
 ): Promise<MediaProvider[]> {
@@ -1011,21 +1151,24 @@ export async function getMediaProviders(
     });
   }
 
-  // Telegram — listable via D1 index
+  // Telegram — D1-index listing; real remote delete via Bot API.
+  // No rename/move/folders: messages cannot be edited into other "paths".
   if (ih?.telegram?.botToken?.trim() && ih?.telegram?.chatId?.trim()) {
     providers.push({
       id: "telegram",
       name: "Telegram",
       type: "telegram",
       canList: true,
-      canDelete: false,
+      canDelete: true,
       canUpload: true,
       canCreateFolder: false,
+      canRename: false,
+      canMove: false,
       isDefault: isActive("telegram"),
     });
   }
 
-  // Discord — listable via D1 index, deletable via Discord API
+  // Discord — authoritative channel-history listing; real remote delete.
   if (ih?.discord?.botToken?.trim() && ih?.discord?.channelId?.trim()) {
     providers.push({
       id: "discord",
@@ -1035,11 +1178,13 @@ export async function getMediaProviders(
       canDelete: true,
       canUpload: true,
       canCreateFolder: false,
+      canRename: false,
+      canMove: false,
       isDefault: isActive("discord"),
     });
   }
 
-  // HuggingFace — full CRUD
+  // HuggingFace — full CRUD via the datasets commit protocol
   if (ih?.huggingface?.token?.trim() && ih?.huggingface?.repo?.trim()) {
     providers.push({
       id: "huggingface",
@@ -1049,11 +1194,13 @@ export async function getMediaProviders(
       canDelete: true,
       canUpload: true,
       canCreateFolder: true,
+      canRename: true,
+      canMove: true,
       isDefault: isActive("huggingface"),
     });
   }
 
-  // WebDAV — full CRUD
+  // WebDAV — full CRUD via PROPFIND/MKCOL/MOVE/DELETE
   if (ih?.webdav?.baseUrl?.trim()) {
     providers.push({
       id: "webdav",
@@ -1063,6 +1210,8 @@ export async function getMediaProviders(
       canDelete: true,
       canUpload: true,
       canCreateFolder: true,
+      canRename: true,
+      canMove: true,
       isDefault: isActive("webdav"),
     });
   }
@@ -1091,13 +1240,18 @@ export async function listExternalDirectory(
 ): Promise<ExternalDirectoryResult> {
   const provider = data.providerId;
 
-  // Telegram & API-Key: D1 index only (no remote listing API available)
+  // Telegram & API-Key: D1 index only. The Telegram Bot API cannot
+  // enumerate chat history, so the blog's own upload index is the only
+  // possible (and authoritative-for-blog) view of these channels.
   if (provider === "telegram" || provider === "api-key") {
     return listExternalDirectoryFromD1(context, data);
   }
 
-  // S3, HuggingFace, WebDAV, Discord: merge remote API + D1 records
-  return listExternalDirectoryMerged(context, data);
+  // S3, Discord, HuggingFace, WebDAV: the remote channel listing is
+  // authoritative and complete — anything uploaded outside the blog shows
+  // up and remotely deleted files disappear. No D1 merge, otherwise records
+  // whose real object is gone would linger and duplicates would appear.
+  return listExternalDirectoryDirect(context, data);
 }
 
 async function listExternalDirectoryFromD1(
@@ -1128,48 +1282,6 @@ async function listExternalDirectoryFromD1(
   };
 }
 
-async function listExternalDirectoryMerged(
-  context: DbContext & { executionCtx: ExecutionContext },
-  data: ListExternalDirectoryInput,
-): Promise<ExternalDirectoryResult> {
-  const provider = data.providerId;
-
-  // S3: the remote bucket listing is authoritative and complete — anything
-  // inside the bucket (including files uploaded outside the blog) shows up,
-  // and removed objects disappear. No D1 merge, otherwise records whose real
-  // object is gone would linger and duplicates would appear.
-  if (provider === "s3") {
-    return listExternalDirectoryDirect(context, data);
-  }
-
-  // 1. Fetch remote file listing (primary source of truth)
-  const remoteResult = await listExternalDirectoryDirect(context, data);
-
-  // 2. Fetch D1 records for this provider (to include blog-uploaded files not yet in remote)
-  const { items: d1Records } = await MediaRepo.getMediaByProvider(context.db, provider, {
-    limit: 10000,
-  });
-
-  // 3. Merge: remote files first, then D1-only files (uploaded via blog but not in remote listing)
-  const remoteKeys = new Set(remoteResult.files.map((f) => f.key));
-  const d1OnlyFiles: ExternalDirectoryFile[] = d1Records
-    .filter((r) => !remoteKeys.has(r.key))
-    .map((r) => ({
-      key: r.key,
-      name: r.fileName,
-      url: r.url,
-      mimeType: r.mimeType,
-      sizeInBytes: r.sizeInBytes,
-    }));
-
-  return {
-    files: [...remoteResult.files, ...d1OnlyFiles],
-    folders: remoteResult.folders,
-    nextContinuationToken: remoteResult.nextContinuationToken,
-    error: remoteResult.error,
-  };
-}
-
 async function listExternalDirectoryDirect(
   context: DbContext & { executionCtx: ExecutionContext },
   data: ListExternalDirectoryInput,
@@ -1183,7 +1295,7 @@ async function listExternalDirectoryDirect(
 
     // Browse the REAL bucket root: the configured pathPrefix appears as a
     // regular folder, exactly like the actual S3 storage layout.
-    const folder = normalizeFolderPath(data.folder);
+    const folder = normalizeFolderPath(data.folder ?? "");
     const result = await listS3Objects(s3Config, {
       prefix: folder ? `${folder}/` : "",
       delimiter: "/",
@@ -1222,59 +1334,30 @@ async function listExternalDirectoryDirect(
     const discordConfig = resolveDiscordConfig(config);
     if (!discordConfig) return { files: [], folders: [], nextContinuationToken: null, error: "Discord 未配置" };
 
-    const botToken = discordConfig.botToken!.trim();
-    const channelId = discordConfig.channelId!.trim();
-    const proxyDomain = discordConfig.proxyUrl?.trim();
-    const apiBase = proxyDomain
-      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
-      : "https://discord.com/api/v10";
+    // Page through the real channel history; every attachment becomes an
+    // entry keyed by `${messageId}:${index}` so deletion maps back to the
+    // exact message that carries it.
+    const page = await DiscordChannelApi.listDiscordAttachments(
+      discordConfig,
+      data.continuationToken || undefined,
+    );
 
-    try {
-      const url = `${apiBase}/channels/${channelId}/messages?limit=100${data.continuationToken ? `&before=${data.continuationToken}` : ""}`;
-      const response = await fetch(url, {
-        headers: { Authorization: `Bot ${botToken}` },
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        return { files: [], folders: [], nextContinuationToken: null, error: text.slice(0, 300) };
-      }
-
-      const messages: Array<{
-        id: string;
-        attachments: Array<{
-          id: string;
-          filename: string;
-          url: string;
-          content_type: string;
-          size: number;
-        }>;
-      }> = await response.json();
-
-      const files: ExternalDirectoryFile[] = [];
-      for (const msg of messages) {
-        for (const att of msg.attachments) {
-          files.push({
-            key: att.id,
-            name: att.filename,
-            url: att.url,
-            mimeType: att.content_type || guessMimeFromKey(att.filename),
-            sizeInBytes: att.size,
-          });
-        }
-      }
-
-      const hasMore = messages.length === 100;
-      const nextToken = hasMore ? messages[messages.length - 1]?.id : null;
-
-      return {
-        files,
-        folders: [],
-        nextContinuationToken: nextToken,
-      };
-    } catch (e) {
-      return { files: [], folders: [], nextContinuationToken: null, error: e instanceof Error ? e.message : String(e) };
+    if (page.error) {
+      console.error(JSON.stringify({ message: "discord list failed", error: page.error.message }));
+      return { files: [], folders: [], nextContinuationToken: null, error: page.error.message };
     }
+
+    return {
+      files: page.data.files.map((f) => ({
+        key: f.key,
+        name: f.name,
+        url: f.url,
+        mimeType: f.mimeType,
+        sizeInBytes: f.sizeInBytes,
+      })),
+      folders: [],
+      nextContinuationToken: page.data.nextBefore,
+    };
   }
 
   if (provider === "huggingface") {
@@ -1282,48 +1365,22 @@ async function listExternalDirectoryDirect(
     const hfConfig = resolveHuggingFaceConfig(config);
     if (!hfConfig) return { files: [], folders: [], nextContinuationToken: null, error: "HuggingFace 未配置" };
 
-    const token = hfConfig.token!.trim();
-    const repo = hfConfig.repo!.trim();
-    const folder = normalizeFolderPath(data.folder);
-    const path = folder || "";
-    const repoType = hfConfig.isPrivate ? "private" : "model";
+    const folder = normalizeFolderPath(data.folder ?? "");
+    const result = await HuggingFaceChannelApi.listHuggingFaceDirectory(
+      hfConfig,
+      folder,
+    );
 
-    try {
-      const url = `https://huggingface.co/api/repos/${repoType}/${repo}/tree/main/${path}`;
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        return { files: [], folders: [], nextContinuationToken: null, error: text.slice(0, 300) };
-      }
-
-      const entries: Array<{ path: string; type: string; size?: number }> = await response.json();
-      const files: ExternalDirectoryFile[] = [];
-      const folders: Array<{ key: string; name: string }> = [];
-
-      for (const entry of entries) {
-        const entryName = getBasename(entry.path);
-        if (entryName.startsWith(".")) continue;
-
-        if (entry.type === "file" || entry.type === "regular_file") {
-          files.push({
-            key: entry.path,
-            name: entryName,
-            url: `https://huggingface.co/${repo}/resolve/main/${entry.path}`,
-            mimeType: guessMimeFromKey(entry.path),
-            sizeInBytes: entry.size ?? 0,
-          });
-        } else if (entry.type === "directory" || entry.type === "tree") {
-          folders.push({ key: entry.path, name: entryName });
-        }
-      }
-
-      return { files, folders, nextContinuationToken: null };
-    } catch (e) {
-      return { files: [], folders: [], nextContinuationToken: null, error: e instanceof Error ? e.message : String(e) };
+    if (result.error) {
+      console.error(JSON.stringify({ message: "huggingface list failed", error: result.error.message }));
+      return { files: [], folders: [], nextContinuationToken: null, error: result.error.message };
     }
+
+    return {
+      files: result.data.files,
+      folders: result.data.folders,
+      nextContinuationToken: null,
+    };
   }
 
   if (provider === "webdav") {
@@ -1331,65 +1388,19 @@ async function listExternalDirectoryDirect(
     const davConfig = resolveWebDAVConfig(config);
     if (!davConfig) return { files: [], folders: [], nextContinuationToken: null, error: "WebDAV 未配置" };
 
-    const baseUrl = davConfig.baseUrl!.trim().replace(/\/+$/, "");
-    const folder = normalizeFolderPath(data.folder);
-    const targetUrl = folder ? `${baseUrl}/${folder}` : baseUrl;
+    const folder = normalizeFolderPath(data.folder ?? "");
+    const result = await WebDavChannelApi.listWebDavDirectory(davConfig, folder);
 
-    const headers: Record<string, string> = { Depth: "1" };
-    if (davConfig.username) {
-      headers.Authorization = `Basic ${btoa(`${davConfig.username}:${davConfig.password || ""}`)}`;
+    if (result.error) {
+      console.error(JSON.stringify({ message: "webdav list failed", error: result.error.message }));
+      return { files: [], folders: [], nextContinuationToken: null, error: result.error.message };
     }
 
-    try {
-      const response = await fetch(targetUrl, {
-        method: "PROPFIND",
-        headers,
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        return { files: [], folders: [], nextContinuationToken: null, error: text.slice(0, 300) };
-      }
-
-      const xml = await response.text();
-      const files: ExternalDirectoryFile[] = [];
-      const folders: Array<{ key: string; name: string }> = [];
-
-      const responses = xml.split("<d:response>").slice(1);
-      for (const block of responses) {
-        const hrefMatch = block.match(/<d?:href>([^<]+)<\/d?:href>/);
-        if (!hrefMatch) continue;
-
-        const href = decodeURIComponent(hrefMatch[1]);
-        const hrefPath = href.replace(/\/+$/, "");
-        const entryName = getBasename(hrefPath);
-        if (!entryName || entryName === getBasename(targetUrl.replace(/\/+$/, ""))) continue;
-
-        const isCollection = /<d?:resourcetype>\s*<d?:collection\s*\/?>/.test(block);
-        const contentLengthMatch = block.match(/<d?:getcontentlength>(\d+)<\/d?:getcontentlength>/);
-        const contentTypeMatch = block.match(/<d?:getcontenttype>([^<]+)<\/d?:getcontenttype>/);
-
-        const relKey = folder ? `${folder}/${entryName}` : entryName;
-
-        if (isCollection) {
-          folders.push({ key: relKey, name: entryName });
-        } else {
-          files.push({
-            key: relKey,
-            name: entryName,
-            url: davConfig.publicUrl?.trim()
-              ? `${davConfig.publicUrl.trim().replace(/\/+$/, "")}/${relKey}`
-              : href,
-            mimeType: contentTypeMatch?.[1] || guessMimeFromKey(entryName),
-            sizeInBytes: parseInt(contentLengthMatch?.[1] ?? "0", 10) || 0,
-          });
-        }
-      }
-
-      return { files, folders, nextContinuationToken: null };
-    } catch (e) {
-      return { files: [], folders: [], nextContinuationToken: null, error: e instanceof Error ? e.message : String(e) };
-    }
+    return {
+      files: result.data.files,
+      folders: result.data.folders,
+      nextContinuationToken: null,
+    };
   }
 
   return { files: [], folders: [], nextContinuationToken: null };
@@ -1400,97 +1411,89 @@ export async function deleteExternalFiles(
   data: DeleteExternalFilesInput,
 ): Promise<{ deleted: number; skipped: number }> {
   const provider = data.providerId;
+  const keys = data.keys;
 
-  // Delete from D1 index
-  await MediaRepo.deleteMediaByKeys(context.db, data.keys);
+  // Delete from the REAL channel first; only keys whose remote deletion
+  // succeeded (or never had a remote object) are removed from the D1 index,
+  // so failed entries stay visible and can be retried.
+  let okKeys = keys;
+  let skipped = 0;
 
-  // Delete from remote provider
   if (provider === "s3") {
     const config = await ConfigService.getSystemConfig(context);
     const s3Config = resolveS3ConfigForMedia(config);
-    if (!s3Config) return { deleted: data.keys.length, skipped: 0 };
-    const result = await deleteS3Objects(s3Config, data.keys);
+    if (!s3Config) return { deleted: 0, skipped: keys.length };
+    const result = await deleteS3Objects(s3Config, keys);
     if (result.error) {
       console.error(JSON.stringify({ message: "s3 delete failed", error: result.error.message }));
+      return { deleted: 0, skipped: keys.length };
     }
-    return { deleted: data.keys.length, skipped: 0 };
   }
 
   if (provider === "huggingface") {
     const config = await ConfigService.getSystemConfig(context);
     const hfConfig = resolveHuggingFaceConfig(config);
-    if (!hfConfig) return { deleted: data.keys.length, skipped: 0 };
-    const token = hfConfig.token!.trim();
-    const repo = hfConfig.repo!.trim();
+    if (!hfConfig) return { deleted: 0, skipped: keys.length };
 
-    for (const filePath of data.keys) {
-      try {
-        const commitUrl = `https://huggingface.co/api/datasets/${repo}/commit/main`;
-        const body = [
-          JSON.stringify({ key: "header", value: { summary: `Delete ${filePath} via media library` } }),
-          JSON.stringify({ key: "deletedFile", value: { path: filePath } }),
-        ].join("\n");
-        await fetch(commitUrl, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/x-ndjson",
-          },
-          body,
-        });
-      } catch (e) {
-        console.error(JSON.stringify({ message: "huggingface delete failed", file: filePath, error: e instanceof Error ? e.message : String(e) }));
-      }
+    const result = await HuggingFaceChannelApi.deleteHuggingFaceFiles(hfConfig, keys);
+    if (result.error) {
+      console.error(JSON.stringify({ message: "huggingface delete failed", error: result.error.message }));
+      return { deleted: 0, skipped: keys.length };
     }
-    return { deleted: data.keys.length, skipped: 0 };
   }
 
   if (provider === "webdav") {
     const config = await ConfigService.getSystemConfig(context);
     const davConfig = resolveWebDAVConfig(config);
-    if (!davConfig) return { deleted: data.keys.length, skipped: 0 };
-    const baseUrl = davConfig.baseUrl!.trim().replace(/\/+$/, "");
-    const headers: Record<string, string> = {};
-    if (davConfig.username) {
-      headers.Authorization = `Basic ${btoa(`${davConfig.username}:${davConfig.password || ""}`)}`;
-    }
+    if (!davConfig) return { deleted: 0, skipped: keys.length };
 
-    for (const filePath of data.keys) {
-      try {
-        await fetch(`${baseUrl}/${filePath}`, { method: "DELETE", headers });
-      } catch (e) {
-        console.error(JSON.stringify({ message: "webdav delete failed", file: filePath, error: e instanceof Error ? e.message : String(e) }));
-      }
+    const result = await WebDavChannelApi.deleteWebDavPaths(davConfig, keys);
+    if (result.error) {
+      console.error(JSON.stringify({ message: "webdav delete failed", error: result.error.message }));
+      return { deleted: 0, skipped: keys.length };
     }
-    return { deleted: data.keys.length, skipped: 0 };
   }
 
   if (provider === "discord") {
     const config = await ConfigService.getSystemConfig(context);
     const dcConfig = resolveDiscordConfig(config);
-    if (!dcConfig) return { deleted: data.keys.length, skipped: 0 };
-    const botToken = dcConfig.botToken!.trim();
-    const channelId = dcConfig.channelId!.trim();
-    const proxyDomain = dcConfig.proxyUrl?.trim();
-    const apiBase = proxyDomain
-      ? `https://${proxyDomain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}`
-      : "https://discord.com/api/v10";
+    if (!dcConfig) return { deleted: 0, skipped: keys.length };
 
-    for (const messageId of data.keys) {
-      try {
-        await fetch(`${apiBase}/channels/${channelId}/messages/${messageId}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bot ${botToken}` },
-        });
-      } catch (e) {
-        console.error(JSON.stringify({ message: "discord delete failed", messageId, error: e instanceof Error ? e.message : String(e) }));
+    const failedKeys: string[] = [];
+    for (const key of keys) {
+      const result = await DiscordChannelApi.deleteDiscordMessage(dcConfig, key);
+      if (result.error) {
+        console.error(JSON.stringify({ message: "discord delete failed", key, error: result.error.message }));
+        failedKeys.push(key);
       }
     }
-    return { deleted: data.keys.length, skipped: 0 };
+    skipped += failedKeys.length;
+    okKeys = keys.filter((k) => !failedKeys.includes(k));
   }
 
-  // Telegram — cannot delete from remote, but D1 record is already removed
-  return { deleted: data.keys.length, skipped: 0 };
+  if (provider === "telegram") {
+    const config = await ConfigService.getSystemConfig(context);
+    const tgConfig = resolveTelegramConfig(config);
+
+    const failedKeys: string[] = [];
+    for (const key of keys) {
+      // Keys look like `telegram/{messageId}`; legacy synthetic keys
+      // (`telegram/{ts}-{uuid}`) have no remote message to delete.
+      const messageId = key.replace(/^telegram\//, "");
+      if (!tgConfig || !/^\d+$/.test(messageId)) continue;
+
+      const result = await TelegramChannelApi.deleteTelegramMessage(tgConfig, messageId);
+      if (result.error) {
+        console.error(JSON.stringify({ message: "telegram delete failed", key, error: result.error.message }));
+        failedKeys.push(key);
+      }
+    }
+    skipped += failedKeys.length;
+    okKeys = keys.filter((k) => !failedKeys.includes(k));
+  }
+
+  await MediaRepo.deleteMediaByKeys(context.db, okKeys);
+  return { deleted: okKeys.length, skipped };
 }
 
 export async function createExternalFolder(
@@ -1533,38 +1536,15 @@ export async function createExternalFolder(
     if (!name || name.includes("/")) return err({ reason: "MEDIA_INVALID_FOLDER_NAME" });
 
     const parent = normalizeFolderPath(data.parent ?? "");
-    const folderPath = joinFolderKey(parent, name);
+    const folderPath = normalizeFolderPath(joinFolderKey(parent, name));
 
-    const token = hfConfig.token!.trim();
-    const repo = hfConfig.repo!.trim();
-    const repoType = hfConfig.isPrivate ? "private" : "model";
-
-    try {
-      const gitkeepPath = `${folderPath}/.gitkeep`;
-      const response = await fetch(
-        `https://huggingface.co/api/repos/${repoType}/${repo}/upload/main`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "text/plain",
-            "X-Content-Type": gitkeepPath,
-          },
-          body: new TextEncoder().encode(""),
-        },
-      );
-
-      if (!response.ok) {
-        const text = await response.text();
-        console.error(JSON.stringify({ message: "huggingface create folder failed", error: text.slice(0, 300) }));
-        return err({ reason: "HUGGINGFACE_FOLDER_CREATE_FAILED" });
-      }
-
-      return ok({ key: folderPath, name });
-    } catch (e) {
-      console.error(JSON.stringify({ message: "huggingface create folder failed", error: e instanceof Error ? e.message : String(e) }));
+    const result = await HuggingFaceChannelApi.createHuggingFaceFolder(hfConfig, folderPath);
+    if (result.error) {
+      console.error(JSON.stringify({ message: "huggingface create folder failed", error: result.error.message }));
       return err({ reason: "HUGGINGFACE_FOLDER_CREATE_FAILED" });
     }
+
+    return ok({ key: folderPath, name });
   }
 
   if (data.providerId === "webdav") {
@@ -1576,29 +1556,15 @@ export async function createExternalFolder(
     if (!name || name.includes("/")) return err({ reason: "MEDIA_INVALID_FOLDER_NAME" });
 
     const parent = normalizeFolderPath(data.parent ?? "");
-    const folderPath = joinFolderKey(parent, name);
-    const baseUrl = davConfig.baseUrl!.trim().replace(/\/+$/, "");
-    const folderUrl = `${baseUrl}/${folderPath}`;
+    const folderPath = normalizeFolderPath(joinFolderKey(parent, name));
 
-    const headers: Record<string, string> = {};
-    if (davConfig.username) {
-      headers.Authorization = `Basic ${btoa(`${davConfig.username}:${davConfig.password || ""}`)}`;
-    }
-
-    try {
-      const response = await fetch(folderUrl, { method: "MKCOL", headers });
-
-      if (!response.ok && response.status !== 201 && response.status !== 405) {
-        const text = await response.text();
-        console.error(JSON.stringify({ message: "webdav create folder failed", error: text.slice(0, 300) }));
-        return err({ reason: "WEBDAV_FOLDER_CREATE_FAILED" });
-      }
-
-      return ok({ key: folderPath, name });
-    } catch (e) {
-      console.error(JSON.stringify({ message: "webdav create folder failed", error: e instanceof Error ? e.message : String(e) }));
+    const result = await WebDavChannelApi.ensureWebDavFolder(davConfig, folderPath);
+    if (result.error) {
+      console.error(JSON.stringify({ message: "webdav create folder failed", error: result.error.message }));
       return err({ reason: "WEBDAV_FOLDER_CREATE_FAILED" });
     }
+
+    return ok({ key: folderPath, name });
   }
 
   return err({ reason: "UNSUPPORTED_PROVIDER" });

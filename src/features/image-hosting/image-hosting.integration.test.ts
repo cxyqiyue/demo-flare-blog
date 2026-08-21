@@ -81,7 +81,9 @@ describe("ImageHostingService", () => {
       const fetchMock = stubFetch({
         body: { data: { url: "https://i.ibb.co/x.png" }, success: true },
       });
-      await seedImageHosting({});
+      await seedImageHosting({
+        r2Native: { articleEnabled: false, commentEnabled: false },
+      });
 
       const formData = new FormData();
       formData.append("image", makeFile("article.png"));
@@ -318,6 +320,7 @@ describe("ImageHostingService", () => {
         body: { data: { url: "https://i.ibb.co/imgbb.png" }, success: true },
       });
       await seedImageHosting({
+        r2Native: { articleEnabled: false, commentEnabled: false },
         apiProviders: [
           {
             id: "imgbb-1",
@@ -507,8 +510,20 @@ describe("ImageHostingService", () => {
       expect(result.providerCategory).toBe("r2-native");
     });
 
-    it("should be disabled when no image hosting is configured", async () => {
+    it("should fall back to r2-native comments when nothing else is configured", async () => {
       await seedImageHosting({});
+
+      const result =
+        await ImageHostingService.getCommentImageHostingConfig(adminContext);
+
+      expect(result.enabled).toBe(true);
+      expect(result.providerCategory).toBe("r2-native");
+    });
+
+    it("should be disabled when no image hosting is configured", async () => {
+      await seedImageHosting({
+        r2Native: { articleEnabled: false, commentEnabled: false },
+      });
 
       const result =
         await ImageHostingService.getCommentImageHostingConfig(adminContext);
@@ -561,7 +576,7 @@ describe("ImageHostingService", () => {
       expect(result).toEqual({ enabled: true });
     });
 
-    it("should be disabled when only r2-native is on", async () => {
+    it("should be disabled when only r2-native comments are on", async () => {
       await seedImageHosting({
         r2Native: { commentEnabled: true },
       });
@@ -573,7 +588,9 @@ describe("ImageHostingService", () => {
     });
 
     it("should be disabled when nothing is configured", async () => {
-      await seedImageHosting({});
+      await seedImageHosting({
+        r2Native: { articleEnabled: false, commentEnabled: false },
+      });
 
       const result =
         await ImageHostingService.getArticleImageHostingConfig(adminContext);
