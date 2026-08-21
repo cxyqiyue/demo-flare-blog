@@ -105,6 +105,7 @@ export const ImageHostingConfigSchema = z.object({
     .object({
       articleEnabled: z.boolean().optional(),
       commentEnabled: z.boolean().optional(),
+      pathPrefix: z.string().optional(),
     })
     .optional(),
   s3: z
@@ -314,6 +315,7 @@ export const DEFAULT_CONFIG: SystemConfig = {
     r2Native: {
       articleEnabled: true,
       commentEnabled: true,
+      pathPrefix: "images/blog",
     },
     s3: {
       articleEnabled: false,

@@ -225,6 +225,9 @@ export function ImageHostingSettingsSection({
 
   const activeProvider = watch("imageHosting.activeProvider") ?? null;
 
+  // ── R2 Native fields ──
+  const r2PathPrefix = watch("imageHosting.r2Native.pathPrefix") ?? "";
+
   // ── S3 fields ──
   const s3Provider = watch("imageHosting.s3.provider") ?? "cloudflare-r2";
   const s3Endpoint = watch("imageHosting.s3.endpoint") ?? "";
@@ -638,6 +641,22 @@ export function ImageHostingSettingsSection({
                       <p className="text-xs text-muted-foreground">
                         {m.settings_image_hosting_r2_native_desc_full()}
                       </p>
+                      <div className="space-y-4">
+                        <label className="text-sm text-muted-foreground">
+                          {m.settings_image_hosting_r2_native_storage_path_label()}
+                        </label>
+                        <Input
+                          placeholder="images/blog"
+                          value={r2PathPrefix}
+                          onChange={(e) => {
+                            setValue("imageHosting.r2Native.pathPrefix", e.target.value, { shouldDirty: true });
+                          }}
+                          className={INPUT_CLASS}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {m.settings_image_hosting_r2_native_storage_path_desc()}
+                        </p>
+                      </div>
                     </div>
                   )}
 

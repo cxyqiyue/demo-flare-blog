@@ -106,6 +106,14 @@ function extensionFromMime(mime: string): string {
   return MIME_EXTENSIONS[mime] ?? "png";
 }
 
+function resolveR2PathPrefix(
+  config: SystemConfig | undefined,
+  pathway: "article" | "comment",
+): string {
+  const base = config?.imageHosting?.r2Native?.pathPrefix?.trim() || "images/blog";
+  return pathway === "article" ? `${base}/articles` : `${base}/comments`;
+}
+
 function buildObjectKey(pathPrefix: string, ext: string): string {
   let uuid = "";
   try {
@@ -630,7 +638,8 @@ async function uploadToActiveProvider(
           : ih?.r2Native?.commentEnabled;
       if (r2Enabled) {
         const ext = extensionFromMime(file.type);
-        const key = buildObjectKey(pathway === "article" ? "articles" : "comments", ext);
+        const folder = resolveR2PathPrefix(config, pathway);
+        const key = buildObjectKey(folder, ext);
         try {
           await MediaStorage.putToR2(context.env, file, key);
           return ok({ url: `/images/${key}` });
@@ -691,6 +700,7 @@ function buildProviderKey(
   provider: ActiveImageHostingProvider,
   apiProviderType: string | undefined,
   ext: string,
+  config?: SystemConfig,
 ): string {
   const ts = Date.now();
   let uuid = "";
@@ -703,7 +713,7 @@ function buildProviderKey(
 
   switch (provider) {
     case "r2-native":
-      return `articles/${base}`;
+      return `${config?.imageHosting?.r2Native?.pathPrefix?.trim() || "images/blog"}/articles/${base}`;
     case "s3":
       return `articles/${base}`;
     case "api-key":
@@ -725,6 +735,7 @@ function buildCommentProviderKey(
   provider: ActiveImageHostingProvider,
   apiProviderType: string | undefined,
   ext: string,
+  config?: SystemConfig,
 ): string {
   const ts = Date.now();
   let uuid = "";
@@ -737,7 +748,7 @@ function buildCommentProviderKey(
 
   switch (provider) {
     case "r2-native":
-      return `comments/${base}`;
+      return `${config?.imageHosting?.r2Native?.pathPrefix?.trim() || "images/blog"}/comments/${base}`;
     case "s3":
       return `comments/${base}`;
     case "api-key":
@@ -835,7 +846,7 @@ export async function uploadForArticle(
     const dimensions = await getImageDimensionsResult();
     const providerLabel = getProviderLabel(activeProvider);
     const ext = extensionFromMime(file.type);
-    const providerKey = buildProviderKey(activeProvider, undefined, ext);
+    const providerKey = buildProviderKey(activeProvider, undefined, ext, config);
 
     await trackMediaUpload(context.db, {
       provider: providerLabel,
@@ -1069,7 +1080,8 @@ export async function uploadForArticle(
   // ── 7. R2 原生（兜底） ──
   if (ih?.r2Native?.articleEnabled) {
     const ext = extensionFromMime(file.type);
-    const key = buildObjectKey("articles", ext);
+    const folder = resolveR2PathPrefix(config, "article");
+    const key = buildObjectKey(folder, ext);
     try {
       await MediaStorage.putToR2(context.env, file, key);
       const dimensions = await getImageDimensionsResult();
@@ -1142,7 +1154,7 @@ export async function uploadCommentImage(
     }
 
     const ext = extensionFromMime(file.type);
-    const providerKey = buildCommentProviderKey(activeProvider, undefined, ext);
+    const providerKey = buildCommentProviderKey(activeProvider, undefined, ext, config);
     await trackMediaUpload(context.db, {
       provider: getProviderLabel(activeProvider),
       key: providerKey,
@@ -1297,7 +1309,8 @@ export async function uploadCommentImage(
   // ── 7. R2 原生（兜底） ──
   if (ih?.r2Native?.commentEnabled) {
     const ext = extensionFromMime(file.type);
-    const key = buildObjectKey("comments", ext);
+    const folder = resolveR2PathPrefix(config, "comment");
+    const key = buildObjectKey(folder, ext);
     try {
       await MediaStorage.putToR2(context.env, file, key);
 

@@ -1541,6 +1541,8 @@
   "settings_image_hosting_r2_native_desc": "使用博客绑定的 Cloudflare R2 存储桶直接上传",
   "settings_image_hosting_r2_native_desc_full": "使用博客绑定的 Cloudflare R2 存储桶直接上传，无需任何第三方配置。",
   "settings_image_hosting_r2_native_comment_desc": "启用后，评论图片将上传到 R2 存储桶",
+  "settings_image_hosting_r2_native_storage_path_label": "自定义存储路径",
+  "settings_image_hosting_r2_native_storage_path_desc": "R2 存储桶内的文件夹路径，所有图片将上传到此路径下。文章图片存放在该路径的 articles/ 子目录，评论图片存放在 comments/ 子目录。留空则使用默认路径 images/blog",
   "settings_image_hosting_api_providers_title": "API Key 图床",
   "settings_image_hosting_api_providers_desc": "ImgBB / Ffsky 等第三方图床",
   "settings_image_hosting_api_provider_desc_imgbb": "免费图床，支持匿名上传",

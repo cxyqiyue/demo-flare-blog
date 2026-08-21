@@ -1549,6 +1549,8 @@
   "settings_image_hosting_r2_native_desc": "Upload directly to the blog's bound Cloudflare R2 bucket",
   "settings_image_hosting_r2_native_desc_full": "Upload directly to the blog's bound Cloudflare R2 bucket, no third-party configuration needed.",
   "settings_image_hosting_r2_native_comment_desc": "When enabled, comment images are uploaded to the R2 bucket",
+  "settings_image_hosting_r2_native_storage_path_label": "Custom Storage Path",
+  "settings_image_hosting_r2_native_storage_path_desc": "Folder path inside the R2 bucket. All images will be uploaded under this path. Article images go to the articles/ subdirectory, comment images to the comments/ subdirectory. Leave empty to use the default path images/blog",
   "settings_image_hosting_api_providers_title": "API Key Image Hosting",
   "settings_image_hosting_api_providers_desc": "ImgBB / Ffsky and other third-party image hosting",
   "settings_image_hosting_api_provider_desc_imgbb": "Free image hosting, supports anonymous uploads",
