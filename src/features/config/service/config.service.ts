@@ -185,6 +185,8 @@ function migrateImageHostingConfig(
       discord: ih.discord ?? DEFAULT_CONFIG.imageHosting?.discord,
       huggingface: ih.huggingface ?? DEFAULT_CONFIG.imageHosting?.huggingface,
       webdav: ih.webdav ?? DEFAULT_CONFIG.imageHosting?.webdav,
+      imageProcessing:
+        ih.imageProcessing ?? DEFAULT_CONFIG.imageHosting?.imageProcessing,
     };
   }
 
@@ -258,6 +260,8 @@ function migrateImageHostingConfig(
     discord: ih.discord ?? DEFAULT_CONFIG.imageHosting?.discord,
     huggingface: ih.huggingface ?? DEFAULT_CONFIG.imageHosting?.huggingface,
     webdav: ih.webdav ?? DEFAULT_CONFIG.imageHosting?.webdav,
+    imageProcessing:
+      ih.imageProcessing ?? DEFAULT_CONFIG.imageHosting?.imageProcessing,
   };
 }
 

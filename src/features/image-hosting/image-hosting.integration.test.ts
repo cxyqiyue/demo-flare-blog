@@ -2,6 +2,8 @@ import { createAdminTestContext, seedUser } from "tests/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_CONFIG } from "@/features/config/config.schema";
 import * as ConfigRepo from "@/features/config/data/config.data";
+import * as ConfigService from "@/features/config/service/config.service";
+import { resolveSystemConfig } from "@/features/config/service/config.service";
 import {
   DEFAULT_FFSKY_API_ENDPOINT,
   IMGBB_API_ENDPOINT,
@@ -647,5 +649,61 @@ describe("ImageHostingService", () => {
       expect(extractImageUrlFromMarkdown("")).toBeNull();
       expect(extractImageUrlFromMarkdown("no image here")).toBeNull();
     });
+  });
+});
+
+describe("ImageHosting imageProcessing persistence", () => {
+  let adminContext: ReturnType<typeof createAdminTestContext>;
+
+  beforeEach(async () => {
+    adminContext = createAdminTestContext();
+    await seedUser(adminContext.db, adminContext.session.user);
+  });
+
+  it("keeps convertToFormat when saving the imageHosting section", async () => {
+    await ConfigRepo.upsertSystemConfig(adminContext.db, {
+      ...DEFAULT_CONFIG,
+      imageHosting: {
+        ...DEFAULT_CONFIG.imageHosting,
+        activeProvider: "r2-native",
+        imageProcessing: { compressEnabled: true, convertToFormat: "webp" },
+      },
+    });
+
+    await ConfigService.updateSystemConfigSection(adminContext, {
+      section: "imageHosting",
+      data: {
+        ...DEFAULT_CONFIG.imageHosting,
+        activeProvider: "r2-native",
+        imageProcessing: { compressEnabled: false, convertToFormat: "jpeg" },
+      },
+    });
+
+    const stored = resolveSystemConfig(
+      await ConfigRepo.getSystemConfig(adminContext.db),
+    );
+    expect(stored.imageHosting?.imageProcessing).toEqual({
+      compressEnabled: false,
+      convertToFormat: "jpeg",
+    });
+  });
+
+  it("preserves a previously saved conversion format through resolution", async () => {
+    await ConfigRepo.upsertSystemConfig(adminContext.db, {
+      ...DEFAULT_CONFIG,
+      imageHosting: {
+        ...DEFAULT_CONFIG.imageHosting,
+        activeProvider: "r2-native",
+        r2Native: { articleEnabled: true, commentEnabled: true },
+        imageProcessing: { compressEnabled: true, convertToFormat: "webp" },
+      },
+    });
+
+    const resolved = resolveSystemConfig(
+      await ConfigRepo.getSystemConfig(adminContext.db),
+    );
+    expect(resolved.imageHosting?.imageProcessing?.convertToFormat).toBe(
+      "webp",
+    );
   });
 });
