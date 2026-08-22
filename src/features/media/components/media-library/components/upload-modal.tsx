@@ -3,10 +3,6 @@ import { ChevronDown, FolderPlus, Home, Loader2, X } from "lucide-react";
 import type React from "react";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  ACCEPTED_IMAGE_TYPES,
-  MAX_FILE_SIZE,
-} from "@/features/media/media.schema";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { MediaFolder } from "../types";
@@ -18,6 +14,8 @@ interface UploadModalProps {
   isDragging: boolean;
   selectedFolder?: string;
   folders?: MediaFolder[];
+  /** 当前渠道上传大小上限（字节）；null = 无固定上限 */
+  maxFileSizeBytes?: number | null;
   onFolderChange?: (folder: string) => void;
   onClose: () => void;
   onFileSelect: (files: Array<File>) => void;
@@ -32,6 +30,7 @@ function UploadModalInternal({
   isDragging,
   selectedFolder,
   folders = [],
+  maxFileSizeBytes = null,
   onFolderChange,
   onClose,
   onFileSelect,
@@ -41,8 +40,10 @@ function UploadModalInternal({
 }: UploadModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [folderDropdownOpen, setFolderDropdownOpen] = useState(false);
-  const accept = ACCEPTED_IMAGE_TYPES.join(",");
-  const maxSizeMb = Math.floor(MAX_FILE_SIZE / 1024 / 1024);
+  const limitMb =
+    maxFileSizeBytes !== null
+      ? Math.round(maxFileSizeBytes / 1024 / 1024)
+      : null;
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
@@ -106,7 +107,6 @@ function UploadModalInternal({
           onChange={handleInputChange}
           className="hidden"
           multiple
-          accept={accept}
         />
 
         {/* Body */}
@@ -201,8 +201,15 @@ function UploadModalInternal({
                   : m.media_upload_drop_here()}
               </p>
               <p className="text-xs font-mono text-muted-foreground/60">
-                {m.media_upload_support_format({ maxSizeMb })}
+                {limitMb !== null
+                  ? m.media_upload_support_any_file_limited({ limit: String(limitMb) })
+                  : m.media_upload_support_any_file()}
               </p>
+              {limitMb !== null && (
+                <p className="text-xs text-red-500 max-w-xs mx-auto">
+                  {m.media_upload_oversize_hint()}
+                </p>
+              )}
             </div>
           </div>
 

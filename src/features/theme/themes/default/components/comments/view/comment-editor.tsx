@@ -62,9 +62,9 @@ export const CommentEditor = ({
   const openImageModal = useCallback(() => {
     if (imageHostingEnabled) {
       // 第三方图床已启用：打开官方上传弹窗
-      void openUpload().then((url) => {
-        if (url && editor) {
-          editor.chain().focus().setImage({ src: url }).run();
+      void openUpload().then((urls) => {
+        for (const url of urls) {
+          editor?.chain().focus().setImage({ src: url }).run();
         }
       });
       return;

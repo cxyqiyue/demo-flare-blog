@@ -27,6 +27,14 @@ interface InsertModalProps {
   onClose: () => void;
   onSubmit: (url: string, attrs?: { width?: number; height?: number }) => void;
   onFileUpload?: (file: File) => Promise<string | null>;
+  /** 批量上传完成回调：按选择顺序插入多张图片 */
+  onFilesUploaded?: (results: Array<EditorImageUploadResult>) => void;
+}
+
+export interface EditorImageUploadResult {
+  url: string;
+  width?: number;
+  height?: number;
 }
 
 const MediaItem = memo(
@@ -93,6 +101,7 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
   onClose,
   onSubmit,
   onFileUpload,
+  onFilesUploaded,
 }) => {
   const isMounted = !!type;
   const shouldRender = useDelayUnmount(isMounted, 500);
@@ -160,11 +169,37 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
     }
   };
 
+  const handleFilesUpload = async (files: Array<File>) => {
+    if (!onFileUpload || files.length === 0) return;
+    setUploading(true);
+    try {
+      const results: Array<EditorImageUploadResult> = [];
+      for (const file of files) {
+        const url = await onFileUpload(file);
+        if (url) {
+          results.push({ url });
+        }
+      }
+      if (results.length > 0) {
+        if (onFilesUploaded) {
+          onFilesUploaded(results);
+        } else {
+          onSubmit(results[results.length - 1].url);
+        }
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (file) {
-      handleFileUpload(file);
+    if (files.length === 0) return;
+    if (files.length === 1) {
+      handleFileUpload(files[0]);
+    } else {
+      handleFilesUpload(files);
     }
   };
 
@@ -256,6 +291,7 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
                     type="file"
                     accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
                     className="hidden"
+                    multiple
                     onChange={handleFileInputChange}
                   />
                   <button

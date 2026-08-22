@@ -79,6 +79,19 @@ export type ImageHostingProviderCategory =
   | "huggingface"
   | "webdav";
 
+// ── 上传大小上限字段（各渠道通用，单位 MB） ────────────────────
+export const MAX_FILE_SIZE_MB_FIELD = z.number().positive().max(4096);
+
+// ── 图片处理全局设置 ─────────────────────────────────────────
+export const IMAGE_CONVERT_FORMATS = ["none", "webp", "jpeg"] as const;
+export type ImageConvertFormat = (typeof IMAGE_CONVERT_FORMATS)[number];
+
+export const ImageProcessingSettingsSchema = z.object({
+  compressEnabled: z.boolean().optional(),
+  convertToFormat: z.enum(IMAGE_CONVERT_FORMATS).optional(),
+});
+export type ImageProcessingSettings = z.infer<typeof ImageProcessingSettingsSchema>;
+
 // ── API Key 图床实例 ─────────────────────────────────────────
 export const ApiKeyProviderSchema = z.object({
   id: z.string(),
@@ -88,6 +101,7 @@ export const ApiKeyProviderSchema = z.object({
   apiEndpoint: z.string().optional(),
   articleEnabled: z.boolean().optional(),
   commentEnabled: z.boolean().optional(),
+  maxFileSizeMb: MAX_FILE_SIZE_MB_FIELD.optional(),
 });
 export type ApiKeyProvider = z.infer<typeof ApiKeyProviderSchema>;
 
@@ -96,6 +110,7 @@ export const TelegramChannelSchema = z.object({
   botToken: z.string().optional(),
   chatId: z.string().optional(),
   proxyUrl: z.string().optional(),
+  maxFileSizeMb: MAX_FILE_SIZE_MB_FIELD.optional(),
 });
 export type TelegramChannel = z.infer<typeof TelegramChannelSchema>;
 
@@ -105,6 +120,7 @@ export const DiscordChannelSchema = z.object({
   channelId: z.string().optional(),
   proxyUrl: z.string().optional(),
   isNitro: z.boolean().optional(),
+  maxFileSizeMb: MAX_FILE_SIZE_MB_FIELD.optional(),
 });
 export type DiscordChannel = z.infer<typeof DiscordChannelSchema>;
 
@@ -113,6 +129,7 @@ export const HuggingFaceChannelSchema = z.object({
   token: z.string().optional(),
   repo: z.string().optional(),
   isPrivate: z.boolean().optional(),
+  maxFileSizeMb: MAX_FILE_SIZE_MB_FIELD.optional(),
 });
 export type HuggingFaceChannel = z.infer<typeof HuggingFaceChannelSchema>;
 
@@ -123,6 +140,7 @@ export const WebDAVChannelSchema = z.object({
   password: z.string().optional(),
   publicUrl: z.string().optional(),
   createDirectory: z.boolean().optional(),
+  maxFileSizeMb: MAX_FILE_SIZE_MB_FIELD.optional(),
 });
 export type WebDAVChannel = z.infer<typeof WebDAVChannelSchema>;
 
@@ -151,11 +169,19 @@ export interface CommentImageHostingConfig {
   enabled: boolean;
   providerCategory: ImageHostingProviderCategory | null;
   providerType?: ApiKeyProviderType;
+  /** 当前渠道允许的最大上传字节数；null = 无固定上限 */
+  maxImageBytes: number | null;
+  compressEnabled: boolean;
+  convertToFormat: ImageConvertFormat;
 }
 
 // ── 文章图床配置返回 ─────────────────────────────────────────
 export interface ArticleImageHostingConfig {
   enabled: boolean;
+  /** 当前渠道允许的最大上传字节数；null = 无固定上限 */
+  maxImageBytes: number | null;
+  compressEnabled: boolean;
+  convertToFormat: ImageConvertFormat;
 }
 
 // ── 上传结果 provider 标识 ───────────────────────────────────

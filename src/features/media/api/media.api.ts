@@ -16,6 +16,7 @@ import {
   UploadMediaInputSchema,
 } from "@/features/media/media.schema";
 import * as MediaService from "@/features/media/service/media.service";
+import { resolveR2NativeMaxBytes } from "@/features/image-hosting/size-limits";
 import { adminMiddleware } from "@/lib/middlewares";
 import { m } from "@/paraglide/messages";
 
@@ -24,9 +25,21 @@ export const uploadImageFn = createServerFn({
 })
   .middleware([adminMiddleware])
   .inputValidator(UploadMediaInputSchema)
-  .handler(({ data, context }) =>
-    MediaService.upload(context, parseUploadMediaInput(data, m)),
-  );
+  .handler(({ data, context }) => {
+    // 媒体库管理员上传：允许任意文件类型，并放宽到 R2 渠道上限。
+    // 编辑器回退路径不带 source 字段，仍保持 10MB / 仅图片限制。
+    const isMediaLibrary =
+      (data.get("source") as string | null) === "media-library";
+    return MediaService.upload(
+      context,
+      parseUploadMediaInput(data, m, isMediaLibrary
+        ? {
+            allowAnyFileType: true,
+            maxSizeBytes: resolveR2NativeMaxBytes() ?? undefined,
+          }
+        : undefined),
+    );
+  });
 
 export const uploadToProviderFn = createServerFn({
   method: "POST",

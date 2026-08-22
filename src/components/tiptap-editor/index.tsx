@@ -6,10 +6,10 @@ import type {
 import { EditorContent, useEditor } from "@tiptap/react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { uploadToImageHostingFn } from "@/features/image-hosting/api/image-hosting.api";
-import { uploadImageFn } from "@/features/media/api/media.api";
+import { uploadEditorImage } from "@/features/image-hosting/utils/upload-editor-image";
 import { normalizeLinkHref } from "@/lib/links/normalize-link-href";
 import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages";
 import type { FormulaModalPayload } from "./formula-modal-store";
 import {
   addFormulaModalOpener,
@@ -183,29 +183,26 @@ export const Editor = memo(function Editor({
     setModalOpen(null);
   };
 
+  const handleFilesUploaded = useCallback(
+    (results: Array<{ url: string; width?: number; height?: number }>) => {
+      for (const item of results) {
+        editor?.chain().focus().setImage({ src: item.url, ...item }).run();
+      }
+      setModalOpen(null);
+    },
+    [editor],
+  );
+
   const handleFileUpload = useCallback(
     async (file: File): Promise<string | null> => {
       try {
-        const formData = new FormData();
-        formData.append("image", file);
-        const hosted = await uploadToImageHostingFn({ data: formData });
-        if (!hosted.error && hosted.data.mode === "image-hosting") {
-          return hosted.data.url;
-        }
-        if (!hosted.error && hosted.data.mode === "none") {
-          const result = await uploadImageFn({ data: formData });
-          if (result.error) {
-            toast.error("上传失败");
-            return null;
-          }
-          return result.data.url;
-        }
-        toast.error("图床上传失败", {
-          description: hosted.error?.message ?? "请检查图床配置",
+        const result = await uploadEditorImage(file);
+        return result.url;
+      } catch (error) {
+        toast.error(m.editor_image_upload_failed(), {
+          description:
+            error instanceof Error ? error.message : m.editor_action_unknown_error(),
         });
-        return null;
-      } catch {
-        toast.error("上传失败");
         return null;
       }
     },
@@ -241,6 +238,7 @@ export const Editor = memo(function Editor({
           onClose={() => setModalOpen(null)}
           onSubmit={handleModalSubmit}
           onFileUpload={handleFileUpload}
+          onFilesUploaded={handleFilesUploaded}
         />
       )}
 

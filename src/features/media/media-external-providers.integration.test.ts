@@ -735,4 +735,59 @@ describe("MediaService external channels", () => {
       });
     });
   });
+
+  // ============================================
+  // 渠道大小上限（FILE_TOO_LARGE）
+  // ============================================
+  describe("upload size limits", () => {
+    it("should reject oversized uploads before calling the channel", async () => {
+      await seedImageHosting({
+        telegram: {
+          botToken: "bot-token",
+          chatId: "-100123",
+          proxyUrl: "",
+          maxFileSizeMb: 1,
+        },
+      });
+
+      const spy = vi.mocked(TelegramChannelApi.uploadToTelegramChannel);
+      const file = new File([new Uint8Array(2 * 1024 * 1024)], "big.png", {
+        type: "image/png",
+      });
+
+      const result = await MediaService.uploadToProvider(
+        adminContext,
+        { providerId: "telegram", folder: "" },
+        file,
+      );
+
+      expect(result.error).not.toBeNull();
+      expect(result.error?.reason).toBe("FILE_TOO_LARGE");
+      expect(spy).not.toHaveBeenCalled();
+
+      const stored = await MediaRepo.getMediaByKey(
+        adminContext.db,
+        "telegram/4242",
+      );
+      expect(stored).toBeUndefined();
+    });
+
+    it("should expose per-provider maxFileSizeBytes to the UI", async () => {
+      await seedImageHosting({
+        r2Native: { articleEnabled: true },
+        telegram: { botToken: "t", chatId: "c", proxyUrl: "", maxFileSizeMb: 20 },
+        discord: { botToken: "b", channelId: "c", proxyUrl: "", isNitro: true },
+        huggingface: { token: "hf", repo: "user/repo" },
+        webdav: { baseUrl: "https://dav.example.com" },
+      });
+
+      const providers = await MediaService.getMediaProviders(adminContext);
+      const byId = Object.fromEntries(providers.map((p) => [p.id, p]));
+
+      expect(byId.telegram?.maxFileSizeBytes).toBe(20 * 1024 * 1024);
+      expect(byId.discord?.maxFileSizeBytes).toBe(25 * 1024 * 1024);
+      expect(byId.huggingface?.maxFileSizeBytes).toBeNull();
+      expect(byId.webdav?.maxFileSizeBytes).toBeNull();
+    });
+  });
 });

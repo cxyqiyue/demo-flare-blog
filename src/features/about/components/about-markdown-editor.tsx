@@ -7,6 +7,7 @@ import {
   Heading2,
   Heading3,
   Image as ImageIcon,
+  ImagePlus,
   Italic,
   Link as LinkIcon,
   List,
@@ -20,8 +21,10 @@ import {
   Table,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { MarkdownContent } from "@/features/about/components/markdown-content";
+import { uploadEditorImage } from "@/features/image-hosting/utils/upload-editor-image";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -149,7 +152,9 @@ export function AboutMarkdownEditor({
   const [markdown, setMarkdown] = useState(initialMarkdown);
   const [tab, setTab] = useState<"write" | "preview">("write");
   const [pendingSel, setPendingSel] = useState<Selection | null>(null);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (pendingSel && taRef.current) {
@@ -158,6 +163,46 @@ export function AboutMarkdownEditor({
       setPendingSel(null);
     }
   }, [pendingSel]);
+
+  const handleImageFilesChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (files.length === 0 || tab !== "write") return;
+    const ta = taRef.current;
+    const value = ta?.value ?? markdown;
+    const start = ta?.selectionStart ?? value.length;
+    const end = ta?.selectionEnd ?? value.length;
+
+    setIsUploadingImages(true);
+    try {
+      const snippets: string[] = [];
+      for (const file of files) {
+        try {
+          const result = await uploadEditorImage(file);
+          const alt = file.name.replace(/\.[^.]+$/, "");
+          snippets.push(`![${alt}](${result.url})`);
+        } catch (error) {
+          toast.error(m.editor_image_upload_failed(), {
+            description:
+              error instanceof Error
+                ? error.message
+                : m.editor_action_unknown_error(),
+          });
+        }
+      }
+      if (snippets.length > 0) {
+        const insertText = `${snippets.join("\n")}\n`;
+        const next = `${value.slice(0, start)}${insertText}${value.slice(end)}`;
+        setMarkdown(next);
+        const caret = start + insertText.length;
+        setPendingSel({ start: caret, end: caret });
+      }
+    } finally {
+      setIsUploadingImages(false);
+    }
+  };
 
   const applyAction = (action: ToolbarAction) => {
     if (tab !== "write") return;
@@ -215,6 +260,16 @@ export function AboutMarkdownEditor({
       run: insertTemplate(
         `![${SEL_START}${m.about_editor_ph_image()}${SEL_END}](https://)\n`,
       ),
+    },
+    {
+      icon: ImagePlus,
+      label: m.about_editor_image_upload(),
+      run: (value, sel) => {
+        if (!isUploadingImages) {
+          imageInputRef.current?.click();
+        }
+        return { next: value, selStart: sel.start, selEnd: sel.end };
+      },
     },
     { icon: List, label: m.about_editor_bullet_list(), run: prefixLine("- ") },
     {
@@ -287,6 +342,14 @@ export function AboutMarkdownEditor({
       </div>
 
       <div className="border border-border/40 rounded-lg overflow-hidden bg-muted/20">
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+          className="hidden"
+          multiple
+          onChange={handleImageFilesChange}
+        />
         <div className="flex items-center justify-between px-2 py-1.5 border-b border-border/40">
           <div className="flex flex-wrap items-center gap-0.5">
             {actions.map((action) => (

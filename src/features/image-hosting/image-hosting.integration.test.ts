@@ -554,7 +554,12 @@ describe("ImageHostingService", () => {
       const result =
         await ImageHostingService.getArticleImageHostingConfig(adminContext);
 
-      expect(result).toEqual({ enabled: true });
+      expect(result).toEqual({
+        enabled: true,
+        maxImageBytes: null,
+        compressEnabled: true,
+        convertToFormat: "none",
+      });
     });
 
     it("should enable when api key provider article is on", async () => {
@@ -573,7 +578,12 @@ describe("ImageHostingService", () => {
       const result =
         await ImageHostingService.getArticleImageHostingConfig(adminContext);
 
-      expect(result).toEqual({ enabled: true });
+      expect(result).toEqual({
+        enabled: true,
+        maxImageBytes: 32 * 1024 * 1024,
+        compressEnabled: true,
+        convertToFormat: "none",
+      });
     });
 
     it("should be disabled when only r2-native comments are on", async () => {
@@ -584,7 +594,12 @@ describe("ImageHostingService", () => {
       const result =
         await ImageHostingService.getArticleImageHostingConfig(adminContext);
 
-      expect(result).toEqual({ enabled: false });
+      expect(result).toEqual({
+        enabled: false,
+        maxImageBytes: 10 * 1024 * 1024,
+        compressEnabled: true,
+        convertToFormat: "none",
+      });
     });
 
     it("should be disabled when nothing is configured", async () => {
@@ -595,7 +610,12 @@ describe("ImageHostingService", () => {
       const result =
         await ImageHostingService.getArticleImageHostingConfig(adminContext);
 
-      expect(result).toEqual({ enabled: false });
+      expect(result).toEqual({
+        enabled: false,
+        maxImageBytes: 10 * 1024 * 1024,
+        compressEnabled: true,
+        convertToFormat: "none",
+      });
     });
   });
 

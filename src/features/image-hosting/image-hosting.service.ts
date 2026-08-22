@@ -2,6 +2,7 @@ import type { SystemConfig } from "@/features/config/config.schema";
 import * as ConfigService from "@/features/config/service/config.service";
 import type {
   ActiveImageHostingProvider,
+  ApiKeyProviderType,
   ArticleImageHostingConfig,
   CommentImageHostingConfig,
   DiscordChannel,
@@ -20,11 +21,24 @@ import {
   type S3UploadConfig,
   uploadToS3,
 } from "@/features/image-hosting/s3/s3-upload";
+import {
+  resolveDiscordMaxBytes,
+  resolveFfskyMaxBytes,
+  resolveHuggingFaceMaxBytes,
+  resolveImgbbMaxBytes,
+  resolveR2NativeMaxBytes,
+  resolveS3MaxBytes,
+  resolveTelegramMaxBytes,
+  resolveWebDavMaxBytes,
+} from "@/features/image-hosting/size-limits";
 import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
 import * as DiscordChannelApi from "@/features/image-hosting/channels/discord";
 import * as HuggingFaceChannelApi from "@/features/image-hosting/channels/huggingface";
 import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
-import { parseUploadMediaInput } from "@/features/media/media.schema";
+import {
+  MAX_FILE_SIZE,
+  parseUploadMediaInput,
+} from "@/features/media/media.schema";
 import * as MediaRepo from "@/features/media/data/media.data";
 import * as MediaStorage from "@/features/media/data/media.storage";
 import { getImageDimensions } from "@/features/media/utils/image-dimensions";
@@ -405,8 +419,21 @@ async function uploadToWebDAV(
 
 type ProviderUploadResult = Result<
   { url: string; key: string },
-  { reason: "PROVIDER_REQUEST_FAILED"; message: string }
+  | { reason: "PROVIDER_REQUEST_FAILED"; message: string }
+  | { reason: "FILE_TOO_LARGE"; message: string }
 >;
+
+function fileSizeTooLargeError(limitBytes: number): {
+  reason: "FILE_TOO_LARGE";
+  message: string;
+} {
+  const limitMb = limitBytes / (1024 * 1024);
+  const limitText = Number.isInteger(limitMb) ? String(limitMb) : limitMb.toFixed(1);
+  return {
+    reason: "FILE_TOO_LARGE",
+    message: m.image_hosting_file_too_large({ limit: limitText }),
+  };
+}
 
 async function uploadToActiveProvider(
   provider: ActiveImageHostingProvider,
@@ -421,6 +448,10 @@ async function uploadToActiveProvider(
     case "s3": {
       const s3Config = resolveS3Config(config);
       if (s3Config) {
+        const limit = resolveS3MaxBytes(ih?.s3);
+        if (limit !== null && file.size > limit) {
+          return err(fileSizeTooLargeError(limit));
+        }
         return uploadToS3ForFile(s3Config.config, file);
       }
       return null;
@@ -428,8 +459,18 @@ async function uploadToActiveProvider(
 
     case "api-key": {
       const apiProviders = ih?.apiProviders ?? [];
+      let sizeRejected = false;
       for (const p of apiProviders) {
         if (!p.apiKey?.trim()) continue;
+
+        const apiKeyLimit =
+          p.type === "imgbb"
+            ? resolveImgbbMaxBytes()
+            : resolveFfskyMaxBytes();
+        if (apiKeyLimit !== null && file.size > apiKeyLimit) {
+          sizeRejected = true;
+          continue;
+        }
 
         const { fieldName, defaultEndpoint } = getApiKeyProviderFieldInfo(p.type);
         const endpoint =
@@ -445,6 +486,12 @@ async function uploadToActiveProvider(
           key: buildApiKeyTrackingKey(p.type, extensionFromMime(file.type)),
         });
       }
+      if (sizeRejected) {
+        const limit = resolveImgbbMaxBytes();
+        if (limit !== null) {
+          return err(fileSizeTooLargeError(limit));
+        }
+      }
       return null;
     }
 
@@ -454,6 +501,10 @@ async function uploadToActiveProvider(
           ? ih?.r2Native?.articleEnabled
           : ih?.r2Native?.commentEnabled;
       if (r2Enabled) {
+        const r2Limit = resolveR2NativeMaxBytes();
+        if (r2Limit !== null && file.size > r2Limit) {
+          return err(fileSizeTooLargeError(r2Limit));
+        }
         const ext = extensionFromMime(file.type);
         const folder = resolveR2PathPrefix(config, pathway);
         const key = buildObjectKey(folder, ext);
@@ -472,6 +523,10 @@ async function uploadToActiveProvider(
 
     case "telegram": {
       if (ih?.telegram?.botToken && ih?.telegram?.chatId) {
+        const limit = resolveTelegramMaxBytes(ih.telegram);
+        if (limit !== null && file.size > limit) {
+          return err(fileSizeTooLargeError(limit));
+        }
         return uploadToTelegram(ih.telegram, file);
       }
       return null;
@@ -479,6 +534,10 @@ async function uploadToActiveProvider(
 
     case "discord": {
       if (ih?.discord?.botToken && ih?.discord?.channelId) {
+        const limit = resolveDiscordMaxBytes(ih.discord);
+        if (limit !== null && file.size > limit) {
+          return err(fileSizeTooLargeError(limit));
+        }
         return uploadToDiscord(ih.discord, file);
       }
       return null;
@@ -486,6 +545,10 @@ async function uploadToActiveProvider(
 
     case "huggingface": {
       if (ih?.huggingface?.token && ih?.huggingface?.repo) {
+        const limit = resolveHuggingFaceMaxBytes(ih.huggingface);
+        if (limit !== null && file.size > limit) {
+          return err(fileSizeTooLargeError(limit));
+        }
         return uploadToHuggingFace(ih.huggingface, file);
       }
       return null;
@@ -493,6 +556,10 @@ async function uploadToActiveProvider(
 
     case "webdav": {
       if (ih?.webdav?.baseUrl) {
+        const limit = resolveWebDavMaxBytes(ih.webdav);
+        if (limit !== null && file.size > limit) {
+          return err(fileSizeTooLargeError(limit));
+        }
         return uploadToWebDAV(ih.webdav, file);
       }
       return null;
@@ -1284,8 +1351,21 @@ function base64ToFile(base64: string, fileName: string, mimeType: string): File 
 
 function isChannelConfigured(channel: Record<string, unknown>): boolean {
   return Object.values(channel).some(
-    (v) => typeof v === "string" && v.trim() !== "",
+    (value) => typeof value === "string" && value.trim().length > 0,
   );
+}
+
+function resolveImageProcessingSettings(ih: SystemConfig["imageHosting"]) {
+  return {
+    compressEnabled: ih?.imageProcessing?.compressEnabled ?? true,
+    convertToFormat: ih?.imageProcessing?.convertToFormat ?? ("none" as const),
+  };
+}
+
+function resolveApiKeyProviderLimitBytes(
+  type: ApiKeyProviderType,
+): number | null {
+  return type === "imgbb" ? resolveImgbbMaxBytes() : resolveFfskyMaxBytes();
 }
 
 export async function getCommentImageHostingConfig(
@@ -1293,14 +1373,25 @@ export async function getCommentImageHostingConfig(
 ): Promise<CommentImageHostingConfig> {
   const config = await ConfigService.getSystemConfig(context);
   const ih = config?.imageHosting;
+  const processing = resolveImageProcessingSettings(ih);
 
   if (ih?.activeProvider !== null && ih?.activeProvider !== undefined) {
     const provider = ih.activeProvider;
     if (provider === "r2-native" && ih.r2Native?.commentEnabled) {
-      return { enabled: true, providerCategory: "r2-native" };
+      return {
+        enabled: true,
+        providerCategory: "r2-native",
+        maxImageBytes: resolveR2NativeMaxBytes(),
+        ...processing,
+      };
     }
     if (provider === "s3" && ih.s3?.commentEnabled) {
-      return { enabled: true, providerCategory: "s3" };
+      return {
+        enabled: true,
+        providerCategory: "s3",
+        maxImageBytes: resolveS3MaxBytes(ih.s3),
+        ...processing,
+      };
     }
     if (provider === "api-key") {
       const activeApiProvider = ih.apiProviders?.find((p) => p.commentEnabled);
@@ -1309,29 +1400,61 @@ export async function getCommentImageHostingConfig(
           enabled: true,
           providerCategory: "api-key",
           providerType: activeApiProvider.type,
+          maxImageBytes: resolveApiKeyProviderLimitBytes(activeApiProvider.type),
+          ...processing,
         };
       }
     }
     if (provider === "telegram" && isChannelConfigured(ih.telegram ?? {})) {
-      return { enabled: true, providerCategory: "telegram" };
+      return {
+        enabled: true,
+        providerCategory: "telegram",
+        maxImageBytes: resolveTelegramMaxBytes(ih.telegram),
+        ...processing,
+      };
     }
     if (provider === "discord" && isChannelConfigured(ih.discord ?? {})) {
-      return { enabled: true, providerCategory: "discord" };
+      return {
+        enabled: true,
+        providerCategory: "discord",
+        maxImageBytes: resolveDiscordMaxBytes(ih.discord),
+        ...processing,
+      };
     }
     if (provider === "huggingface" && isChannelConfigured(ih.huggingface ?? {})) {
-      return { enabled: true, providerCategory: "huggingface" };
+      return {
+        enabled: true,
+        providerCategory: "huggingface",
+        maxImageBytes: resolveHuggingFaceMaxBytes(ih.huggingface),
+        ...processing,
+      };
     }
     if (provider === "webdav" && isChannelConfigured(ih.webdav ?? {})) {
-      return { enabled: true, providerCategory: "webdav" };
+      return {
+        enabled: true,
+        providerCategory: "webdav",
+        maxImageBytes: resolveWebDavMaxBytes(ih.webdav),
+        ...processing,
+      };
     }
-    return { enabled: false, providerCategory: null };
+    return {
+      enabled: false,
+      providerCategory: null,
+      maxImageBytes: null,
+      ...processing,
+    };
   }
 
   // ── 旧版兼容：按优先级链检查 ──
   // 镜像 uploadCommentImage 的真实回退顺序：S3 → API-Key → Telegram →
   // Discord → HuggingFace → WebDAV → R2 原生（兜底）。
   if (ih?.s3?.commentEnabled) {
-    return { enabled: true, providerCategory: "s3" };
+    return {
+      enabled: true,
+      providerCategory: "s3",
+      maxImageBytes: resolveS3MaxBytes(ih.s3),
+      ...processing,
+    };
   }
 
   const activeApiProvider = ih?.apiProviders?.find((p) => p.commentEnabled);
@@ -1340,30 +1463,62 @@ export async function getCommentImageHostingConfig(
       enabled: true,
       providerCategory: "api-key",
       providerType: activeApiProvider.type,
+      maxImageBytes: resolveApiKeyProviderLimitBytes(activeApiProvider.type),
+      ...processing,
     };
   }
 
   if (ih?.telegram && isChannelConfigured(ih.telegram)) {
-    return { enabled: true, providerCategory: "telegram" };
+    return {
+      enabled: true,
+      providerCategory: "telegram",
+      maxImageBytes: resolveTelegramMaxBytes(ih.telegram),
+      ...processing,
+    };
   }
 
   if (ih?.discord && isChannelConfigured(ih.discord)) {
-    return { enabled: true, providerCategory: "discord" };
+    return {
+      enabled: true,
+      providerCategory: "discord",
+      maxImageBytes: resolveDiscordMaxBytes(ih.discord),
+      ...processing,
+    };
   }
 
   if (ih?.huggingface && isChannelConfigured(ih.huggingface)) {
-    return { enabled: true, providerCategory: "huggingface" };
+    return {
+      enabled: true,
+      providerCategory: "huggingface",
+      maxImageBytes: resolveHuggingFaceMaxBytes(ih.huggingface),
+      ...processing,
+    };
   }
 
   if (ih?.webdav && isChannelConfigured(ih.webdav)) {
-    return { enabled: true, providerCategory: "webdav" };
+    return {
+      enabled: true,
+      providerCategory: "webdav",
+      maxImageBytes: resolveWebDavMaxBytes(ih.webdav),
+      ...processing,
+    };
   }
 
   if (ih?.r2Native?.commentEnabled) {
-    return { enabled: true, providerCategory: "r2-native" };
+    return {
+      enabled: true,
+      providerCategory: "r2-native",
+      maxImageBytes: resolveR2NativeMaxBytes(),
+      ...processing,
+    };
   }
 
-  return { enabled: false, providerCategory: null };
+  return {
+    enabled: false,
+    providerCategory: null,
+    maxImageBytes: null,
+    ...processing,
+  };
 }
 
 export async function getArticleImageHostingConfig(
@@ -1371,46 +1526,141 @@ export async function getArticleImageHostingConfig(
 ): Promise<ArticleImageHostingConfig> {
   const config = await ConfigService.getSystemConfig(context);
   const ih = config?.imageHosting;
+  const processing = resolveImageProcessingSettings(ih);
+
+  // 图床未启用时，编辑器回退到媒体库 R2 路径（10MB / 仅图片）。
+  const disabledResult: ArticleImageHostingConfig = {
+    enabled: false,
+    maxImageBytes: MAX_FILE_SIZE,
+    ...processing,
+  };
 
   const activeProvider = ih?.activeProvider ?? null;
 
   if (activeProvider !== null) {
     switch (activeProvider) {
       case "s3":
-        return { enabled: !!ih?.s3?.articleEnabled };
-      case "api-key":
-        return { enabled: !!ih?.apiProviders?.some((p) => p.articleEnabled) };
+        return {
+          enabled: !!ih?.s3?.articleEnabled,
+          maxImageBytes: ih?.s3?.articleEnabled
+            ? resolveS3MaxBytes(ih.s3)
+            : MAX_FILE_SIZE,
+          ...processing,
+        };
+      case "api-key": {
+        const articleApiProvider = ih?.apiProviders?.find(
+          (p) => p.articleEnabled,
+        );
+        return {
+          enabled: !!articleApiProvider,
+          maxImageBytes: articleApiProvider
+            ? resolveApiKeyProviderLimitBytes(articleApiProvider.type)
+            : MAX_FILE_SIZE,
+          ...processing,
+        };
+      }
       case "r2-native":
-        return { enabled: !!ih?.r2Native?.articleEnabled };
+        return {
+          enabled: !!ih?.r2Native?.articleEnabled,
+          maxImageBytes: ih?.r2Native?.articleEnabled
+            ? resolveR2NativeMaxBytes()
+            : MAX_FILE_SIZE,
+          ...processing,
+        };
       case "telegram":
-        return { enabled: isChannelConfigured(ih?.telegram ?? {}) };
+        return {
+          enabled: isChannelConfigured(ih?.telegram ?? {}),
+          maxImageBytes: isChannelConfigured(ih?.telegram ?? {})
+            ? resolveTelegramMaxBytes(ih?.telegram)
+            : MAX_FILE_SIZE,
+          ...processing,
+        };
       case "discord":
-        return { enabled: isChannelConfigured(ih?.discord ?? {}) };
+        return {
+          enabled: isChannelConfigured(ih?.discord ?? {}),
+          maxImageBytes: isChannelConfigured(ih?.discord ?? {})
+            ? resolveDiscordMaxBytes(ih?.discord)
+            : MAX_FILE_SIZE,
+          ...processing,
+        };
       case "huggingface":
-        return { enabled: isChannelConfigured(ih?.huggingface ?? {}) };
+        return {
+          enabled: isChannelConfigured(ih?.huggingface ?? {}),
+          maxImageBytes: isChannelConfigured(ih?.huggingface ?? {})
+            ? resolveHuggingFaceMaxBytes(ih?.huggingface)
+            : MAX_FILE_SIZE,
+          ...processing,
+        };
       case "webdav":
-        return { enabled: isChannelConfigured(ih?.webdav ?? {}) };
+        return {
+          enabled: isChannelConfigured(ih?.webdav ?? {}),
+          maxImageBytes: isChannelConfigured(ih?.webdav ?? {})
+            ? resolveWebDavMaxBytes(ih?.webdav)
+            : MAX_FILE_SIZE,
+          ...processing,
+        };
     }
   }
 
   // ── 旧版兼容 ──
   // 镜像 uploadForArticle 的真实回退顺序：S3 → API-Key → Telegram →
   // Discord → HuggingFace → WebDAV → R2 原生（兜底）。
-  const s3Enabled = !!ih?.s3?.articleEnabled;
-  const apiKeyEnabled = !!ih?.apiProviders?.some((p) => p.articleEnabled);
-  const telegramEnabled = isChannelConfigured(ih?.telegram ?? {});
-  const discordEnabled = isChannelConfigured(ih?.discord ?? {});
-  const huggingfaceEnabled = isChannelConfigured(ih?.huggingface ?? {});
-  const webdavEnabled = isChannelConfigured(ih?.webdav ?? {});
+  if (ih?.s3?.articleEnabled) {
+    return {
+      enabled: true,
+      maxImageBytes: resolveS3MaxBytes(ih.s3),
+      ...processing,
+    };
+  }
 
-  return {
-    enabled:
-      s3Enabled ||
-      apiKeyEnabled ||
-      telegramEnabled ||
-      discordEnabled ||
-      huggingfaceEnabled ||
-      webdavEnabled ||
-      !!ih?.r2Native?.articleEnabled,
-  };
+  const articleApiProvider = ih?.apiProviders?.find((p) => p.articleEnabled);
+  if (articleApiProvider) {
+    return {
+      enabled: true,
+      maxImageBytes: resolveApiKeyProviderLimitBytes(articleApiProvider.type),
+      ...processing,
+    };
+  }
+
+  if (isChannelConfigured(ih?.telegram ?? {})) {
+    return {
+      enabled: true,
+      maxImageBytes: resolveTelegramMaxBytes(ih?.telegram),
+      ...processing,
+    };
+  }
+
+  if (isChannelConfigured(ih?.discord ?? {})) {
+    return {
+      enabled: true,
+      maxImageBytes: resolveDiscordMaxBytes(ih?.discord),
+      ...processing,
+    };
+  }
+
+  if (isChannelConfigured(ih?.huggingface ?? {})) {
+    return {
+      enabled: true,
+      maxImageBytes: resolveHuggingFaceMaxBytes(ih?.huggingface),
+      ...processing,
+    };
+  }
+
+  if (isChannelConfigured(ih?.webdav ?? {})) {
+    return {
+      enabled: true,
+      maxImageBytes: resolveWebDavMaxBytes(ih?.webdav),
+      ...processing,
+    };
+  }
+
+  if (ih?.r2Native?.articleEnabled) {
+    return {
+      enabled: true,
+      maxImageBytes: resolveR2NativeMaxBytes(),
+      ...processing,
+    };
+  }
+
+  return disabledResult;
 }

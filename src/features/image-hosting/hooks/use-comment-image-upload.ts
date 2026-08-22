@@ -7,6 +7,7 @@ import {
 } from "@/features/image-hosting/api/image-hosting.api";
 import { IMGBB_UPLOAD_PAGE } from "@/features/image-hosting/image-hosting.schema";
 import { extractImageUrlFromMarkdown } from "@/features/image-hosting/utils/extract-image-url";
+import { processImageBeforeUpload } from "@/lib/image-processing";
 import { m } from "@/paraglide/messages";
 
 const COMMENT_IMAGE_HOSTING_CONFIG_KEY = [
@@ -29,38 +30,56 @@ const ALLOWED_IMAGE_MIME_TYPES = [
 ];
 
 /**
- * 服务端上传（S3 / R2 原生 / 图床代理）：文件选择器上传，返回图片 URL。
+ * 服务端上传（S3 / R2 原生 / 图床代理）：文件选择器批量上传，返回图片 URL 列表。
+ * 上传前按渠道设置进行压缩 / 格式转换。
  */
-function uploadViaFileInput(): Promise<string | null> {
+function uploadViaFileInput(policy: {
+  maxImageBytes: number | null;
+  compressEnabled: boolean;
+  convertToFormat: "none" | "webp" | "jpeg";
+}): Promise<string[]> {
   return new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
+    input.multiple = true;
     input.accept = ALLOWED_IMAGE_MIME_TYPES.join(",");
     input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) {
-        resolve(null);
+      const files = Array.from(input.files ?? []);
+      if (files.length === 0) {
+        resolve([]);
         return;
       }
-      try {
-        const formData = new FormData();
-        formData.append("image", file);
-        const result = await uploadCommentImageFn({ data: formData });
-        if (result.error) {
-          toast.error(m.comments_editor_upload_failed(), {
-            description: result.error.message,
+      const urls: string[] = [];
+      let failed = false;
+      for (const rawFile of files) {
+        try {
+          const { file } = await processImageBeforeUpload(rawFile, {
+            maxBytes: policy.maxImageBytes,
+            compressEnabled: policy.compressEnabled,
+            convertToFormat: policy.convertToFormat,
           });
-          resolve(null);
-          return;
+          const formData = new FormData();
+          formData.append("image", file);
+          const result = await uploadCommentImageFn({ data: formData });
+          if (result.error) {
+            failed = true;
+            toast.error(m.comments_editor_upload_failed(), {
+              description: result.error.message,
+            });
+            continue;
+          }
+          urls.push(result.data.url);
+        } catch {
+          failed = true;
+          toast.error(m.comments_editor_upload_failed());
         }
-        toast.success(m.comments_editor_upload_success());
-        resolve(result.data.url);
-      } catch {
-        toast.error(m.comments_editor_upload_failed());
-        resolve(null);
       }
+      if (urls.length > 0 && !failed) {
+        toast.success(m.comments_editor_upload_success());
+      }
+      resolve(urls);
     };
-    input.oncancel = () => resolve(null);
+    input.oncancel = () => resolve([]);
     input.click();
   });
 }
@@ -90,18 +109,23 @@ export function useCommentImageUploader() {
   const enabled = data?.enabled ?? false;
   const providerCategory = data?.providerCategory ?? null;
   const providerType = data?.providerType;
+  const policy = {
+    maxImageBytes: data?.maxImageBytes ?? null,
+    compressEnabled: data?.compressEnabled ?? true,
+    convertToFormat: data?.convertToFormat ?? ("none" as const),
+  };
 
-  const openUpload = useCallback(async (): Promise<string | null> => {
+  const openUpload = useCallback(async (): Promise<string[]> => {
     // R2 原生 / S3 / api-key 中非 imgbb 的 → 使用文件选择器
     if (
       providerCategory === "r2-native" ||
       providerCategory === "s3" ||
       (providerCategory === "api-key" && providerType !== "imgbb")
     ) {
-      return await uploadViaFileInput();
+      return await uploadViaFileInput(policy);
     }
 
-    // ImgBB → 弹窗上传
+    // ImgBB → 弹窗上传（单张）
     const winName = generateWindowName();
 
     const hostWindow = window as UploadPluginWindow;
@@ -120,10 +144,10 @@ export function useCommentImageUploader() {
       toast.error(m.comments_editor_upload_failed(), {
         description: m.comments_editor_upload_popup_blocked(),
       });
-      return null;
+      return [];
     }
 
-    return new Promise<string | null>((resolve) => {
+    return new Promise<string[]>((resolve) => {
       let settled = false;
 
       const cleanup = () => {
@@ -141,8 +165,10 @@ export function useCommentImageUploader() {
         cleanup();
         if (url) {
           toast.success(m.comments_editor_upload_success());
+          resolve([url]);
+          return;
         }
-        resolve(url);
+        resolve([]);
       };
 
       const onMessage = (event: MessageEvent) => {
@@ -162,7 +188,7 @@ export function useCommentImageUploader() {
 
       window.addEventListener("message", onMessage);
     });
-  }, [providerCategory, providerType]);
+  }, [providerCategory, providerType, policy]);
 
   return { enabled, providerCategory, openUpload };
 }

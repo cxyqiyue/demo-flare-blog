@@ -3,8 +3,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import type { Editor as TiptapEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { toast } from "sonner";
-import { uploadToImageHostingFn } from "@/features/image-hosting/api/image-hosting.api";
-import { uploadImageFn } from "@/features/media/api/media.api";
+import { uploadEditorImage } from "@/features/image-hosting/utils/upload-editor-image";
 import { ImageExtension } from "@/features/posts/editor/extensions/images";
 import type { ImageUploadResult } from "@/features/posts/editor/extensions/upload-image";
 import { ImageUpload } from "@/features/posts/editor/extensions/upload-image";
@@ -19,41 +18,7 @@ const ALLOWED_IMAGE_MIME_TYPES = [
 ];
 
 async function handleImageUpload(file: File): Promise<ImageUploadResult> {
-  const formData = new FormData();
-  formData.append("image", file);
-
-  const hosted = await uploadToImageHostingFn({ data: formData });
-  if (hosted.error) {
-    throw new Error(m.image_hosting_upload_failed());
-  }
-
-  if (hosted.data.mode === "image-hosting") {
-    toast.success(m.image_hosting_upload_success({ name: file.name }), {
-      description: m.image_hosting_upload_success_desc({ name: file.name }),
-    });
-    return {
-      url: hosted.data.url,
-      width: hosted.data.width || undefined,
-      height: hosted.data.height || undefined,
-    };
-  }
-
-  if (hosted.data.mode === "none") {
-    const result = await uploadImageFn({ data: formData });
-    if (result.error) {
-      throw new Error(m.media_upload_error_db());
-    }
-    toast.success(m.media_upload_success({ name: file.name }), {
-      description: m.editor_image_upload_success_desc({ name: file.name }),
-    });
-    return {
-      url: result.data.url,
-      width: result.data.width || undefined,
-      height: result.data.height || undefined,
-    };
-  }
-
-  throw new Error(m.image_hosting_upload_failed());
+  return await uploadEditorImage(file);
 }
 
 function handleFileDrop(editor: TiptapEditor, files: Array<File>, pos: number) {

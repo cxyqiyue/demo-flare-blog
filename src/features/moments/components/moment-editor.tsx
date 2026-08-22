@@ -111,10 +111,12 @@ export function MomentEditor({
 
   const handleFileChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
+      const files = Array.from(event.target.files ?? []);
       event.target.value = "";
-      if (file && editor) {
-        editor.commands.uploadImage(file);
+      if (files.length > 0 && editor) {
+        for (const file of files) {
+          editor.commands.uploadImage(file);
+        }
       }
     },
     [editor],
@@ -135,6 +137,7 @@ export function MomentEditor({
         type="file"
         accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
         className="hidden"
+        multiple
         onChange={handleFileChange}
       />
 

@@ -11,6 +11,7 @@ import {
   Server,
   Send,
   Trash2,
+  TriangleAlert,
 } from "lucide-react";
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
@@ -126,6 +127,54 @@ function generateId(): string {
 
 const INPUT_CLASS =
   "w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10";
+
+function SizeLimitWarning({ text }: { text: string }) {
+  return (
+    <p className="flex items-start gap-2 text-xs text-red-500">
+      <TriangleAlert size={13} className="mt-0.5 shrink-0" />
+      <span>{text}</span>
+    </p>
+  );
+}
+
+function NoLimitHint() {
+  return (
+    <p className="text-xs text-muted-foreground">
+      {m.settings_image_hosting_no_limit_hint()}
+    </p>
+  );
+}
+
+function MaxFileSizeField({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: number | undefined;
+  placeholder: string;
+  onChange: (value: number | undefined) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <label className="text-sm text-muted-foreground">
+        {m.settings_image_hosting_field_max_file_size_label()}
+      </label>
+      <Input
+        type="number"
+        min={1}
+        placeholder={placeholder}
+        value={value ?? ""}
+        onChange={(e) => {
+          onChange(e.target.value === "" ? undefined : Number(e.target.value));
+        }}
+        className={INPUT_CLASS}
+      />
+      <p className="text-xs text-muted-foreground">
+        {m.settings_image_hosting_field_max_file_size_desc()}
+      </p>
+    </div>
+  );
+}
 
 function StatusDot({ status }: { status: ConnectionStatus }) {
   return (
@@ -264,6 +313,15 @@ export function ImageHostingSettingsSection({
   const wdPassword = watch("imageHosting.webdav.password") ?? "";
   const wdPublicUrl = watch("imageHosting.webdav.publicUrl") ?? "";
   const wdCreateDir = watch("imageHosting.webdav.createDirectory") ?? true;
+  const tgMaxFileSizeMb = watch("imageHosting.telegram.maxFileSizeMb");
+  const dcMaxFileSizeMb = watch("imageHosting.discord.maxFileSizeMb");
+  const hfMaxFileSizeMb = watch("imageHosting.huggingface.maxFileSizeMb");
+  const wdMaxFileSizeMb = watch("imageHosting.webdav.maxFileSizeMb");
+  const s3MaxFileSizeMb = watch("imageHosting.s3.maxFileSizeMb");
+  const compressEnabled =
+    watch("imageHosting.imageProcessing.compressEnabled") ?? true;
+  const convertToFormat =
+    watch("imageHosting.imageProcessing.convertToFormat") ?? "none";
 
   // ── Connection Status ──
   const [s3Status, setS3Status] = useState<ConnectionStatus>("IDLE");
@@ -583,6 +641,67 @@ export function ImageHostingSettingsSection({
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
+      {/* ── 图片处理（压缩 / 格式转换） ── */}
+      <div className="border border-border/30 bg-background/50 p-4 md:p-8 space-y-6">
+        <div className="space-y-1">
+          <h4 className="text-sm font-medium text-foreground">
+            {m.settings_image_hosting_processing_title()}
+          </h4>
+          <p className="text-xs text-muted-foreground">
+            {m.settings_image_hosting_processing_desc()}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:gap-x-16 md:gap-y-10 lg:grid-cols-2">
+          <div className="space-y-4">
+            <label className="text-sm text-muted-foreground">
+              {m.settings_image_hosting_compress_label()}
+            </label>
+            <div className="flex items-center gap-3 py-1">
+              <Checkbox
+                checked={compressEnabled}
+                onCheckedChange={(checked) => {
+                  setValue("imageHosting.imageProcessing.compressEnabled", checked, {
+                    shouldDirty: true,
+                  });
+                }}
+              />
+              <span className="text-xs text-muted-foreground">
+                {m.settings_image_hosting_compress_desc()}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <label className="text-sm text-muted-foreground">
+              {m.settings_image_hosting_convert_label()}
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              {(["none", "webp", "jpeg"] as const).map((format) => (
+                <button
+                  key={format}
+                  type="button"
+                  onClick={() =>
+                    setValue("imageHosting.imageProcessing.convertToFormat", format, {
+                      shouldDirty: true,
+                    })
+                  }
+                  className={cn(
+                    "rounded-none border px-3 py-1.5 text-xs transition-colors",
+                    convertToFormat === format
+                      ? "border-foreground/40 bg-foreground text-background"
+                      : "border-border/30 bg-muted/10 text-muted-foreground hover:bg-muted/20",
+                  )}
+                >
+                  {m[`settings_image_hosting_convert_${format}`]()}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {m.settings_image_hosting_convert_desc()}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="border border-border/30 bg-background/50 overflow-hidden divide-y divide-border/20">
         {PROVIDER_DEFS.map((def) => {
           const isActive = activeProvider === def.id;
@@ -657,6 +776,7 @@ export function ImageHostingSettingsSection({
                           {m.settings_image_hosting_r2_native_storage_path_desc()}
                         </p>
                       </div>
+                      <NoLimitHint />
                     </div>
                   )}
 
@@ -812,6 +932,17 @@ export function ImageHostingSettingsSection({
                         </div>
                       </div>
 
+                      <NoLimitHint />
+                      <MaxFileSizeField
+                        value={s3MaxFileSizeMb}
+                        placeholder={m.settings_image_hosting_field_max_file_size_unlimited()}
+                        onChange={(v) =>
+                          setValue("imageHosting.s3.maxFileSizeMb", v, {
+                            shouldDirty: true,
+                          })
+                        }
+                      />
+
                       <TestToolbar
                         status={s3Status}
                         onTest={handleTestS3}
@@ -887,6 +1018,13 @@ export function ImageHostingSettingsSection({
 
                                 {isExpanded && (
                                   <div className="border-t border-border/20 p-3 md:p-4 space-y-4 bg-muted/5">
+                                    {p.type === "imgbb" && (
+                                      <SizeLimitWarning
+                                        text={m.settings_image_hosting_limit_imgbb_warning({
+                                          limit: "32",
+                                        })}
+                                      />
+                                    )}
                                     <div className="space-y-4">
                                       <label className="text-xs text-muted-foreground">
                                         {m.settings_image_hosting_provider_name_label()}
@@ -1015,6 +1153,23 @@ export function ImageHostingSettingsSection({
                         </div>
                       </div>
 
+                      <SizeLimitWarning
+                        text={m.settings_image_hosting_limit_telegram_warning({
+                          limit: "50",
+                        })}
+                      />
+                      <MaxFileSizeField
+                        value={tgMaxFileSizeMb}
+                        placeholder={m.settings_image_hosting_field_max_file_size_default({
+                          limit: "50",
+                        })}
+                        onChange={(v) =>
+                          setValue("imageHosting.telegram.maxFileSizeMb", v, {
+                            shouldDirty: true,
+                          })
+                        }
+                      />
+
                       <TestToolbar status={telegramStatus} onTest={handleTestTelegram} canTest={canTestTelegram} />
                       {telegramStatus === "SUCCESS" && telegramEcho && <EchoBlock url={telegramEcho} />}
                     </div>
@@ -1095,6 +1250,25 @@ export function ImageHostingSettingsSection({
                         </div>
                       </div>
 
+                      <SizeLimitWarning
+                        text={
+                          dcIsNitro
+                            ? m.settings_image_hosting_limit_discord_warning({ limit: "25" })
+                            : m.settings_image_hosting_limit_discord_warning({ limit: "10" })
+                        }
+                      />
+                      <MaxFileSizeField
+                        value={dcMaxFileSizeMb}
+                        placeholder={m.settings_image_hosting_field_max_file_size_default({
+                          limit: dcIsNitro ? "25" : "10",
+                        })}
+                        onChange={(v) =>
+                          setValue("imageHosting.discord.maxFileSizeMb", v, {
+                            shouldDirty: true,
+                          })
+                        }
+                      />
+
                       <TestToolbar
                         status={discordStatus}
                         onTest={handleTestDiscord}
@@ -1163,6 +1337,17 @@ export function ImageHostingSettingsSection({
                           </div>
                         </div>
                       </div>
+
+                      <NoLimitHint />
+                      <MaxFileSizeField
+                        value={hfMaxFileSizeMb}
+                        placeholder={m.settings_image_hosting_field_max_file_size_unlimited()}
+                        onChange={(v) =>
+                          setValue("imageHosting.huggingface.maxFileSizeMb", v, {
+                            shouldDirty: true,
+                          })
+                        }
+                      />
 
                       <TestToolbar
                         status={hfStatus}
@@ -1260,6 +1445,17 @@ export function ImageHostingSettingsSection({
                           </div>
                         </div>
                       </div>
+
+                      <NoLimitHint />
+                      <MaxFileSizeField
+                        value={wdMaxFileSizeMb}
+                        placeholder={m.settings_image_hosting_field_max_file_size_unlimited()}
+                        onChange={(v) =>
+                          setValue("imageHosting.webdav.maxFileSizeMb", v, {
+                            shouldDirty: true,
+                          })
+                        }
+                      />
 
                       <TestToolbar
                         status={wdStatus}

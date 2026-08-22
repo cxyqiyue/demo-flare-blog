@@ -9,6 +9,8 @@ import {
   ApiKeyProviderSchema,
   DiscordChannelSchema,
   HuggingFaceChannelSchema,
+  ImageProcessingSettingsSchema,
+  MAX_FILE_SIZE_MB_FIELD,
   TelegramChannelSchema,
   WebDAVChannelSchema,
 } from "@/features/image-hosting/image-hosting.schema";
@@ -121,6 +123,7 @@ export const ImageHostingConfigSchema = z.object({
       pathPrefix: z.string().optional(),
       publicUrl: z.string().optional(),
       pathStyle: z.boolean().optional(),
+      maxFileSizeMb: MAX_FILE_SIZE_MB_FIELD.optional(),
     })
     .optional(),
   apiProviders: z.array(ApiKeyProviderSchema).optional(),
@@ -128,6 +131,7 @@ export const ImageHostingConfigSchema = z.object({
   discord: DiscordChannelSchema.optional(),
   huggingface: HuggingFaceChannelSchema.optional(),
   webdav: WebDAVChannelSchema.optional(),
+  imageProcessing: ImageProcessingSettingsSchema.optional(),
   // ── 兼容旧版迁移字段（读取后自动转换，不再写入） ──
   imgbb: z.any().optional(),
   ffsky: z.any().optional(),

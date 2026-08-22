@@ -42,7 +42,19 @@ import type {
   TelegramChannel,
   WebDAVChannel,
 } from "@/features/image-hosting/image-hosting.schema";
+import {
+  resolveDiscordMaxBytes,
+  resolveHuggingFaceMaxBytes,
+  resolveImgbbMaxBytes,
+  resolveFfskyMaxBytes,
+  resolveR2NativeMaxBytes,
+  resolveS3MaxBytes,
+  resolveTelegramMaxBytes,
+  resolveWebDavMaxBytes,
+  formatLimitMb,
+} from "@/features/image-hosting/size-limits";
 import * as ConfigService from "@/features/config/service/config.service";
+import { m } from "@/paraglide/messages";
 import * as PostMediaRepo from "@/features/posts/data/post-media.data";
 import { CACHE_CONTROL } from "@/lib/constants";
 import { err, ok, type Result } from "@/lib/errors";
@@ -100,6 +112,42 @@ export async function upload(
   }
 }
 
+/**
+ * 解析媒体库外部渠道的上传大小上限（字节）。null = 无固定上限。
+ */
+function providerLimitBytes(
+  config: Awaited<ReturnType<typeof ConfigService.getSystemConfig>>,
+  provider: string,
+): number | null {
+  const ih = config?.imageHosting;
+  switch (provider) {
+    case "s3":
+      return resolveS3MaxBytes(ih?.s3);
+    case "telegram":
+      return resolveTelegramMaxBytes(ih?.telegram);
+    case "discord":
+      return resolveDiscordMaxBytes(ih?.discord);
+    case "huggingface":
+      return resolveHuggingFaceMaxBytes(ih?.huggingface);
+    case "webdav":
+      return resolveWebDavMaxBytes(ih?.webdav);
+    default:
+      return null;
+  }
+}
+
+function fileSizeTooLargeError(limitBytes: number): {
+  reason: "FILE_TOO_LARGE";
+  message: string;
+} {
+  return {
+    reason: "FILE_TOO_LARGE",
+    message: m.media_upload_file_too_large_channel({
+      limit: formatLimitMb(limitBytes),
+    }),
+  };
+}
+
 export async function uploadToProvider(
   context: DbContext & { executionCtx: ExecutionContext },
   data: UploadToProviderInput,
@@ -116,13 +164,17 @@ export async function uploadToProvider(
       mimeType?: string;
       sizeInBytes?: number;
     },
-    { reason: string }
+    { reason: string; message?: string }
   >;
 
   if (provider === "s3") {
     const config = await ConfigService.getSystemConfig(context);
     const s3Config = resolveS3ConfigForMedia(config);
     if (!s3Config) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+    const limit = providerLimitBytes(config, provider);
+    if (limit !== null && file.size > limit) {
+      return err(fileSizeTooLargeError(limit));
+    }
     const result = await uploadToS3ForMediaLibrary(s3Config, file, folder);
     if (result.error) return err({ reason: "S3_UPLOAD_FAILED" });
     uploadResult = ok(result.data);
@@ -130,6 +182,10 @@ export async function uploadToProvider(
     const config = await ConfigService.getSystemConfig(context);
     const tgConfig = resolveTelegramConfig(config);
     if (!tgConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+    const limit = providerLimitBytes(config, provider);
+    if (limit !== null && file.size > limit) {
+      return err(fileSizeTooLargeError(limit));
+    }
     const result = await TelegramChannelApi.uploadToTelegramChannel(
       tgConfig,
       file,
@@ -144,6 +200,10 @@ export async function uploadToProvider(
     const config = await ConfigService.getSystemConfig(context);
     const dcConfig = resolveDiscordConfig(config);
     if (!dcConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+    const limit = providerLimitBytes(config, provider);
+    if (limit !== null && file.size > limit) {
+      return err(fileSizeTooLargeError(limit));
+    }
     const result = await DiscordChannelApi.uploadToDiscordChannel(
       dcConfig,
       file,
@@ -158,6 +218,10 @@ export async function uploadToProvider(
     const config = await ConfigService.getSystemConfig(context);
     const hfConfig = resolveHuggingFaceConfig(config);
     if (!hfConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+    const limit = providerLimitBytes(config, provider);
+    if (limit !== null && file.size > limit) {
+      return err(fileSizeTooLargeError(limit));
+    }
     const result = await HuggingFaceChannelApi.uploadToHuggingFaceChannel(
       hfConfig,
       file,
@@ -169,6 +233,10 @@ export async function uploadToProvider(
     const config = await ConfigService.getSystemConfig(context);
     const davConfig = resolveWebDAVConfig(config);
     if (!davConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
+    const limit = providerLimitBytes(config, provider);
+    if (limit !== null && file.size > limit) {
+      return err(fileSizeTooLargeError(limit));
+    }
     const result = await WebDavChannelApi.uploadToWebDavChannel(
       davConfig,
       file,
@@ -1116,6 +1184,7 @@ export async function getMediaProviders(
     canRename: true,
     canMove: true,
     isDefault: activeProvider === null || activeProvider === "r2-native",
+    maxFileSizeBytes: resolveR2NativeMaxBytes(),
   });
 
   // S3
@@ -1132,6 +1201,7 @@ export async function getMediaProviders(
       canRename: true,
       canMove: true,
       isDefault: isActive("s3"),
+      maxFileSizeBytes: resolveS3MaxBytes(ih?.s3),
     });
   }
 
@@ -1148,6 +1218,10 @@ export async function getMediaProviders(
       canUpload: true,
       canCreateFolder: false,
       isDefault: isActive("api-key"),
+      maxFileSizeBytes:
+        p.type === "imgbb"
+          ? resolveImgbbMaxBytes()
+          : resolveFfskyMaxBytes(),
     });
   }
 
@@ -1165,6 +1239,7 @@ export async function getMediaProviders(
       canRename: false,
       canMove: false,
       isDefault: isActive("telegram"),
+      maxFileSizeBytes: resolveTelegramMaxBytes(ih.telegram),
     });
   }
 
@@ -1181,6 +1256,7 @@ export async function getMediaProviders(
       canRename: false,
       canMove: false,
       isDefault: isActive("discord"),
+      maxFileSizeBytes: resolveDiscordMaxBytes(ih.discord),
     });
   }
 
@@ -1197,6 +1273,7 @@ export async function getMediaProviders(
       canRename: true,
       canMove: true,
       isDefault: isActive("huggingface"),
+      maxFileSizeBytes: resolveHuggingFaceMaxBytes(ih.huggingface),
     });
   }
 
@@ -1213,6 +1290,7 @@ export async function getMediaProviders(
       canRename: true,
       canMove: true,
       isDefault: isActive("webdav"),
+      maxFileSizeBytes: resolveWebDavMaxBytes(ih.webdav),
     });
   }
 

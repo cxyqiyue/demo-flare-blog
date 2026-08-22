@@ -33,19 +33,33 @@ export interface MediaProvider {
   canRename?: boolean;
   canMove?: boolean;
   isDefault?: boolean;
+  /** 渠道上传大小上限（字节）；null/undefined = 无固定上限 */
+  maxFileSizeBytes?: number | null;
 }
 
 export const UploadMediaInputSchema = z.instanceof(FormData);
 
-export function parseUploadMediaInput(formData: FormData, messages: Messages) {
+export interface ParseUploadMediaOptions {
+  /** 媒体库管理员上传任意文件类型时为 true（仅 admin 接口可用） */
+  allowAnyFileType?: boolean;
+  /** 覆盖默认大小上限（字节） */
+  maxSizeBytes?: number;
+}
+
+export function parseUploadMediaInput(
+  formData: FormData,
+  messages: Messages,
+  options?: ParseUploadMediaOptions,
+) {
   const file = formData.get("image");
   if (!(file instanceof File)) {
     throw new Error(messages.media_validation_file_required());
   }
-  if (file.size > MAX_FILE_SIZE) {
+  const maxSize = options?.maxSizeBytes ?? MAX_FILE_SIZE;
+  if (file.size > maxSize) {
     throw new Error(messages.media_validation_file_too_large());
   }
-  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+  if (!options?.allowAnyFileType && !ACCEPTED_IMAGE_TYPES.includes(file.type)) {
     throw new Error(messages.media_validation_file_invalid_type());
   }
 

@@ -280,6 +280,7 @@ export function MediaLibrary() {
         isDragging={isDragging}
         selectedFolder={uploadFolder}
         folders={folders}
+        maxFileSizeBytes={currentProvider?.maxFileSizeBytes ?? null}
         onFolderChange={setUploadFolder}
         onClose={resetUpload}
         onFileSelect={uploadDisabled ? () => {} : (files) => processFiles(files, uploadFolder)}

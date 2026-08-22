@@ -47,6 +47,8 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
 
       const formData = new FormData();
       formData.append("image", item.file);
+      // 媒体库管理员上传：允许任意文件类型，上限放宽到 R2 渠道限制
+      formData.append("source", "media-library");
       if (item.folder) {
         formData.append("folder", item.folder);
       }
@@ -87,7 +89,9 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
         const result = await uploadMutation.mutateAsync(item);
         if (result.error) {
           if (isMountedRef.current) {
-            const message = m.media_upload_error_db();
+            const message =
+              (result.error as { message?: string }).message ||
+              m.media_upload_error_db();
             setQueue((prev) =>
               prev.map((q, i) =>
                 i === waitingIndex
@@ -132,16 +136,34 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
   }, [queue, uploadMutation, queryClient]);
 
   const processFiles = (files: Array<File>, folder = "") => {
-    const newItems: Array<UploadItem> = files.map((file) => ({
-      id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      size: formatBytes(file.size),
-      progress: 0,
-      status: "WAITING" as const,
-      log: m.media_upload_log_init(),
-      file,
-      folder,
-    }));
+    const limitBytes = provider?.maxFileSizeBytes ?? null;
+    const newItems: Array<UploadItem> = files.map((file) => {
+      // 上传前判断渠道大小限制：超限文件直接标记失败，不发起上传
+      if (limitBytes !== null && file.size > limitBytes) {
+        return {
+          id: Math.random().toString(36).substr(2, 9),
+          name: file.name,
+          size: formatBytes(file.size),
+          progress: 0,
+          status: "ERROR" as const,
+          log: m.media_upload_file_too_large_channel({
+            limit: String(Math.round(limitBytes / 1024 / 1024)),
+          }),
+          file,
+          folder,
+        };
+      }
+      return {
+        id: Math.random().toString(36).substr(2, 9),
+        name: file.name,
+        size: formatBytes(file.size),
+        progress: 0,
+        status: "WAITING" as const,
+        log: m.media_upload_log_init(),
+        file,
+        folder,
+      };
+    });
     setQueue((prev) => [...prev, ...newItems]);
   };
 
