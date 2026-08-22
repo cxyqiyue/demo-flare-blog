@@ -7,6 +7,8 @@ import {
 } from "@/features/image-hosting/api/image-hosting.api";
 import { IMGBB_UPLOAD_PAGE } from "@/features/image-hosting/image-hosting.schema";
 import { extractImageUrlFromMarkdown } from "@/features/image-hosting/utils/extract-image-url";
+import { handleServerError } from "@/lib/errors/error-handler";
+import { parseRequestError } from "@/lib/errors/request-errors";
 import { processImageBeforeUpload } from "@/lib/image-processing";
 import { m } from "@/paraglide/messages";
 
@@ -69,9 +71,16 @@ function uploadViaFileInput(policy: {
             continue;
           }
           urls.push(result.data.url);
-        } catch {
+        } catch (error) {
           failed = true;
-          toast.error(m.comments_editor_upload_failed());
+          const parsed = parseRequestError(error);
+          if (parsed.code === "UNKNOWN") {
+            toast.error(m.comments_editor_upload_failed(), {
+              description: parsed.message || undefined,
+            });
+          } else {
+            handleServerError(error);
+          }
         }
       }
       if (urls.length > 0 && !failed) {

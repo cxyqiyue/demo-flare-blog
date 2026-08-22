@@ -30,6 +30,7 @@ import {
   resolveS3MaxBytes,
   resolveTelegramMaxBytes,
   resolveWebDavMaxBytes,
+  R2_NATIVE_MAX_MB,
 } from "@/features/image-hosting/size-limits";
 import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
 import * as DiscordChannelApi from "@/features/image-hosting/channels/discord";
@@ -630,10 +631,15 @@ export async function uploadForArticle(
     { reason: "IMAGE_HOSTING_UPLOAD_FAILED"; message: string }
   >
 > {
-  const { file } = parseUploadMediaInput(formData, m);
   const config = await ConfigService.getSystemConfig(context);
   const ih = config?.imageHosting;
   const activeProvider = ih?.activeProvider ?? null;
+  // 服务端大小校验与渠道上限对齐（客户端压缩策略同样按渠道上限判断）
+  const policy = await getArticleImageHostingConfig(context);
+  const articleLimitBytes = policy.maxImageBytes ?? R2_NATIVE_MAX_MB * 1024 * 1024;
+  const { file } = parseUploadMediaInput(formData, m, {
+    maxSizeBytes: articleLimitBytes,
+  });
 
   const getImageDimensionsResult = async () => {
     const buf = await file.arrayBuffer();
@@ -927,10 +933,15 @@ export async function uploadCommentImage(
     { reason: "COMMENT_IMAGE_UPLOAD_FAILED"; message: string }
   >
 > {
-  const { file } = parseUploadMediaInput(formData, m);
   const config = await ConfigService.getSystemConfig(context);
   const ih = config?.imageHosting;
   const activeProvider = ih?.activeProvider ?? null;
+  // 服务端大小校验与渠道上限对齐
+  const commentPolicy = await getCommentImageHostingConfig(context);
+  const commentLimitBytes = commentPolicy.maxImageBytes ?? R2_NATIVE_MAX_MB * 1024 * 1024;
+  const { file } = parseUploadMediaInput(formData, m, {
+    maxSizeBytes: commentLimitBytes,
+  });
 
   if (activeProvider !== null) {
     const result = await uploadToActiveProvider(

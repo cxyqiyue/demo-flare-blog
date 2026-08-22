@@ -7,6 +7,8 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { uploadEditorImage } from "@/features/image-hosting/utils/upload-editor-image";
+import { handleServerError } from "@/lib/errors/error-handler";
+import { parseRequestError } from "@/lib/errors/request-errors";
 import { normalizeLinkHref } from "@/lib/links/normalize-link-href";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -199,10 +201,14 @@ export const Editor = memo(function Editor({
         const result = await uploadEditorImage(file);
         return result.url;
       } catch (error) {
-        toast.error(m.editor_image_upload_failed(), {
-          description:
-            error instanceof Error ? error.message : m.editor_action_unknown_error(),
-        });
+        const parsed = parseRequestError(error);
+        if (parsed.code === "UNKNOWN") {
+          toast.error(m.editor_image_upload_failed(), {
+            description: parsed.message,
+          });
+        } else {
+          handleServerError(error);
+        }
         return null;
       }
     },

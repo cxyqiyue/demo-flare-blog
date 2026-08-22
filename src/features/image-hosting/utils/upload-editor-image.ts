@@ -80,7 +80,9 @@ export async function uploadEditorImage(
 
   const hosted = await uploadToImageHostingFn({ data: formData });
   if (hosted.error) {
-    throw new Error(m.image_hosting_upload_failed());
+    throw new Error(
+      hosted.error.message || m.image_hosting_upload_failed(),
+    );
   }
 
   if (hosted.data.mode === "image-hosting") {
@@ -95,7 +97,8 @@ export async function uploadEditorImage(
   if (hosted.data.mode === "none") {
     const result = await uploadImageFn({ data: formData });
     if (result.error) {
-      throw new Error(m.media_upload_error_db());
+      const detail = (result.error as { message?: string }).message;
+      throw new Error(detail || m.media_upload_error_db());
     }
     toastSuccess(file.name, false);
     return {

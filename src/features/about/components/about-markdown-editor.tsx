@@ -25,6 +25,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { MarkdownContent } from "@/features/about/components/markdown-content";
 import { uploadEditorImage } from "@/features/image-hosting/utils/upload-editor-image";
+import { handleServerError } from "@/lib/errors/error-handler";
+import { parseRequestError } from "@/lib/errors/request-errors";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -184,12 +186,14 @@ export function AboutMarkdownEditor({
           const alt = file.name.replace(/\.[^.]+$/, "");
           snippets.push(`![${alt}](${result.url})`);
         } catch (error) {
-          toast.error(m.editor_image_upload_failed(), {
-            description:
-              error instanceof Error
-                ? error.message
-                : m.editor_action_unknown_error(),
-          });
+          const parsed = parseRequestError(error);
+          if (parsed.code === "UNKNOWN") {
+            toast.error(m.editor_image_upload_failed(), {
+              description: parsed.message,
+            });
+          } else {
+            handleServerError(error);
+          }
         }
       }
       if (snippets.length > 0) {
