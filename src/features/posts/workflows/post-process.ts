@@ -12,6 +12,7 @@ import {
   upsertPostSearchIndex,
 } from "@/features/posts/workflows/helpers";
 import * as SearchService from "@/features/search/service/search.service";
+import * as SubscriptionService from "@/features/subscription/service/subscription.service";
 import { getDb } from "@/lib/db";
 
 interface Params {
@@ -150,6 +151,19 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
         hash,
       );
     });
+
+    // 7. Notify subscribers (future posts are handled by ScheduledPublishWorkflow)
+    if (!isFuturePost) {
+      await step.do("notify subscribers", async () => {
+        const p = await fetchPost(this.env, postId);
+        if (!p || p.status !== "published") return;
+
+        await SubscriptionService.notifySubscribersOfNewPost(
+          { db: getDb(this.env), env: this.env },
+          { id: p.id, title: p.title, slug: p.slug },
+        );
+      });
+    }
   }
 
   private async handleUnpublish(step: WorkflowStep, postId: number) {

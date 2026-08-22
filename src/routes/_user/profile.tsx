@@ -11,6 +11,7 @@ import {
 import { AUTH_KEYS } from "@/features/auth/queries";
 import { authClient } from "@/lib/auth/auth.client";
 import { m } from "@/paraglide/messages";
+import { useBlogSubscription } from "@/features/subscription/hooks/use-blog-subscription";
 
 export const Route = createFileRoute("/_user/profile")({
   ssr: false,
@@ -41,6 +42,7 @@ function ProfilePage() {
     enabled: !!user,
   });
   const notification = useNotificationToggle(user?.id);
+  const subscription = useBlogSubscription(user?.id);
   const { logout } = useLogout();
 
   if (!user) return null;
@@ -51,6 +53,7 @@ function ProfilePage() {
       profileForm={profileForm}
       passwordForm={hasPassword ? passwordForm : null}
       notification={notification}
+      subscription={subscription}
       logout={logout}
     />
   );

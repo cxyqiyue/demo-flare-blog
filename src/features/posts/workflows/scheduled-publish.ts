@@ -6,6 +6,8 @@ import {
   invalidatePostCaches,
   upsertPostSearchIndex,
 } from "@/features/posts/workflows/helpers";
+import * as SubscriptionService from "@/features/subscription/service/subscription.service";
+import { getDb } from "@/lib/db";
 
 interface Params {
   postId: number;
@@ -33,6 +35,13 @@ export class ScheduledPublishWorkflow extends WorkflowEntrypoint<Env, Params> {
 
     await step.do("update search index", async () => {
       await upsertPostSearchIndex(this.env, post);
+    });
+
+    await step.do("notify subscribers", async () => {
+      await SubscriptionService.notifySubscribersOfNewPost(
+        { db: getDb(this.env), env: this.env },
+        { id: post.id, title: post.title, slug: post.slug },
+      );
     });
   }
 }

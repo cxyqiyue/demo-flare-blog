@@ -41,10 +41,19 @@ export interface NotificationData {
   toggle: () => void;
 }
 
+export interface BlogSubscriptionData {
+  available: boolean;
+  subscribed: boolean | undefined;
+  isLoading: boolean;
+  isPending: boolean;
+  toggle: () => void;
+}
+
 export interface ProfilePageProps {
   user: ProfileUserInfo;
   profileForm: ProfileFormData;
   passwordForm: PasswordFormData | null;
   notification: NotificationData;
+  subscription: BlogSubscriptionData;
   logout: () => Promise<void>;
 }

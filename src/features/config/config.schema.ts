@@ -50,6 +50,19 @@ export const NotificationConfigSchema = z.object({
     .optional(),
   webhooks: z.array(webhookEndpointSchema).optional(),
 });
+
+export const SUBSCRIPTION_TEMPLATE_PLACEHOLDERS = [
+  "{{articleTitle}}",
+  "{{articleUrl}}",
+  "{{siteName}}",
+] as const;
+
+export const SubscriptionConfigSchema = z.object({
+  allUserNotifyEnabled: z.boolean().optional(),
+  templateSubject: z.string().max(300).optional(),
+  templateBody: z.string().max(50000).optional(),
+});
+export type SubscriptionConfig = z.infer<typeof SubscriptionConfigSchema>;
 export type AiBlogSkillType = (typeof AI_BLOG_SKILL_TYPES)[number];
 
 // ── AI 第三方兼容接口类型 ───────────────────────────────────
@@ -208,6 +221,7 @@ export const CloudflareAnalyticsConfigSchema = z.object({
 export const CONFIG_SECTIONS = [
   "email",
   "notification",
+  "subscription",
   "ai",
   "imageHosting",
   "challenge",
@@ -225,6 +239,10 @@ export const UpdateSystemConfigSectionInputSchema = z.discriminatedUnion(
     z.object({
       section: z.literal("notification"),
       data: NotificationConfigSchema,
+    }),
+    z.object({
+      section: z.literal("subscription"),
+      data: SubscriptionConfigSchema,
     }),
     z.object({ section: z.literal("ai"), data: AiConfigSchema }),
     z.object({
@@ -251,6 +269,7 @@ export type UpdateSystemConfigSectionInput = z.infer<
 export const SystemConfigSchema = z.object({
   email: EmailConfigSchema.optional(),
   notification: NotificationConfigSchema.optional(),
+  subscription: SubscriptionConfigSchema.optional(),
   ai: AiConfigSchema.optional(),
   imageHosting: ImageHostingConfigSchema.optional(),
   challenge: ChallengeConfigSchema.optional(),
@@ -270,6 +289,7 @@ export const createSystemConfigFormSchema = (messages: Messages) =>
         webhooks: z.array(createWebhookEndpointFormSchema(messages)).optional(),
       })
       .optional(),
+    subscription: SystemConfigSchema.shape.subscription,
     ai: SystemConfigSchema.shape.ai,
     imageHosting: SystemConfigSchema.shape.imageHosting,
     challenge: SystemConfigSchema.shape.challenge,
@@ -306,6 +326,11 @@ export const DEFAULT_CONFIG: SystemConfig = {
       emailEnabled: true,
     },
     webhooks: [],
+  },
+  subscription: {
+    allUserNotifyEnabled: false,
+    templateSubject: "",
+    templateBody: "",
   },
   ai: {
     workersAi: { enabled: true },

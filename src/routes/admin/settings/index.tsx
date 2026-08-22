@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute, useBlocker } from "@tanstack/react-router";
 import {
+  BellRing,
   Check,
   Cloud,
   Cpu,
@@ -42,6 +43,7 @@ import { useEmailConnection } from "@/features/email/hooks/use-email-connection"
 import { ImageHostingSettingsSection } from "@/features/image-hosting/components/image-hosting-settings-section";
 import { useImageHostingConnection } from "@/features/image-hosting/hooks/use-image-hosting-connection";
 import { OAuthClientsSection } from "@/features/oauth-clients/components/oauth-clients-section";
+import { SubscriptionSettingsSection } from "@/features/subscription/components/subscription-settings-section";
 import { WebhookSettingsSection } from "@/features/webhook/components/webhook-settings-section";
 import { WechatVerifySettingsSection } from "@/features/wechat-verify/components/wechat-verify-settings-section";
 import { cn } from "@/lib/utils";
@@ -104,6 +106,11 @@ function RouteComponent() {
       label: m.settings_tab_webhook(),
     },
     {
+      value: "subscription",
+      icon: BellRing,
+      label: m.settings_tab_subscription(),
+    },
+    {
       value: "cloudflare",
       icon: Cloud,
       label: "Cloudflare",
@@ -137,6 +144,7 @@ function RouteComponent() {
     challenge: "challenge",
     "wechat-verify": "wechatVerify",
     webhook: "notification",
+    subscription: "subscription",
     cloudflare: "cloudflareAnalytics",
   };
 
@@ -440,6 +448,18 @@ function RouteComponent() {
                 </p>
               </div>
               <WebhookSettingsSection />
+            </TabsContent>
+
+            <TabsContent value="subscription" className="mt-0 space-y-10">
+              <div className="space-y-2 pb-6 border-b border-border/30">
+                <h2 className="text-2xl font-serif font-medium tracking-tight">
+                  {m.settings_subscription_title()}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {m.settings_subscription_desc()}
+                </p>
+              </div>
+              <SubscriptionSettingsSection />
             </TabsContent>
 
             <TabsContent value="cloudflare" className="mt-0 space-y-10">

@@ -9,6 +9,7 @@ export function ProfilePage({
   profileForm,
   passwordForm,
   notification,
+  subscription,
   logout,
 }: ProfilePageProps) {
   const inputClassName =
@@ -236,6 +237,45 @@ export function ProfilePage({
               </div>
             </div>
           )}
+
+          <div
+            className="fuwari-card-base p-6 fuwari-onload-animation flex flex-col gap-6"
+            style={{ animationDelay: "300ms" }}
+          >
+            <h3 className="text-lg font-bold fuwari-text-90 border-b border-(--fuwari-btn-regular-bg) pb-3">
+              {m.profile_subscription_title()}
+            </h3>
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-bold fuwari-text-75">
+                {m.profile_subscription_label()}
+              </span>
+              <p className="text-xs text-(--fuwari-btn-content) mb-2">
+                {subscription.available
+                  ? m.profile_subscription_desc()
+                  : m.profile_subscription_no_email()}
+              </p>
+              <button
+                disabled={subscription.isLoading || subscription.isPending}
+                onClick={subscription.toggle}
+                className={cn(
+                  "w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95",
+                  subscription.subscribed
+                    ? "fuwari-btn-primary"
+                    : "fuwari-btn-regular",
+                )}
+              >
+                {subscription.isLoading || subscription.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <span>
+                    {subscription.subscribed
+                      ? m.profile_subscription_subscribed()
+                      : m.profile_subscription_not_subscribed()}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
 
           <div
             className="fuwari-card-base p-6 fuwari-onload-animation flex flex-col gap-3"

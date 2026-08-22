@@ -11,6 +11,7 @@ export function ProfilePage({
   profileForm,
   passwordForm,
   notification,
+  subscription,
   logout,
 }: ProfilePageProps) {
   return (
@@ -172,6 +173,42 @@ export function ProfilePage({
             </div>
           </section>
         )}
+
+        <section className="space-y-8">
+          <h3 className="text-lg font-serif font-medium text-foreground">
+            {m.profile_subscription_title()}
+          </h3>
+          <div className="flex items-center justify-between py-2 border-b border-border/40 gap-4">
+            <div className="space-y-1 min-w-0">
+              <span className="text-sm font-sans text-foreground">
+                {m.profile_subscription_label()}
+              </span>
+              <span className="text-[10px] font-mono text-muted-foreground block">
+                {subscription.available
+                  ? m.profile_subscription_desc()
+                  : m.profile_subscription_no_email()}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={subscription.isLoading || subscription.isPending}
+              onClick={subscription.toggle}
+              className={cn(
+                "font-mono text-[10px] tracking-wider h-auto px-3 py-1 border transition-all rounded-full shrink-0",
+                subscription.subscribed
+                  ? "border-foreground text-foreground"
+                  : "border-border text-muted-foreground hover:border-foreground/50",
+              )}
+            >
+              {subscription.isLoading
+                ? m.profile_notify_status_loading()
+                : subscription.subscribed
+                  ? m.profile_subscription_subscribed()
+                  : m.profile_subscription_not_subscribed()}
+            </Button>
+          </div>
+        </section>
 
         {/* Security Section */}
         {passwordForm && (
