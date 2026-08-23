@@ -1106,7 +1106,7 @@ export async function handleImageRequest(
 
     const subRequestHeaders = new Headers();
 
-    const headersToKeep = ["user-agent", "accept"];
+    const headersToKeep = ["user-agent", "accept", "referer"];
     for (const [k, v] of request.headers.entries()) {
       if (headersToKeep.includes(k.toLowerCase())) {
         subRequestHeaders.set(k, v);

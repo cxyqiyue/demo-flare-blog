@@ -412,8 +412,9 @@ export function ImageHostingSettingsSection({
 
   // ── 图链访问模式 ──
   const linkAccessMode = watch("imageHosting.linkAccess.mode") ?? "direct";
+  // 与运行时默认一致（未设置时放行空 Referer），避免 UI 显示与实际行为不符
   const allowEmptyReferer =
-    watch("imageHosting.linkAccess.allowEmptyReferer") ?? false;
+    watch("imageHosting.linkAccess.allowEmptyReferer") ?? true;
   const refererAllowlistRaw = (
     watch("imageHosting.linkAccess.refererAllowlist") ?? []
   ).join("\n");

@@ -4,6 +4,7 @@ import { testCloudflareConnection } from "@/features/cloudflare-usage/lib/cf-gra
 import {
   getCloudflareUsage,
   getCloudflareAlertStatus,
+  refreshCloudflareUsage,
 } from "@/features/cloudflare-usage/service/cloudflare-usage.service";
 import { TestCloudflareConnectionInputSchema } from "@/features/cloudflare-usage/cloudflare-usage.schema";
 import { sendWebhookRequest } from "@/features/webhook/api/webhook.consumer";
@@ -18,6 +19,12 @@ export const getCloudflareUsageFn = createServerFn({
 })
   .middleware([adminMiddleware])
   .handler(({ context }) => getCloudflareUsage(context));
+
+export const refreshCloudflareUsageFn = createServerFn({
+  method: "POST",
+})
+  .middleware([adminMiddleware])
+  .handler(({ context }) => refreshCloudflareUsage(context));
 
 export const getCloudflareAlertStatusFn = createServerFn({
   method: "GET",
