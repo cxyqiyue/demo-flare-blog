@@ -7,6 +7,11 @@
   "observability": {
     "enabled": true
   },
+  // 每小时检查一次 Cloudflare 用量阈值并触发邮件/webhook 告警
+  // （后台设置中开启「用量告警」后生效）
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
   "keep_vars": true,
   // 默认 routes 模式（需 Zone 已在 Cloudflare 账号内）。
   // 部署脚本会自动用 DOMAIN 推导 zone_name；留空数组即纯 workers.dev 部署。

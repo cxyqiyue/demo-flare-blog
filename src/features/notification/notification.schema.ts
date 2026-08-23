@@ -11,6 +11,7 @@ export const NOTIFICATION_EVENT = {
   FRIEND_LINK_SUBMITTED: "friend_link.submitted",
   FRIEND_LINK_APPROVED: "friend_link.approved",
   FRIEND_LINK_REJECTED: "friend_link.rejected",
+  CLOUDFLARE_USAGE_ALERT: "cloudflare.usage_alert",
 } as const;
 
 export const ADMIN_NOTIFICATION_EVENTS = [
@@ -26,7 +27,6 @@ export const USER_NOTIFICATION_EVENTS = [
   NOTIFICATION_EVENT.FRIEND_LINK_APPROVED,
   NOTIFICATION_EVENT.FRIEND_LINK_REJECTED,
 ] as const;
-
 export const notificationEventTypeSchema = z.enum(NOTIFICATION_EVENT);
 
 const commentAdminRootCreatedNotificationSchema = z.object({
@@ -117,6 +117,16 @@ const friendLinkRejectedNotificationSchema = z.object({
   }),
 });
 
+// Cloudflare 用量告警：内容由告警服务按管理员语言预渲染，mapper 直接透传
+const cloudflareUsageAlertNotificationSchema = z.object({
+  type: z.literal(NOTIFICATION_EVENT.CLOUDFLARE_USAGE_ALERT),
+  data: z.object({
+    subject: z.string(),
+    message: z.string(),
+    html: z.string(),
+  }),
+});
+
 export const notificationEventSchema = z.discriminatedUnion("type", [
   commentAdminRootCreatedNotificationSchema,
   commentAdminPendingReviewNotificationSchema,
@@ -126,6 +136,7 @@ export const notificationEventSchema = z.discriminatedUnion("type", [
   friendLinkSubmittedNotificationSchema,
   friendLinkApprovedNotificationSchema,
   friendLinkRejectedNotificationSchema,
+  cloudflareUsageAlertNotificationSchema,
 ]);
 
 export type NotificationEvent = z.infer<typeof notificationEventSchema>;

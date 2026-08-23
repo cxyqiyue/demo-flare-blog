@@ -5,6 +5,7 @@ import * as ConfigRepo from "@/features/config/data/config.data";
 import * as PostService from "@/features/posts/services/posts.service";
 import { PostMediaTable } from "@/lib/db/schema";
 import * as S3Upload from "@/features/image-hosting/s3/s3-upload";
+import * as LinkAccessService from "./service/link-access.service";
 import * as MediaRepo from "./data/media.data";
 import * as MediaService from "./service/media.service";
 import { err, ok, unwrap } from "@/lib/errors";
@@ -488,6 +489,56 @@ describe("MediaService S3 media library", () => {
 
       const captured = vi.mocked(S3Upload.uploadToS3).mock.calls[0][1];
       expect(captured.key).toBe("images/blog/newdir/");
+    });
+  });
+
+  // ============================================
+  // 鍙椾繚鎶ゅ浘閾炬ā寮忕殑浠忕殑浠ｇ悊锲炴簮 (protected-mode /media/file/s3/:key)
+  // ============================================
+  describe("protected-mode S3 proxy", () => {
+    it("should resolve the upstream via authenticated SigV4 GetObject, not a public URL", async () => {
+      const spy = vi
+        .spyOn(S3Upload, "fetchS3ImageStream")
+        .mockResolvedValue(
+          ok(
+            new Response("image-bytes", {
+              status: 200,
+              headers: { "content-type": "image/png" },
+            }),
+          ),
+        );
+
+      const result = await LinkAccessService.resolveProxiedMedia(
+        adminContext,
+        "s3",
+        "images/blog/a.png",
+      );
+      expect(result.error).toBeUndefined();
+      expect(await result.data?.text()).toBe("image-bytes");
+      expect(result.data?.headers.get("content-type")).toBe("image/png");
+
+      // 回源使用与上传相同的签名客户端配置（私有桶公开 URL 会 403/404 → 曾致 502）
+      expect(spy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bucket: "my-bucket",
+          endpoint: "https://s3.example.com",
+        }),
+        "images/blog/a.png",
+      );
+    });
+
+    it("should surface upstream failures so the route answers 502", async () => {
+      vi.spyOn(S3Upload, "fetchS3ImageStream").mockResolvedValue(
+        err({ reason: "S3_FETCH_FAILED", message: "NoSuchKey" }),
+      );
+
+      const result = await LinkAccessService.resolveProxiedMedia(
+        adminContext,
+        "s3",
+        "images/blog/missing.webp",
+      );
+      expect(result.error?.reason).toBe("S3_FETCH_FAILED");
+      expect(result.error?.message).toBe("NoSuchKey");
     });
   });
 });

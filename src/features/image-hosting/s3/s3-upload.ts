@@ -15,6 +15,7 @@ if (typeof globalThis.process === "undefined") {
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
@@ -92,6 +93,44 @@ export async function uploadToS3(
   } catch (error) {
     return err({
       reason: "PROVIDER_REQUEST_FAILED",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+// ── Authenticated Read (proxy upstream) ───────────────────────
+
+/**
+ * 经 SigV4 签名回源读取对象（与上传同一条鉴权路径）。
+ * 受保护图链模式下，Worker 代理 /media/file/s3/:key 必须用它取内容：
+ * 公开读 URL 对私有桶（以及 virtual-host 型端点）会 403/404。
+ */
+export async function fetchS3ImageStream(
+  cfg: S3Config,
+  key: string,
+): Promise<Result<Response, { reason: string; message: string }>> {
+  try {
+    const client = createS3Client(cfg);
+    const res = await client.send(
+      new GetObjectCommand({ Bucket: cfg.bucket, Key: key }),
+    );
+
+    const headers = new Headers();
+    if (res.ContentType) headers.set("content-type", res.ContentType);
+    if (res.ContentLength != null) {
+      headers.set("content-length", String(res.ContentLength));
+    }
+    if (res.ETag) headers.set("etag", res.ETag);
+
+    return ok(
+      new Response(res.Body as unknown as ReadableStream, {
+        status: 200,
+        headers,
+      }),
+    );
+  } catch (error) {
+    return err({
+      reason: "S3_FETCH_FAILED",
       message: error instanceof Error ? error.message : String(error),
     });
   }

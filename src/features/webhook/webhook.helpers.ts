@@ -29,6 +29,7 @@ export function getWebhookSeverity(eventType: string): WebhookSeverity {
     case "comment.admin_blocked":
       return "critical";
     case "comment.admin_pending_review":
+    case "cloudflare.usage_alert":
       return "warning";
     default:
       return "info";

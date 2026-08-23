@@ -25,6 +25,8 @@ export const CfServiceUsageSchema = z.object({
   unit: z.string(),
   percentage: z.number().min(0).max(100),
   billingMetric: z.string().optional(),
+  /** 该服务查询失败的原因；存在时 used=0 不可信，UI 应显示不可用 */
+  error: z.string().optional(),
 });
 export type CfServiceUsage = z.infer<typeof CfServiceUsageSchema>;
 
@@ -77,7 +79,57 @@ export const TestCloudflareConnectionInputSchema = z.object({
 export const CF_USAGE_CACHE_KEYS = {
   usage: ["cloudflare-usage", "data"] as const,
   alert: ["cloudflare-usage", "alert"] as const,
+  /** 定时告警去重状态（每服务当日已发送的最高档位） */
+  alertState: ["cloudflare-usage", "alert-state"] as const,
 } as const;
+
+/**
+ * 服务对应的告警阈值（百分比）。纯函数，供告警状态展示与定时分发共用。
+ */
+export function thresholdForService(
+  thresholds:
+    | {
+        workersRequestsPct?: number;
+        workersCpuPct?: number;
+        d1RowsReadPct?: number;
+        r2StoragePct?: number;
+        kvReadPct?: number;
+        kvWritePct?: number;
+        kvStoragePct?: number;
+        queuesMessagesPct?: number;
+        workflowsInvocationsPct?: number;
+        workersAiPct?: number;
+        durableObjectsRequestsPct?: number;
+      }
+    | undefined,
+  service: string,
+): number | undefined {
+  if (!thresholds) return undefined;
+  switch (service) {
+    case "workers":
+      return thresholds.workersRequestsPct;
+    case "d1":
+      return thresholds.d1RowsReadPct;
+    case "r2":
+      return thresholds.r2StoragePct;
+    case "kv":
+      return thresholds.kvReadPct;
+    case "kvWrites":
+      return thresholds.kvWritePct;
+    case "kvStorage":
+      return thresholds.kvStoragePct;
+    case "queues":
+      return thresholds.queuesMessagesPct;
+    case "workflows":
+      return thresholds.workflowsInvocationsPct;
+    case "workersAi":
+      return thresholds.workersAiPct;
+    case "durableObjects":
+      return thresholds.durableObjectsRequestsPct;
+    default:
+      return undefined;
+  }
+}
 
 // ── 服务显示顺序 ─────────────────────────────────────────────
 export const CF_SERVICE_ORDER: CfService[] = [
