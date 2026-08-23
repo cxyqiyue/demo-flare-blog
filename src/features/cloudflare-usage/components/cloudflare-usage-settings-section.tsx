@@ -18,9 +18,51 @@ import {
   testCloudflareAlertEmailFn,
   testCloudflareAlertWebhookFn,
 } from "@/features/cloudflare-usage/api/cloudflare-usage.api";
+import {
+  CF_SERVICE_DESCRIPTIONS,
+  type CfService,
+} from "@/features/cloudflare-usage/cloudflare-usage.schema";
 import type { SystemConfig } from "@/features/config/config.schema";
 
 type ConnectionStatus = "idle" | "testing" | "success" | "error";
+
+type ThresholdFieldName =
+  | "workersRequestsPct"
+  | "d1RowsReadPct"
+  | "r2StoragePct"
+  | "kvReadPct"
+  | "kvWritePct"
+  | "kvStoragePct"
+  | "queuesMessagesPct"
+  | "workflowsInvocationsPct"
+  | "workersAiPct"
+  | "durableObjectsRequestsPct";
+
+/** 告警阈值字段 → 服务 ID（与 thresholdForService 的映射保持一致） */
+const THRESHOLD_FIELDS: Array<{
+  name: ThresholdFieldName;
+  label: string;
+  serviceId: CfService;
+}> = [
+  { name: "workersRequestsPct", label: "Workers Requests", serviceId: "workers" },
+  { name: "d1RowsReadPct", label: "D1 Rows Read", serviceId: "d1" },
+  { name: "r2StoragePct", label: "R2 Storage", serviceId: "r2" },
+  { name: "kvReadPct", label: "KV Reads", serviceId: "kv" },
+  { name: "kvWritePct", label: "KV Writes", serviceId: "kvWrites" },
+  { name: "kvStoragePct", label: "KV Storage", serviceId: "kvStorage" },
+  { name: "queuesMessagesPct", label: "Queues Messages", serviceId: "queues" },
+  {
+    name: "workflowsInvocationsPct",
+    label: "Workflows Invocations",
+    serviceId: "workflows",
+  },
+  { name: "workersAiPct", label: "Workers AI", serviceId: "workersAi" },
+  {
+    name: "durableObjectsRequestsPct",
+    label: "Durable Objects",
+    serviceId: "durableObjects",
+  },
+];
 
 export function CloudflareAnalyticsSettingsSection() {
   const { register, watch } = useFormContext<SystemConfig>();
@@ -329,23 +371,15 @@ export function CloudflareAnalyticsSettingsSection() {
             各服务告警阈值（默认 80%，用量达到该比例时触发通知）
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-            {(
-              [
-                { name: "workersRequestsPct", label: "Workers Requests" },
-                { name: "d1RowsReadPct", label: "D1 Rows Read" },
-                { name: "r2StoragePct", label: "R2 Storage" },
-                { name: "kvReadPct", label: "KV Reads" },
-                { name: "queuesMessagesPct", label: "Queues Messages" },
-                { name: "workflowsInvocationsPct", label: "Workflows Invocations" },
-                { name: "workersAiPct", label: "Workers AI" },
-                { name: "durableObjectsRequestsPct", label: "Durable Objects" },
-              ] as const
-            ).map(({ name, label }) => {
-              const fieldPath =
-                `cloudflareAnalytics.alert.thresholds.${name}` as const;
+            {THRESHOLD_FIELDS.map(({ name, label, serviceId }) => {
+              const fieldPath: `cloudflareAnalytics.alert.thresholds.${ThresholdFieldName}` =
+                `cloudflareAnalytics.alert.thresholds.${name}`;
               return (
                 <div key={name} className="flex items-center justify-between gap-2">
-                  <label className="text-xs text-muted-foreground">
+                  <label
+                    className="text-xs text-muted-foreground cursor-help"
+                    title={CF_SERVICE_DESCRIPTIONS[serviceId]}
+                  >
                     {label}
                   </label>
                   <div className="flex items-center gap-1">
@@ -362,6 +396,20 @@ export function CloudflareAnalyticsSettingsSection() {
                 </div>
               );
             })}
+          </div>
+          <div className="space-y-1 pt-1">
+            {THRESHOLD_FIELDS.map(({ label, serviceId }) => (
+              <p
+                key={serviceId}
+                className="text-[10px] leading-relaxed text-muted-foreground"
+              >
+                <span className="font-mono uppercase tracking-wider">
+                  {label}
+                </span>
+                {" · "}
+                {CF_SERVICE_DESCRIPTIONS[serviceId]}
+              </p>
+            ))}
           </div>
         </div>
       </div>

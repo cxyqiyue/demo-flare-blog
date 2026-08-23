@@ -173,7 +173,9 @@ app.get("/media/file/:provider/:key{.+}", async (c) => {
           error: result.error,
         }),
       );
-      return c.text("Upstream unavailable", 502);
+      // 响应体附带短错误码（不含敏感信息），便于在浏览器 F12 中直接定位失败类别；
+      // 完整错误消息仅写入 Worker 日志
+      return c.text(`Upstream unavailable (${result.error.reason})`, 502);
     }
 
     const upstream = result.data;

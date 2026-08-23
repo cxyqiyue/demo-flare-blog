@@ -19,6 +19,7 @@ import {
 } from "@/features/image-hosting/image-hosting.schema";
 import {
   type S3UploadConfig,
+  resolveValidatedS3Config,
   uploadToS3,
 } from "@/features/image-hosting/s3/s3-upload";
 import {
@@ -73,58 +74,25 @@ function resolveS3RuntimeConfig(
   config: SystemConfig | undefined,
   pathway: "article" | "comment",
 ): S3RuntimeConfig | null {
+  const resolved = resolveValidatedS3Config(config?.imageHosting?.s3);
+  if (!resolved) return null;
+
   const s3 = config?.imageHosting?.s3;
-  if (!s3) return null;
-
-  const endpoint = s3.endpoint?.trim();
-  const bucket = s3.bucket?.trim();
-  const accessKeyId = s3.accessKeyId?.trim();
-  const secretAccessKey = s3.secretAccessKey?.trim();
-  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
-
   const hasEnabledFlag =
-    pathway === "article" ? !!s3.articleEnabled : !!s3.commentEnabled;
+    pathway === "article" ? !!s3?.articleEnabled : !!s3?.commentEnabled;
 
   return {
     enabled: hasEnabledFlag,
-    config: {
-      endpoint: endpoint.replace(/\/+$/, ""),
-      bucket,
-      region: s3.region?.trim() || "",
-      accessKeyId,
-      secretAccessKey,
-      pathPrefix: s3.pathPrefix?.trim() || "",
-      publicUrl: s3.publicUrl?.trim() || "",
-      pathStyle: s3.pathStyle ?? false,
-    },
+    config: resolved,
   };
 }
 
 function resolveS3Config(
   config: SystemConfig | undefined,
 ): S3RuntimeConfig | null {
-  const s3 = config?.imageHosting?.s3;
-  if (!s3) return null;
-
-  const endpoint = s3.endpoint?.trim();
-  const bucket = s3.bucket?.trim();
-  const accessKeyId = s3.accessKeyId?.trim();
-  const secretAccessKey = s3.secretAccessKey?.trim();
-  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
-
-  return {
-    enabled: true,
-    config: {
-      endpoint: endpoint.replace(/\/+$/, ""),
-      bucket,
-      region: s3.region?.trim() || "",
-      accessKeyId,
-      secretAccessKey,
-      pathPrefix: s3.pathPrefix?.trim() || "",
-      publicUrl: s3.publicUrl?.trim() || "",
-      pathStyle: s3.pathStyle ?? false,
-    },
-  };
+  const resolved = resolveValidatedS3Config(config?.imageHosting?.s3);
+  if (!resolved) return null;
+  return { enabled: true, config: resolved };
 }
 
 function extensionFromMime(mime: string): string {

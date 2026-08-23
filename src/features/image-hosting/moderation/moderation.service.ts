@@ -29,7 +29,7 @@ import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram"
 import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
 import {
   deleteS3Objects,
-  type S3Config,
+  resolveValidatedS3Config,
 } from "@/features/image-hosting/s3/s3-upload";
 import * as MediaStorage from "@/features/media/data/media.storage";
 import { err, ok, type Result } from "@/lib/errors";
@@ -179,18 +179,8 @@ async function deleteUploadedMediaBestEffort(
         }
         break;
       case "s3": {
-        const s3 = ih?.s3;
-        if (s3?.endpoint && s3.bucket && s3.accessKeyId && s3.secretAccessKey) {
-          const cfg: S3Config = {
-            endpoint: s3.endpoint.replace(/\/+$/, ""),
-            bucket: s3.bucket,
-            region: s3.region?.trim() || "us-east-1",
-            accessKeyId: s3.accessKeyId,
-            secretAccessKey: s3.secretAccessKey,
-            pathPrefix: s3.pathPrefix?.trim() || "",
-            publicUrl: s3.publicUrl?.trim() || "",
-            pathStyle: s3.pathStyle ?? false,
-          };
+        const cfg = resolveValidatedS3Config(ih?.s3);
+        if (cfg) {
           await deleteS3Objects(cfg, [key]);
         }
         break;
