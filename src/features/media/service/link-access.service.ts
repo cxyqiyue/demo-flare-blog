@@ -18,8 +18,11 @@ import * as DiscordChannelApi from "@/features/image-hosting/channels/discord";
 import * as HuggingFaceChannelApi from "@/features/image-hosting/channels/huggingface";
 import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
 import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
-import type { S3Config } from "@/features/image-hosting/s3/s3-upload";
-import { fetchS3ImageStream } from "@/features/image-hosting/s3/s3-upload";
+import {
+  fetchS3ImageStream,
+  resolveValidatedS3Config,
+  type S3Config,
+} from "@/features/image-hosting/s3/s3-upload";
 import { err, ok, type Result } from "@/lib/errors";
 
 export interface LinkAccessSettings {
@@ -228,24 +231,7 @@ async function resolveDiscordUpstream(
 function resolveS3ConfigForProxy(
   config: SystemConfig | undefined,
 ): S3Config | null {
-  const s3 = config?.imageHosting?.s3;
-  const endpoint = s3?.endpoint?.trim();
-  const bucket = s3?.bucket?.trim();
-  const accessKeyId = s3?.accessKeyId?.trim();
-  const secretAccessKey = s3?.secretAccessKey?.trim();
-  if (!s3 || !endpoint || !bucket || !accessKeyId || !secretAccessKey) {
-    return null;
-  }
-  return {
-    endpoint: endpoint.replace(/\/+$/, ""),
-    bucket,
-    region: s3.region?.trim() || "us-east-1",
-    accessKeyId,
-    secretAccessKey,
-    pathPrefix: s3.pathPrefix?.trim() || "",
-    publicUrl: s3.publicUrl?.trim() || "",
-    pathStyle: s3.pathStyle ?? false,
-  };
+  return resolveValidatedS3Config(config?.imageHosting?.s3);
 }
 
 async function resolveS3Upstream(

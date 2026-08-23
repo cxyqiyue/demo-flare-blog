@@ -7,6 +7,10 @@ import {
   cloudflareUsageQuery,
   cloudflareAlertQuery,
 } from "@/features/cloudflare-usage/queries";
+import {
+  CF_SERVICE_DESCRIPTIONS,
+  type CfService,
+} from "@/features/cloudflare-usage/cloudflare-usage.schema";
 import { refreshCloudflareUsageFn } from "@/features/cloudflare-usage/api/cloudflare-usage.api";
 import {
   formatBytes,
@@ -90,8 +94,14 @@ function ServiceCard({
     );
   }
 
+  const description =
+    CF_SERVICE_DESCRIPTIONS[service.service as CfService] ?? "";
+
   return (
-    <div className="space-y-3 p-4 border border-border/20 bg-muted/10">
+    <div
+      className="space-y-3 p-4 border border-border/20 bg-muted/10"
+      title={description}
+    >
       <div className="flex items-center justify-between">
         <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
           {service.displayName}
@@ -105,6 +115,12 @@ function ServiceCard({
           {service.percentage.toFixed(1)}%
         </span>
       </div>
+
+      {description && (
+        <p className="text-[10px] leading-relaxed text-muted-foreground line-clamp-2 min-h-[2em]">
+          {description}
+        </p>
+      )}
 
       <UsageBar percentage={service.percentage} />
 
@@ -143,7 +159,7 @@ export function CloudflareUsageDashboard() {
           {Array.from({ length: 10 }).map((_, i) => (
             <div
               key={i}
-              className="h-32 border border-border/20 bg-muted/10 animate-pulse"
+              className="h-36 border border-border/20 bg-muted/10 animate-pulse"
             />
           ))}
         </div>

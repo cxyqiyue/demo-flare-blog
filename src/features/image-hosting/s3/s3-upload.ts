@@ -36,6 +36,48 @@ export interface S3Config {
 /** @deprecated Use S3Config */
 export type S3UploadConfig = S3Config;
 
+/**
+ * 从系统配置的 imageHosting.s3 段解析出可用的 S3 连接配置。
+ * 所有路径（编辑器上传、媒体库管理、图床代理读取、审查后清理）必须共用此函数，
+ * 确保 region/pathStyle 等默认值完全一致 —— 各处默认值不一致会导致
+ * 上传与读取使用不同的签名作用域（region），从而出现"上传成功但代理读取 502"。
+ */
+export function resolveValidatedS3Config(
+  s3:
+    | {
+        endpoint?: string | null;
+        bucket?: string | null;
+        region?: string | null;
+        accessKeyId?: string | null;
+        secretAccessKey?: string | null;
+        pathPrefix?: string | null;
+        publicUrl?: string | null;
+        pathStyle?: boolean | null;
+      }
+    | undefined
+    | null,
+): S3Config | null {
+  const endpoint = s3?.endpoint?.trim();
+  const bucket = s3?.bucket?.trim();
+  const accessKeyId = s3?.accessKeyId?.trim();
+  const secretAccessKey = s3?.secretAccessKey?.trim();
+  if (!s3 || !endpoint || !bucket || !accessKeyId || !secretAccessKey) {
+    return null;
+  }
+
+  return {
+    endpoint: endpoint.replace(/\/+$/, ""),
+    bucket,
+    // 留空时由 createS3Client 统一映射为 "auto"，与已验证可用的上传路径一致
+    region: s3.region?.trim() || "",
+    accessKeyId,
+    secretAccessKey,
+    pathPrefix: s3.pathPrefix?.trim() || "",
+    publicUrl: s3.publicUrl?.trim() || "",
+    pathStyle: s3.pathStyle ?? false,
+  };
+}
+
 export interface S3UploadInput {
   key: string;
   body: ArrayBuffer;

@@ -29,6 +29,7 @@ import {
   moveS3Objects,
   moveS3Object,
   renameS3Object,
+  resolveValidatedS3Config,
   uploadToS3,
   uploadToS3ForMediaLibrary,
   type S3Config,
@@ -1163,23 +1164,7 @@ export async function handleImageRequest(
 function resolveS3ConfigForMedia(
   config: Awaited<ReturnType<typeof ConfigService.getSystemConfig>>,
 ): S3Config | null {
-  const s3 = config?.imageHosting?.s3;
-  if (!s3) return null;
-  const endpoint = s3.endpoint?.trim();
-  const bucket = s3.bucket?.trim();
-  const accessKeyId = s3.accessKeyId?.trim();
-  const secretAccessKey = s3.secretAccessKey?.trim();
-  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
-  return {
-    endpoint: endpoint.replace(/\/+$/, ""),
-    bucket,
-    region: s3.region?.trim() || "us-east-1",
-    accessKeyId,
-    secretAccessKey,
-    pathPrefix: s3.pathPrefix?.trim() || "",
-    publicUrl: s3.publicUrl?.trim() || "",
-    pathStyle: s3.pathStyle ?? false,
-  };
+  return resolveValidatedS3Config(config?.imageHosting?.s3);
 }
 
 function resolveTelegramConfig(
