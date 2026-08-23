@@ -1,8 +1,11 @@
 import { Link } from "@tanstack/react-router";
+import { ArrowLeft, Folder } from "lucide-react";
 import {
   getHostname,
   useFaviconSource,
 } from "@/features/navigation/components/favicon";
+import { MaskedName } from "@/features/navigation/components/masked-name";
+import { useGridPagination } from "@/features/navigation/hooks/use-grid-pagination";
 import { useNavigationPageState } from "@/features/navigation/hooks/use-navigation-page-state";
 import type { NavigationPageProps } from "@/features/theme/contract/pages";
 import { cn } from "@/lib/utils";
@@ -14,7 +17,8 @@ export function NavigationPage({
   isAdmin,
   showBookmarks,
 }: NavigationPageProps) {
-  const state = useNavigationPageState(data);
+  const grid = useGridPagination();
+  const state = useNavigationPageState(data, grid.pageSize);
 
   return (
     <div className="w-full max-w-4xl mx-auto pb-20 px-6 md:px-0">
@@ -75,10 +79,29 @@ export function NavigationPage({
       {/* Bookmarks（仅管理员可见） */}
       {showBookmarks && (
         <section className="mt-14 space-y-6">
+          {/* 面包屑：根目录 ↔ 文件夹 */}
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <h2 className="font-serif text-xl font-medium text-foreground">
-              {m.navigation_bookmarks()}
-            </h2>
+            <div className="flex items-center gap-3 min-w-0">
+              {state.currentFolder ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={state.backToRoot}
+                    className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border/40 text-xs font-mono text-muted-foreground hover:text-foreground hover:border-border/80 transition-all"
+                  >
+                    <ArrowLeft size={13} />
+                    {m.navigation_all()}
+                  </button>
+                  <h2 className="font-serif text-xl font-medium text-foreground truncate">
+                    {state.currentFolder.name}
+                  </h2>
+                </>
+              ) : (
+                <h2 className="font-serif text-xl font-medium text-foreground">
+                  {m.navigation_bookmarks()}
+                </h2>
+              )}
+            </div>
             {isAdmin && (
               <Link
                 to="/admin/navigation"
@@ -88,30 +111,34 @@ export function NavigationPage({
               </Link>
             )}
           </div>
+          {!state.currentFolder && (
+            <p className="-mt-4 text-xs font-mono text-muted-foreground/60">
+              {m.navigation_level_summary({
+                folders: state.folders.length,
+                bookmarks: state.bookmarks.filter(
+                  (b) => b.folderId === null,
+                ).length,
+              })}
+            </p>
+          )}
 
-          {/* Folder Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar pb-1">
-            <FolderTab
-              active={state.activeFolderId === null}
-              onClick={() => state.selectFolder(null)}
-              label={`${m.navigation_all()} (${state.totalBookmarks})`}
-            />
-            {state.folders.map((folder) => (
-              <FolderTab
-                key={folder.id}
-                active={state.activeFolderId === folder.id}
-                onClick={() => state.selectFolder(folder.id)}
-                label={`${folder.name} (${folder.bookmarkCount})`}
-              />
-            ))}
-          </div>
-
-          {/* Bookmark Cards */}
+          {/* 卡片网格：固定尺寸卡片，列数随屏宽自适应，按同级数量自动分页 */}
           {state.pageItems.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {state.pageItems.map((bookmark) => (
-                <BookmarkCard key={bookmark.id} bookmark={bookmark} />
-              ))}
+            <div
+              ref={grid.containerRef}
+              className="flex flex-wrap content-start gap-2"
+            >
+              {state.pageItems.map((item) =>
+                item.kind === "folder" ? (
+                  <FolderCard
+                    key={`folder-${item.folder.id}`}
+                    folder={item.folder}
+                    onOpen={() => state.enterFolder(item.folder.id)}
+                  />
+                ) : (
+                  <BookmarkCard key={item.bookmark.id} bookmark={item.bookmark} />
+                ),
+              )}
             </div>
           ) : (
             <div className="py-16 text-center">
@@ -187,25 +214,29 @@ function EngineButton({ engine, selected, onSelect }: EngineButtonProps) {
   );
 }
 
-interface FolderTabProps {
-  active: boolean;
-  onClick: () => void;
-  label: string;
+interface FolderCardProps {
+  folder: { id: number; name: string };
+  onOpen: () => void;
 }
 
-function FolderTab({ active, onClick, label }: FolderTabProps) {
+/** 文件夹卡片：左侧文件夹图标 + 右侧分类名（超出虚化） */
+function FolderCard({ folder, onOpen }: FolderCardProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      className={cn(
-        "shrink-0 px-4 h-8 rounded-full border text-xs font-mono transition-all whitespace-nowrap",
-        active
-          ? "border-foreground bg-foreground text-background"
-          : "border-border/40 bg-background/50 text-muted-foreground hover:border-border/80 hover:text-foreground",
-      )}
+      onClick={onOpen}
+      title={folder.name}
+      className="group flex h-11 w-36 items-center gap-2 rounded-lg border border-border/40 bg-background/50 px-2.5 text-left transition-all hover:border-border/80 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
     >
-      {label}
+      <span className="w-7 h-7 rounded-md bg-muted/40 border border-border/40 flex items-center justify-center shrink-0 text-muted-foreground group-hover:text-foreground group-hover:bg-muted/60 transition-colors">
+        <Folder size={14} strokeWidth={1.75} />
+      </span>
+      <MaskedName
+        title={folder.name}
+        className="text-[13px] font-medium text-foreground/80 group-hover:text-foreground transition-colors"
+      >
+        {folder.name}
+      </MaskedName>
     </button>
   );
 }
@@ -218,6 +249,7 @@ interface BookmarkCardProps {
   };
 }
 
+/** 书签卡片：左侧网站标签页图标 + 右侧书签名（最多约 6 个中文字符，超出虚化） */
 function BookmarkCard({ bookmark }: BookmarkCardProps) {
   const domain = getHostname(bookmark.url);
   const favicon = useFaviconSource(domain);
@@ -227,9 +259,10 @@ function BookmarkCard({ bookmark }: BookmarkCardProps) {
       href={bookmark.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex flex-col items-center justify-center gap-2 p-3 min-h-20 rounded-lg border border-border/40 bg-background/50 hover:border-border/80 hover:bg-muted/30 transition-all text-center"
+      title={bookmark.name}
+      className="group flex h-11 w-36 items-center gap-2 rounded-lg border border-border/40 bg-background/50 px-2.5 transition-all hover:border-border/80 hover:bg-muted/30"
     >
-      <div className="w-8 h-8 rounded-md bg-muted/30 border border-border/40 flex items-center justify-center overflow-hidden shrink-0">
+      <span className="w-7 h-7 rounded-md overflow-hidden bg-muted/30 border border-border/40 flex items-center justify-center shrink-0">
         {favicon.hasIcon ? (
           <img
             src={favicon.src}
@@ -243,10 +276,13 @@ function BookmarkCard({ bookmark }: BookmarkCardProps) {
             {bookmark.name.slice(0, 1)}
           </span>
         )}
-      </div>
-      <span className="text-[11px] font-medium text-foreground/80 group-hover:text-foreground truncate max-w-full px-1">
-        {bookmark.name}
       </span>
+      <MaskedName
+        title={bookmark.name}
+        className="text-[13px] font-medium text-foreground/80 group-hover:text-foreground transition-colors"
+      >
+        {bookmark.name}
+      </MaskedName>
     </a>
   );
 }

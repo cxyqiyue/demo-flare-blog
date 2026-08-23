@@ -1,12 +1,14 @@
 import {
   FileUp,
+  Folder,
   FolderPlus,
   Loader2,
   Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { AdminPagination } from "@/components/admin/admin-pagination";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
@@ -19,10 +21,15 @@ import {
   getHostname,
   useFaviconSource,
 } from "@/features/navigation/components/favicon";
+import { MaskedName } from "@/features/navigation/components/masked-name";
 import {
   useAdminNavigation,
   useAdminNavigationData,
 } from "@/features/navigation/hooks/use-navigation";
+import {
+  useGridPagination,
+  NAV_CARD_GAP,
+} from "@/features/navigation/hooks/use-grid-pagination";
 import type {
   CreateBookmarkFormValues,
   CreateFolderFormValues,
@@ -31,10 +38,28 @@ import type {
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
-type Folder = NavigationPublicData["folders"][number];
+type NavigationFolder = NavigationPublicData["folders"][number];
 type Bookmark = NavigationPublicData["bookmarks"][number];
 
 type BatchDeleteTarget = "folders" | "bookmarks";
+
+/** 后台卡片固定宽度（px）：与 w-44 对齐，容纳勾选框 + 图标 + 名称 + 操作 */
+const ADMIN_CARD_WIDTH = 176;
+
+/** 后台通用分页推导：页码收敛，避免数据变化后出现空页 */
+function resolvePaged<T>(items: T[], page: number, pageSize: number) {
+  const effectivePageSize = Math.max(1, pageSize);
+  const totalPages = Math.max(1, Math.ceil(items.length / effectivePageSize));
+  const currentPage = Math.min(Math.max(page, 1), totalPages);
+  return {
+    totalPages,
+    currentPage,
+    paged: items.slice(
+      (currentPage - 1) * effectivePageSize,
+      currentPage * effectivePageSize,
+    ),
+  };
+}
 
 export function BookmarkManager() {
   const { data, isPending } = useAdminNavigationData();
@@ -53,13 +78,13 @@ export function BookmarkManager() {
   const [showImport, setShowImport] = useState(false);
   const [folderModal, setFolderModal] = useState<{
     open: boolean;
-    editing: Folder | null;
+    editing: NavigationFolder | null;
   }>({ open: false, editing: null });
   const [bookmarkModal, setBookmarkModal] = useState<{
     open: boolean;
     editing: Bookmark | null;
   }>({ open: false, editing: null });
-  const [deletingFolder, setDeletingFolder] = useState<Folder | null>(null);
+  const [deletingFolder, setDeletingFolder] = useState<NavigationFolder | null>(null);
   const [deletingBookmark, setDeletingBookmark] = useState<Bookmark | null>(
     null,
   );
@@ -69,6 +94,16 @@ export function BookmarkManager() {
   const [selectedBookmarkIds, setSelectedBookmarkIds] = useState<number[]>([]);
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  /** 内联快速改名状态：正在改名的书签 id 与草稿值 */
+  const [renaming, setRenaming] = useState<{ id: number; value: string } | null>(
+    null,
+  );
+
+  // 同级内容自动分页：列数按容器宽度自适应，行数按设备档位固定
+  const folderGrid = useGridPagination(ADMIN_CARD_WIDTH, NAV_CARD_GAP);
+  const bookmarkGrid = useGridPagination(ADMIN_CARD_WIDTH, NAV_CARD_GAP);
+  const [folderPage, setFolderPage] = useState(1);
+  const [bookmarkPage, setBookmarkPage] = useState(1);
 
   const folders = data?.folders ?? [];
   const bookmarks = data?.bookmarks ?? [];
@@ -81,12 +116,25 @@ export function BookmarkManager() {
     })
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const visibleIds = visibleBookmarks.map((b) => b.id);
+  const folderPaging = resolvePaged(folders, folderPage, folderGrid.pageSize);
+  const bookmarkPaging = resolvePaged(
+    visibleBookmarks,
+    bookmarkPage,
+    bookmarkGrid.pageSize,
+  );
+
+  // 当前页可见书签：全选仅作用于当前页
+  const visibleIds = bookmarkPaging.paged.map((b) => b.id);
   const allVisibleSelected =
     visibleIds.length > 0 &&
     visibleIds.every((id) => selectedBookmarkIds.includes(id));
 
   const busy = (key: string) => busyId === key;
+
+  const applyFilter = (next: number | "all" | "none") => {
+    setFilter(next);
+    setBookmarkPage(1);
+  };
 
   const toggleFolderSelect = (id: number) => {
     setSelectedFolderIds((prev) =>
@@ -137,6 +185,19 @@ export function BookmarkManager() {
       ? await updateBookmark({ data: { id: editing.id, ...input } })
       : await createBookmark({ data: input });
     return !!result.data;
+  };
+
+  const startRename = (bookmark: Bookmark) => {
+    setRenaming({ id: bookmark.id, value: bookmark.name });
+  };
+
+  const commitRename = async () => {
+    if (!renaming) return;
+    const target = bookmarks.find((b) => b.id === renaming.id);
+    const next = renaming.value.trim();
+    setRenaming(null);
+    if (!target || !next || next === target.name) return;
+    await updateBookmark({ data: { id: target.id, name: next } });
   };
 
   const confirmDeleteFolder = async () => {
@@ -203,80 +264,95 @@ export function BookmarkManager() {
         </Button>
       </div>
 
-      {/* Folder chips */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <FolderChip
+      {/* 文件夹卡片：左侧文件夹图标 + 右侧分类名，同级数量自动分页 */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <label className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
+            <span>
+              {m.navigation_admin_section_folders()} ({folders.length})
+            </span>
+            {selectedFolderIds.length > 0 && (
+              <span className="text-red-600">
+                {m.navigation_admin_selected_count({
+                  count: selectedFolderIds.length,
+                })}
+              </span>
+            )}
+          </label>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFolderModal({ open: true, editing: null })}
+              className="rounded-full h-8 gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
+            >
+              <FolderPlus size={12} />
+              {m.navigation_admin_add_folder()}
+            </Button>
+            {selectedFolderIds.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBatchDeleteTarget("folders")}
+                className="rounded-full h-8 gap-1 font-mono text-xs text-red-600 border-red-400/50 hover:text-red-600 hover:border-red-400"
+              >
+                <Trash2 size={12} />
+                {m.navigation_admin_batch_delete()} ({selectedFolderIds.length})
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {folders.length === 0 ? (
+          <p className="text-xs font-mono text-muted-foreground/50 py-2">
+            {m.navigation_admin_empty_folders()}
+          </p>
+        ) : (
+          <>
+            <div
+              ref={folderGrid.containerRef}
+              className="flex flex-wrap content-start gap-2"
+            >
+              {folderPaging.paged.map((folder) => (
+                <AdminFolderCard
+                  key={folder.id}
+                  folder={folder}
+                  busy={busy(`folder-${folder.id}`)}
+                  selected={selectedFolderIds.includes(folder.id)}
+                  active={filter === folder.id}
+                  onSelectToggle={() => toggleFolderSelect(folder.id)}
+                  onOpen={() => applyFilter(folder.id)}
+                  onEdit={() => setFolderModal({ open: true, editing: folder })}
+                  onDelete={() => setDeletingFolder(folder)}
+                />
+              ))}
+            </div>
+            <AdminPagination
+              currentPage={folderPaging.currentPage}
+              totalPages={folderPaging.totalPages}
+              totalItems={folders.length}
+              itemsPerPage={folderGrid.pageSize}
+              currentPageItemCount={folderPaging.paged.length}
+              onPageChange={setFolderPage}
+            />
+          </>
+        )}
+      </div>
+
+      {/* 书签区：筛选 + 网格分页 */}
+      <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border/20">
+        <FilterChip
           active={filter === "all"}
-          onClick={() => setFilter("all")}
+          onClick={() => applyFilter("all")}
           label={`${m.navigation_all()} (${bookmarks.length})`}
         />
-        <FolderChip
+        <FilterChip
           active={filter === "none"}
-          onClick={() => setFilter("none")}
+          onClick={() => applyFilter("none")}
           label={`${m.navigation_uncategorized()} (${
             bookmarks.filter((b) => b.folderId === null).length
           })`}
         />
-        {folders.map((folder) => (
-          <div key={folder.id} className="flex items-center gap-1">
-            <Checkbox
-              checked={selectedFolderIds.includes(folder.id)}
-              onCheckedChange={() => toggleFolderSelect(folder.id)}
-              className="h-3.5 w-3.5"
-              aria-label={folder.name}
-            />
-            <FolderChip
-              active={filter === folder.id}
-              onClick={() => setFilter(folder.id)}
-              label={`${folder.name} (${folder.bookmarkCount})`}
-            />
-            {busy(`folder-${folder.id}`) ? (
-              <Loader2
-                size={12}
-                className="animate-spin text-muted-foreground ml-1"
-              />
-            ) : (
-              <div className="ml-0.5 flex">
-                <button
-                  onClick={() =>
-                    setFolderModal({ open: true, editing: folder })
-                  }
-                  className="p-0.5 text-muted-foreground/50 hover:text-foreground transition-colors"
-                  title={m.navigation_admin_edit()}
-                >
-                  <Pencil size={11} strokeWidth={1.5} />
-                </button>
-                <button
-                  onClick={() => setDeletingFolder(folder)}
-                  className="p-0.5 text-muted-foreground/50 hover:text-red-500 transition-colors"
-                  title={m.navigation_admin_delete()}
-                >
-                  <Trash2 size={11} strokeWidth={1.5} />
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setFolderModal({ open: true, editing: null })}
-          className="rounded-full h-8 gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
-        >
-          <FolderPlus size={12} />
-          {m.navigation_admin_add_folder()}
-        </Button>
-        {selectedFolderIds.length > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setBatchDeleteTarget("folders")}
-            className="rounded-full h-8 gap-1 font-mono text-xs text-red-600 border-red-400/50 hover:text-red-600 hover:border-red-400"
-          >
-            <Trash2 size={12} />
-            {m.navigation_admin_batch_delete()} ({selectedFolderIds.length})
-          </Button>
-        )}
       </div>
 
       {/* Bookmark list header */}
@@ -288,7 +364,7 @@ export function BookmarkManager() {
               onCheckedChange={toggleSelectAllVisible}
               className="h-3.5 w-3.5"
             />
-            {m.navigation_admin_select_all()} ({visibleBookmarks.length})
+            {m.navigation_admin_select_all()} ({visibleIds.length})
           </label>
           {selectedBookmarkIds.length > 0 && (
             <Button
@@ -304,25 +380,49 @@ export function BookmarkManager() {
         </div>
       )}
 
-      {/* Bookmark list */}
+      {/* Bookmark grid：固定尺寸卡片，同级数量自动分页；点击名称内联快速改名 */}
       {visibleBookmarks.length === 0 ? (
         <div className="border border-border/30 py-16 text-center text-sm text-muted-foreground">
           {m.navigation_admin_empty_bookmarks()}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {visibleBookmarks.map((bookmark) => (
-            <BookmarkCard
-              key={bookmark.id}
-              bookmark={bookmark}
-              busy={busy(`bookmark-${bookmark.id}`)}
-              selected={selectedBookmarkIds.includes(bookmark.id)}
-              onSelect={() => toggleBookmarkSelect(bookmark.id)}
-              onEdit={() => setBookmarkModal({ open: true, editing: bookmark })}
-              onDelete={() => setDeletingBookmark(bookmark)}
-            />
-          ))}
-        </div>
+        <>
+          <div
+            ref={bookmarkGrid.containerRef}
+            className="flex flex-wrap content-start gap-2"
+          >
+            {bookmarkPaging.paged.map((bookmark) => (
+              <AdminBookmarkCard
+                key={bookmark.id}
+                bookmark={bookmark}
+                busy={busy(`bookmark-${bookmark.id}`)}
+                selected={selectedBookmarkIds.includes(bookmark.id)}
+                renaming={
+                  renaming?.id === bookmark.id ? renaming.value : undefined
+                }
+                onSelect={() => toggleBookmarkSelect(bookmark.id)}
+                onRenameStart={() => startRename(bookmark)}
+                onRenameChange={(value) =>
+                  setRenaming({ id: bookmark.id, value })
+                }
+                onRenameCommit={commitRename}
+                onRenameCancel={() => setRenaming(null)}
+                onEdit={() =>
+                  setBookmarkModal({ open: true, editing: bookmark })
+                }
+                onDelete={() => setDeletingBookmark(bookmark)}
+              />
+            ))}
+          </div>
+          <AdminPagination
+            currentPage={bookmarkPaging.currentPage}
+            totalPages={bookmarkPaging.totalPages}
+            totalItems={visibleBookmarks.length}
+            itemsPerPage={bookmarkGrid.pageSize}
+            currentPageItemCount={bookmarkPaging.paged.length}
+            onPageChange={setBookmarkPage}
+          />
+        </>
       )}
 
       {/* Modals */}
@@ -379,7 +479,7 @@ export function BookmarkManager() {
   );
 }
 
-function FolderChip({
+function FilterChip({
   active,
   onClick,
   label,
@@ -403,27 +503,139 @@ function FolderChip({
   );
 }
 
-function BookmarkCard({
-  bookmark,
+/** 卡片右上角悬停操作层（渐变遮罩盖住计数/名称尾部） */
+function CardHoverActions({ children }: { children: ReactNode }) {
+  return (
+    <div className="absolute inset-y-0 right-0 hidden group-hover:flex items-center gap-0.5 pr-1.5 pl-8 bg-gradient-to-l from-background via-background/95 to-transparent">
+      {children}
+    </div>
+  );
+}
+
+interface AdminFolderCardProps {
+  folder: NavigationFolder;
+  busy: boolean;
+  selected: boolean;
+  active: boolean;
+  onSelectToggle: () => void;
+  onOpen: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+/** 后台文件夹卡片：勾选框 + 左侧图标 + 右侧分类名（超出虚化），点击卡片筛选该书签 */
+function AdminFolderCard({
+  folder,
   busy,
   selected,
-  onSelect,
+  active,
+  onSelectToggle,
+  onOpen,
   onEdit,
   onDelete,
-}: {
+}: AdminFolderCardProps) {
+  return (
+    <div
+      className={cn(
+        "group relative flex h-11 w-44 items-center gap-1.5 rounded-lg border px-2 transition-colors",
+        selected || active
+          ? "border-foreground/60 bg-muted/30"
+          : "border-border/30 hover:bg-muted/40",
+      )}
+    >
+      <Checkbox
+        checked={selected}
+        onCheckedChange={onSelectToggle}
+        className="h-3.5 w-3.5 shrink-0"
+        aria-label={folder.name}
+      />
+      <button
+        type="button"
+        onClick={onOpen}
+        title={folder.name}
+        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+      >
+        <span className="w-6 h-6 rounded-md bg-muted/40 border border-border/40 flex items-center justify-center shrink-0 text-muted-foreground">
+          <Folder size={13} strokeWidth={1.75} />
+        </span>
+        <MaskedName className="text-xs font-medium text-foreground/80">
+          {folder.name}
+        </MaskedName>
+        <span className="ml-auto shrink-0 pr-0.5 text-[10px] font-mono text-muted-foreground/70 group-hover:opacity-0 transition-opacity">
+          {folder.bookmarkCount}
+        </span>
+      </button>
+      {busy ? (
+        <Loader2
+          size={13}
+          className="animate-spin text-muted-foreground absolute right-2"
+        />
+      ) : (
+        <CardHoverActions>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            title={m.navigation_admin_edit()}
+          >
+            <Pencil size={12} strokeWidth={1.5} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-1.5 text-muted-foreground hover:text-red-500 transition-colors"
+            title={m.navigation_admin_delete()}
+          >
+            <Trash2 size={12} strokeWidth={1.5} />
+          </button>
+        </CardHoverActions>
+      )}
+    </div>
+  );
+}
+
+interface AdminBookmarkCardProps {
   bookmark: Bookmark;
   busy: boolean;
   selected: boolean;
+  /** 有值表示该卡片处于内联改名态（值为输入框草稿） */
+  renaming?: string;
   onSelect: () => void;
+  onRenameStart: () => void;
+  onRenameChange: (value: string) => void;
+  onRenameCommit: () => void;
+  onRenameCancel: () => void;
   onEdit: () => void;
   onDelete: () => void;
-}) {
+}
+
+/**
+ * 后台书签卡片：勾选框 + 左侧网站图标 + 右侧书签名（超出虚化）。
+ * 点击名称进入内联快速改名（回车/失焦保存，Esc 取消）。
+ */
+function AdminBookmarkCard({
+  bookmark,
+  busy,
+  selected,
+  renaming,
+  onSelect,
+  onRenameStart,
+  onRenameChange,
+  onRenameCommit,
+  onRenameCancel,
+  onEdit,
+  onDelete,
+}: AdminBookmarkCardProps) {
   const favicon = useFaviconSource(getHostname(bookmark.url));
 
   return (
     <div
       className={cn(
-        "group flex items-center gap-3 border px-3 py-3 transition-colors",
+        "group relative flex h-11 w-44 items-center gap-1.5 rounded-lg border px-2 transition-colors",
         selected
           ? "border-foreground/60 bg-muted/30"
           : "border-border/30 hover:bg-muted/40",
@@ -435,7 +647,7 @@ function BookmarkCard({
         className="h-3.5 w-3.5 shrink-0"
         aria-label={bookmark.name}
       />
-      <div className="w-8 h-8 rounded-md overflow-hidden border border-border/40 flex items-center justify-center shrink-0">
+      <span className="w-6 h-6 rounded-md overflow-hidden bg-muted/40 border border-border/40 flex items-center justify-center shrink-0">
         {favicon.hasIcon ? (
           <img
             src={favicon.src}
@@ -449,42 +661,67 @@ function BookmarkCard({
             {bookmark.name.slice(0, 1)}
           </span>
         )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <a
-          href={bookmark.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block text-sm font-medium truncate hover:underline"
-        >
-          {bookmark.name}
-        </a>
-        <p className="text-[11px] text-muted-foreground truncate font-mono">
-          {getHostname(bookmark.url)}
-        </p>
-      </div>
-      {busy ? (
-        <Loader2
-          size={14}
-          className="animate-spin text-muted-foreground shrink-0"
+      </span>
+      {renaming !== undefined ? (
+        <input
+          autoFocus
+          value={renaming}
+          onChange={(e) => onRenameChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              onRenameCancel();
+            }
+          }}
+          onBlur={onRenameCommit}
+          className="min-w-0 flex-1 h-7 rounded border border-border/60 bg-background px-1.5 text-xs text-foreground outline-none focus:border-foreground/60 focus:ring-1 focus:ring-foreground/10"
+          aria-label={m.navigation_admin_rename()}
         />
       ) : (
-        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={onEdit}
-            className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-            title={m.navigation_admin_edit()}
-          >
-            <Pencil size={12} strokeWidth={1.5} />
-          </button>
-          <button
-            onClick={onDelete}
-            className="p-1.5 text-muted-foreground hover:text-red-500 transition-colors"
-            title={m.navigation_admin_delete()}
-          >
-            <Trash2 size={12} strokeWidth={1.5} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onRenameStart}
+          title={`${bookmark.name} · ${getHostname(bookmark.url)}`}
+          className="flex min-w-0 flex-1 text-left"
+        >
+          <MaskedName className="text-xs font-medium text-foreground/80 hover:text-foreground transition-colors">
+            {bookmark.name}
+          </MaskedName>
+        </button>
+      )}
+      {busy ? (
+        <Loader2
+          size={13}
+          className="animate-spin text-muted-foreground absolute right-2"
+        />
+      ) : (
+        renaming === undefined && (
+          <CardHoverActions>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              title={m.navigation_admin_edit()}
+            >
+              <Pencil size={12} strokeWidth={1.5} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="p-1.5 text-muted-foreground hover:text-red-500 transition-colors"
+              title={m.navigation_admin_delete()}
+            >
+              <Trash2 size={12} strokeWidth={1.5} />
+            </button>
+          </CardHoverActions>
+        )
       )}
     </div>
   );
