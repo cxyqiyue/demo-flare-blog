@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import {
+  CF_USAGE_KEYS,
   cloudflareUsageQuery,
   cloudflareAlertQuery,
 } from "@/features/cloudflare-usage/queries";
+import { refreshCloudflareUsageFn } from "@/features/cloudflare-usage/api/cloudflare-usage.api";
 import {
   formatBytes,
   formatNumber,
@@ -98,15 +100,26 @@ function ServiceCard({
 }
 
 export function CloudflareUsageDashboard() {
-  const { data, isLoading, refetch, isFetching } =
-    useQuery(cloudflareUsageQuery);
+  const queryClient = useQueryClient();
+  const { data, isLoading, isFetching } = useQuery(cloudflareUsageQuery);
   const { data: alertData } = useQuery(cloudflareAlertQuery);
+
+  // 强制刷新：删除服务端 KV 缓存后重新拉取 Cloudflare Analytics
+  const refreshMutation = useMutation({
+    mutationFn: () => refreshCloudflareUsageFn(),
+    onSuccess: (fresh) => {
+      queryClient.setQueryData(CF_USAGE_KEYS.usage, fresh);
+      void queryClient.invalidateQueries({ queryKey: CF_USAGE_KEYS.all });
+    },
+  });
+
+  const isRefreshing = refreshMutation.isPending || isFetching;
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: 10 }).map((_, i) => (
             <div
               key={i}
               className="h-32 border border-border/20 bg-muted/10 animate-pulse"
@@ -145,7 +158,8 @@ export function CloudflareUsageDashboard() {
             Cloudflare 用量概览
           </h3>
           <p className="text-xs text-muted-foreground">
-            数据周期：最近 30 天 · 更新时间：
+            数据周期：今日（与 Cloudflare 告警邮件同口径，分析数据有数分钟延迟） ·
+            更新时间：
             {data?.fetchedAt
               ? new Date(data.fetchedAt).toLocaleString("zh-CN")
               : "未知"}
@@ -163,13 +177,13 @@ export function CloudflareUsageDashboard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
+            onClick={() => refreshMutation.mutate()}
+            disabled={isRefreshing}
             className="rounded-none border-border/30 text-xs font-mono uppercase tracking-wider"
           >
             <RefreshCw
               size={12}
-              className={cn("mr-2", isFetching && "animate-spin")}
+              className={cn("mr-2", isRefreshing && "animate-spin")}
             />
             刷新
           </Button>

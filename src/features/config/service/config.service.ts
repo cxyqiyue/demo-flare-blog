@@ -392,6 +392,16 @@ function hasSiteConfigChanged(
   );
 }
 
+function hasLinkAccessModeChanged(
+  currentConfig: SystemConfig | null | undefined,
+  nextConfig: SystemConfig | null | undefined,
+) {
+  return (
+    (currentConfig?.imageHosting?.linkAccess?.mode ?? "direct") !==
+    (nextConfig?.imageHosting?.linkAccess?.mode ?? "direct")
+  );
+}
+
 function resolveCloudflareAnalyticsConfig(
   config: SystemConfig | null | undefined,
 ) {
@@ -469,6 +479,12 @@ export async function updateSystemConfig(
     await purgeSiteCDNCache(context.env);
   }
 
+  if (hasLinkAccessModeChanged(currentConfig, nextConfig)) {
+    // 切换防盗链模式后，边缘已缓存的公开图副本必须清掉，否则
+    // protected 校验对旧缓存不生效
+    await purgeSiteCDNCache(context.env);
+  }
+
   return { success: true };
 }
 
@@ -491,6 +507,14 @@ export async function updateSystemConfigSection(
     input.section === "site" &&
     hasSiteConfigChanged(currentConfig, nextConfig)
   ) {
+    await purgeSiteCDNCache(context.env);
+  }
+
+  if (
+    input.section === "imageHosting" &&
+    hasLinkAccessModeChanged(currentConfig, nextConfig)
+  ) {
+    // 切换防盗链模式后清边缘缓存，保证新校验立即生效
     await purgeSiteCDNCache(context.env);
   }
 

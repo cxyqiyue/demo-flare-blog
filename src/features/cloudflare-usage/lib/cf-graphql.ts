@@ -49,7 +49,7 @@ query D1RowsRead($accountTag: String!, $start: Date!, $end: Date!) {
   }
 }`;
 
-// ── R2 Storage ───────────────────────────────────────────────
+// ── R2 Storage（存量指标：取最新一天，不做累计） ─────────────
 const R2_STORAGE_QUERY = `
 query R2Storage($accountTag: String!, $start: Date!, $end: Date!) {
   viewer {
@@ -58,6 +58,9 @@ query R2Storage($accountTag: String!, $start: Date!, $end: Date!) {
         filter: { date_geq: $start, date_leq: $end }
         limit: 1000
       ) {
+        dimensions {
+          date
+        }
         sum {
           payloadSize
         }
@@ -77,6 +80,43 @@ query KvReads($accountTag: String!, $start: Date!, $end: Date!) {
       ) {
         sum {
           reads
+        }
+      }
+    }
+  }
+}`;
+
+// ── KV Writes ────────────────────────────────────────────────
+const KV_WRITES_QUERY = `
+query KvWrites($accountTag: String!, $start: Date!, $end: Date!) {
+  viewer {
+    accounts(filter: { accountTag: $accountTag }) {
+      kvOperationsAdaptiveGroups(
+        filter: { date_geq: $start, date_leq: $end }
+        limit: 1000
+      ) {
+        sum {
+          writes
+        }
+      }
+    }
+  }
+}`;
+
+// ── KV Storage（存量指标：取最新一天，不做累计） ─────────────
+const KV_STORAGE_QUERY = `
+query KvStorage($accountTag: String!, $start: Date!, $end: Date!) {
+  viewer {
+    accounts(filter: { accountTag: $accountTag }) {
+      kvStorageAdaptiveGroups(
+        filter: { date_geq: $start, date_leq: $end }
+        limit: 1000
+      ) {
+        dimensions {
+          date
+        }
+        sum {
+          storage
         }
       }
     }
@@ -161,70 +201,129 @@ function pickNum(obj: unknown, path: string): number {
   return typeof cur === "number" ? cur : 0;
 }
 
-const SERVICE_QUERIES: Record<
-  CfService,
-  { query: string; extract: (data: Record<string, unknown>) => number }
-> = {
+/**
+ * 累计型指标：把窗口内所有日期行的 sum.<field> 相加。
+ * （此前只取第一行，导致数值几乎不随时间变化。）
+ */
+export function extractSumAllRows(
+  data: Record<string, unknown>,
+  rowsPath: string,
+  field: string,
+): number {
+  const rows = pickValue(data, rowsPath);
+  if (!Array.isArray(rows)) return 0;
+  return rows.reduce((total, row) => total + pickNum(row, `sum.${field}`), 0);
+}
+
+/**
+ * 存量型指标（存储占用等 gauge）：取日期最新一行的值，而非累计。
+ */
+export function extractLatestRow(
+  data: Record<string, unknown>,
+  rowsPath: string,
+  field: string,
+): number {
+  const rows = pickValue(data, rowsPath);
+  if (!Array.isArray(rows) || rows.length === 0) return 0;
+  let latestDate = "";
+  let value = 0;
+  for (const row of rows) {
+    const date = String(pickValue(row, "dimensions.date") ?? "");
+    if (date >= latestDate) {
+      latestDate = date;
+      value = pickNum(row, `sum.${field}`);
+    }
+  }
+  return value;
+}
+
+function pickValue(obj: unknown, path: string): unknown {
+  if (!path) return obj;
+  let cur: unknown = obj;
+  for (const p of path.split(".")) {
+    if (cur == null || typeof cur !== "object") return undefined;
+    cur = (cur as Record<string, unknown>)[p];
+  }
+  return cur;
+}
+
+interface ServiceQueryConfig {
+  query: string;
+  extract: (data: Record<string, unknown>) => number;
+}
+
+/** 累计型（按日计数求和）的通用 extractor */
+function cumulativeExtractor(rowsPath: string, field: string) {
+  return (data: Record<string, unknown>) =>
+    extractSumAllRows(data, rowsPath, field);
+}
+
+/** 存量型（取最新日期值）的通用 extractor */
+function gaugeExtractor(rowsPath: string, field: string) {
+  return (data: Record<string, unknown>) =>
+    extractLatestRow(data, rowsPath, field);
+}
+
+const ACCOUNTS = "viewer.accounts.0";
+
+const SERVICE_QUERIES: Record<CfService, ServiceQueryConfig> = {
   workers: {
     query: WORKERS_REQUESTS_QUERY,
-    extract: (data) =>
-      pickNum(
-        data,
-        "viewer.accounts.0.workersInvocationsAdaptive.0.sum.requests",
-      ),
+    extract: cumulativeExtractor(
+      `${ACCOUNTS}.workersInvocationsAdaptive`,
+      "requests",
+    ),
   },
   d1: {
     query: D1_ROWS_READ_QUERY,
-    extract: (data) =>
-      pickNum(
-        data,
-        "viewer.accounts.0.d1OperationsAdaptiveGroups.0.sum.readQueries",
-      ),
+    extract: cumulativeExtractor(
+      `${ACCOUNTS}.d1OperationsAdaptiveGroups`,
+      "readQueries",
+    ),
   },
   r2: {
     query: R2_STORAGE_QUERY,
-    extract: (data) =>
-      pickNum(
-        data,
-        "viewer.accounts.0.r2StorageAdaptiveGroups.0.sum.payloadSize",
-      ),
+    extract: gaugeExtractor(`${ACCOUNTS}.r2StorageAdaptiveGroups`, "payloadSize"),
   },
   kv: {
     query: KV_READS_QUERY,
-    extract: (data) =>
-      pickNum(data, "viewer.accounts.0.kvOperationsAdaptiveGroups.0.sum.reads"),
+    extract: cumulativeExtractor(`${ACCOUNTS}.kvOperationsAdaptiveGroups`, "reads"),
+  },
+  kvWrites: {
+    query: KV_WRITES_QUERY,
+    extract: cumulativeExtractor(`${ACCOUNTS}.kvOperationsAdaptiveGroups`, "writes"),
+  },
+  kvStorage: {
+    query: KV_STORAGE_QUERY,
+    extract: gaugeExtractor(`${ACCOUNTS}.kvStorageAdaptiveGroups`, "storage"),
   },
   queues: {
     query: QUEUES_MESSAGES_QUERY,
-    extract: (data) =>
-      pickNum(
-        data,
-        "viewer.accounts.0.queuesInvocationsAdaptiveGroups.0.sum.messageCount",
-      ),
+    extract: cumulativeExtractor(
+      `${ACCOUNTS}.queuesInvocationsAdaptiveGroups`,
+      "messageCount",
+    ),
   },
   workflows: {
     query: WORKFLOWS_INVOCATIONS_QUERY,
-    extract: (data) =>
-      pickNum(
-        data,
-        "viewer.accounts.0.workflowsInvocationsAdaptiveGroups.0.sum.invocations",
-      ),
+    extract: cumulativeExtractor(
+      `${ACCOUNTS}.workflowsInvocationsAdaptiveGroups`,
+      "invocations",
+    ),
   },
   workersAi: {
     query: WORKERS_AI_QUERY,
-    extract: (data) =>
-      pickNum(
-        data,
-        "viewer.accounts.0.workersAiOperationsAdaptiveGroups.0.sum.neuronCount",
-      ),
+    extract: cumulativeExtractor(
+      `${ACCOUNTS}.workersAiOperationsAdaptiveGroups`,
+      "neuronCount",
+    ),
   },
   durableObjects: {
     query: DO_REQUESTS_QUERY,
-    extract: (data) =>
-      pickNum(
-        data,
-        "viewer.accounts.0.durableObjectsInvocationsAdaptiveGroups.0.sum.requests",
-      ),
+    extract: cumulativeExtractor(
+      `${ACCOUNTS}.durableObjectsInvocationsAdaptiveGroups`,
+      "requests",
+    ),
   },
 };
 

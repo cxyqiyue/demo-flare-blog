@@ -20,6 +20,7 @@ describe("getLinkAccessSettings", () => {
       mode: "direct",
       refererAllowlist: [],
       allowEmptyReferer: true,
+      ownDomains: [],
     });
   });
 
@@ -29,14 +30,26 @@ describe("getLinkAccessSettings", () => {
         linkAccess: {
           mode: "protected",
           allowEmptyReferer: false,
-          refererAllowlist: [" https://Blog.Example.com/ ", "*.foo.com", ""],
+          refererAllowlist: [
+            " https://Blog.Example.com/ ",
+            "*.foo.com",
+            "",
+            "https://www.mysite.com/blog/",
+            "other.net:8443",
+          ],
         },
       },
     } as unknown as SystemConfig;
     const settings = getLinkAccessSettings(config);
     expect(settings.mode).toBe("protected");
     expect(settings.allowEmptyReferer).toBe(false);
-    expect(settings.refererAllowlist).toEqual(["blog.example.com", "*.foo.com"]);
+    // 协议/路径/端口/www 前缀都会被剥离，避免填错格式导致白名单永不命中
+    expect(settings.refererAllowlist).toEqual([
+      "blog.example.com",
+      "*.foo.com",
+      "mysite.com",
+      "other.net",
+    ]);
   });
 });
 
@@ -45,6 +58,7 @@ describe("isRefererAllowed", () => {
     mode: "protected" as "direct" | "protected",
     refererAllowlist: ["example.com"],
     allowEmptyReferer: true,
+    ownDomains: [],
   };
 
   it("allows same-site references unconditionally", () => {
@@ -55,6 +69,39 @@ describe("isRefererAllowed", () => {
         { ...base, refererAllowlist: [] },
       ),
     ).toBe(true);
+  });
+
+  it("treats own-site references as allowed even across hosts and ports", () => {
+    // 经不同端口访问（如本地开发）不再被误判为外站
+    expect(
+      isRefererAllowed(
+        request("https://self.com:8443/i.jpg", "https://self.com/post"),
+        base,
+      ),
+    ).toBe(true);
+
+    // DOMAIN / CDN_DOMAIN 配置的站点域名无条件放行
+    const withOwn = { ...base, ownDomains: ["myblog.com"] };
+    expect(
+      isRefererAllowed(
+        request("https://cdn.other-host.net/i.jpg", "https://www.myblog.com/post"),
+        withOwn,
+      ),
+    ).toBe(true);
+    // 子域名同样命中
+    expect(
+      isRefererAllowed(
+        request("https://img.host.net/i.jpg", "https://blog.myblog.com/x"),
+        withOwn,
+      ),
+    ).toBe(true);
+    // 非自身域名仍走白名单
+    expect(
+      isRefererAllowed(
+        request("https://img.host.net/i.jpg", "https://evil.com/x"),
+        withOwn,
+      ),
+    ).toBe(false);
   });
 
   it("honors the empty-referer setting", () => {
@@ -82,8 +129,8 @@ describe("isRefererAllowed", () => {
 });
 
 describe("buildMediaAccessUrl", () => {
-  const protectedMode = { mode: "protected" as const, refererAllowlist: [], allowEmptyReferer: true };
-  const directMode = { mode: "direct" as const, refererAllowlist: [], allowEmptyReferer: true };
+  const protectedMode = { mode: "protected" as const, refererAllowlist: [], allowEmptyReferer: true, ownDomains: [] };
+  const directMode = { mode: "direct" as const, refererAllowlist: [], allowEmptyReferer: true, ownDomains: [] };
 
   it("keeps r2 on its native path in every mode", () => {
     expect(buildMediaAccessUrl(protectedMode, "r2", "a/b.jpg", "/images/a/b.jpg")).toBe("/images/a/b.jpg");

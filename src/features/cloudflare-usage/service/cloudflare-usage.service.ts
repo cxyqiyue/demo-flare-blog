@@ -37,18 +37,19 @@ export async function getCloudflareUsage(
     return {
       services: [],
       fetchedAt: Date.now(),
-      period: "30d",
+      period: "today",
     };
   }
 
   const fetcher = async (): Promise<CfUsageData> => {
     const apiToken = ca!.apiToken!;
     const env = context.env;
+    // 与 Cloudflare 告警邮件同口径：今日用量 vs 每日免费额度
     const results = await fetchAllUsage(
       env,
       accountId,
       apiToken,
-      "30d",
+      "today",
     );
 
     const services: CfServiceUsage[] = results.map(({ service, used }) => {
@@ -81,7 +82,7 @@ export async function getCloudflareUsage(
     return {
       services,
       fetchedAt: Date.now(),
-      period: "30d",
+      period: "today",
     };
   };
 
@@ -92,6 +93,17 @@ export async function getCloudflareUsage(
     fetcher,
     { ttl: "1h" },
   );
+}
+
+/**
+ * 强制刷新：删除服务端缓存后重新拉取 Cloudflare Analytics。
+ * 供仪表盘「刷新」按钮使用，绕过最长 1 小时的 KV 缓存。
+ */
+export async function refreshCloudflareUsage(
+  context: DbContext & { executionCtx: ExecutionContext },
+): Promise<CfUsageData> {
+  await CacheService.deleteKey(context, CF_USAGE_CACHE_KEYS.usage);
+  return getCloudflareUsage(context);
 }
 
 // ── 获取告警状态 ─────────────────────────────────────────────
@@ -131,6 +143,12 @@ export async function getCloudflareAlertStatus(
         break;
       case "kv":
         threshold = thresholds.kvReadPct;
+        break;
+      case "kvWrites":
+        threshold = thresholds.kvWritePct;
+        break;
+      case "kvStorage":
+        threshold = thresholds.kvStoragePct;
         break;
       case "queues":
         threshold = thresholds.queuesMessagesPct;

@@ -25,18 +25,42 @@ export interface LinkAccessSettings {
   mode: "direct" | "protected";
   refererAllowlist: string[];
   allowEmptyReferer: boolean;
+  /**
+   * 站点自身域名（归一化 hostname）：博客自己页面的引用无条件放行，
+   * 不受白名单填写格式影响。包含请求 Host 与 DOMAIN / CDN_DOMAIN。
+   */
+  ownDomains: string[];
+}
+
+/**
+ * 归一化域名条目：小写；剥离协议、路径/查询、端口与前导 www.；
+ * 保留 `*.` 通配前缀。这样无论管理员填 `https://www.x.com/blog/` 还是
+ * 裸域名，都能正确匹配对应主机（含其子域名）。
+ */
+function normalizeDomainEntry(raw: string): string {
+  const withoutWildcard = raw.trim().toLowerCase().startsWith("*.")
+    ? `*.${raw.trim().toLowerCase().slice(2)}`
+    : raw.trim().toLowerCase();
+  return withoutWildcard
+    .replace(/^https?:\/\//, "")
+    .split(/[/?#]/)[0]
+    .split(":")[0]
+    .replace(/^www\./, "")
+    .trim();
 }
 
 export function getLinkAccessSettings(
   config: SystemConfig | undefined,
+  ownDomains: string[] = [],
 ): LinkAccessSettings {
   const linkAccess = config?.imageHosting?.linkAccess;
   return {
     mode: linkAccess?.mode === "protected" ? "protected" : "direct",
     refererAllowlist: (linkAccess?.refererAllowlist ?? [])
-      .map((d) => d.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/+$/, ""))
+      .map(normalizeDomainEntry)
       .filter(Boolean),
     allowEmptyReferer: linkAccess?.allowEmptyReferer ?? true,
+    ownDomains: ownDomains.map(normalizeDomainEntry).filter(Boolean),
   };
 }
 
@@ -47,9 +71,10 @@ function hostMatchesEntry(host: string, entry: string): boolean {
 
 /**
  * 判断请求是否被防盗链策略放行：
- * - 同站引用（与请求 Host 一致）始终放行；
+ * - 同站引用（Referer 主机与请求主机一致，或命中站点自身域名集合）
+ *   始终放行——博客自己的页面永远能加载自己的图；
  * - 空 Referer 按 allowEmptyReferer 设置（默认放行，兼容直接打开/下载）；
- * - 其余外站需命中白名单域名（含子域名）。
+ * - 其余外站需命中白名单域名（含子域名，www 与裸域名等价）。
  */
 export function isRefererAllowed(
   request: Request,
@@ -60,18 +85,23 @@ export function isRefererAllowed(
 
   let refererHost: string;
   try {
-    refererHost = new URL(referer).host.toLowerCase();
+    // hostname 不含端口，避免同站经不同端口访问时被误判为外站
+    refererHost = new URL(referer).hostname.toLowerCase();
   } catch {
     return false;
   }
 
   let selfHost: string;
   try {
-    selfHost = new URL(request.url).host.toLowerCase();
+    selfHost = new URL(request.url).hostname.toLowerCase();
   } catch {
     return false;
   }
   if (refererHost === selfHost) return true;
+
+  if (settings.ownDomains.some((entry) => hostMatchesEntry(refererHost, entry))) {
+    return true;
+  }
 
   return settings.refererAllowlist.some((entry) =>
     hostMatchesEntry(refererHost, entry),

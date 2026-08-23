@@ -1,11 +1,13 @@
 import { z } from "zod";
 
-// ── 8 Cloudflare 服务 Quota 定义 ──────────────────────────────
+// ── Cloudflare 服务 Quota 定义 ──────────────────────────────
 export const CF_SERVICES = [
   "workers",
   "d1",
   "r2",
   "kv",
+  "kvWrites",
+  "kvStorage",
   "queues",
   "workflows",
   "workersAi",
@@ -42,6 +44,7 @@ export const CfAlertThresholdsSchema = z.object({
   r2StoragePct: z.number().min(0).max(100).default(80),
   kvReadPct: z.number().min(0).max(100).default(80),
   kvWritePct: z.number().min(0).max(100).default(80),
+  kvStoragePct: z.number().min(0).max(100).default(80),
   queuesMessagesPct: z.number().min(0).max(100).default(80),
   workflowsInvocationsPct: z.number().min(0).max(100).default(80),
   workersAiPct: z.number().min(0).max(100).default(80),
@@ -82,6 +85,8 @@ export const CF_SERVICE_ORDER: CfService[] = [
   "d1",
   "r2",
   "kv",
+  "kvWrites",
+  "kvStorage",
   "queues",
   "workflows",
   "workersAi",
@@ -112,6 +117,16 @@ export const CF_FREE_TIER_LIMITS: Record<
     limit: 100_000,
     unit: "reads/day",
     metric: "Reads",
+  },
+  kvWrites: {
+    limit: 1_000,
+    unit: "writes/day",
+    metric: "Writes",
+  },
+  kvStorage: {
+    limit: 1024 ** 3,
+    unit: "bytes",
+    metric: "Storage",
   },
   queues: {
     limit: 1_000_000,

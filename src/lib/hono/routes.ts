@@ -90,6 +90,23 @@ app.all("/api/send", async (c) => {
   return proxy(sendUrl, c.req);
 });
 
+/**
+ * 站点自身域名集合（请求主机 + DOMAIN / CDN_DOMAIN）：
+ * 传给防盗链校验，保证博客自己页面的引用无条件放行，
+ * 不依赖管理员在白名单里填写的格式。
+ */
+function ownSiteDomains(request: Request, env: Env): string[] {
+  const domains = [new URL(request.url).hostname];
+  try {
+    const envVars = serverEnv(env);
+    if (envVars.DOMAIN) domains.push(envVars.DOMAIN);
+    if (envVars.CDN_DOMAIN) domains.push(envVars.CDN_DOMAIN);
+  } catch {
+    // env 解析失败时仅用请求主机
+  }
+  return domains;
+}
+
 app.get("/images/:key{.+}", async (c) => {
   const key = c.req.param("key");
 
@@ -99,7 +116,10 @@ app.get("/images/:key{.+}", async (c) => {
   try {
     const context = resolveMediaRequestContext(c);
     const config = await ConfigService.getSystemConfig(context);
-    const settings = getLinkAccessSettings(config);
+    const settings = getLinkAccessSettings(
+      config,
+      ownSiteDomains(c.req.raw, c.env),
+    );
     if (settings.mode === "protected" && !isRefererAllowed(c.req.raw, settings)) {
       return c.text("Forbidden", 403);
     }
@@ -132,7 +152,10 @@ app.get("/media/file/:provider/:key{.+}", async (c) => {
 
   try {
     const config = await ConfigService.getSystemConfig(context);
-    const settings = getLinkAccessSettings(config);
+    const settings = getLinkAccessSettings(
+      config,
+      ownSiteDomains(c.req.raw, c.env),
+    );
     if (!isRefererAllowed(c.req.raw, settings)) {
       return c.text("Forbidden", 403);
     }
