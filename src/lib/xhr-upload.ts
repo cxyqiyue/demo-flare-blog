@@ -12,7 +12,13 @@
  * Retry-After response header when present. This keeps uploads working
  * when a fronting layer (e.g. Cloudflare rate limiting) throttles
  * bursts of requests.
+ *
+ * Every attempt also runs inside a global upload slot (see
+ * ./upload-scheduler) so pasting/dropping many images paces requests
+ * instead of firing them all concurrently.
  */
+import { withUploadSlot } from "./upload-scheduler";
+
 export interface XhrUploadOptions {
   url: string;
   formData: FormData;
@@ -129,7 +135,7 @@ export async function xhrUpload<T = unknown>(
   const maxAttempts = Math.max(1, options.maxAttempts ?? 3);
 
   for (let attemptIndex = 0; ; attemptIndex++) {
-    const outcome = await attemptUpload<T>(options);
+    const outcome = await withUploadSlot(() => attemptUpload<T>(options));
 
     if (!outcome.retryable || attemptIndex >= maxAttempts - 1) {
       return outcome.result;
