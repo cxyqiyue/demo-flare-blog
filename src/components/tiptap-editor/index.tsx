@@ -196,9 +196,12 @@ export const Editor = memo(function Editor({
   );
 
   const handleFileUpload = useCallback(
-    async (file: File): Promise<string | null> => {
+    async (
+      file: File,
+      onProgress?: (fraction: number) => void,
+    ): Promise<string | null> => {
       try {
-        const result = await uploadEditorImage(file);
+        const result = await uploadEditorImage(file, { onProgress });
         return result.url;
       } catch (error) {
         const parsed = parseRequestError(error);

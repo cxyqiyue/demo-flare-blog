@@ -561,6 +561,8 @@ describe("ImageHostingService", () => {
         maxImageBytes: null,
         compressEnabled: true,
         convertToFormat: "none",
+        compressThresholdBytes: null,
+        compressTargetBytes: null,
       });
     });
 
@@ -585,6 +587,8 @@ describe("ImageHostingService", () => {
         maxImageBytes: 32 * 1024 * 1024,
         compressEnabled: true,
         convertToFormat: "none",
+        compressThresholdBytes: null,
+        compressTargetBytes: null,
       });
     });
 
@@ -601,6 +605,8 @@ describe("ImageHostingService", () => {
         maxImageBytes: 10 * 1024 * 1024,
         compressEnabled: true,
         convertToFormat: "none",
+        compressThresholdBytes: null,
+        compressTargetBytes: null,
       });
     });
 
@@ -617,6 +623,8 @@ describe("ImageHostingService", () => {
         maxImageBytes: 10 * 1024 * 1024,
         compressEnabled: true,
         convertToFormat: "none",
+        compressThresholdBytes: null,
+        compressTargetBytes: null,
       });
     });
   });

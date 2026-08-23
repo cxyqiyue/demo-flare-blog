@@ -20,6 +20,7 @@ import { HeadingExtension } from "@/features/posts/editor/extensions/typography/
 import type { ImageUploadResult } from "@/features/posts/editor/extensions/upload-image";
 import { ImageUpload } from "@/features/posts/editor/extensions/upload-image";
 import { slugify } from "@/features/posts/utils/content";
+import { showUploadProgressToast } from "@/lib/upload-progress-toast";
 import { m } from "@/paraglide/messages";
 
 const ALLOWED_IMAGE_MIME_TYPES = [
@@ -31,7 +32,16 @@ const ALLOWED_IMAGE_MIME_TYPES = [
 ];
 
 async function handleImageUpload(file: File): Promise<ImageUploadResult> {
-  return await uploadEditorImage(file);
+  // 粘贴/拖拽上传无弹窗，用 toast 展示真实进度
+  const progress = showUploadProgressToast(file.name);
+  try {
+    const result = await uploadEditorImage(file, {
+      onProgress: (fraction) => progress.update(fraction),
+    });
+    return result;
+  } finally {
+    progress.done();
+  }
 }
 
 function handleFileDrop(editor: TiptapEditor, files: Array<File>, pos: number) {

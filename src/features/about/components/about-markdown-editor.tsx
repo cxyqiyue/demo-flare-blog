@@ -27,6 +27,7 @@ import { MarkdownContent } from "@/features/about/components/markdown-content";
 import { uploadEditorImage } from "@/features/image-hosting/utils/upload-editor-image";
 import { handleServerError } from "@/lib/errors/error-handler";
 import { parseRequestError } from "@/lib/errors/request-errors";
+import { showUploadProgressToast } from "@/lib/upload-progress-toast";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -182,7 +183,16 @@ export function AboutMarkdownEditor({
       const snippets: string[] = [];
       for (const file of files) {
         try {
-          const result = await uploadEditorImage(file);
+          // 文件选择器上传无弹窗，用 toast 展示真实进度
+          const progress = showUploadProgressToast(file.name);
+          let result: Awaited<ReturnType<typeof uploadEditorImage>>;
+          try {
+            result = await uploadEditorImage(file, {
+              onProgress: (fraction) => progress.update(fraction),
+            });
+          } finally {
+            progress.done();
+          }
           const alt = file.name.replace(/\.[^.]+$/, "");
           snippets.push(`![${alt}](${result.url})`);
         } catch (error) {

@@ -3,14 +3,31 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 import {
   getCommentImageHostingConfigFn,
-  uploadCommentImageFn,
 } from "@/features/image-hosting/api/image-hosting.api";
 import { IMGBB_UPLOAD_PAGE } from "@/features/image-hosting/image-hosting.schema";
 import { extractImageUrlFromMarkdown } from "@/features/image-hosting/utils/extract-image-url";
 import { handleServerError } from "@/lib/errors/error-handler";
 import { parseRequestError } from "@/lib/errors/request-errors";
 import { processImageBeforeUpload } from "@/lib/image-processing";
+import { showUploadProgressToast } from "@/lib/upload-progress-toast";
+import { xhrUpload } from "@/lib/xhr-upload";
 import { m } from "@/paraglide/messages";
+
+/** 经 XHR 端点上传评论图片（支持真实进度） */
+function uploadCommentImageViaXhr(
+  formData: FormData,
+  onProgress?: (fraction: number) => void,
+): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
+  return xhrUpload<{ url: string }>({
+    url: "/api/image-hosting/upload/comment",
+    formData,
+    onProgress,
+  }).then((result) =>
+    result.ok
+      ? { ok: true, url: result.data.url }
+      : { ok: false, message: result.message },
+  );
+}
 
 const COMMENT_IMAGE_HOSTING_CONFIG_KEY = [
   "image-hosting",
@@ -39,6 +56,8 @@ function uploadViaFileInput(policy: {
   maxImageBytes: number | null;
   compressEnabled: boolean;
   convertToFormat: "none" | "webp" | "jpeg";
+  compressThresholdBytes: number | null;
+  compressTargetBytes: number | null;
 }): Promise<string[]> {
   return new Promise((resolve) => {
     const input = document.createElement("input");
@@ -54,23 +73,29 @@ function uploadViaFileInput(policy: {
       const urls: string[] = [];
       let failed = false;
       for (const rawFile of files) {
+        // 文件选择器上传无弹窗，用 toast 展示真实进度
+        const progress = showUploadProgressToast(rawFile.name);
         try {
           const { file } = await processImageBeforeUpload(rawFile, {
             maxBytes: policy.maxImageBytes,
             compressEnabled: policy.compressEnabled,
             convertToFormat: policy.convertToFormat,
+            compressThresholdBytes: policy.compressThresholdBytes,
+            compressTargetBytes: policy.compressTargetBytes,
           });
           const formData = new FormData();
           formData.append("image", file);
-          const result = await uploadCommentImageFn({ data: formData });
-          if (result.error) {
+          const result = await uploadCommentImageViaXhr(formData, (fraction) =>
+            progress.update(fraction),
+          );
+          if (!result.ok) {
             failed = true;
             toast.error(m.comments_editor_upload_failed(), {
-              description: result.error.message,
+              description: result.message,
             });
             continue;
           }
-          urls.push(result.data.url);
+          urls.push(result.url);
         } catch (error) {
           failed = true;
           const parsed = parseRequestError(error);
@@ -81,6 +106,8 @@ function uploadViaFileInput(policy: {
           } else {
             handleServerError(error);
           }
+        } finally {
+          progress.done();
         }
       }
       if (urls.length > 0 && !failed) {
@@ -122,6 +149,8 @@ export function useCommentImageUploader() {
     maxImageBytes: data?.maxImageBytes ?? null,
     compressEnabled: data?.compressEnabled ?? true,
     convertToFormat: data?.convertToFormat ?? ("none" as const),
+    compressThresholdBytes: data?.compressThresholdBytes ?? null,
+    compressTargetBytes: data?.compressTargetBytes ?? null,
   };
 
   const openUpload = useCallback(async (): Promise<string[]> => {

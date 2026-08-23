@@ -83,12 +83,18 @@ export type ImageHostingProviderCategory =
 export const MAX_FILE_SIZE_MB_FIELD = z.number().positive().max(4096);
 
 // ── 图片处理全局设置 ─────────────────────────────────────────
+// 编辑器场景（文章/动态/评论/关于页）专用：达到阈值触发压缩并压向
+// 自定义目标大小；媒体库上传保持渠道原始限制，两者互不影响。
 export const IMAGE_CONVERT_FORMATS = ["none", "webp", "jpeg"] as const;
 export type ImageConvertFormat = (typeof IMAGE_CONVERT_FORMATS)[number];
 
 export const ImageProcessingSettingsSchema = z.object({
   compressEnabled: z.boolean().optional(),
   convertToFormat: z.enum(IMAGE_CONVERT_FORMATS).optional(),
+  /** 触发压缩的大小阈值（MB）；不设置时按渠道上限触发 */
+  compressThresholdMb: z.number().positive().max(4096).optional(),
+  /** 压缩目标大小（MB，支持小数）；不设置时压缩到触发阈值内 */
+  compressTargetMb: z.number().positive().max(4096).optional(),
 });
 export type ImageProcessingSettings = z.infer<typeof ImageProcessingSettingsSchema>;
 
@@ -171,6 +177,10 @@ export interface CommentImageHostingConfig {
   providerType?: ApiKeyProviderType;
   /** 当前渠道允许的最大上传字节数；null = 无固定上限 */
   maxImageBytes: number | null;
+  /** 触发压缩的阈值（字节）；null = 按渠道上限触发 */
+  compressThresholdBytes: number | null;
+  /** 压缩目标大小（字节）；null = 压到触发阈值内 */
+  compressTargetBytes: number | null;
   compressEnabled: boolean;
   convertToFormat: ImageConvertFormat;
 }
@@ -180,6 +190,10 @@ export interface ArticleImageHostingConfig {
   enabled: boolean;
   /** 当前渠道允许的最大上传字节数；null = 无固定上限 */
   maxImageBytes: number | null;
+  /** 触发压缩的阈值（字节）；null = 按渠道上限触发 */
+  compressThresholdBytes: number | null;
+  /** 压缩目标大小（字节）；null = 压到触发阈值内 */
+  compressTargetBytes: number | null;
   compressEnabled: boolean;
   convertToFormat: ImageConvertFormat;
 }

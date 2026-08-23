@@ -8,7 +8,11 @@ import type {
 export const MB = 1024 * 1024;
 
 // ── 渠道默认上传大小上限（MB）；null = 无固定上限 ──────────────
-export const TELEGRAM_DEFAULT_MAX_MB = 50;
+// Telegram Bot API 接受最大 50MB 的上传，但 getFile（生成直链的前提）
+// 仅支持 ≤20MB 的文件；CloudFlare-ImgBed 为此按 16MB 分片存储。
+// 本项目不做分片，为保证图链始终可用，默认对齐直链上限 20MB，
+// 管理员仍可通过渠道配置中的 maxFileSizeMb 覆盖。
+export const TELEGRAM_DEFAULT_MAX_MB = 20;
 export const DISCORD_DEFAULT_MAX_MB = 10;
 export const DISCORD_NITRO_MAX_MB = 25;
 export const IMGBB_DEFAULT_MAX_MB = 32;

@@ -5,6 +5,8 @@ import {
   isChallengeReady,
   verifyAltchaSolutionPayload,
 } from "@/features/challenge/service/challenge.service";
+import * as ConfigService from "@/features/config/service/config.service";
+import { getLinkAccessSettings } from "@/features/media/service/link-access.service";
 import { getAuth } from "@/lib/auth/auth.server";
 import { CACHE_CONTROL } from "@/lib/constants";
 import { getDb } from "@/lib/db";
@@ -78,9 +80,27 @@ export const cacheMiddleware = createMiddleware(async (c, next) => {
 
   // 排除需要 session 的 API（如 /api/auth, /api/send）
   // 但包含 public API（/api/posts, /api/post, /api/tags, /api/search）
-  const EXCLUDED_PREFIXES = ["/api/auth", "/api/send"];
+  const EXCLUDED_PREFIXES = ["/api/auth", "/api/send", "/media/file"];
   if (EXCLUDED_PREFIXES.some((prefix) => path.startsWith(prefix))) {
     return next();
+  }
+
+  // 防盗链 protected 模式下，/images/* 响应依赖 Referer，不能进边缘缓存
+  // （缓存键不含 Referer，否则白名单校验会被缓存绕过）
+  if (path.startsWith("/images/") && c.env) {
+    try {
+      const config = await ConfigService.getSystemConfig({
+        db: getDb(c.env),
+        env: c.env,
+        executionCtx: c.executionCtx,
+      });
+      if (getLinkAccessSettings(config).mode === "protected") {
+        return next();
+      }
+    } catch {
+      // 配置读取失败时保守处理：不缓存
+      return next();
+    }
   }
 
   // 缓存响应逻辑

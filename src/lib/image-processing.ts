@@ -9,12 +9,19 @@
 export type ImageConvertFormat = "none" | "webp" | "jpeg";
 
 export interface ImageProcessOptions {
-  /** 渠道允许的最大字节数；null = 不因大小触发压缩 */
+  /** 渠道允许的最大字节数；null = 不因渠道限制触发压缩 */
   maxBytes: number | null;
   /** 是否启用超限压缩 */
   compressEnabled?: boolean;
   /** 目标转换格式 */
   convertToFormat?: ImageConvertFormat;
+  /**
+   * 编辑器自定义压缩阈值（字节）：文件超过该值即触发压缩（与渠道上限
+   * 取更小者），实现「编辑器压缩策略与媒体库原始限制分离」。
+   */
+  compressThresholdBytes?: number | null;
+  /** 压缩目标大小（字节）：迭代向该尺寸收敛（同样不超过渠道上限） */
+  compressTargetBytes?: number | null;
 }
 
 export interface ImageProcessResult {
@@ -43,6 +50,26 @@ function isProcessableImage(file: File): boolean {
   return true;
 }
 
+/** 触发压缩的有效阈值：渠道上限与编辑器自定义阈值取更小者 */
+function resolveTriggerBytes(options: ImageProcessOptions): number | null {
+  const candidates = [options.maxBytes, options.compressThresholdBytes].filter(
+    (n): n is number => typeof n === "number" && n > 0,
+  );
+  return candidates.length > 0 ? Math.min(...candidates) : null;
+}
+
+/** 压缩迭代的收敛目标：渠道上限与自定义目标大小取更小者 */
+function resolveLoopTargetBytes(options: ImageProcessOptions): number | null {
+  const candidates = [
+    ...(options.maxBytes !== null ? [options.maxBytes] : []),
+    ...(typeof options.compressTargetBytes === "number" &&
+    options.compressTargetBytes > 0
+      ? [options.compressTargetBytes]
+      : []),
+  ];
+  return candidates.length > 0 ? Math.min(...candidates) : null;
+}
+
 export function planImageProcessing(
   file: File,
   options: ImageProcessOptions,
@@ -56,9 +83,10 @@ export function planImageProcessing(
     (format === "webp" && file.type !== "image/webp") ||
     (format === "jpeg" && file.type !== "image/jpeg");
 
+  const triggerBytes = resolveTriggerBytes(options);
   const overLimit =
-    options.maxBytes !== null &&
-    file.size > options.maxBytes &&
+    triggerBytes !== null &&
+    file.size > triggerBytes &&
     options.compressEnabled !== false;
 
   if (overLimit) return { action: "compress", targetMime: FORMAT_MIME[format === "none" ? "webp" : format] };
@@ -124,6 +152,8 @@ export async function processImageBeforeUpload(
 
   if (plan.action === "skip") return base;
 
+  const loopTargetBytes = resolveLoopTargetBytes(options);
+
   try {
     const bitmap = await loadBitmap(file);
     const targetMime = plan.targetMime;
@@ -140,14 +170,14 @@ export async function processImageBeforeUpload(
       if (
         bestBlob === null ||
         blob.size < bestBlob.size ||
-        (options.maxBytes !== null &&
-          blob.size <= options.maxBytes &&
-          bestBlob.size > options.maxBytes)
+        (loopTargetBytes !== null &&
+          blob.size <= loopTargetBytes &&
+          bestBlob.size > loopTargetBytes)
       ) {
         bestBlob = blob;
       }
 
-      if (options.maxBytes === null || blob.size <= options.maxBytes) break;
+      if (loopTargetBytes === null || blob.size <= loopTargetBytes) break;
 
       if (quality - QUALITY_STEP >= MIN_QUALITY) {
         quality = Math.round((quality - QUALITY_STEP) * 10) / 10;
@@ -164,7 +194,7 @@ export async function processImageBeforeUpload(
     if (
       !willConvert &&
       bestBlob.size >= file.size &&
-      (options.maxBytes === null || file.size <= options.maxBytes)
+      (loopTargetBytes === null || file.size <= loopTargetBytes)
     ) {
       return base;
     }

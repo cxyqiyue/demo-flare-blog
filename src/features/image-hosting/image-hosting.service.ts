@@ -43,7 +43,13 @@ import {
 import * as MediaRepo from "@/features/media/data/media.data";
 import * as MediaStorage from "@/features/media/data/media.storage";
 import { getImageDimensions } from "@/features/media/utils/image-dimensions";
+import {
+  buildMediaAccessUrl,
+  getLinkAccessSettings,
+} from "@/features/media/service/link-access.service";
+import { enforceImageModeration } from "@/features/image-hosting/moderation/moderation.service";
 import { err, ok, type Result } from "@/lib/errors";
+import { getDb } from "@/lib/db";
 import { m } from "@/paraglide/messages";
 
 const MIME_EXTENSIONS: Record<string, string> = {
@@ -308,8 +314,8 @@ function buildApiKeyTrackingKey(
 
 /**
  * Upload via the shared Telegram channel client. The returned key
- * `telegram/{messageId}` is the durable handle used by the media library
- * for remote deletion.
+ * `telegram/{messageId}:{fileId}` carries both durable handles — the
+ * message id is used for remote deletion, the file id for proxy serving.
  */
 async function uploadToTelegram(
   config: TelegramChannel,
@@ -329,7 +335,7 @@ async function uploadToTelegram(
   }
   return ok({
     url: result.data.url,
-    key: `telegram/${result.data.messageId}`,
+    key: `telegram/${result.data.messageId}:${result.data.fileId}`,
   });
 }
 
@@ -612,6 +618,20 @@ async function trackMediaUpload(
 
 // ── 文章上传 ───────────────────────────────────────────────────
 
+/**
+ * 将 Hono 上下文适配为服务层依赖（db + env + executionCtx），
+ * 供 /api/image-hosting/upload 等直接挂载的 Hono 路由复用服务层函数。
+ */
+export function resolveImageHostingRequestContext(
+  c: { env: Env; executionCtx: ExecutionContext },
+): DbContext & { executionCtx: ExecutionContext } {
+  return {
+    db: getDb(c.env),
+    env: c.env,
+    executionCtx: c.executionCtx,
+  };
+}
+
 export type ArticleUploadResult =
   | {
       mode: "image-hosting";
@@ -622,9 +642,15 @@ export type ArticleUploadResult =
     }
   | { mode: "none" };
 
+export interface UploadPathwayOptions {
+  /** 站点来源（Hono 路由传入），用于审查服务访问相对路径图片 */
+  origin?: string;
+}
+
 export async function uploadForArticle(
   context: DbContext & { executionCtx: ExecutionContext },
   formData: FormData,
+  options?: UploadPathwayOptions,
 ): Promise<
   Result<
     ArticleUploadResult,
@@ -646,6 +672,54 @@ export async function uploadForArticle(
     return getImageDimensions(buf);
   };
 
+  // 统一完成路径：审查 → 远端记录 → 计算对外图链（防盗链模式）
+  const finish = async (
+    providerLabel: ImageHostingProviderLabel,
+    uploaded: { url: string; key: string },
+  ): Promise<Result<ArticleUploadResult, { reason: "IMAGE_HOSTING_UPLOAD_FAILED"; message: string }>> => {
+    const moderation = await enforceImageModeration(context, {
+      url: uploaded.url,
+      file,
+      origin: options?.origin,
+      providerLabel,
+      key: uploaded.key,
+    });
+    if (moderation.error) {
+      return err({
+        reason: "IMAGE_HOSTING_UPLOAD_FAILED",
+        message: moderation.error.message,
+      });
+    }
+
+    const dimensions = await getImageDimensionsResult();
+
+    await trackMediaUpload(context.db, {
+      provider: providerLabel,
+      key: uploaded.key,
+      url: uploaded.url,
+      fileName: file.name,
+      mimeType: file.type,
+      sizeInBytes: file.size,
+      width: dimensions?.width,
+      height: dimensions?.height,
+    });
+
+    const accessUrl = buildMediaAccessUrl(
+      getLinkAccessSettings(config),
+      providerLabel,
+      uploaded.key,
+      uploaded.url,
+    );
+
+    return ok({
+      mode: "image-hosting",
+      provider: providerLabel,
+      url: accessUrl,
+      width: dimensions?.width,
+      height: dimensions?.height,
+    });
+  };
+
   if (activeProvider !== null) {
     const result = await uploadToActiveProvider(
       activeProvider,
@@ -663,27 +737,7 @@ export async function uploadForArticle(
         message: result.error.message,
       });
     }
-    const dimensions = await getImageDimensionsResult();
-    const providerLabel = getProviderLabel(activeProvider);
-
-    await trackMediaUpload(context.db, {
-      provider: providerLabel,
-      key: result.data.key,
-      url: result.data.url,
-      fileName: file.name,
-      mimeType: file.type,
-      sizeInBytes: file.size,
-      width: dimensions?.width,
-      height: dimensions?.height,
-    });
-
-    return ok({
-      mode: "image-hosting",
-      provider: providerLabel,
-      url: result.data.url,
-      width: dimensions?.width,
-      height: dimensions?.height,
-    });
+    return finish(getProviderLabel(activeProvider), result.data);
   }
 
   // ── 旧版兼容：按优先级链 ──
@@ -698,26 +752,7 @@ export async function uploadForArticle(
         message: result.error.message,
       });
     }
-    const dimensions = await getImageDimensionsResult();
-
-    await trackMediaUpload(context.db, {
-      provider: "s3",
-      key: result.data.key,
-      url: result.data.url,
-      fileName: file.name,
-      mimeType: file.type,
-      sizeInBytes: file.size,
-      width: dimensions?.width,
-      height: dimensions?.height,
-    });
-
-    return ok({
-      mode: "image-hosting",
-      provider: "s3",
-      url: result.data.url,
-      width: dimensions?.width,
-      height: dimensions?.height,
-    });
+    return finish("s3", result.data);
   }
 
   // ── 2. API Key 图床（第三方优先） ──
@@ -746,25 +781,9 @@ export async function uploadForArticle(
       continue;
     }
 
-    const dimensions = await getImageDimensionsResult();
-
-    await trackMediaUpload(context.db, {
-      provider: p.type,
+    return finish(p.type, {
+      url: result.data.url,
       key: buildApiKeyTrackingKey(p.type, extensionFromMime(file.type)),
-      url: result.data.url,
-      fileName: file.name,
-      mimeType: file.type,
-      sizeInBytes: file.size,
-      width: dimensions?.width,
-      height: dimensions?.height,
-    });
-
-    return ok({
-      mode: "image-hosting",
-      provider: p.type,
-      url: result.data.url,
-      width: dimensions?.width,
-      height: dimensions?.height,
     });
   }
 
@@ -779,26 +798,7 @@ export async function uploadForArticle(
   if (ih?.telegram?.botToken && ih?.telegram?.chatId) {
     const result = await uploadToTelegram(ih.telegram, file);
     if (!result.error) {
-      const dimensions = await getImageDimensionsResult();
-
-      await trackMediaUpload(context.db, {
-        provider: "telegram",
-        key: result.data.key,
-        url: result.data.url,
-        fileName: file.name,
-        mimeType: file.type,
-        sizeInBytes: file.size,
-        width: dimensions?.width,
-        height: dimensions?.height,
-      });
-
-      return ok({
-        mode: "image-hosting",
-        provider: "telegram",
-        url: result.data.url,
-        width: dimensions?.width,
-        height: dimensions?.height,
-      });
+      return finish("telegram", result.data);
     }
   }
 
@@ -806,26 +806,7 @@ export async function uploadForArticle(
   if (ih?.discord?.botToken && ih?.discord?.channelId) {
     const result = await uploadToDiscord(ih.discord, file);
     if (!result.error) {
-      const dimensions = await getImageDimensionsResult();
-
-      await trackMediaUpload(context.db, {
-        provider: "discord",
-        key: result.data.key,
-        url: result.data.url,
-        fileName: file.name,
-        mimeType: file.type,
-        sizeInBytes: file.size,
-        width: dimensions?.width,
-        height: dimensions?.height,
-      });
-
-      return ok({
-        mode: "image-hosting",
-        provider: "discord",
-        url: result.data.url,
-        width: dimensions?.width,
-        height: dimensions?.height,
-      });
+      return finish("discord", result.data);
     }
   }
 
@@ -833,26 +814,7 @@ export async function uploadForArticle(
   if (ih?.huggingface?.token && ih?.huggingface?.repo) {
     const result = await uploadToHuggingFace(ih.huggingface, file);
     if (!result.error) {
-      const dimensions = await getImageDimensionsResult();
-
-      await trackMediaUpload(context.db, {
-        provider: "huggingface",
-        key: result.data.key,
-        url: result.data.url,
-        fileName: file.name,
-        mimeType: file.type,
-        sizeInBytes: file.size,
-        width: dimensions?.width,
-        height: dimensions?.height,
-      });
-
-      return ok({
-        mode: "image-hosting",
-        provider: "huggingface",
-        url: result.data.url,
-        width: dimensions?.width,
-        height: dimensions?.height,
-      });
+      return finish("huggingface", result.data);
     }
   }
 
@@ -860,26 +822,7 @@ export async function uploadForArticle(
   if (ih?.webdav?.baseUrl) {
     const result = await uploadToWebDAV(ih.webdav, file);
     if (!result.error) {
-      const dimensions = await getImageDimensionsResult();
-
-      await trackMediaUpload(context.db, {
-        provider: "webdav",
-        key: result.data.key,
-        url: result.data.url,
-        fileName: file.name,
-        mimeType: file.type,
-        sizeInBytes: file.size,
-        width: dimensions?.width,
-        height: dimensions?.height,
-      });
-
-      return ok({
-        mode: "image-hosting",
-        provider: "webdav",
-        url: result.data.url,
-        width: dimensions?.width,
-        height: dimensions?.height,
-      });
+      return finish("webdav", result.data);
     }
   }
 
@@ -890,27 +833,7 @@ export async function uploadForArticle(
     const key = buildObjectKey(folder, ext);
     try {
       await MediaStorage.putToR2(context.env, file, key);
-      const dimensions = await getImageDimensionsResult();
-      const url = `/images/${key}`;
-
-      await trackMediaUpload(context.db, {
-        provider: "r2-native",
-        key,
-        url,
-        fileName: file.name,
-        mimeType: file.type,
-        sizeInBytes: file.size,
-        width: dimensions?.width,
-        height: dimensions?.height,
-      });
-
-      return ok({
-        mode: "image-hosting",
-        provider: "r2-native",
-        url,
-        width: dimensions?.width,
-        height: dimensions?.height,
-      });
+      return await finish("r2-native", { url: `/images/${key}`, key });
     } catch (error) {
       return err({
         reason: "IMAGE_HOSTING_UPLOAD_FAILED",
@@ -927,6 +850,7 @@ export async function uploadForArticle(
 export async function uploadCommentImage(
   context: DbContext & { executionCtx: ExecutionContext },
   formData: FormData,
+  options?: UploadPathwayOptions,
 ): Promise<
   Result<
     { url: string },
@@ -942,6 +866,44 @@ export async function uploadCommentImage(
   const { file } = parseUploadMediaInput(formData, m, {
     maxSizeBytes: commentLimitBytes,
   });
+
+  // 统一完成路径：审查 → 远端记录 → 计算对外图链（防盗链模式）
+  const finish = async (
+    providerLabel: ImageHostingProviderLabel,
+    uploaded: { url: string; key: string },
+  ): Promise<Result<{ url: string }, { reason: "COMMENT_IMAGE_UPLOAD_FAILED"; message: string }>> => {
+    const moderation = await enforceImageModeration(context, {
+      url: uploaded.url,
+      file,
+      origin: options?.origin,
+      providerLabel,
+      key: uploaded.key,
+    });
+    if (moderation.error) {
+      return err({
+        reason: "COMMENT_IMAGE_UPLOAD_FAILED",
+        message: moderation.error.message,
+      });
+    }
+
+    await trackMediaUpload(context.db, {
+      provider: providerLabel,
+      key: uploaded.key,
+      url: uploaded.url,
+      fileName: file.name,
+      mimeType: file.type,
+      sizeInBytes: file.size,
+    });
+
+    return ok({
+      url: buildMediaAccessUrl(
+        getLinkAccessSettings(config),
+        providerLabel,
+        uploaded.key,
+        uploaded.url,
+      ),
+    });
+  };
 
   if (activeProvider !== null) {
     const result = await uploadToActiveProvider(
@@ -964,17 +926,7 @@ export async function uploadCommentImage(
       });
     }
 
-    const providerKey = result.data.key;
-    await trackMediaUpload(context.db, {
-      provider: getProviderLabel(activeProvider),
-      key: providerKey,
-      url: result.data.url,
-      fileName: file.name,
-      mimeType: file.type,
-      sizeInBytes: file.size,
-    });
-
-    return ok({ url: result.data.url });
+    return finish(getProviderLabel(activeProvider), result.data);
   }
 
   // ── 旧版兼容：按优先级链 ──
@@ -989,17 +941,7 @@ export async function uploadCommentImage(
         message: result.error.message,
       });
     }
-
-    await trackMediaUpload(context.db, {
-      provider: "s3",
-      key: result.data.key,
-      url: result.data.url,
-      fileName: file.name,
-      mimeType: file.type,
-      sizeInBytes: file.size,
-    });
-
-    return ok({ url: result.data.url });
+    return finish("s3", result.data);
   }
 
   // ── 2. API Key 图床（第三方优先） ──
@@ -1028,31 +970,17 @@ export async function uploadCommentImage(
       });
     }
 
-    await trackMediaUpload(context.db, {
-      provider: p.type,
-      key: buildApiKeyTrackingKey(p.type, extensionFromMime(file.type)),
+    return finish(p.type, {
       url: result.data.url,
-      fileName: file.name,
-      mimeType: file.type,
-      sizeInBytes: file.size,
+      key: buildApiKeyTrackingKey(p.type, extensionFromMime(file.type)),
     });
-
-    return ok({ url: result.data.url });
   }
 
   // ── 3. Telegram ──
   if (ih?.telegram?.botToken && ih?.telegram?.chatId) {
     const result = await uploadToTelegram(ih.telegram, file);
     if (!result.error) {
-      await trackMediaUpload(context.db, {
-        provider: "telegram",
-        key: result.data.key,
-        url: result.data.url,
-        fileName: file.name,
-        mimeType: file.type,
-        sizeInBytes: file.size,
-      });
-      return ok({ url: result.data.url });
+      return finish("telegram", result.data);
     }
   }
 
@@ -1060,15 +988,7 @@ export async function uploadCommentImage(
   if (ih?.discord?.botToken && ih?.discord?.channelId) {
     const result = await uploadToDiscord(ih.discord, file);
     if (!result.error) {
-      await trackMediaUpload(context.db, {
-        provider: "discord",
-        key: result.data.key,
-        url: result.data.url,
-        fileName: file.name,
-        mimeType: file.type,
-        sizeInBytes: file.size,
-      });
-      return ok({ url: result.data.url });
+      return finish("discord", result.data);
     }
   }
 
@@ -1076,15 +996,7 @@ export async function uploadCommentImage(
   if (ih?.huggingface?.token && ih?.huggingface?.repo) {
     const result = await uploadToHuggingFace(ih.huggingface, file);
     if (!result.error) {
-      await trackMediaUpload(context.db, {
-        provider: "huggingface",
-        key: result.data.key,
-        url: result.data.url,
-        fileName: file.name,
-        mimeType: file.type,
-        sizeInBytes: file.size,
-      });
-      return ok({ url: result.data.url });
+      return finish("huggingface", result.data);
     }
   }
 
@@ -1092,15 +1004,7 @@ export async function uploadCommentImage(
   if (ih?.webdav?.baseUrl) {
     const result = await uploadToWebDAV(ih.webdav, file);
     if (!result.error) {
-      await trackMediaUpload(context.db, {
-        provider: "webdav",
-        key: result.data.key,
-        url: result.data.url,
-        fileName: file.name,
-        mimeType: file.type,
-        sizeInBytes: file.size,
-      });
-      return ok({ url: result.data.url });
+      return finish("webdav", result.data);
     }
   }
 
@@ -1111,17 +1015,7 @@ export async function uploadCommentImage(
     const key = buildObjectKey(folder, ext);
     try {
       await MediaStorage.putToR2(context.env, file, key);
-
-      await trackMediaUpload(context.db, {
-        provider: "r2-native",
-        key,
-        url: `/images/${key}`,
-        fileName: file.name,
-        mimeType: file.type,
-        sizeInBytes: file.size,
-      });
-
-      return ok({ url: `/images/${key}` });
+      return await finish("r2-native", { url: `/images/${key}`, key });
     } catch (error) {
       return err({
         reason: "COMMENT_IMAGE_UPLOAD_FAILED",
@@ -1367,9 +1261,18 @@ function isChannelConfigured(channel: Record<string, unknown>): boolean {
 }
 
 function resolveImageProcessingSettings(ih: SystemConfig["imageHosting"]) {
+  // 编辑器自定义压缩：阈值（超过才压缩）与目标大小，单位 MB → 字节
+  const thresholdMb = ih?.imageProcessing?.compressThresholdMb;
+  const targetMb = ih?.imageProcessing?.compressTargetMb;
   return {
     compressEnabled: ih?.imageProcessing?.compressEnabled ?? true,
     convertToFormat: ih?.imageProcessing?.convertToFormat ?? ("none" as const),
+    compressThresholdBytes:
+      typeof thresholdMb === "number"
+        ? Math.round(thresholdMb * 1024 * 1024)
+        : null,
+    compressTargetBytes:
+      typeof targetMb === "number" ? Math.round(targetMb * 1024 * 1024) : null,
   };
 }
 
