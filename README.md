@@ -16,11 +16,10 @@
 
 > **注意**：本项目专为 Cloudflare 生态设计，**仅支持**部署在 Cloudflare Workers。
 
-> 建了个 Telegram 群组，欢迎交流本项目相关问题：[Telegram 群](https://t.me/+Rmtf2Jmx_MUwNWE1)
+> 欢迎交流本项目相关问题：[Telegram 群](https://t.me/+Rmtf2Jmx_MUwNWE1) · [QQ 群](https://qun.qq.com/universal-share/share?ac=1&authKey=xfLd%2B0FCPOGjICC7%2BNsCJ7%2BxRngZg%2BWZckIoWTSpvcEaCc1Fyn%2BmB30Wq2z0c1IT&busi_data=eyJncm91cENvZGUiOiI4NzE4NDQ2NjgiLCJ0b2tlbiI6ImhGaXB3Z2xTY2ZCYS9XTVg2UGU1TVpSRnNxVFAvdGljRTVpbGhkNkRpano1U3lteEx6UTcxR0ZCQmxkYW1pZGMiLCJ1aW4iOiIyOTE4MzM2OTI2In0%3D&data=D0JnYq8EXQFBrTS9kPGSsewT1sCGk5xYW65Jd8jXXhDZ2KcUKER1Xrf_qFOUunvqxBU-SM12OA6wS7lsFxU7Og&svctype=4&tempid=h5_group_info)
 
-> 也建了 QQ 群，欢迎加入交流：[QQ 群](https://qun.qq.com/universal-share/share?ac=1&authKey=xfLd%2B0FCPOGjICC7%2BNsCJ7%2BxRngZg%2BWZckIoWTSpvcEaCc1Fyn%2BmB30Wq2z0c1IT&busi_data=eyJncm91cENvZGUiOiI4NzE4NDQ2NjgiLCJ0b2tlbiI6ImhGaXB3Z2xTY2ZCYS9XTVg2UGU1TVpSRnNxVFAvdGljRTVpbGhkNkRpano1U3lteEx6UTcxR0ZCQmxkYW1pZGMiLCJ1aW4iOiIyOTE4MzM2OTI2In0%3D&data=D0JnYq8EXQFBrTS9kPGSsewT1sCGk5xYW65Jd8jXXhDZ2KcUKER1Xrf_qFOUunvqxBU-SM12OA6wS7lsFxU7Og&svctype=4&tempid=h5_group_info)
 
-> **项目来源**：本项目基于 [flare-stack-blog](https://github.com/du2333/flare-stack-blog)（v1.5.2）改造而来，保留 GPL-3.0 协议；部分功能参考 [Rin](https://github.com/openRin/Rin)。部署与日常使用见下文。
+> **项目来源**：本项目基于 [flare-stack-blog](https://github.com/du2333/flare-stack-blog)（v1.5.2）改造而来，保留 GPL-3.0 协议；部分功能参考 [Rin](https://github.com/openRin/Rin)；图床功能参考[CloudFlare-ImgBed](https://github.com/MarSeventh/CloudFlare-ImgBed)。部署与日常使用见下文。
 
 ## 界面预览
 
@@ -41,29 +40,33 @@
 - **关于页** — 管理员可直接在页面上内联编辑 Markdown 内容
 
 ### 互动与社区
-- **评论系统** — 嵌套回复（两层）、邮件通知、AI 辅助审核与上下文化审核，违规评论自动拦截并通知管理员；文章、动态、关于页共用同一套评论体系
+- **评论系统** — 嵌套回复（两层）、邮件通知（支持一键退订）、AI 辅助审核与上下文化审核，违规评论自动拦截并通知管理员；文章、动态、关于页共用同一套评论体系，支持在评论中直接上传图片
 - **友情链接** — 访客申请、后台审批（通过/拒绝）、邮件通知、频率限制
-- **导航页** — 搜索引擎集合展示、书签管理（仅管理员，支持文件夹层级组织）、支持导入 Netscape 格式浏览器书签、服务端 Favicon 代理
+- **导航页** — 搜索引擎集合一键搜索；书签卡片（左图标右名称、超宽自动虚化）与文件夹卡片进入式浏览、自适应网格分页（书签数据仅管理员可见）；支持导入 Netscape 格式浏览器书签、服务端 Favicon 代理
 
 ### 图床与媒体
-- **媒体库** — R2 / S3 / 外部图床统一管理，支持目录浏览、文件夹创建/重命名/删除、文件重命名、使用状态追踪
-- **7 种图床方案** — 后台设置 → 图床，支持：
-  - **S3 兼容存储** — AWS S3 / Cloudflare R2 / 阿里云 OSS / 腾讯云 COS / 自定义
-  - **API Key 图床** — ImgBB / 幻域图床（ffsky），文章走服务端代理上传
-  - **Telegram Bot** — 通过 Bot API 上传到频道
-  - **Discord Bot** — 通过频道附件上传（Nitro 支持 25MB）
-  - **HuggingFace** — 上传到 HF 仓库
-  - **WebDAV** — 支持自动创建目录
-  - **R2 原生** — 兜底方案
-  - 媒体库支持从所有已配置图床拉取完整文件列表（包括非博客上传的文件）
-  - 图床启用后自动关闭 R2 上传入口，未启用或未配置时回退到 R2
+- **媒体库** — R2 / S3 / 外部图床统一管理：目录浏览（面包屑 + 文件夹树）、文件夹创建/重命名/删除、文件重命名与移动、多选删除（已引用文件保护）、网格/表格视图、使用状态追踪；可从所有已配置渠道拉取完整远端文件列表（包括非博客上传的文件）
+- **7 种图床渠道（单选启用）** — 后台设置 → 图床：
+  - **R2 原生** — 兜底方案，自定义存储路径前缀（默认 `images/blog`）
+  - **S3 兼容存储** — AWS S3 / Cloudflare R2 / 阿里云 OSS / 腾讯云 COS / 自定义，内置区域预设
+  - **API Key 图床** — ImgBB / 幻域图床（ffsky），可配置多个实例，文章走服务端代理上传
+  - **Telegram Bot** — 上传到频道，默认上限 20MB，支持代理
+  - **Discord Bot** — 频道附件上传，默认 10MB（Nitro 25MB），支持代理
+  - **HuggingFace** — 上传到 HF 数据集仓库，支持私有仓库
+  - **WebDAV** — 支持自动创建目录与自定义公开 URL
+- **分渠道大小限制** — 每个渠道可独立设置单文件上限（Telegram 20MB / Discord 10·25MB / ImgBB 32MB / R2 原生 100MB 默认），超限前端直接拦截
+- **客户端压缩与格式转换** — 编辑器图片超过「压缩阈值」（留空则按渠道上限触发）时迭代压缩至「目标大小」，可选转 WebP/JPEG；GIF/SVG 跳过；仅作用于文章/动态/评论/关于页的编辑器上传路径
+- **图片内容审核（NSFW）** — Workers AI / ModerateContent / NSFW.js 三种检测方案可选，确认违规自动拒绝并清理远端文件
+- **防盗链保护** — 「受保护」链接模式下按 Referer 白名单校验外链（支持通配子域名）；Telegram/Discord 图片始终经 Worker 代理回源，凭证不暴露
+- **真实上传进度** — 编辑器进度条/进度提示、媒体库逐文件百分比队列，全部基于 XHR 直传
+- 渠道启用后媒体库 R2 上传入口自动关闭；未启用或未配置完整时回退到 R2 媒体库
 
 ### 用户与认证
 - **用户认证** — GitHub OAuth + 邮箱密码注册/登录，`ADMIN_EMAIL` 自动授予管理员
 - **用户管理** — 角色管理（admin/user）、封禁/解封（可附带理由和到期时间）、评论统计
 
 ### AI 与自动化
-- **AI 辅助** — 支持 Cloudflare Workers AI、Agnes AI（无限期免费，国际站/国内站双端点）或第三方 AI（支持 OpenAI / Claude / Gemini 三种独立兼容类型，可配置多个 Provider 实例并切换），提供：
+- **AI 辅助** — 内置 Cloudflare Workers AI，也可配置多个第三方 Provider 实例并随时切换（OpenAI / Claude / Gemini 三种兼容协议，DeepSeek、Agnes AI 等 OpenAI 兼容服务均可直接接入），提供：
   - 文章摘要生成（200 字以内）
   - 标签自动提取（1-3 个）
   - AI 一键生文（支持博客/技术文档/通讯三种写作风格 + 自定义写作指令）
@@ -73,15 +76,16 @@
 
 ### 通知与安全
 - **通知系统** — 邮件（SMTP）+ Webhook（通用 HMAC 签名 / 企业微信）多通道通知，8 种事件类型可按需订阅，支持邮件退订
-- **人机验证** — 支持 ALTCHA PoW（工作量证明）/ Cloudflare Turnstile，Turnstile 可自动回退到 PoW 兜底
-- **SEO 增强** — Canonical URL、Schema.org 结构化数据、Open Graph、RSS / Atom / Sitemap / Robots.txt
+- **博客订阅通知** — 登录读者在个人中心一键订阅新文章邮件推送（按文章去重，绝不重复发送）；管理员可切换「通知全部用户」模式并自定义邮件模板（`{{articleTitle}}` / `{{articleUrl}}` / `{{siteName}}` 占位符）
+- **人机验证** — 支持 ALTCHA PoW（工作量证明）/ Cloudflare Turnstile（应用于登录/注册表单），Turnstile 可自动回退到 PoW 兜底
+- **SEO 增强** — Canonical URL、Schema.org 结构化数据、Open Graph、RSS / Atom / JSON Feed / Sitemap / Robots.txt
 - **PWA 支持** — 自动生成 Web App Manifest
 
 ### 运营与维护
 - **数据统计** — 站内浏览量统计（Queue + D1 去重）+ Umami 代理集成（`/stats.js`、`/api/send`），24h / 7d / 30d / 90d 多维度流量分析
 - **全文搜索** — 基于 Orama 的高性能站内搜索，支持中文分词、模糊匹配、高亮显示
 - **主题系统** — 可扩展主题契约，完整替换页面与布局（内置 `default` / `fuwari` 两套主题）
-- **Cloudflare 用量监控** — 监控 Workers / D1 / R2 / KV / Queues / Workflows / Workers AI / Durable Objects 八大服务用量，支持可配置阈值告警（邮件 + Webhook）
+- **Cloudflare 用量概览** — 管理后台首页内嵌用量仪表盘：Workers / D1 / R2 / KV / Queues / Workflows / Workers AI / Durable Objects 八大服务近 30 天用量卡片（对照免费额度，≥70% 黄色、≥90% 红色预警）+ 各服务百分比对比图表；后台设置 → Cloudflare 可按服务配置告警阈值（默认 80%），开启邮件 / Webhook 告警通道并一键测试发送，超阈值时仪表盘醒目提示；需配置具有 Account Analytics 读取权限的 API Token
 - **微信公众号验证** — 后台配置验证文件名和内容
 - **版本更新检查** — 对比 GitHub Release，后台提示新版本
 - **缓存管理** — KV 缓存 + CDN 缓存清除，后台一键操作
@@ -100,8 +104,7 @@
 | Durable Objects | 分布式限流 / Argon2id 密码哈希          |
 | Workflows       | 异步任务（内容审核、定时发布） |
 | Queues          | 消息队列（邮件通知）           |
-| Workers AI      | AI 能力（或接入 Agnes AI / OpenAI 兼容接口） |
-| Images          | 图片优化（可选）               |
+| Workers AI      | AI 能力（或接入 OpenAI / Claude / Gemini 兼容接口） |
 
 ### 前端
 
@@ -147,6 +150,7 @@ src/
 │   ├── dashboard/   # 管理后台数据统计
 │   ├── email/       # 邮件通知（SMTP）
 │   ├── notification/# 通知系统（邮件 + Webhook）
+│   ├── subscription/# 博客订阅通知（新文章邮件推送）
 │   ├── webhook/     # Webhook（HMAC 签名 / 企业微信）
 │   ├── cache/       # KV 缓存服务
 │   ├── config/      # 博客配置（9 个配置分区）
@@ -295,12 +299,13 @@ src/
 - [ ] 打开 `/admin`，用 `ADMIN_EMAIL` 注册账号，系统自动赋予管理员权限
 - [ ] 在后台 **设置** 中完善站点标题、描述、头像、favicon、社交链接、SEO 信息
 - [ ] 上传一张图片验证媒体库（R2）可用
-- [ ] （可选）配置第三方图床：后台设置 → 图床，启用 ImgBB（文章 + 评论）或幻域图床 ffsky（文章），填入 API Key 后点「测试连接」；文章图床启用后 R2 上传入口会自动关闭，未启用或未配置 Key 时才回退 R2
+- [ ] （可选）配置第三方图床：后台设置 → 图床，从 R2 原生 / S3 兼容 / API Key 图床 / Telegram / Discord / HuggingFace / WebDAV 中选择一个渠道启用，填好凭证后点「测试连接」，并按需开启评论区上传、压缩与内容审核；详见[常见问题 8](#8-如何配置第三方图床)
 - [ ] （可选）配置 SMTP 邮件：后台设置 → 邮箱，即可使用验证码登录与评论回复通知
 - [ ] （可选）配置 Webhook 通知：后台设置 → 通知，按事件订阅
+- [ ] （可选）开启博客订阅通知：后台设置 → 订阅通知 自定义邮件模板，读者在个人中心开启订阅后即可收到新文章邮件（需先配置 SMTP）
 - [ ] （可选）开启人机验证：后台设置 → 人机验证，选择验证方案（不启用 / **ALTCHA PoW** / **Cloudflare Turnstile**）。Turnstile 可在超时或连续失败后自动回退到 ALTCHA PoW 兜底；再配合 Umami 统计
-- [ ] （可选）后台设置 → AI 配置 AI 服务：默认 Workers AI，也可切换到 **Agnes AI**（无限期免费，一键选择国际站/国内站端点）或 OpenAI 兼容接口（填写 Base URL / 模型 / API Key 后点「测试连接」）
-- [ ] （可选）后台设置 → Cloudflare，配置用量监控与告警阈值（Workers / D1 / R2 / KV 等八大服务用量百分比，支持邮件和 Webhook 告警通道）
+- [ ] （可选）后台设置 → AI 配置 AI 服务：默认 Workers AI，也可添加 OpenAI / Claude / Gemini 兼容的第三方 Provider（填写 Base URL / 模型 / API Key 后点「测试连接」）
+- [ ] （可选）后台设置 → Cloudflare：粘贴具有 Account Analytics 读取权限的 API Token，配置用量监控与告警阈值（八大服务用量百分比，支持邮件和 Webhook 告警通道），后台首页即可查看用量仪表盘
 - [ ] 若页面样式异常，在后台设置页手动 **清除 CDN 缓存** 或到 Cloudflare Dashboard 清理
 
 ### 方案二：Cloudflare Dashboard 手动部署
@@ -371,6 +376,7 @@ bun dev
 | `bun dev`       | 启动开发服务器（端口 3000） |
 | `bun run build` | 构建生产版本                |
 | `bun run test`  | 运行测试                    |
+| `bun run test:node` | 运行 Node 环境单元测试   |
 | `bun run lint`  | Biome Lint 检查             |
 | `bun run typecheck` | TypeScript 类型检查      |
 | `bun run check` | 类型检查 + Lint + 格式化    |
@@ -458,16 +464,35 @@ bun dev
 
 ### 8. 如何配置第三方图床？
 
-后台设置 → 图床，支持两家同时启用，互不冲突：
+后台设置 → 图床。采用「单渠道启用」模型：从 7 种渠道中选择一种作为当前图床，每个渠道均可分别勾选「文章区」「评论区」开关并设置单文件大小上限。
 
-- **ImgBB**：可分别开启「评论区」与「文章区」。评论区开启后，评论编辑器点图片按钮会弹出 ImgBB 官方上传窗口（无需 API Key）；文章区开启后，文章编辑器上传图片会先走服务端代理上传到 ImgBB。在 [imgbb.com](https://imgbb.com) 登录后到账户页获取 API Key。
-- **幻域图床（ffsky）**：只支持「文章区」，上传同样走服务端代理（其 API 无 CORS，不能由浏览器直接调用），默认接口 `https://pic.ffsky.net/api/1/upload` 可在设置中修改。
-- **R2 回退规则**：文章图片只在「第三方图床未开启，或开启了但未配置可用的 Key」时才会回退到 R2 媒体库；只要文章区图床已启用并配置了 Key，就会只走第三方图床，即使上传失败也只报错、绝不静默写入 R2。
-- **关闭 R2 上传入口**：文章区图床启用后，后台媒体库的「上传」入口（上传按钮、拖拽/粘贴上传）会自动禁用，文章编辑器图片弹窗中的 R2 媒体库选择也会隐藏，避免图片上传/插入到错误位置；已有 R2 图片仍可浏览、改名与删除。
-- **多图床切换**：两家的文章上传按 ImgBB → ffsky 的顺序尝试，其中一家失败会自动尝试下一家，仅当所有已启用且填了 Key 的图床都失败时才返回错误。
-- 图床 API Key 与站点其他配置（SMTP、AI Key 等）一样保存在 D1 配置表中，仅服务端读取，不会下发到浏览器。
+**各渠道配置要点**：
 
-### 8.5. 部署报错 "Could not find zone" 怎么办？
+| 渠道 | 关键配置 | 默认上限 |
+| :--- | :--- | :--- |
+| R2 原生 | 开启文章/评论区即可，可自定义存储路径前缀（默认 `images/blog`） | 100 MB |
+| S3 兼容 | Endpoint / Bucket / Region / AccessKey（内置 AWS、R2、OSS、COS 区域预设） | 不限 |
+| ImgBB | 在 [imgbb.com](https://imgbb.com) 获取 API Key | 32 MB |
+| 幻域图床（ffsky） | ffsky API Key，默认端点 `https://pic.ffsky.net/api/1/upload` 可修改 | 不限 |
+| Telegram Bot | @BotFather 创建 Bot 获取 Token；将 Bot 拉入频道并设为管理员后填频道 ID，支持代理 | 20 MB |
+| Discord Bot | Bot Token + 频道 ID；勾选 Nitro 后上限提升至 25MB，支持代理 | 10 / 25 MB |
+| HuggingFace | `hf_` Token + 仓库名（`用户名/仓库名`），支持私有仓库 | 不限 |
+| WebDAV | 服务地址 / 账号密码，可配公开 URL（CDN）与自动建目录 | 不限 |
+
+填写完成后点击「测试连接」（上传一张 1×1 测试图并返回直链）验证可用性。
+
+**配套能力**：
+
+- **评论区传图**：渠道开启评论区后，登录用户可在评论中直接上传图片（20 张/小时限速）；ImgBB 渠道会弹出官方上传窗口
+- **压缩与转换**：编辑器图片超过「压缩阈值」（留空则按渠道上限触发）时，浏览器端迭代压缩到「目标大小」（留空则向渠道上限收敛），可选转 WebP/JPEG；GIF/SVG 不处理
+- **内容审核（NSFW）**：Workers AI / ModerateContent / NSFW.js 三选一，确认违规的图片自动拒绝并尽力删除远端文件
+- **防盗链**：「受保护」链接模式下按 Referer 白名单校验外链访问（支持 `*.example.com` 通配子域名，允许空 Referer 可开关）；Telegram/Discord 图片始终由 Worker 代理回源
+
+**R2 回退规则**：未启用任何渠道或所选渠道未配置完整时，文章/评论图片自动回退到 R2 媒体库；一旦渠道就绪则只走该渠道，上传失败只报错、绝不静默写入 R2。渠道启用期间，媒体库的 R2 上传入口（按钮/拖拽/粘贴）自动禁用，已有 R2 图片仍可浏览与管理。
+
+图床 API Key 与站点其他敏感配置（SMTP、AI Key 等）一样保存在 D1 配置表中，仅服务端读取，不会下发到浏览器。
+
+### 9. 部署报错 "Could not find zone" 怎么办？
 
 这通常是因为 `ZONE_NAME` 推导不正确。例如你使用 `blog.qyfy.kdns.fr` 作为 `DOMAIN`，脚本会自动推导出 `zone_name` 为 `kdns.fr`，但实际 Cloudflare Zone 是 `qyfy.kdns.fr`。
 
@@ -479,20 +504,21 @@ bun dev
 
 > 判断方法：在 Cloudflare Dashboard → 你的域名概览页，页面标题显示的就是 Zone 名称。
 
-### 9. 如何接入 Agnes AI（国际站 / 国内站）？
+### 10. 如何开启博客订阅通知？
 
-Agnes AI 无限期免费，使用 OpenAI 兼容协议，后台设置 → AI 配置，选择 **Agnes AI** 后可直接点选端点：
+1. **前提**：后台设置 → 邮箱 配置好 SMTP。
+2. **读者侧**：登录后在个人中心（`/profile`）打开「博客订阅通知」开关，新文章发布时即会收到邮件（每篇文章只发一次）。
+3. **管理员侧**：后台设置 → 订阅通知 可自定义邮件主题/正文模板（占位符 `{{articleTitle}}`、`{{articleUrl}}`、`{{siteName}}`）；打开「通知全部用户」后，新文章会推送给所有未封禁用户而不仅是订阅者。
 
-- **国际站**：`https://apihub.agnes-ai.com/v1`（默认）；中国大陆用户网络不佳时，可改用 **国际站（国内加速）** `https://apihub.agnes-ai.cn/v1`，仍使用国际站的 API Key。
-- **国内站**：`https://api.agnes-ai.cn/v1`，需要在 [agnes-ai.cn](https://agnes-ai.cn) 单独注册并获取国内站 API Key。
+> 不登录的读者可使用 RSS 订阅：`/rss.xml`、`/atom.xml`、`/feed.json`。
 
-注意：
+### 11. 如何查看和监控 Cloudflare 用量？
 
-- 国际站与国内站 **账号 / API Key / 数据互不互通**，不能混用：国内站 Key 只能用国内端点，国际站 Key 用国际端点或国内加速端点。
-- 填入端点与模型（如 `deepseek-chat` 等，以官方模型列表为准）后点击「测试连接」验证；若返回超时或 401/403，先核对 Key 与端点是否匹配。
+- **查看**：管理后台首页内嵌「Cloudflare 用量概览」仪表盘，展示 Workers / D1 / R2 / KV / Queues / Workflows / Workers AI / Durable Objects 八项服务近 30 天用量（对照免费额度，≥70% 黄色、≥90% 红色），并附各服务用量百分比对比图表。
+- **告警**：后台设置 → Cloudflare，粘贴一个具有 **Account → Account Analytics → Read** 权限的 API Token（Account ID 自动读取自部署变量 `CLOUDFLARE_ACCOUNT_ID`），按服务设置阈值（默认 80%），开启邮件 / Webhook 通道并可一键测试发送；打开后台首页时若超阈值会有醒目提示。数据来自 Cloudflare GraphQL Analytics API，结果缓存 1 小时。
 
 ---
 
 ## 参考项目
 
-本项目基于 [flare-stack-blog](https://github.com/du2333/flare-stack-blog)（v1.5.2，GPL-3.0）改造而来，功能部分参考 [Rin](https://github.com/openRin/Rin)，遵循 **GPL-3.0** 协议开源，详见 [LICENSE](./LICENSE)。
+本项目基于 [flare-stack-blog](https://github.com/du2333/flare-stack-blog)（v1.5.2，GPL-3.0）改造而来，功能部分参考 [Rin](https://github.com/openRin/Rin)，图床功能参考[CloudFlare-ImgBed](https://github.com/MarSeventh/CloudFlare-ImgBed)，遵循 **GPL-3.0** 协议开源，详见 [LICENSE](./LICENSE)。
