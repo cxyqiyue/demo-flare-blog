@@ -1,9 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { Search } from "lucide-react";
+import { ArrowLeft, Folder, Search } from "lucide-react";
 import {
   getHostname,
   useFaviconSource,
 } from "@/features/navigation/components/favicon";
+import { MaskedName } from "@/features/navigation/components/masked-name";
+import { useGridPagination } from "@/features/navigation/hooks/use-grid-pagination";
 import { useNavigationPageState } from "@/features/navigation/hooks/use-navigation-page-state";
 import type { NavigationPageProps } from "@/features/theme/contract/pages";
 import { cn } from "@/lib/utils";
@@ -15,7 +17,8 @@ export function NavigationPage({
   isAdmin,
   showBookmarks,
 }: NavigationPageProps) {
-  const state = useNavigationPageState(data);
+  const grid = useGridPagination();
+  const state = useNavigationPageState(data, grid.pageSize);
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -84,10 +87,29 @@ export function NavigationPage({
           className="fuwari-card-base p-6 md:p-8 flex flex-col gap-5 fuwari-onload-animation flex-1"
           style={{ animationDelay: "350ms" }}
         >
+          {/* 面包屑：根目录 ↔ 文件夹 */}
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <h2 className="text-xl font-bold fuwari-text-90 transition-colors">
-              {m.navigation_bookmarks()}
-            </h2>
+            <div className="flex items-center gap-3 min-w-0">
+              {state.currentFolder ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={state.backToRoot}
+                    className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold fuwari-btn-regular active:scale-95 transition-all"
+                  >
+                    <ArrowLeft size={13} />
+                    {m.navigation_all()}
+                  </button>
+                  <h2 className="text-xl font-bold fuwari-text-90 truncate transition-colors">
+                    {state.currentFolder.name}
+                  </h2>
+                </>
+              ) : (
+                <h2 className="text-xl font-bold fuwari-text-90 transition-colors">
+                  {m.navigation_bookmarks()}
+                </h2>
+              )}
+            </div>
             {isAdmin && (
               <Link
                 to="/admin/navigation"
@@ -97,35 +119,42 @@ export function NavigationPage({
               </Link>
             )}
           </div>
-
-          {/* Folder Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto overscroll-x-contain no-scrollbar py-1">
-            <FolderTab
-              active={state.activeFolderId === null}
-              onClick={() => state.selectFolder(null)}
-              label={`${m.navigation_all()} (${state.totalBookmarks})`}
-            />
-            {state.folders.map((folder) => (
-              <FolderTab
-                key={folder.id}
-                active={state.activeFolderId === folder.id}
-                onClick={() => state.selectFolder(folder.id)}
-                label={`${folder.name} (${folder.bookmarkCount})`}
-              />
-            ))}
-          </div>
+          {!state.currentFolder && (
+            <p className="-mt-3 text-xs font-bold fuwari-text-30 transition-colors">
+              {m.navigation_level_summary({
+                folders: state.folders.length,
+                bookmarks: state.bookmarks.filter(
+                  (b) => b.folderId === null,
+                ).length,
+              })}
+            </p>
+          )}
 
           {state.pageItems.length > 0 ? (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                {state.pageItems.map((bookmark, i) => (
-                  <BookmarkCard
-                    key={bookmark.id}
-                    bookmark={bookmark}
-                    className="fuwari-onload-animation"
-                    style={{ animationDelay: `${400 + i * 40}ms` }}
-                  />
-                ))}
+              {/* 卡片网格：固定尺寸卡片，列数随屏宽自适应，按同级数量自动分页 */}
+              <div
+                ref={grid.containerRef}
+                className="flex flex-wrap content-start gap-2"
+              >
+                {state.pageItems.map((item, i) =>
+                  item.kind === "folder" ? (
+                    <FolderCard
+                      key={`folder-${item.folder.id}`}
+                      folder={item.folder}
+                      onOpen={() => state.enterFolder(item.folder.id)}
+                      className="fuwari-onload-animation"
+                      style={{ animationDelay: `${400 + i * 40}ms` }}
+                    />
+                  ) : (
+                    <BookmarkCard
+                      key={item.bookmark.id}
+                      bookmark={item.bookmark}
+                      className="fuwari-onload-animation"
+                      style={{ animationDelay: `${400 + i * 40}ms` }}
+                    />
+                  ),
+                )}
               </div>
 
               {state.total > state.pageSize && (
@@ -198,37 +227,51 @@ function EngineButton({ engine, selected, onSelect }: EngineButtonProps) {
   );
 }
 
-interface FolderTabProps {
-  active: boolean;
-  onClick: () => void;
-  label: string;
+interface CardStyleProps {
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-function FolderTab({ active, onClick, label }: FolderTabProps) {
+interface FolderCardProps extends CardStyleProps {
+  folder: { id: number; name: string };
+  onOpen: () => void;
+}
+
+/** 文件夹卡片：左侧文件夹图标 + 右侧分类名（超出虚化） */
+function FolderCard({ folder, onOpen, className, style }: FolderCardProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={onOpen}
+      title={folder.name}
       className={cn(
-        "shrink-0 px-4 h-8 rounded-full text-xs font-bold transition-all whitespace-nowrap active:scale-95",
-        active ? "fuwari-btn-primary" : "fuwari-btn-regular",
+        "fuwari-card-base flex h-11 w-36 items-center gap-2 px-2.5 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group active:scale-[0.98]",
+        className,
       )}
+      style={style}
     >
-      {label}
+      <span className="w-7 h-7 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center shrink-0 border border-black/5 dark:border-white/5 text-(--fuwari-text-50) group-hover:text-(--fuwari-primary) transition-colors">
+        <Folder size={14} strokeWidth={1.75} />
+      </span>
+      <MaskedName
+        title={folder.name}
+        className="text-[13px] font-bold fuwari-text-75 group-hover:text-(--fuwari-primary) transition-colors"
+      >
+        {folder.name}
+      </MaskedName>
     </button>
   );
 }
 
-interface BookmarkCardProps {
+interface BookmarkCardProps extends CardStyleProps {
   bookmark: {
     id: number;
     name: string;
     url: string;
   };
-  className?: string;
-  style?: React.CSSProperties;
 }
 
+/** 书签卡片：左侧网站标签页图标 + 右侧书签名（最多约 6 个中文字符，超出虚化） */
 function BookmarkCard({ bookmark, className, style }: BookmarkCardProps) {
   const domain = getHostname(bookmark.url);
   const favicon = useFaviconSource(domain);
@@ -238,13 +281,14 @@ function BookmarkCard({ bookmark, className, style }: BookmarkCardProps) {
       href={bookmark.url}
       target="_blank"
       rel="noopener noreferrer"
+      title={bookmark.name}
       className={cn(
-        "fuwari-card-base flex flex-col items-center justify-center gap-2 p-3 min-h-20 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group active:scale-[0.98]",
+        "fuwari-card-base flex h-11 w-36 items-center gap-2 px-2.5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group active:scale-[0.98]",
         className,
       )}
       style={style}
     >
-      <div className="w-8 h-8 rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 flex items-center justify-center border border-black/5 dark:border-white/5 transition-transform duration-300 group-hover:scale-105 shrink-0">
+      <span className="w-7 h-7 rounded-lg overflow-hidden bg-black/5 dark:bg-white/5 flex items-center justify-center shrink-0 border border-black/5 dark:border-white/5">
         {favicon.hasIcon ? (
           <img
             src={favicon.src}
@@ -258,10 +302,13 @@ function BookmarkCard({ bookmark, className, style }: BookmarkCardProps) {
             {bookmark.name.slice(0, 1)}
           </span>
         )}
-      </div>
-      <span className="text-[11px] font-bold fuwari-text-75 group-hover:text-(--fuwari-primary) truncate max-w-full px-1 transition-colors">
-        {bookmark.name}
       </span>
+      <MaskedName
+        title={bookmark.name}
+        className="text-[13px] font-bold fuwari-text-75 group-hover:text-(--fuwari-primary) transition-colors"
+      >
+        {bookmark.name}
+      </MaskedName>
     </a>
   );
 }
