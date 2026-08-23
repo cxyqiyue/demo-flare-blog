@@ -13,7 +13,7 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -176,6 +176,83 @@ function MaxFileSizeField({
   );
 }
 
+function MbNumberField({
+  label,
+  desc,
+  placeholder,
+  value,
+  onChange,
+}: {
+  label: string;
+  desc: string;
+  placeholder: string;
+  value: number | null;
+  onChange: (value: number | undefined) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <label className="text-sm text-muted-foreground">{label}</label>
+      <Input
+        type="number"
+        min={1}
+        step="any"
+        placeholder={placeholder}
+        value={value ?? ""}
+        onChange={(e) => {
+          onChange(e.target.value === "" ? undefined : Number(e.target.value));
+        }}
+        className={cn(INPUT_CLASS, "py-3")}
+      />
+      <p className="text-xs text-muted-foreground">{desc}</p>
+    </div>
+  );
+}
+
+/** 渠道选择按钮组（审查渠道 / 访问模式共用样式） */
+function OptionButtons<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { id: T; label: string }[];
+  value: T;
+  onChange: (id: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => onChange(option.id)}
+          className={cn(
+            "rounded-none border px-3 py-1.5 text-xs transition-colors",
+            value === option.id
+              ? "border-foreground/40 bg-foreground text-background"
+              : "border-border/30 bg-muted/10 text-muted-foreground hover:bg-muted/20",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** 折叠式渠道配置教程 */
+function ChannelGuide({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <details className="group border border-border/20 bg-muted/5">
+      <summary className="cursor-pointer list-none px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted/10 [&::-webkit-details-marker]:hidden">
+        <span className="text-foreground">{title}</span>
+      </summary>
+      <div className="space-y-2 border-t border-border/20 px-4 py-4 text-xs leading-relaxed text-muted-foreground">
+        {children}
+      </div>
+    </details>
+  );
+}
+
 function StatusDot({ status }: { status: ConnectionStatus }) {
   return (
     <div
@@ -322,6 +399,24 @@ export function ImageHostingSettingsSection({
     watch("imageHosting.imageProcessing.compressEnabled") ?? true;
   const convertToFormat =
     watch("imageHosting.imageProcessing.convertToFormat") ?? "none";
+  const compressThresholdMb =
+    watch("imageHosting.imageProcessing.compressThresholdMb") ?? null;
+  const compressTargetMb =
+    watch("imageHosting.imageProcessing.compressTargetMb") ?? null;
+
+  // ── 上传审查 ──
+  const moderationChannel = watch("imageHosting.moderation.channel") ?? "off";
+  const moderateContentApiKey =
+    watch("imageHosting.moderation.moderateContentApiKey") ?? "";
+  const nsfwApiUrl = watch("imageHosting.moderation.nsfwApiUrl") ?? "";
+
+  // ── 图链访问模式 ──
+  const linkAccessMode = watch("imageHosting.linkAccess.mode") ?? "direct";
+  const allowEmptyReferer =
+    watch("imageHosting.linkAccess.allowEmptyReferer") ?? false;
+  const refererAllowlistRaw = (
+    watch("imageHosting.linkAccess.refererAllowlist") ?? []
+  ).join("\n");
 
   // ── Connection Status ──
   const [s3Status, setS3Status] = useState<ConnectionStatus>("IDLE");
@@ -668,6 +763,30 @@ export function ImageHostingSettingsSection({
               <span className="text-xs text-muted-foreground">
                 {m.settings_image_hosting_compress_desc()}
               </span>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <MbNumberField
+                label={m.settings_image_hosting_compress_threshold_label()}
+                desc={m.settings_image_hosting_compress_threshold_desc()}
+                placeholder={m.settings_image_hosting_compress_threshold_placeholder()}
+                value={compressThresholdMb}
+                onChange={(v) =>
+                  setValue("imageHosting.imageProcessing.compressThresholdMb", v ?? undefined, {
+                    shouldDirty: true,
+                  })
+                }
+              />
+              <MbNumberField
+                label={m.settings_image_hosting_compress_target_label()}
+                desc={m.settings_image_hosting_compress_target_desc()}
+                placeholder={m.settings_image_hosting_compress_target_placeholder()}
+                value={compressTargetMb}
+                onChange={(v) =>
+                  setValue("imageHosting.imageProcessing.compressTargetMb", v ?? undefined, {
+                    shouldDirty: true,
+                  })
+                }
+              />
             </div>
           </div>
           <div className="space-y-4">
@@ -1470,6 +1589,180 @@ export function ImageHostingSettingsSection({
             </div>
           );
         })}
+      </div>
+
+      {/* ── 上传审查 ── */}
+      <div className="border border-border/30 bg-background/50 p-4 md:p-8 space-y-6">
+        <div className="space-y-1">
+          <h4 className="text-sm font-medium text-foreground">
+            {m.settings_moderation_title()}
+          </h4>
+          <p className="text-xs text-muted-foreground">
+            {m.settings_moderation_desc()}
+          </p>
+        </div>
+        <OptionButtons
+          value={moderationChannel}
+          onChange={(id) =>
+            setValue("imageHosting.moderation.channel", id, { shouldDirty: true })
+          }
+          options={[
+            { id: "off", label: m.settings_moderation_channel_off() },
+            { id: "workers-ai", label: m.settings_moderation_channel_workers_ai() },
+            { id: "moderatecontent", label: m.settings_moderation_channel_moderatecontent() },
+            { id: "nsfwjs", label: m.settings_moderation_channel_nsfwjs() },
+          ]}
+        />
+        {moderationChannel === "workers-ai" && (
+          <p className="text-xs text-muted-foreground">
+            {m.settings_moderation_workers_ai_desc()}
+          </p>
+        )}
+        {moderationChannel === "moderatecontent" && (
+          <div className="space-y-3">
+            <label className="text-sm text-muted-foreground">
+              {m.settings_moderation_api_key_label()}
+            </label>
+            <Input
+              value={moderateContentApiKey}
+              placeholder="xxxxxxxxxxxx"
+              onChange={(e) =>
+                setValue("imageHosting.moderation.moderateContentApiKey", e.target.value, {
+                  shouldDirty: true,
+                })
+              }
+              className={INPUT_CLASS}
+            />
+            <p className="text-xs text-muted-foreground">
+              {m.settings_moderation_moderatecontent_key_desc()}
+            </p>
+          </div>
+        )}
+        {moderationChannel === "nsfwjs" && (
+          <div className="space-y-3">
+            <label className="text-sm text-muted-foreground">
+              {m.settings_moderation_nsfw_url_label()}
+            </label>
+            <Input
+              value={nsfwApiUrl}
+              placeholder="https://your-worker.workers.dev"
+              onChange={(e) =>
+                setValue("imageHosting.moderation.nsfwApiUrl", e.target.value, {
+                  shouldDirty: true,
+                })
+              }
+              className={INPUT_CLASS}
+            />
+            <p className="text-xs text-muted-foreground">
+              {m.settings_moderation_nsfw_url_desc()}
+            </p>
+          </div>
+        )}
+        {moderationChannel !== "off" && (
+          <p className="text-xs text-muted-foreground">
+            {m.settings_moderation_behavior_hint()}
+          </p>
+        )}
+      </div>
+
+      {/* ── 图链访问模式（防盗链） ── */}
+      <div className="border border-border/30 bg-background/50 p-4 md:p-8 space-y-6">
+        <div className="space-y-1">
+          <h4 className="text-sm font-medium text-foreground">
+            {m.settings_link_access_title()}
+          </h4>
+          <p className="text-xs text-muted-foreground">
+            {m.settings_link_access_desc()}
+          </p>
+        </div>
+        <OptionButtons
+          value={linkAccessMode}
+          onChange={(id) =>
+            setValue("imageHosting.linkAccess.mode", id, { shouldDirty: true })
+          }
+          options={[
+            { id: "direct", label: m.settings_link_access_mode_direct() },
+            { id: "protected", label: m.settings_link_access_mode_protected() },
+          ]}
+        />
+        {linkAccessMode === "protected" ? (
+          <>
+            <div className="flex items-center gap-3 py-1">
+              <Checkbox
+                checked={allowEmptyReferer}
+                onCheckedChange={(checked) => {
+                  setValue("imageHosting.linkAccess.allowEmptyReferer", checked, {
+                    shouldDirty: true,
+                  });
+                }}
+              />
+              <span className="text-xs text-muted-foreground">
+                {m.settings_link_access_allow_empty_referer()}
+              </span>
+            </div>
+            <div className="space-y-3">
+              <label className="text-sm text-muted-foreground">
+                {m.settings_link_access_referer_list_label()}
+              </label>
+              <textarea
+                value={refererAllowlistRaw}
+                rows={5}
+                spellCheck={false}
+                onChange={(e) => {
+                  const domains = e.target.value
+                    .split(/[\n,]+/)
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                  setValue("imageHosting.linkAccess.refererAllowlist", domains, {
+                    shouldDirty: true,
+                  });
+                }}
+                className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-3 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
+              />
+              <p className="text-xs text-muted-foreground">
+                {m.settings_link_access_referer_list_desc()}
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {m.settings_link_access_protected_hint()}
+            </p>
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {m.settings_link_access_direct_hint()}
+          </p>
+        )}
+      </div>
+
+      {/* ── 渠道配置教程 ── */}
+      <div className="border border-border/30 bg-background/50 overflow-hidden divide-y divide-border/20">
+        <div className="px-4 md:px-8 pt-6 pb-2 space-y-1">
+          <h4 className="text-sm font-medium text-foreground">
+            {m.settings_guides_title()}
+          </h4>
+          <p className="text-xs text-muted-foreground">{m.settings_guides_desc()}</p>
+        </div>
+        <ChannelGuide title={m.settings_guide_r2_title()}>
+          <p>{m.settings_guide_r2_body()}</p>
+        </ChannelGuide>
+        <ChannelGuide title={m.settings_guide_s3_title()}>
+          <p>{m.settings_guide_s3_body()}</p>
+        </ChannelGuide>
+        <ChannelGuide title={m.settings_guide_telegram_title()}>
+          <p>{m.settings_guide_telegram_body()}</p>
+        </ChannelGuide>
+        <ChannelGuide title={m.settings_guide_discord_title()}>
+          <p>{m.settings_guide_discord_body()}</p>
+        </ChannelGuide>
+        <ChannelGuide title={m.settings_guide_huggingface_title()}>
+          <p>{m.settings_guide_huggingface_body()}</p>
+        </ChannelGuide>
+        <ChannelGuide title={m.settings_guide_webdav_title()}>
+          <p>{m.settings_guide_webdav_body()}</p>
+        </ChannelGuide>
+        <ChannelGuide title={m.settings_guide_apikey_title()}>
+          <p>{m.settings_guide_apikey_body()}</p>
+        </ChannelGuide>
       </div>
     </div>
   );

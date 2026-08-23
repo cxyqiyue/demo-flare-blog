@@ -78,6 +78,52 @@ describe("planImageProcessing", () => {
     expect(plan.action).toBe("compress");
     expect(plan.targetMime).toBe("image/webp");
   });
+
+  it("editor compression threshold triggers below the channel limit", () => {
+    const file = makeFile("image/png", 3 * MB);
+    expect(
+      planImageProcessing(file, { maxBytes: 10 * MB }).action,
+    ).toBe("skip");
+    expect(
+      planImageProcessing(file, {
+        maxBytes: 10 * MB,
+        compressThresholdBytes: 2 * MB,
+      }).action,
+    ).toBe("compress");
+    // 阈值与渠道上限取更小者：渠道更小时仍按渠道触发
+    expect(
+      planImageProcessing(file, {
+        maxBytes: 1 * MB,
+        compressThresholdBytes: 2 * MB,
+      }).action,
+    ).toBe("compress");
+  });
+
+  it("compression target converges below the channel limit", () => {
+    // 目标仅影响收敛值：不改变是否触发的判定
+    const small = makeFile("image/png", 512);
+    expect(
+      planImageProcessing(small, {
+        maxBytes: 10 * MB,
+        compressTargetBytes: 256 * 1024,
+      }).action,
+    ).toBe("skip");
+    // 只设置目标、无任何触发条件时不压缩
+    expect(
+      planImageProcessing(makeFile("image/png", 5 * MB), {
+        maxBytes: null,
+        compressTargetBytes: 2 * MB,
+      }).action,
+    ).toBe("skip");
+    // 触发阈值命中后按 compress 处理，收敛目标由 processImageBeforeUpload 取更小者
+    const big = makeFile("image/png", 5 * MB);
+    const plan = planImageProcessing(big, {
+      maxBytes: 10 * MB,
+      compressThresholdBytes: 4 * MB,
+      compressTargetBytes: 2 * MB,
+    });
+    expect(plan.action).toBe("compress");
+  });
 });
 
 describe("processImageBeforeUpload", () => {

@@ -121,11 +121,12 @@ describe("MediaService external channels", () => {
       });
     });
 
-    it("should store the real messageId-based key at upload", async () => {
+    it("should store the real messageId+fileId based key at upload", async () => {
       vi.mocked(TelegramChannelApi.uploadToTelegramChannel).mockResolvedValue(
         ok({
           url: "https://t.me/file/photo.jpg",
           messageId: "4242",
+          fileId: "file-1",
           fileName: "photo.png",
           mimeType: "image/png",
           sizeInBytes: 100,
@@ -142,7 +143,7 @@ describe("MediaService external channels", () => {
 
       const stored = await MediaRepo.getMediaByKey(
         adminContext.db,
-        "telegram/4242",
+        "telegram/4242:file-1",
       );
       expect(stored).toBeDefined();
       expect(stored?.provider).toBe("telegram");

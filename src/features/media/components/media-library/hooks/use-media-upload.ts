@@ -1,9 +1,9 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { uploadImageFn, uploadToProviderFn } from "@/features/media/api/media.api";
 import { MEDIA_KEYS } from "@/features/media/queries";
 import { formatBytes } from "@/lib/utils";
+import { xhrUpload } from "@/lib/xhr-upload";
 import { m } from "@/paraglide/messages";
 import type { MediaProvider } from "@/features/media/media.schema";
 import type { UploadItem } from "../types";
@@ -28,33 +28,19 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
     };
   }, []);
 
-  // Upload mutation — routes to the selected provider
-  const uploadMutation = useMutation({
-    mutationFn: async (item: UploadItem) => {
-      if (!item.file) {
-        throw new Error(m.media_upload_log_error_no_data());
-      }
-
-      if (provider && provider.type !== "r2") {
-        const formData = new FormData();
-        formData.append("image", item.file);
-        formData.append("providerId", provider.id);
-        if (item.folder) {
-          formData.append("folder", item.folder);
-        }
-        return await uploadToProviderFn({ data: formData });
-      }
-
-      const formData = new FormData();
-      formData.append("image", item.file);
-      // 媒体库管理员上传：允许任意文件类型，上限放宽到 R2 渠道限制
-      formData.append("source", "media-library");
-      if (item.folder) {
-        formData.append("folder", item.folder);
-      }
-      return await uploadImageFn({ data: formData });
-    },
-  });
+  const updateItem = (
+    waitingIndex: number,
+    patch: Partial<UploadItem> | ((item: UploadItem) => Partial<UploadItem>),
+  ) => {
+    setQueue((prev) =>
+      prev.map((q, i) => {
+        if (i !== waitingIndex) return q;
+        const extra =
+          typeof patch === "function" ? patch(q) : patch;
+        return { ...q, ...extra };
+      }),
+    );
+  };
 
   // Process upload queue
   useEffect(() => {
@@ -66,65 +52,76 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
       processingRef.current = true;
 
       if (!item.file) {
-        setQueue((prev) =>
-          prev.map((q, i) =>
-            i === waitingIndex
-              ? { ...q, status: "ERROR", log: m.media_upload_log_error_no_data() }
-              : q,
-          ),
-        );
+        updateItem(waitingIndex, {
+          status: "ERROR",
+          log: m.media_upload_log_error_no_data(),
+        });
         processingRef.current = false;
         return;
       }
 
-      setQueue((prev) =>
-        prev.map((q, i) =>
-          i === waitingIndex
-            ? { ...q, status: "UPLOADING", progress: 50, log: m.media_upload_log_stream_sending() }
-            : q,
-        ),
-      );
+      updateItem(waitingIndex, {
+        status: "UPLOADING",
+        progress: 0,
+        log: m.media_upload_log_stream_sending(),
+      });
 
       try {
-        const result = await uploadMutation.mutateAsync(item);
-        if (result.error) {
-          if (isMountedRef.current) {
-            const message =
-              (result.error as { message?: string }).message ||
-              m.media_upload_error_db();
-            setQueue((prev) =>
-              prev.map((q, i) =>
-                i === waitingIndex
-                  ? { ...q, status: "ERROR", progress: 0, log: m.media_upload_log_error({ message }) }
-                  : q,
-              ),
-            );
-            toast.error(m.media_upload_fail({ name: item.name }), { description: message });
+        const formData = new FormData();
+        formData.append("image", item.file);
+        if (item.folder) {
+          formData.append("folder", item.folder);
+        }
+        const isProviderUpload =
+          provider && provider.type !== "r2" && Boolean(provider.id);
+        if (isProviderUpload) {
+          formData.append("providerId", provider?.id ?? "");
+        } else {
+          formData.append("source", "media-library");
+        }
+
+        const result = await xhrUpload<{ url?: string }>({
+          url: isProviderUpload
+            ? "/api/media/upload/provider"
+            : "/api/media/upload",
+          formData,
+          onProgress: (fraction) => {
+            updateItem(waitingIndex, () => ({
+              progress: Math.max(1, Math.round(fraction * 100)),
+            }));
+          },
+        });
+
+        if (!result.ok || !isMountedRef.current) {
+          if (!result.ok) {
+            const message = result.message || m.media_upload_error_db();
+            updateItem(waitingIndex, {
+              status: "ERROR",
+              progress: 0,
+              log: m.media_upload_log_error({ message }),
+            });
+            toast.error(m.media_upload_fail({ name: item.name }), {
+              description: message,
+            });
           }
           return;
         }
 
-        if (isMountedRef.current) {
-          setQueue((prev) =>
-            prev.map((q, i) =>
-              i === waitingIndex
-                ? { ...q, status: "COMPLETE", progress: 100, log: m.media_upload_log_complete() }
-                : q,
-            ),
-          );
-          toast.success(m.media_upload_success({ name: item.name }));
-          queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
-        }
+        updateItem(waitingIndex, {
+          status: "COMPLETE",
+          progress: 100,
+          log: m.media_upload_log_complete(),
+        });
+        toast.success(m.media_upload_success({ name: item.name }));
+        queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
       } catch (error) {
         if (isMountedRef.current) {
           const message = error instanceof Error ? error.message : m.request_error_unknown_title();
-          setQueue((prev) =>
-            prev.map((q, i) =>
-              i === waitingIndex
-                ? { ...q, status: "ERROR", progress: 0, log: m.media_upload_log_error({ message }) }
-                : q,
-            ),
-          );
+          updateItem(waitingIndex, {
+            status: "ERROR",
+            progress: 0,
+            log: m.media_upload_log_error({ message }),
+          });
           toast.error(m.media_upload_fail({ name: item.name }), { description: message });
         }
       } finally {
@@ -133,7 +130,7 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
     };
 
     processQueue();
-  }, [queue, uploadMutation, queryClient]);
+  }, [queue, provider, queryClient]);
 
   const processFiles = (files: Array<File>, folder = "") => {
     const limitBytes = provider?.maxFileSizeBytes ?? null;

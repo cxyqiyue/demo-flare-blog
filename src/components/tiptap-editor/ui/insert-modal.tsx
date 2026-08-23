@@ -26,7 +26,11 @@ interface InsertModalProps {
   initialUrl?: string;
   onClose: () => void;
   onSubmit: (url: string, attrs?: { width?: number; height?: number }) => void;
-  onFileUpload?: (file: File) => Promise<string | null>;
+  /** onProgress 回调携带真实上传进度（fraction ∈ [0,1]），用于内嵌进度条 */
+  onFileUpload?: (
+    file: File,
+    onProgress?: (fraction: number) => void,
+  ) => Promise<string | null>;
   /** 批量上传完成回调：按选择顺序插入多张图片 */
   onFilesUploaded?: (results: Array<EditorImageUploadResult>) => void;
 }
@@ -114,6 +118,10 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
   const [inputUrl, setInputUrl] = useState(initialUrl);
   const [selectedMedia, setSelectedMedia] = useState<MediaAsset | null>(null);
   const [uploading, setUploading] = useState(false);
+  // 当前上传文件的真实进度（0~1）与批量计数；null = 未开始/不可用
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadIndex, setUploadIndex] = useState(0);
+  const [uploadTotal, setUploadTotal] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { enabled: articleImageHostingEnabled } =
@@ -156,11 +164,25 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
     }
   }, [initialUrl, type, setSearchQuery]);
 
+  const uploadWithOptions = async (file: File) => {
+    if (!onFileUpload) return null;
+    setUploadProgress(0);
+    try {
+      return await onFileUpload(file, (fraction) =>
+        setUploadProgress(Math.max(0, Math.min(1, fraction))),
+      );
+    } finally {
+      setUploadProgress(null);
+    }
+  };
+
   const handleFileUpload = async (file: File) => {
     if (!onFileUpload) return;
     setUploading(true);
+    setUploadTotal(1);
+    setUploadIndex(1);
     try {
-      const url = await onFileUpload(file);
+      const url = await uploadWithOptions(file);
       if (url) {
         onSubmit(url);
       }
@@ -172,10 +194,12 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
   const handleFilesUpload = async (files: Array<File>) => {
     if (!onFileUpload || files.length === 0) return;
     setUploading(true);
+    setUploadTotal(files.length);
     try {
       const results: Array<EditorImageUploadResult> = [];
-      for (const file of files) {
-        const url = await onFileUpload(file);
+      for (let i = 0; i < files.length; i += 1) {
+        setUploadIndex(i + 1);
+        const url = await uploadWithOptions(files[i]);
         if (url) {
           results.push({ url });
         }
@@ -307,10 +331,25 @@ const InsertModalInternal: React.FC<InsertModalProps> = ({
                     )}
                     <span className="text-sm font-mono">
                       {uploading
-                        ? m.editor_image_uploading()
+                        ? uploadTotal > 1
+                          ? m.editor_image_uploading_batch({
+                              index: uploadIndex,
+                              total: uploadTotal,
+                            })
+                          : m.editor_image_uploading()
                         : m.editor_image_upload_local()}
                     </span>
                   </button>
+                  {uploading && uploadProgress !== null && (
+                    <div className="w-64 h-1.5 overflow-hidden rounded-full bg-border/60">
+                      <div
+                        className="h-full rounded-full bg-primary transition-[width] duration-150 ease-out"
+                        style={{
+                          width: `${Math.round(uploadProgress * 100)}%`,
+                        }}
+                      />
+                    </div>
+                  )}
                   <p className="max-w-md text-xs text-muted-foreground/60">
                     {m.editor_insert_image_hosting_hint()}
                   </p>

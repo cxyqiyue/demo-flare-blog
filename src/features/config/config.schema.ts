@@ -101,6 +101,36 @@ export const AiConfigSchema = z.object({
   agnesAi: z.any().optional(),
 });
 
+// ── 图片审查配置（nsfwjs 无法直接跑在 Workers 中，与 ImgBed 一致
+//    采用「自托管 nsfwjs API 地址」或 moderatecontent.com；Workers AI
+//    使用免费额度（10,000 Neurons/天，超出当日仅报错不扣费）作为内置渠道 ──
+export const IMAGE_MODERATION_CHANNELS = [
+  "off",
+  "workers-ai",
+  "moderatecontent",
+  "nsfwjs",
+] as const;
+export type ImageModerationChannel = (typeof IMAGE_MODERATION_CHANNELS)[number];
+
+export const ImageModerationConfigSchema = z.object({
+  channel: z.enum(IMAGE_MODERATION_CHANNELS).optional(),
+  /** moderatecontent.com 的 API Key */
+  moderateContentApiKey: z.string().optional(),
+  /** 自托管 nsfwjs 兼容审查服务地址，按 GET {url}?url=<图片直链> 调用 */
+  nsfwApiUrl: z.string().optional(),
+});
+
+// ── 图链访问控制（防盗链）：R2 原生在 /images/* 直接校验 Referer；
+//    第三方渠道经 /media/file/:provider/:key 代理访问并同样校验。
+//    Telegram/Discord 因直链含敏感令牌或会轮换失效，始终走代理。 ──
+export const ImageLinkAccessConfigSchema = z.object({
+  mode: z.enum(["direct", "protected"]).optional(),
+  /** 允许外链的 Referer 域名列表；空列表 = 仅允许本站引用 */
+  refererAllowlist: z.array(z.string()).optional(),
+  /** 无 Referer 请求（直接打开/下载）是否放行，默认放行 */
+  allowEmptyReferer: z.boolean().optional(),
+});
+
 // ── 图床配置 Schema ─────────────────────────────────────────
 export const ImageHostingConfigSchema = z.object({
   // 单选互斥：当前激活的图床渠道（null = 使用旧版优先级链兼容模式）
@@ -145,6 +175,10 @@ export const ImageHostingConfigSchema = z.object({
   huggingface: HuggingFaceChannelSchema.optional(),
   webdav: WebDAVChannelSchema.optional(),
   imageProcessing: ImageProcessingSettingsSchema.optional(),
+  // ── 上传管理：图片审查（参考 CloudFlare-ImgBed 审查渠道） ──
+  moderation: ImageModerationConfigSchema.optional(),
+  // ── 图链访问控制（防盗链） ──
+  linkAccess: ImageLinkAccessConfigSchema.optional(),
   // ── 兼容旧版迁移字段（读取后自动转换，不再写入） ──
   imgbb: z.any().optional(),
   ffsky: z.any().optional(),

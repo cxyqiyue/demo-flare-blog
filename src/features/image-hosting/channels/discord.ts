@@ -221,6 +221,76 @@ export async function listDiscordAttachments(
   }
 }
 
+export interface DiscordAttachment {
+  url: string;
+  fileName: string;
+  mimeType: string;
+  sizeInBytes: number;
+}
+
+/**
+ * 按 messageId 现取指定附件的最新签名直链（附件 URL 约 24h 轮换，
+ * 代理回源时必须每次现取现用）。
+ */
+export async function getDiscordMessageAttachment(
+  config: DiscordChannel,
+  messageId: string,
+  index = 0,
+): Promise<
+  Result<DiscordAttachment, { reason: string; message: string }>
+> {
+  const botToken = config.botToken?.trim();
+  const channelId = config.channelId?.trim();
+  if (!botToken || !channelId) {
+    return err({
+      reason: "DISCORD_RESOLVE_FAILED",
+      message: "Discord bot token and channel ID are required",
+    });
+  }
+
+  try {
+    const response = await fetch(
+      `${resolveDiscordApiBase(config)}/channels/${channelId}/messages/${messageId}`,
+      { headers: { Authorization: `Bot ${botToken}` } },
+    );
+    const { parsed, text } = await readBody(response);
+
+    if (!response.ok) {
+      return err({
+        reason: "DISCORD_RESOLVE_FAILED",
+        message: extractErrorMessage(parsed, text),
+      });
+    }
+
+    const msg = parsed as
+      | { attachments?: Array<Record<string, unknown>> }
+      | null;
+    const attachment = msg?.attachments?.[index];
+    const url = typeof attachment?.url === "string" ? attachment.url : null;
+    if (!attachment || !url) {
+      return err({
+        reason: "DISCORD_RESOLVE_FAILED",
+        message: "Attachment not found on the message",
+      });
+    }
+
+    return ok({
+      url,
+      fileName:
+        (attachment.filename as string) || `discord-${messageId}-${index}`,
+      mimeType:
+        (attachment.content_type as string) || "application/octet-stream",
+      sizeInBytes:
+        typeof attachment.size === "number" ? attachment.size : 0,
+    });
+  } catch (error) {
+    return err({
+      reason: "DISCORD_RESOLVE_FAILED",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 /**
  * Delete the Discord message that carries an attachment.
  * Accepts either a bare messageId or a `${messageId}:${index}` key.

@@ -3,7 +3,18 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 import { proxy } from "hono/proxy";
 import { exportDownloadRoute } from "@/features/import-export/api/hono/download.route";
-import { handleImageRequest } from "@/features/media/service/media.service";
+import { imageHostingUploadRoute } from "@/features/image-hosting/api/hono/upload.route";
+import {
+  getLinkAccessSettings,
+  isRefererAllowed,
+  resolveProxiedMedia,
+} from "@/features/media/service/link-access.service";
+import {
+  handleImageRequest,
+  resolveMediaRequestContext,
+} from "@/features/media/service/media.service";
+import { mediaUploadRoute } from "@/features/media/api/hono/upload.route";
+import * as ConfigService from "@/features/config/service/config.service";
 import navigationFaviconRoute from "@/features/navigation/api/hono/favicon.route";
 import postsAdjacentRoute from "@/features/posts/api/hono/posts.adjacent.route";
 import postsDetailRoute from "@/features/posts/api/hono/posts.detail.route";
@@ -84,6 +95,18 @@ app.get("/images/:key{.+}", async (c) => {
 
   if (!key) return c.text("Image key is required", 400);
 
+  // 防盗链：protected 模式下校验 Referer 白名单
+  try {
+    const context = resolveMediaRequestContext(c);
+    const config = await ConfigService.getSystemConfig(context);
+    const settings = getLinkAccessSettings(config);
+    if (settings.mode === "protected" && !isRefererAllowed(c.req.raw, settings)) {
+      return c.text("Forbidden", 403);
+    }
+  } catch {
+    // 配置读取失败时放行，避免阻断正常图片访问
+  }
+
   try {
     return await handleImageRequest(c.env, key, c.req.raw);
   } catch (error) {
@@ -91,6 +114,60 @@ app.get("/images/:key{.+}", async (c) => {
       JSON.stringify({
         message: "r2 image fetch failed",
         key,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    return c.text("Internal server error", 500);
+  }
+});
+
+// 第三方渠道媒体代理（Telegram/Discord 始终经此路由；其余渠道仅在
+// protected 防盗链模式下使用）。回源凭据只存在于 Worker 内部。
+app.get("/media/file/:provider/:key{.+}", async (c) => {
+  const provider = c.req.param("provider");
+  const key = c.req.param("key");
+  if (!provider || !key) return c.text("Not Found", 404);
+
+  const context = resolveMediaRequestContext(c);
+
+  try {
+    const config = await ConfigService.getSystemConfig(context);
+    const settings = getLinkAccessSettings(config);
+    if (!isRefererAllowed(c.req.raw, settings)) {
+      return c.text("Forbidden", 403);
+    }
+  } catch {
+    return c.text("Internal server error", 500);
+  }
+
+  try {
+    const result = await resolveProxiedMedia(context, provider, key);
+    if (result.error) {
+      console.error(
+        JSON.stringify({
+          message: "media proxy resolve failed",
+          provider,
+          error: result.error,
+        }),
+      );
+      return c.text("Upstream unavailable", 502);
+    }
+
+    const upstream = result.data;
+    const headers = new Headers();
+    for (const name of ["content-type", "content-length", "etag"]) {
+      const value = upstream.headers.get(name);
+      if (value) headers.set(name, value);
+    }
+    // 内容按需现取（签名地址会轮换），仅允许浏览器私有缓存
+    headers.set("Cache-Control", "private, max-age=3600");
+
+    return new Response(upstream.body, { status: 200, headers });
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        message: "media proxy failed",
+        provider,
         error: error instanceof Error ? error.message : String(error),
       }),
     );
@@ -137,6 +214,10 @@ app.post(
 
 // Admin export download route
 app.route("/api/admin/export", exportDownloadRoute);
+
+// 上传端点（XHR 直传 + 真实进度），须在 shieldMiddleware 之前注册
+app.route("/api/media", mediaUploadRoute);
+app.route("/api/image-hosting", imageHostingUploadRoute);
 
 // 微信部署验证文件（须在 shieldMiddleware 之前注册，否则 .txt 路径会被拦截）
 app.route("/", wechatVerifyRoute);

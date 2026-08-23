@@ -54,16 +54,36 @@ import {
   formatLimitMb,
 } from "@/features/image-hosting/size-limits";
 import * as ConfigService from "@/features/config/service/config.service";
+import {
+  buildMediaAccessUrl,
+  getLinkAccessSettings,
+} from "@/features/media/service/link-access.service";
+import { enforceImageModeration } from "@/features/image-hosting/moderation/moderation.service";
 import { m } from "@/paraglide/messages";
 import * as PostMediaRepo from "@/features/posts/data/post-media.data";
 import { CACHE_CONTROL } from "@/lib/constants";
 import { err, ok, type Result } from "@/lib/errors";
+import { getDb } from "@/lib/db";
 
 const DEFAULT_DIRECTORY_LIMIT = 50;
 
+/**
+ * 将 Hono 上下文适配为服务层依赖（db + env + executionCtx），
+ * 供 /media/file 等直接挂载的 Hono 路由复用服务层函数。
+ */
+export function resolveMediaRequestContext(
+  c: { env: Env; executionCtx: ExecutionContext },
+): DbContext & { executionCtx: ExecutionContext } {
+  return {
+    db: getDb(c.env),
+    env: c.env,
+    executionCtx: c.executionCtx,
+  };
+}
+
 export async function upload(
   context: DbContext & { executionCtx: ExecutionContext },
-  input: { file: File; folder?: string },
+  input: { file: File; folder?: string; origin?: string },
 ) {
   const { file } = input;
   const folder = normalizeFolderPath(input.folder ?? "");
@@ -73,6 +93,18 @@ export async function upload(
   const height = dimensions?.height;
 
   const uploaded = await Storage.putToR2(context.env, file, folder);
+
+  // 上传审查：判定为成人内容时拒绝并尽力清理远端对象
+  const moderation = await enforceImageModeration(context, {
+    url: uploaded.url,
+    file,
+    origin: input.origin,
+    providerLabel: "r2",
+    key: uploaded.key,
+  });
+  if (moderation.error) {
+    return err({ reason: "MEDIA_RECORD_CREATE_FAILED", message: moderation.error.message });
+  }
 
   try {
     const mediaRecord = await MediaRepo.insertMedia(context.db, {
@@ -152,6 +184,7 @@ export async function uploadToProvider(
   context: DbContext & { executionCtx: ExecutionContext },
   data: UploadToProviderInput,
   file: File,
+  options?: { origin?: string },
 ) {
   const folder = normalizeFolderPath(data.folder ?? "");
   const provider = data.providerId;
@@ -191,10 +224,10 @@ export async function uploadToProvider(
       file,
     );
     if (result.error) return err({ reason: "TELEGRAM_UPLOAD_FAILED" });
-    // The Telegram message id is the durable handle used for remote delete.
+    // 键携带双重句柄：messageId 用于远程删除，fileId 用于代理回源。
     uploadResult = ok({
       ...result.data,
-      key: `telegram/${result.data.messageId}`,
+      key: `telegram/${result.data.messageId}:${result.data.fileId}`,
     });
   } else if (provider === "discord") {
     const config = await ConfigService.getSystemConfig(context);
@@ -254,6 +287,19 @@ export async function uploadToProvider(
   const key = data_.key ?? `${provider}/${folder ? `${folder}/` : ""}${Date.now()}-${crypto.randomUUID()}`;
   const url = data_.url;
 
+  // 上传审查：判定为成人内容时拒绝并尽力清理远端对象
+  const configForModeration = await ConfigService.getSystemConfig(context);
+  const moderation = await enforceImageModeration(context, {
+    url,
+    file,
+    origin: options?.origin,
+    providerLabel: provider,
+    key,
+  });
+  if (moderation.error) {
+    return err({ reason: "CONTENT_MODERATION_BLOCKED", message: moderation.error.message });
+  }
+
   try {
     await MediaRepo.insertMedia(context.db, {
       provider,
@@ -269,7 +315,14 @@ export async function uploadToProvider(
     console.error(JSON.stringify({ message: "media db insert failed after provider upload", provider, key, error: e instanceof Error ? e.message : String(e) }));
   }
 
-  return ok({ url });
+  // 对外返回按访问模式计算后的图链（Telegram/Discord 恒为代理地址）
+  const accessUrl = buildMediaAccessUrl(
+    getLinkAccessSettings(configForModeration),
+    provider,
+    key,
+    url,
+  );
+  return ok({ url: accessUrl });
 }
 
 export async function deleteImage(
@@ -1345,10 +1398,14 @@ async function listExternalDirectoryFromD1(
     cursor: data.continuationToken ? Number(data.continuationToken) : undefined,
   });
 
+  // 对外展示/复制的链接按访问模式计算（Telegram/Discord 恒为代理地址）
+  const config = await ConfigService.getSystemConfig(context);
+  const accessSettings = getLinkAccessSettings(config);
+
   const files: ExternalDirectoryFile[] = items.map((item) => ({
     key: item.key,
     name: item.fileName,
-    url: item.url,
+    url: buildMediaAccessUrl(accessSettings, provider, item.key, item.url),
     mimeType: item.mimeType,
     sizeInBytes: item.sizeInBytes,
   }));
@@ -1358,6 +1415,19 @@ async function listExternalDirectoryFromD1(
     folders: [],
     nextContinuationToken: nextCursor ? String(nextCursor) : null,
   };
+}
+
+/** 按访问模式把渠道直链转换为对外地址（Telegram/Discord 恒代理，其余 protected 时代理） */
+function withAccessUrls(
+  config: Awaited<ReturnType<typeof ConfigService.getSystemConfig>>,
+  provider: string,
+  files: ExternalDirectoryFile[],
+): ExternalDirectoryFile[] {
+  const settings = getLinkAccessSettings(config);
+  return files.map((f) => ({
+    ...f,
+    url: buildMediaAccessUrl(settings, provider, f.key, f.url),
+  }));
 }
 
 async function listExternalDirectoryDirect(
@@ -1397,7 +1467,7 @@ async function listExternalDirectoryDirect(
       }));
 
     return {
-      files,
+      files: withAccessUrls(config, provider, files),
       // Trailing-slash keys keep frontend folder detection (isFolderKey)
       // consistent with the R2 provider.
       folders: result.data.prefixes.map((p) => ({ key: `${p}/`, name: getBasename(p) })),
@@ -1426,13 +1496,17 @@ async function listExternalDirectoryDirect(
     }
 
     return {
-      files: page.data.files.map((f) => ({
-        key: f.key,
-        name: f.name,
-        url: f.url,
-        mimeType: f.mimeType,
-        sizeInBytes: f.sizeInBytes,
-      })),
+      files: withAccessUrls(
+        config,
+        provider,
+        page.data.files.map((f) => ({
+          key: f.key,
+          name: f.name,
+          url: f.url,
+          mimeType: f.mimeType,
+          sizeInBytes: f.sizeInBytes,
+        })),
+      ),
       folders: [],
       nextContinuationToken: page.data.nextBefore,
     };
@@ -1455,7 +1529,7 @@ async function listExternalDirectoryDirect(
     }
 
     return {
-      files: result.data.files,
+      files: withAccessUrls(config, provider, result.data.files),
       folders: result.data.folders,
       nextContinuationToken: null,
     };
@@ -1475,7 +1549,7 @@ async function listExternalDirectoryDirect(
     }
 
     return {
-      files: result.data.files,
+      files: withAccessUrls(config, provider, result.data.files),
       folders: result.data.folders,
       nextContinuationToken: null,
     };
@@ -1555,9 +1629,9 @@ export async function deleteExternalFiles(
 
     const failedKeys: string[] = [];
     for (const key of keys) {
-      // Keys look like `telegram/{messageId}`; legacy synthetic keys
-      // (`telegram/{ts}-{uuid}`) have no remote message to delete.
-      const messageId = key.replace(/^telegram\//, "");
+      // 键形如 `telegram/{messageId}:{fileId}`（旧版为纯 messageId）；
+      // 合成键（`telegram/{ts}-{uuid}`）没有远程消息可删。
+      const { messageId } = TelegramChannelApi.parseTelegramKey(key);
       if (!tgConfig || !/^\d+$/.test(messageId)) continue;
 
       const result = await TelegramChannelApi.deleteTelegramMessage(tgConfig, messageId);
