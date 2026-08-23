@@ -41,7 +41,11 @@ describe("getLinkAccessSettings", () => {
 });
 
 describe("isRefererAllowed", () => {
-  const base = { mode: "protected", refererAllowlist: ["example.com"], allowEmptyReferer: true };
+  const base = {
+    mode: "protected" as "direct" | "protected",
+    refererAllowlist: ["example.com"],
+    allowEmptyReferer: true,
+  };
 
   it("allows same-site references unconditionally", () => {
     expect(isRefererAllowed(request("https://self.com/i.jpg", "https://self.com/post"), base)).toBe(true);
