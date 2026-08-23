@@ -32,9 +32,10 @@ export const uploadCommentImageFn = createServerFn({
 })
   .middleware([
     createRateLimitMiddleware({
-      capacity: 20,
+      capacity: 200,
       interval: "1h",
       key: "image-hosting:comment-upload",
+      identifierPriority: "session",
     }),
     authMiddleware,
   ])

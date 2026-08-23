@@ -144,7 +144,11 @@ export const rateLimitMiddleware = (options: RateLimitOptions) =>
     });
 
     if (!result.allowed) {
-      c.res.headers.set("Retry-After", result.retryAfterMs.toString());
+      // RFC 7231：Retry-After 单位为秒
+      c.res.headers.set(
+        "Retry-After",
+        Math.ceil(result.retryAfterMs / 1000).toString(),
+      );
       return c.json(
         {
           code: "RATE_LIMITED",
