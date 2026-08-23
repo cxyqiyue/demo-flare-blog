@@ -307,6 +307,7 @@ src/
 - [ ] （可选）后台设置 → AI 配置 AI 服务：默认 Workers AI，也可添加 OpenAI / Claude / Gemini 兼容的第三方 Provider（填写 Base URL / 模型 / API Key 后点「测试连接」）
 - [ ] （可选）后台设置 → Cloudflare：粘贴具有 Account Analytics 读取权限的 API Token，配置用量监控与告警阈值（八大服务用量百分比，支持邮件和 Webhook 告警通道），后台首页即可查看用量仪表盘
 - [ ] 若页面样式异常，在后台设置页手动 **清除 CDN 缓存** 或到 Cloudflare Dashboard 清理
+- [ ] （可选）若在 Cloudflare 配置了 **速率限制（Rate Limiting）规则**，请为上传端点添加例外或放宽阈值：`/api/image-hosting/upload*`、`/api/media/upload*`。客户端已内置并发调度与 429 自动重试，但持续命中的限流规则仍会拖慢图片上传
 
 ### 方案二：Cloudflare Dashboard 手动部署
 

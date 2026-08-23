@@ -36,6 +36,8 @@ interface ArticleUploadPolicy {
 
 const POLICY_CACHE_TTL_MS = 60_000;
 let policyCache: { value: ArticleUploadPolicy; fetchedAt: number } | null = null;
+/** 在途的策略请求去重：批量上传首帧并发时只发一次 RPC */
+let inflightPolicyFetch: Promise<ArticleUploadPolicy> | null = null;
 
 function defaultPolicy(): ArticleUploadPolicy {
   return {
@@ -49,26 +51,36 @@ function defaultPolicy(): ArticleUploadPolicy {
 
 /**
  * 获取文章/动态/关于页上传策略（渠道大小上限 + 压缩/转换设置 + 自定义
- * 压缩阈值/目标），带 60s 缓存。
+ * 压缩阈值/目标），带 60s 缓存；并发的首次调用共享同一个请求。
  */
 export async function fetchArticleUploadPolicy(): Promise<ArticleUploadPolicy> {
   if (policyCache && Date.now() - policyCache.fetchedAt < POLICY_CACHE_TTL_MS) {
     return policyCache.value;
   }
-  try {
-    const config = (await getArticleImageHostingConfigFn()) as ArticleImageHostingConfig;
-    const value: ArticleUploadPolicy = {
-      maxImageBytes: config.maxImageBytes ?? null,
-      compressEnabled: config.compressEnabled ?? true,
-      convertToFormat: config.convertToFormat ?? "none",
-      compressThresholdBytes: config.compressThresholdBytes ?? null,
-      compressTargetBytes: config.compressTargetBytes ?? null,
-    };
-    policyCache = { value, fetchedAt: Date.now() };
-    return value;
-  } catch {
-    return defaultPolicy();
+  if (inflightPolicyFetch) {
+    return inflightPolicyFetch;
   }
+
+  inflightPolicyFetch = (async () => {
+    try {
+      const config = (await getArticleImageHostingConfigFn()) as ArticleImageHostingConfig;
+      const value: ArticleUploadPolicy = {
+        maxImageBytes: config.maxImageBytes ?? null,
+        compressEnabled: config.compressEnabled ?? true,
+        convertToFormat: config.convertToFormat ?? "none",
+        compressThresholdBytes: config.compressThresholdBytes ?? null,
+        compressTargetBytes: config.compressTargetBytes ?? null,
+      };
+      policyCache = { value, fetchedAt: Date.now() };
+      return value;
+    } catch {
+      return defaultPolicy();
+    } finally {
+      inflightPolicyFetch = null;
+    }
+  })();
+
+  return inflightPolicyFetch;
 }
 
 export function clearArticleUploadPolicyCache(): void {

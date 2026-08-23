@@ -307,6 +307,7 @@ Run through the following after deployment:
 - [ ] (Optional) Configure AI in admin Settings → AI: Workers AI by default, or add OpenAI / Claude / Gemini-compatible providers (fill in Base URL / model / API key and hit "Test connection")
 - [ ] (Optional) Admin Settings → Cloudflare: paste an API token with Account Analytics read permission, set usage alert thresholds for the 8 services (email and Webhook channels), then monitor the usage dashboard on the admin home page
 - [ ] If styles look broken, manually **Clear CDN Cache** from the admin Settings page or the Cloudflare Dashboard
+- [ ] (Optional) If you configured a Cloudflare **Rate Limiting rule**, add an exception or a higher threshold for the upload endpoints: `/api/image-hosting/upload*` and `/api/media/upload*`. The client already paces uploads concurrently and retries 429s automatically, but a persistently-hit rule still slows image uploads down
 
 ### Option 2: Deploy via Cloudflare Dashboard
 
