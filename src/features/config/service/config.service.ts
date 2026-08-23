@@ -187,6 +187,8 @@ function migrateImageHostingConfig(
       webdav: ih.webdav ?? DEFAULT_CONFIG.imageHosting?.webdav,
       imageProcessing:
         ih.imageProcessing ?? DEFAULT_CONFIG.imageHosting?.imageProcessing,
+      moderation: ih.moderation ?? DEFAULT_CONFIG.imageHosting?.moderation,
+      linkAccess: ih.linkAccess ?? DEFAULT_CONFIG.imageHosting?.linkAccess,
     };
   }
 
@@ -253,6 +255,8 @@ function migrateImageHostingConfig(
           secretAccessKey: s3.secretAccessKey ?? "",
           pathPrefix: s3.pathPrefix ?? "",
           publicUrl: s3.publicUrl ?? "",
+          pathStyle: s3.pathStyle,
+          maxFileSizeMb: s3.maxFileSizeMb,
         }
       : DEFAULT_CONFIG.imageHosting?.s3,
     apiProviders,
@@ -262,6 +266,8 @@ function migrateImageHostingConfig(
     webdav: ih.webdav ?? DEFAULT_CONFIG.imageHosting?.webdav,
     imageProcessing:
       ih.imageProcessing ?? DEFAULT_CONFIG.imageHosting?.imageProcessing,
+    moderation: ih.moderation ?? DEFAULT_CONFIG.imageHosting?.moderation,
+    linkAccess: ih.linkAccess ?? DEFAULT_CONFIG.imageHosting?.linkAccess,
   };
 }
 

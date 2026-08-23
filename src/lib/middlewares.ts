@@ -104,15 +104,22 @@ export const adminMiddleware = createMiddleware({ type: "function" })
 
 /* ======================= Rate Limiting ====================== */
 export const createRateLimitMiddleware = (
-  options: RateLimitOptions & { key?: string },
+  options: RateLimitOptions & {
+    key?: string;
+    /** 限流标识优先级：默认按 IP（兼容旧行为）；"session" 按登录用户计数 */
+    identifierPriority?: "ip" | "session";
+  },
 ) => {
   return createMiddleware({ type: "function" })
     .middleware([sessionMiddleware])
     .server(async ({ next, context }) => {
       const session = context.session;
 
+      const ip = getRequestHeader("cf-connecting-ip");
       const identifier =
-        getRequestHeader("cf-connecting-ip") || session?.user.id || "unknown";
+        options.identifierPriority === "session"
+          ? session?.user.id || ip || "unknown"
+          : ip || session?.user.id || "unknown";
       const scope = options.key || "default";
       const uniqueIdentifier = `${identifier}:${scope}`;
 

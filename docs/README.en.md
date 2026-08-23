@@ -483,7 +483,7 @@ After filling in the credentials, click "Test connection" (uploads a 1×1 test i
 
 **Companion capabilities**:
 
-- **Comment uploads**: once the channel's Comments toggle is on, logged-in users can upload images directly in comments (rate-limited to 20/hour); the ImgBB channel opens its official upload popup
+- **Comment uploads**: once the channel's Comments toggle is on, logged-in users can upload images directly in comments (rate-limited per user to 200/hour); the ImgBB channel opens its official upload popup
 - **Compression & conversion**: editor images above the compression threshold (empty = trigger at the channel limit) are iteratively compressed in the browser toward the target size (empty = converge toward the channel limit), with optional WebP/JPEG conversion; GIF/SVG untouched
 - **Content moderation (NSFW)**: pick one of Workers AI / ModerateContent / NSFW.js; confirmed violations are auto-rejected and remote files deleted best-effort
 - **Hotlink protection**: "Protected" link mode validates external access against a Referer allowlist (supports `*.example.com` wildcard subdomains, empty-Referer toggle); Telegram/Discord images are always proxied through the Worker
