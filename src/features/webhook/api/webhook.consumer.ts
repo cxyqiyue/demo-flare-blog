@@ -78,6 +78,9 @@ function createPlainTextMessage(event: NotificationEvent, locale: Locale) {
             { siteName: event.data.siteName },
             { locale },
           );
+    case "cloudflare.usage_alert":
+      // 内容由告警服务预渲染，直接透传
+      return event.data.message;
     default: {
       event satisfies never;
       throw new Error("Unknown notification event");

@@ -3,7 +3,9 @@ import {
   CF_FREE_TIER_LIMITS,
   CF_SERVICE_ORDER,
   CF_USAGE_CACHE_KEYS,
+  thresholdForService,
   CfUsageDataSchema,
+  type CfService,
   type CfUsageData,
   type CfServiceUsage,
 } from "@/features/cloudflare-usage/cloudflare-usage.schema";
@@ -23,6 +25,52 @@ function formatNumber(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
+}
+
+// ── 用量结果映射 ─────────────────────────────────────────────
+
+function toServiceUsage(result: {
+  service: CfService;
+  used: number;
+  error?: string;
+}): CfServiceUsage {
+  const limitInfo = CF_FREE_TIER_LIMITS[result.service];
+  const percentage =
+    limitInfo.limit > 0
+      ? Math.min((result.used / limitInfo.limit) * 100, 100)
+      : 0;
+
+  return {
+    service: result.service,
+    displayName: result.service,
+    used: result.used,
+    limit: limitInfo.limit,
+    unit: limitInfo.unit,
+    percentage,
+    billingMetric: limitInfo.metric,
+    error: result.error,
+  };
+}
+
+/** 把 fetchAllUsage 原始结果映射为带免费额度百分比的用量列表（按展示顺序排序） */
+export function mapUsageToServices(
+  results: Array<{
+    service: CfService;
+    used: number;
+    error?: string;
+  }>,
+): CfServiceUsage[] {
+  const services = results.map(toServiceUsage);
+  services.sort(
+    (a, b) =>
+      CF_SERVICE_ORDER.indexOf(
+        a.service as (typeof CF_SERVICE_ORDER)[number],
+      ) -
+      CF_SERVICE_ORDER.indexOf(
+        b.service as (typeof CF_SERVICE_ORDER)[number],
+      ),
+  );
+  return services;
 }
 
 // ── 获取用量数据 ─────────────────────────────────────────────
@@ -52,35 +100,8 @@ export async function getCloudflareUsage(
       "today",
     );
 
-    const services: CfServiceUsage[] = results.map(({ service, used }) => {
-      const limitInfo = CF_FREE_TIER_LIMITS[service];
-      const percentage =
-        limitInfo.limit > 0 ? Math.min((used / limitInfo.limit) * 100, 100) : 0;
-
-      return {
-        service,
-        displayName: service,
-        used,
-        limit: limitInfo.limit,
-        unit: limitInfo.unit,
-        percentage,
-        billingMetric: limitInfo.metric,
-      };
-    });
-
-    // 按照 CF_SERVICE_ORDER 排序
-    services.sort(
-      (a, b) =>
-        CF_SERVICE_ORDER.indexOf(
-          a.service as (typeof CF_SERVICE_ORDER)[number],
-        ) -
-        CF_SERVICE_ORDER.indexOf(
-          b.service as (typeof CF_SERVICE_ORDER)[number],
-        ),
-    );
-
     return {
-      services,
+      services: mapUsageToServices(results),
       fetchedAt: Date.now(),
       period: "today",
     };
@@ -129,41 +150,7 @@ export async function getCloudflareAlertStatus(
   }> = [];
 
   for (const svc of usage.services) {
-    let threshold: number | undefined;
-
-    switch (svc.service) {
-      case "workers":
-        threshold = thresholds.workersRequestsPct;
-        break;
-      case "d1":
-        threshold = thresholds.d1RowsReadPct;
-        break;
-      case "r2":
-        threshold = thresholds.r2StoragePct;
-        break;
-      case "kv":
-        threshold = thresholds.kvReadPct;
-        break;
-      case "kvWrites":
-        threshold = thresholds.kvWritePct;
-        break;
-      case "kvStorage":
-        threshold = thresholds.kvStoragePct;
-        break;
-      case "queues":
-        threshold = thresholds.queuesMessagesPct;
-        break;
-      case "workflows":
-        threshold = thresholds.workflowsInvocationsPct;
-        break;
-      case "workersAi":
-        threshold = thresholds.workersAiPct;
-        break;
-      case "durableObjects":
-        threshold = thresholds.durableObjectsRequestsPct;
-        break;
-    }
-
+    const threshold = thresholdForService(thresholds, svc.service);
     if (threshold !== undefined && svc.percentage >= threshold) {
       alerts.push({
         service: svc.service,

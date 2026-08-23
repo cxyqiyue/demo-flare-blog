@@ -131,5 +131,11 @@ export async function publishNotificationEvent(
     return;
   }
 
+  // Cloudflare 用量告警不经过发布器扇出：由用量告警服务按
+  // cloudflareAnalytics.alert 配置直接发送邮件/webhook。
+  if (parsed.type === "cloudflare.usage_alert") {
+    return;
+  }
+
   parsed satisfies never;
 }

@@ -28,4 +28,10 @@ export default {
   async queue(batch, env, ctx) {
     await handleQueueBatch(batch, env, ctx);
   },
+  async scheduled(_controller, env, ctx) {
+    const { checkAndDispatchUsageAlerts } = await import(
+      "@/features/cloudflare-usage/service/cloudflare-usage-alerts.service"
+    );
+    await checkAndDispatchUsageAlerts(env, ctx);
+  },
 } satisfies ExportedHandler<Env>;

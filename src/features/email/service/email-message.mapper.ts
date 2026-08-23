@@ -160,6 +160,13 @@ export function createEmailMessageFromNotification(
           }),
         ),
       };
+    case "cloudflare.usage_alert":
+      // 内容由告警服务预渲染，直接透传
+      return {
+        to: "",
+        subject: event.data.subject,
+        html: event.data.html,
+      };
     default: {
       event satisfies never;
       throw new Error("Unknown notification event");

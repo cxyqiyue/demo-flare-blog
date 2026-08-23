@@ -6,6 +6,19 @@ import type { CfService } from "@/features/cloudflare-usage/cloudflare-usage.sch
 // API: https://api.cloudflare.com/client/v4/graphql
 // Permission: Account > Account Analytics > Read
 // Rate limit: 320 queries / 5 min (free)
+//
+// 数据集名称与字段以官方 GraphQL Analytics API 为准（2026-08 核对）：
+// - D1            → d1AnalyticsAdaptiveGroups.sum.rowsRead
+// - R2 存量       → r2StorageAdaptiveGroups.max.payloadSize（datetime 维度，取最新）
+// - KV 读/写      → kvOperationsAdaptiveGroups.sum.requests + actionType 过滤
+// - KV 存量       → kvStorageAdaptiveGroups.max.byteCount（取最新日期）
+// - Queues        → queueMessageOperationsAdaptiveGroups.sum.billableOperations
+// - Workflows     → workflowsAdaptiveGroups.count（eventType=WORKFLOW_START）
+// - Workers AI    → aiInferenceAdaptiveGroups.sum.totalNeurons
+// - DO            → durableObjectsInvocationsAdaptiveGroups.sum.requests
+// ⚠️ 此前使用的不存在数据集（d1OperationsAdaptiveGroups、
+//   queuesInvocationsAdaptiveGroups 等）会导致查询报错且被吞掉，
+//   各服务用量恒为 0——修改数据集名时务必逐个在真实账号上验证。
 // ─────────────────────────────────────────────────────────────
 
 const GRAPHQL_ENDPOINT = "https://api.cloudflare.com/client/v4/graphql";
@@ -37,31 +50,31 @@ const D1_ROWS_READ_QUERY = `
 query D1RowsRead($accountTag: String!, $start: Date!, $end: Date!) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
-      d1OperationsAdaptiveGroups(
+      d1AnalyticsAdaptiveGroups(
         filter: { date_geq: $start, date_leq: $end }
         limit: 1000
       ) {
         sum {
-          readQueries
+          rowsRead
         }
       }
     }
   }
 }`;
 
-// ── R2 Storage（存量指标：取最新一天，不做累计） ─────────────
+// ── R2 Storage（存量指标：取最新时点，不做累计） ─────────────
 const R2_STORAGE_QUERY = `
-query R2Storage($accountTag: String!, $start: Date!, $end: Date!) {
+query R2Storage($accountTag: String!, $start: DateTime!, $end: DateTime!) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
       r2StorageAdaptiveGroups(
-        filter: { date_geq: $start, date_leq: $end }
+        filter: { datetime_geq: $start, datetime_leq: $end }
         limit: 1000
       ) {
         dimensions {
-          date
+          datetime
         }
-        sum {
+        max {
           payloadSize
         }
       }
@@ -75,11 +88,11 @@ query KvReads($accountTag: String!, $start: Date!, $end: Date!) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
       kvOperationsAdaptiveGroups(
-        filter: { date_geq: $start, date_leq: $end }
+        filter: { date_geq: $start, date_leq: $end, actionType: "read" }
         limit: 1000
       ) {
         sum {
-          reads
+          requests
         }
       }
     }
@@ -92,11 +105,11 @@ query KvWrites($accountTag: String!, $start: Date!, $end: Date!) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
       kvOperationsAdaptiveGroups(
-        filter: { date_geq: $start, date_leq: $end }
+        filter: { date_geq: $start, date_leq: $end, actionType: "write" }
         limit: 1000
       ) {
         sum {
-          writes
+          requests
         }
       }
     }
@@ -115,8 +128,8 @@ query KvStorage($accountTag: String!, $start: Date!, $end: Date!) {
         dimensions {
           date
         }
-        sum {
-          storage
+        max {
+          byteCount
         }
       }
     }
@@ -125,15 +138,15 @@ query KvStorage($accountTag: String!, $start: Date!, $end: Date!) {
 
 // ── Queues Messages ──────────────────────────────────────────
 const QUEUES_MESSAGES_QUERY = `
-query QueuesMessages($accountTag: String!, $start: Date!, $end: Date!) {
+query QueuesMessages($accountTag: String!, $start: DateTime!, $end: DateTime!) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
-      queuesInvocationsAdaptiveGroups(
-        filter: { date_geq: $start, date_leq: $end }
+      queueMessageOperationsAdaptiveGroups(
+        filter: { datetime_geq: $start, datetime_leq: $end }
         limit: 1000
       ) {
         sum {
-          messageCount
+          billableOperations
         }
       }
     }
@@ -142,16 +155,18 @@ query QueuesMessages($accountTag: String!, $start: Date!, $end: Date!) {
 
 // ── Workflows Invocations ────────────────────────────────────
 const WORKFLOWS_INVOCATIONS_QUERY = `
-query WorkflowsInvocations($accountTag: String!, $start: Date!, $end: Date!) {
+query WorkflowsInvocations($accountTag: String!, $start: DateTime!, $end: DateTime!) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
-      workflowsInvocationsAdaptiveGroups(
-        filter: { date_geq: $start, date_leq: $end }
+      workflowsAdaptiveGroups(
+        filter: {
+          datetime_geq: $start
+          datetime_leq: $end
+          eventType: "WORKFLOW_START"
+        }
         limit: 1000
       ) {
-        sum {
-          invocations
-        }
+        count
       }
     }
   }
@@ -159,15 +174,15 @@ query WorkflowsInvocations($accountTag: String!, $start: Date!, $end: Date!) {
 
 // ── Workers AI ───────────────────────────────────────────────
 const WORKERS_AI_QUERY = `
-query WorkersAi($accountTag: String!, $start: Date!, $end: Date!) {
+query WorkersAi($accountTag: String!, $start: DateTime!, $end: DateTime!) {
   viewer {
     accounts(filter: { accountTag: $accountTag }) {
-      workersAiOperationsAdaptiveGroups(
-        filter: { date_geq: $start, date_leq: $end }
+      aiInferenceAdaptiveGroups(
+        filter: { datetime_geq: $start, datetime_leq: $end }
         limit: 1000
       ) {
         sum {
-          neuronCount
+          totalNeurons
         }
       }
     }
@@ -202,36 +217,38 @@ function pickNum(obj: unknown, path: string): number {
 }
 
 /**
- * 累计型指标：把窗口内所有日期行的 sum.<field> 相加。
- * （此前只取第一行，导致数值几乎不随时间变化。）
+ * 累计型指标：把窗口内所有行的 <fieldPath> 相加。
+ * fieldPath 是行内完整路径，如 "sum.requests" 或 "count"。
  */
 export function extractSumAllRows(
   data: Record<string, unknown>,
   rowsPath: string,
-  field: string,
+  fieldPath: string,
 ): number {
   const rows = pickValue(data, rowsPath);
   if (!Array.isArray(rows)) return 0;
-  return rows.reduce((total, row) => total + pickNum(row, `sum.${field}`), 0);
+  return rows.reduce((total, row) => total + pickNum(row, fieldPath), 0);
 }
 
 /**
- * 存量型指标（存储占用等 gauge）：取日期最新一行的值，而非累计。
+ * 存量型指标（存储占用等 gauge）：按维度值取最新一行的值，而非累计。
+ * dimensionPath 如 "dimensions.date" / "dimensions.datetime"（ISO 值可字典序比较）。
  */
 export function extractLatestRow(
   data: Record<string, unknown>,
   rowsPath: string,
-  field: string,
+  fieldPath: string,
+  dimensionPath = "dimensions.date",
 ): number {
   const rows = pickValue(data, rowsPath);
   if (!Array.isArray(rows) || rows.length === 0) return 0;
-  let latestDate = "";
+  let latestDim = "";
   let value = 0;
   for (const row of rows) {
-    const date = String(pickValue(row, "dimensions.date") ?? "");
-    if (date >= latestDate) {
-      latestDate = date;
-      value = pickNum(row, `sum.${field}`);
+    const dim = String(pickValue(row, dimensionPath) ?? "");
+    if (dim >= latestDim) {
+      latestDim = dim;
+      value = pickNum(row, fieldPath);
     }
   }
   return value;
@@ -249,19 +266,25 @@ function pickValue(obj: unknown, path: string): unknown {
 
 interface ServiceQueryConfig {
   query: string;
+  /** true 表示 $start/$end 是 DateTime（含时间），false 表示 Date */
+  datetimeVariables: boolean;
   extract: (data: Record<string, unknown>) => number;
 }
 
-/** 累计型（按日计数求和）的通用 extractor */
-function cumulativeExtractor(rowsPath: string, field: string) {
+/** 累计型（窗口内各行求和）的通用 extractor */
+function cumulativeExtractor(rowsPath: string, fieldPath: string) {
   return (data: Record<string, unknown>) =>
-    extractSumAllRows(data, rowsPath, field);
+    extractSumAllRows(data, rowsPath, fieldPath);
 }
 
-/** 存量型（取最新日期值）的通用 extractor */
-function gaugeExtractor(rowsPath: string, field: string) {
+/** 存量型（取最新维度值）的通用 extractor */
+function gaugeExtractor(
+  rowsPath: string,
+  fieldPath: string,
+  dimensionPath = "dimensions.date",
+) {
   return (data: Record<string, unknown>) =>
-    extractLatestRow(data, rowsPath, field);
+    extractLatestRow(data, rowsPath, fieldPath, dimensionPath);
 }
 
 const ACCOUNTS = "viewer.accounts.0";
@@ -269,60 +292,77 @@ const ACCOUNTS = "viewer.accounts.0";
 const SERVICE_QUERIES: Record<CfService, ServiceQueryConfig> = {
   workers: {
     query: WORKERS_REQUESTS_QUERY,
+    datetimeVariables: false,
     extract: cumulativeExtractor(
       `${ACCOUNTS}.workersInvocationsAdaptive`,
-      "requests",
+      "sum.requests",
     ),
   },
   d1: {
     query: D1_ROWS_READ_QUERY,
+    datetimeVariables: false,
     extract: cumulativeExtractor(
-      `${ACCOUNTS}.d1OperationsAdaptiveGroups`,
-      "readQueries",
+      `${ACCOUNTS}.d1AnalyticsAdaptiveGroups`,
+      "sum.rowsRead",
     ),
   },
   r2: {
     query: R2_STORAGE_QUERY,
-    extract: gaugeExtractor(`${ACCOUNTS}.r2StorageAdaptiveGroups`, "payloadSize"),
+    datetimeVariables: true,
+    extract: gaugeExtractor(
+      `${ACCOUNTS}.r2StorageAdaptiveGroups`,
+      "max.payloadSize",
+      "dimensions.datetime",
+    ),
   },
   kv: {
     query: KV_READS_QUERY,
-    extract: cumulativeExtractor(`${ACCOUNTS}.kvOperationsAdaptiveGroups`, "reads"),
+    datetimeVariables: false,
+    extract: cumulativeExtractor(
+      `${ACCOUNTS}.kvOperationsAdaptiveGroups`,
+      "sum.requests",
+    ),
   },
   kvWrites: {
     query: KV_WRITES_QUERY,
-    extract: cumulativeExtractor(`${ACCOUNTS}.kvOperationsAdaptiveGroups`, "writes"),
+    datetimeVariables: false,
+    extract: cumulativeExtractor(
+      `${ACCOUNTS}.kvOperationsAdaptiveGroups`,
+      "sum.requests",
+    ),
   },
   kvStorage: {
     query: KV_STORAGE_QUERY,
-    extract: gaugeExtractor(`${ACCOUNTS}.kvStorageAdaptiveGroups`, "storage"),
+    datetimeVariables: false,
+    extract: gaugeExtractor(`${ACCOUNTS}.kvStorageAdaptiveGroups`, "max.byteCount"),
   },
   queues: {
     query: QUEUES_MESSAGES_QUERY,
+    datetimeVariables: true,
     extract: cumulativeExtractor(
-      `${ACCOUNTS}.queuesInvocationsAdaptiveGroups`,
-      "messageCount",
+      `${ACCOUNTS}.queueMessageOperationsAdaptiveGroups`,
+      "sum.billableOperations",
     ),
   },
   workflows: {
     query: WORKFLOWS_INVOCATIONS_QUERY,
-    extract: cumulativeExtractor(
-      `${ACCOUNTS}.workflowsInvocationsAdaptiveGroups`,
-      "invocations",
-    ),
+    datetimeVariables: true,
+    extract: cumulativeExtractor(`${ACCOUNTS}.workflowsAdaptiveGroups`, "count"),
   },
   workersAi: {
     query: WORKERS_AI_QUERY,
+    datetimeVariables: true,
     extract: cumulativeExtractor(
-      `${ACCOUNTS}.workersAiOperationsAdaptiveGroups`,
-      "neuronCount",
+      `${ACCOUNTS}.aiInferenceAdaptiveGroups`,
+      "sum.totalNeurons",
     ),
   },
   durableObjects: {
     query: DO_REQUESTS_QUERY,
+    datetimeVariables: false,
     extract: cumulativeExtractor(
       `${ACCOUNTS}.durableObjectsInvocationsAdaptiveGroups`,
-      "requests",
+      "sum.requests",
     ),
   },
 };
@@ -342,13 +382,23 @@ function getDateRange(period: "today" | "7d" | "30d") {
     start = startDate.toISOString().split("T")[0];
   }
 
-  return { start, end };
+  return {
+    start,
+    end,
+    // 部分数据集只接受 datetime 过滤参数
+    startDatetime: `${start}T00:00:00Z`,
+    endDatetime: `${end}T23:59:59Z`,
+  };
 }
 
 // ── GraphQL 查询执行器 ──────────────────────────────────────
 async function executeQuery<T>(
   query: string,
-  variables: { accountTag: string; start: string; end: string },
+  variables: {
+    accountTag: string;
+    start: string;
+    end: string;
+  },
   apiToken: string,
 ): Promise<T> {
   const response = await fetch(GRAPHQL_ENDPOINT, {
@@ -379,12 +429,19 @@ async function executeQuery<T>(
 }
 
 // ── 公共 API ─────────────────────────────────────────────────
+export interface CfUsageResult {
+  service: CfService;
+  used: number;
+  /** 查询失败原因；存在时 used 无意义，UI 应显示不可用而非 0 */
+  error?: string;
+}
+
 export async function fetchAllUsage(
   env: Env,
   accountId: string,
   apiToken: string,
   period: "today" | "7d" | "30d" = "30d",
-): Promise<Array<{ service: CfService; used: number }>> {
+): Promise<Array<CfUsageResult>> {
   if (isNotInProduction(env)) {
     console.log(
       JSON.stringify({
@@ -395,8 +452,7 @@ export async function fetchAllUsage(
     return [];
   }
 
-  const { start, end } = getDateRange(period);
-  const variables = { accountTag: accountId, start, end };
+  const range = getDateRange(period);
 
   const results = await Promise.all(
     (Object.keys(SERVICE_QUERIES) as CfService[]).map(async (service) => {
@@ -404,20 +460,26 @@ export async function fetchAllUsage(
       try {
         const data = await executeQuery<Record<string, unknown>>(
           config.query,
-          variables,
+          {
+            accountTag: accountId,
+            start: config.datetimeVariables ? range.startDatetime : range.start,
+            end: config.datetimeVariables ? range.endDatetime : range.end,
+          },
           apiToken,
         );
         const used = config.extract(data);
-        return { service, used };
+        return { service, used } satisfies CfUsageResult;
       } catch (error) {
+        const message =
+          error instanceof Error ? error.message : String(error);
         console.error(
           JSON.stringify({
             message: "failed to fetch cloudflare usage",
             service,
-            error: String(error),
+            error: message,
           }),
         );
-        return { service, used: 0 };
+        return { service, used: 0, error: message } satisfies CfUsageResult;
       }
     }),
   );
@@ -430,10 +492,12 @@ export async function testCloudflareConnection(
   apiToken: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { start, end } = getDateRange("today");
-    const variables = { accountTag: accountId, start, end };
-
-    await executeQuery(WORKERS_REQUESTS_QUERY, variables, apiToken);
+    const range = getDateRange("today");
+    await executeQuery(
+      WORKERS_REQUESTS_QUERY,
+      { accountTag: accountId, start: range.start, end: range.end },
+      apiToken,
+    );
     return { success: true };
   } catch (error) {
     return {

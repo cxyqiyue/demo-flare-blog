@@ -19,6 +19,7 @@ import * as HuggingFaceChannelApi from "@/features/image-hosting/channels/huggin
 import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
 import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
 import type { S3Config } from "@/features/image-hosting/s3/s3-upload";
+import { fetchS3ImageStream } from "@/features/image-hosting/s3/s3-upload";
 import { err, ok, type Result } from "@/lib/errors";
 
 export interface LinkAccessSettings {
@@ -247,26 +248,18 @@ function resolveS3ConfigForProxy(
   };
 }
 
-function buildS3PublicUrl(cfg: S3Config, key: string): string {
-  const base = (
-    cfg.publicUrl?.trim() ||
-    `${cfg.endpoint.replace(/\/+$/, "")}/${cfg.bucket}`
-  ).replace(/\/+$/, "");
-  const encoded = key
-    .split("/")
-    .filter(Boolean)
-    .map(encodeURIComponent)
-    .join("/");
-  return `${base}/${encoded}`;
-}
-
 async function resolveS3Upstream(
   config: SystemConfig | undefined,
   key: string,
 ): Promise<Result<Response, ProxyResolveError>> {
   const cfg = resolveS3ConfigForProxy(config);
   if (!cfg) return err(proxyError("PROVIDER_NOT_CONFIGURED", "S3 not configured"));
-  return fetchUpstream(buildS3PublicUrl(cfg, key));
+  // 必须走 SigV4 签名回源：公开读 URL 对私有桶/虚拟主机型端点不可用（502 根因）
+  const result = await fetchS3ImageStream(cfg, key);
+  if (result.error) {
+    return err(proxyError(result.error.reason, result.error.message));
+  }
+  return ok(result.data);
 }
 
 async function resolveHuggingFaceUpstream(

@@ -67,8 +67,29 @@ function ServiceCard({
     unit: string;
     percentage: number;
     billingMetric?: string;
+    error?: string;
   };
 }) {
+  if (service.error) {
+    return (
+      <div
+        className="space-y-3 p-4 border border-red-500/30 bg-red-500/5"
+        title={service.error}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+            {service.displayName}
+          </span>
+          <AlertTriangle size={12} className="text-red-500" />
+        </div>
+        <div className="text-sm font-serif text-red-500">数据获取失败</div>
+        <p className="text-[10px] text-muted-foreground line-clamp-2 break-all">
+          {service.error}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3 p-4 border border-border/20 bg-muted/10">
       <div className="flex items-center justify-between">
