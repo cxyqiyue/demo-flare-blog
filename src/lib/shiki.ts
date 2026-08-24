@@ -1,8 +1,4 @@
 import type { HighlighterCore, LanguageRegistration } from "shiki/core";
-import { createHighlighterCore } from "shiki/core";
-import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
-import viteDark from "shiki/themes/vitesse-dark.mjs";
-import viteLight from "shiki/themes/vitesse-light.mjs";
 
 // Shiki language modules export `default` as an array of LanguageRegistration
 type LanguageModule = { default: Array<LanguageRegistration> };
@@ -47,18 +43,27 @@ let highlighterPromise: Promise<HighlighterCore> | null = null;
 
 export async function getHighlighter() {
   if (!highlighterPromise) {
-    // Customizing the background color of vitesse-dark to remove the greenish tint
-    // using Zinc-900 (#18181b) to match the dark mode UI
-    const customViteDark = {
-      ...viteDark,
-      bg: "#18181b",
-      name: "vitesse-dark", // Ensure name matches
-    };
+    // 核心引擎与主题体积可观，按需动态加载，
+    // 避免静态引用方（编辑器插件、关于页高亮）把 Shiki 拖进首屏包
+    highlighterPromise = Promise.all([
+      import("shiki/core"),
+      import("shiki/engine/javascript"),
+      import("shiki/themes/vitesse-dark.mjs"),
+      import("shiki/themes/vitesse-light.mjs"),
+    ]).then(([{ createHighlighterCore }, { createJavaScriptRegexEngine }, viteDark, viteLight]) => {
+      // Customizing the background color of vitesse-dark to remove the greenish tint
+      // using Zinc-900 (#18181b) to match the dark mode UI
+      const customViteDark = {
+        ...viteDark.default,
+        bg: "#18181b",
+        name: "vitesse-dark", // Ensure name matches
+      };
 
-    highlighterPromise = createHighlighterCore({
-      themes: [customViteDark, viteLight],
-      langs: [],
-      engine: createJavaScriptRegexEngine(),
+      return createHighlighterCore({
+        themes: [customViteDark, viteLight.default],
+        langs: [],
+        engine: createJavaScriptRegexEngine(),
+      });
     });
   }
   return highlighterPromise;

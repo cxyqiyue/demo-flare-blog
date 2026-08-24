@@ -1,4 +1,5 @@
 import * as CacheService from "@/features/cache/cache.service";
+import * as EdgeCacheService from "@/features/cache/edge-cache.service";
 import { err, ok } from "@/lib/errors";
 import { purgeCDNCache } from "@/lib/invalidate";
 import * as NavigationRepo from "./data/navigation.data";
@@ -46,7 +47,8 @@ export async function getNavigationPublicData(
     };
   };
 
-  return await CacheService.getVersioned(
+  // 公开导航数据改存 Cache API（零 KV 配额），版本指针仍走 KV 保留失效语义
+  return await EdgeCacheService.getVersionedJson(
     context,
     "navigation:data",
     NAVIGATION_CACHE_KEYS.publicData,

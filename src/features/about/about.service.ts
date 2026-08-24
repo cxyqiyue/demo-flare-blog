@@ -7,6 +7,7 @@ import { jsonContentToMarkdown } from "@/features/import-export/utils/markdown-s
 import * as PostRepo from "@/features/posts/data/posts.data";
 import { deletePost as deleteLegacyPost } from "@/features/posts/services/posts.service";
 import { ok } from "@/lib/errors";
+import { purgeCDNCache } from "@/lib/invalidate";
 
 /** 旧实现将关于页内容保存为 slug=about 的文章，这里用于一次性迁移并清理 */
 const LEGACY_ABOUT_SLUG = "about";
@@ -48,6 +49,23 @@ export async function getAboutArticle(
   return await AboutRepo.findAboutArticle(context.db);
 }
 
+/** 关于页保存后清理公开页面 CDN 缓存，让访客尽快看到新内容 */
+async function invalidateAboutCache(
+  context: DbContext & { executionCtx: ExecutionContext; env: Env },
+) {
+  try {
+    await purgeCDNCache(context.env, { urls: ["/", "/about"] });
+  } catch (error) {
+    // CDN 清理失败不影响保存结果（未配置 Purge 凭证时为静默跳过）
+    console.error(
+      JSON.stringify({
+        message: "about cdn purge failed",
+        error: String(error),
+      }),
+    );
+  }
+}
+
 export async function saveAboutArticle(
   context: DbContext & { executionCtx: ExecutionContext; env: Env },
   data: SaveAboutArticleInput,
@@ -65,6 +83,7 @@ export async function saveAboutArticle(
         markdown,
       },
     );
+    await invalidateAboutCache(context);
     return ok(article);
   }
 
@@ -79,6 +98,7 @@ export async function saveAboutArticle(
       title,
       markdown,
     });
+    await invalidateAboutCache(context);
     return ok(article);
   }
 
@@ -86,5 +106,6 @@ export async function saveAboutArticle(
     title,
     markdown,
   });
+  await invalidateAboutCache(context);
   return ok(article);
 }

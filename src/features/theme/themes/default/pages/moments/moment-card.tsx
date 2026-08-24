@@ -1,16 +1,22 @@
 import { ClientOnly } from "@tanstack/react-router";
 import type { JSONContent } from "@tiptap/react";
 import { Heart, Loader2, MessageCircle, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
-import { MomentEditor } from "@/features/moments/components/moment-editor";
 import { collectImageUrls } from "@/features/moments/components/moment-editor-config";
 import type { MomentWithStats } from "@/features/moments/moments.schema";
 import { cn, formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { renderCommentReact } from "../../components/comments/view/comment-render";
 import { CommentSection } from "../../components/comments/view/comment-section";
+
+// TipTap 编辑器体积大，且仅在管理员编辑动态时挂载，按需加载
+const MomentEditor = lazy(() =>
+  import("@/features/moments/components/moment-editor").then((mod) => ({
+    default: mod.MomentEditor,
+  })),
+);
 
 interface MomentCardProps {
   moment: MomentWithStats;
@@ -143,12 +149,14 @@ export function MomentCard({
       {/* Content / Editor */}
       {editing ? (
         <div className="px-6 pt-4">
-          <MomentEditor
-            onSubmit={handleEditSubmit}
-            isSubmitting={isSubmitting}
-            initialContent={moment.content}
-            onCancel={() => setEditing(false)}
-          />
+          <Suspense fallback={null}>
+            <MomentEditor
+              onSubmit={handleEditSubmit}
+              isSubmitting={isSubmitting}
+              initialContent={moment.content}
+              onCancel={() => setEditing(false)}
+            />
+          </Suspense>
         </div>
       ) : (
         <div className="px-6 pt-4">

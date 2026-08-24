@@ -1,6 +1,7 @@
 import { z } from "zod";
 import * as AiService from "@/features/ai/ai.service";
 import * as CacheService from "@/features/cache/cache.service";
+import * as EdgeCacheService from "@/features/cache/edge-cache.service";
 import { syncPostMedia } from "@/features/posts/data/post-media.data";
 import * as PostRevisionRepo from "@/features/posts/data/post-revisions.data";
 import * as PostRepo from "@/features/posts/data/posts.data";
@@ -52,6 +53,27 @@ function stripPublicContentJson<T extends { publicContentJson?: unknown }>(
   return rest;
 }
 
+/**
+ * 发布/下架等状态切换时的同步快速失效：
+ * 在返回响应前轮换公开缓存 generation，让访客无需等待
+ * 异步 Workflow（AI 摘要等重活）完成即可看到最新状态。
+ * 仅包含轻量的版本指针写入（KV 写次数与管理员操作数同阶）。
+ */
+async function fastInvalidatePublicCaches(
+  env: Env,
+  slugs: Array<string>,
+): Promise<void> {
+  const tasks: Array<Promise<unknown>> = [
+    CacheService.bumpVersion({ env }, "posts:list"),
+    CacheService.bumpVersion({ env }, "posts:detail"),
+    CacheService.bumpVersion({ env }, "tags:list"),
+  ];
+  for (const slug of slugs) {
+    tasks.push(purgePostCDNCache(env, slug));
+  }
+  await Promise.all(tasks);
+}
+
 export async function getPostsCursor(
   context: DbContext & { executionCtx: ExecutionContext },
   data: GetPostsCursorInput,
@@ -66,7 +88,9 @@ export async function getPostsCursor(
       excludePinned: data.excludePinned,
     });
 
-  return await CacheService.getVersioned(
+  // 列表键随分页/游标/标签组合无上限增长，且每次发布后全部重写 ——
+  // 数据本体改存 Cache API（零 KV 配额），KV 只保留版本指针（读多写少）
+  return await EdgeCacheService.getVersionedJson(
     context,
     "posts:list",
     (version) =>
@@ -115,7 +139,7 @@ export async function findPostBySlug(
     };
   };
 
-  return await CacheService.getVersioned(
+  return await EdgeCacheService.getVersionedJson(
     context,
     "posts:detail",
     (version) => POSTS_CACHE_KEYS.detail(version, data.slug),
@@ -137,9 +161,10 @@ export async function getRelatedPosts(
   };
 
   // Cache IDs for 7 days (long-lived cache)
-  // This key is NOT dependent on version, so it persists across publishes
+  // This key is NOT dependent on version, so it persists across publishes.
+  // 相关文章 ID 组合键数量大，改存 Cache API 避免消耗 KV 写入配额
   const cacheKey = POSTS_CACHE_KEYS.related(data.slug, data.limit);
-  const cachedIds = await CacheService.get(
+  const cachedIds = await EdgeCacheService.getJson(
     context,
     cacheKey,
     z.array(z.number()),
@@ -171,7 +196,7 @@ export async function getPublicPostsPage(
   const offset = data.offset ?? 0;
   const limit = Math.min(data.limit ?? 10, 50);
 
-  const result = await CacheService.getVersioned(
+  const result = await EdgeCacheService.getVersionedJson(
     context,
     "posts:list",
     (version) => POSTS_CACHE_KEYS.publicPage(version, offset, limit),
@@ -203,7 +228,7 @@ export async function findAdjacentPosts(
   context: DbContext & { executionCtx: ExecutionContext },
   data: FindAdjacentPostsInput,
 ): Promise<AdjacentPostsResponse> {
-  return await CacheService.getVersioned(
+  return await EdgeCacheService.getVersionedJson(
     context,
     "posts:detail",
     (version) => POSTS_CACHE_KEYS.adjacent(version, data.slug),
@@ -485,6 +510,23 @@ export async function batchUpdatePostsStatus(
     );
   }
 
+  // 同步快速失效：批量发布/下架后立即轮换公开缓存，
+  // 不等异步 Workflow 完成（重活由 Workflow 继续处理）
+  if (affected.length > 0) {
+    const slugs = affected.map((post) => post.slug);
+    context.executionCtx.waitUntil(
+      fastInvalidatePublicCaches(context.env, slugs).catch((error) => {
+        console.error(
+          JSON.stringify({
+            message: "fast invalidate public caches failed for batch update",
+            slugs,
+            error: String(error),
+          }),
+        );
+      }),
+    );
+  }
+
   return ok({ updated: affected.length, skipped });
 }
 
@@ -502,14 +544,9 @@ export async function deletePost(
   // Only clear cache/index for published posts
   if (post.status === "published") {
     const tasks = [];
-    const version = await CacheService.getVersion(context, "posts:detail");
-    tasks.push(
-      CacheService.deleteKey(
-        context,
-        POSTS_CACHE_KEYS.detail(version, post.slug),
-      ),
-    );
+    tasks.push(CacheService.bumpVersion(context, "posts:detail"));
     tasks.push(CacheService.bumpVersion(context, "posts:list"));
+    tasks.push(CacheService.bumpVersion(context, "tags:list"));
     tasks.push(SearchService.deleteIndex(context, { id: data.id }));
     tasks.push(purgePostCDNCache(context.env, post.slug));
     tasks.push(
@@ -605,6 +642,27 @@ export async function startPostProcessWorkflow(
 
   const isFuture =
     !!publishedAtISO && isFuturePublishDate(publishedAtISO, data.clientToday);
+
+  // 同步快速失效：发布/下架动作立即轮换公开缓存，让访客在
+  // 异步 Workflow（AI 摘要、搜索索引等重活）完成前就能看到最新状态。
+  // 定时发布的文章尚未对公众可见，交给 ScheduledPublishWorkflow 处理。
+  if (!isFuture) {
+    try {
+      const post = await PostRepo.findPostById(context.db, data.id);
+      if (post) {
+        await fastInvalidatePublicCaches(context.env, [post.slug]);
+      }
+    } catch (error) {
+      // 快速失效失败不阻断发布流程；Workflow 内的 invalidate 步骤会兜底
+      console.error(
+        JSON.stringify({
+          message: "fast invalidate public caches failed on publish action",
+          postId: data.id,
+          error: String(error),
+        }),
+      );
+    }
+  }
 
   await context.env.POST_PROCESS_WORKFLOW.create({
     params: {

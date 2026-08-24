@@ -100,6 +100,14 @@ export const CommentItem = memo(
                 </span>
               )}
 
+              {isAuthor &&
+                (comment.status === "verifying" ||
+                  comment.status === "pending") && (
+                  <span className="text-[9px] font-mono uppercase tracking-widest border border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1 rounded-[1px]">
+                    {m.comments_item_moderating()}
+                  </span>
+                )}
+
               {isReply && replyToName && (
                 <span className="text-[10px] text-muted-foreground/50 font-mono">
                   {m.comments_item_reply_to({

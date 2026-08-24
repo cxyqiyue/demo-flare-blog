@@ -1,4 +1,5 @@
 import * as CacheService from "@/features/cache/cache.service";
+import * as EdgeCacheService from "@/features/cache/edge-cache.service";
 import { publishNotificationEvent } from "@/features/notification/service/notification.publisher";
 import { serverEnv } from "@/lib/env/server.env";
 import { err, ok } from "@/lib/errors";
@@ -80,7 +81,8 @@ export async function getApprovedFriendLinks(
       limit: null,
     });
 
-  return await CacheService.getVersioned(
+  // 公开友链列表改存 Cache API（零 KV 配额），版本指针仍走 KV 保留失效语义
+  return await EdgeCacheService.getVersionedJson(
     context,
     "friend-links:list",
     FRIEND_LINKS_CACHE_KEYS.approvedList,

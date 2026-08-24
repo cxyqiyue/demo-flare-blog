@@ -1,8 +1,6 @@
 import * as CacheService from "@/features/cache/cache.service";
-import { POSTS_CACHE_KEYS } from "@/features/posts/schema/posts.schema";
 import * as PostService from "@/features/posts/services/posts.service";
 import * as SearchService from "@/features/search/service/search.service";
-import { TAGS_CACHE_KEYS } from "@/features/tags/tags.schema";
 import { getDb } from "@/lib/db";
 import { purgePostCDNCache } from "@/lib/invalidate";
 
@@ -11,13 +9,17 @@ export async function fetchPost(env: Env, postId: number) {
   return await PostService.findPostById({ db, env }, { id: postId });
 }
 
+/**
+ * 轮换公开数据缓存 generation（列表/详情/标签）并清理该文章的 CDN 缓存。
+ * 数据本体存 Cache API（零 KV 配额），KV 只写版本指针；
+ * 轮换后旧 generation 的所有 colo 副本即刻不可达。
+ */
 export async function invalidatePostCaches(env: Env, slug: string) {
-  const version = await CacheService.getVersion({ env }, "posts:detail");
   await Promise.all([
-    CacheService.deleteKey({ env }, POSTS_CACHE_KEYS.detail(version, slug)),
     purgePostCDNCache(env, slug),
     CacheService.bumpVersion({ env }, "posts:list"),
-    CacheService.deleteKey({ env }, TAGS_CACHE_KEYS.publicList),
+    CacheService.bumpVersion({ env }, "posts:detail"),
+    CacheService.bumpVersion({ env }, "tags:list"),
   ]);
 }
 

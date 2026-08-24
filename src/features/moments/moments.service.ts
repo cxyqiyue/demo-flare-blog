@@ -71,17 +71,21 @@ export async function getPublicMomentsPage(
   );
 }
 
-function invalidateCache(
+/**
+ * 轮换动态页缓存 generation 并清理 CDN。
+ * 同步 await（而非 waitUntil）：确保客户端在收到变更响应后立即
+ * refetch 就能读到新 generation 的数据，消除"发布后要等几分钟
+ * 再刷新才可见"的竞态。
+ */
+async function invalidateCache(
   context: DbContext & { executionCtx: ExecutionContext },
 ) {
-  context.executionCtx.waitUntil(
-    Promise.all([
-      CacheService.bumpVersion(context, "moments:page"),
-      purgeCDNCache(context.env, {
-        urls: ["/moments"],
-      }),
-    ]),
-  );
+  await Promise.all([
+    CacheService.bumpVersion(context, "moments:page"),
+    purgeCDNCache(context.env, {
+      urls: ["/moments"],
+    }),
+  ]);
 }
 
 // ============ Admin Methods ============
@@ -111,7 +115,7 @@ export async function createMoment(
     authorUserId: context.session.user.id,
   });
 
-  invalidateCache(context);
+  await invalidateCache(context);
 
   return ok(moment);
 }
@@ -132,7 +136,7 @@ export async function updateMoment(
     images: data.images,
   });
 
-  invalidateCache(context);
+  await invalidateCache(context);
 
   return ok(updated);
 }
@@ -147,7 +151,7 @@ export async function deleteMoment(
   }
 
   await MomentRepo.deleteMoment(context.db, data.id);
-  invalidateCache(context);
+  await invalidateCache(context);
 
   return ok({ success: true });
 }
@@ -182,7 +186,9 @@ export async function toggleMomentLike(
     data.momentId,
   ]);
 
-  invalidateCache(context);
+  // 点赞不再轮换缓存 generation：高频互动若每次都写 KV + Purge 会
+  // 快速耗尽配额。点赞数对其他访客在边缘 TTL（约 5 分钟）内自然收敛，
+  // 操作者本人通过响应即时拿到最新计数。
 
   return ok({
     liked: !existing,

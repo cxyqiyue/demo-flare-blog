@@ -1,7 +1,7 @@
 import { z } from "zod";
 import * as CacheService from "@/features/cache/cache.service";
+import * as EdgeCacheService from "@/features/cache/edge-cache.service";
 import * as PostRepo from "@/features/posts/data/posts.data";
-import { POSTS_CACHE_KEYS } from "@/features/posts/schema/posts.schema";
 import * as PostAutoSnapshotService from "@/features/posts/services/post-auto-snapshot.service";
 import * as TagRepo from "@/features/tags/data/tags.data";
 import type {
@@ -49,7 +49,7 @@ export async function getTags(
 }
 
 /**
- * Get public tags list (KV-only, populated by publish workflow)
+ * Get public tags list (edge-cached, invalidated by tags:list generation bump)
  * This ensures public site only shows "published" tag associations.
  */
 export async function getPublicTags(
@@ -57,9 +57,12 @@ export async function getPublicTags(
     executionCtx: ExecutionContext;
   },
 ) {
-  return await CacheService.get(
+  // 标签云是全站高频读取，改存 Cache API（零 KV 配额），
+  // 失效语义由 bumpVersion("tags:list") 轮换 generation 保留
+  return await EdgeCacheService.getVersionedJson(
     context,
-    TAGS_CACHE_KEYS.publicList,
+    "tags:list",
+    (version) => [version, ...TAGS_CACHE_KEYS.publicList],
     z.array(TagWithCountSchema),
     async () => {
       return await TagRepo.getAllTagsWithCount(context.db, {
@@ -103,45 +106,31 @@ export async function getTagsByPostId(
  * Helper to invalidate caches related to tags and their associated posts.
  *
  * 采用保守策略：
- * 1. 无论如何都清除 publicList（标签变动必然影响标签云）
- * 2. 如果有受影响的文章，精确失效这些文章的缓存
- * 3. 如果没有受影响的文章（可能是 DB/KV 不同步），bump 所有版本号
+ * 1. 无论如何都轮换 tags:list generation（标签变动必然影响标签云）
+ * 2. 如果有受影响的文章，轮换文章缓存 generation 并清理对应 CDN 缓存
+ * 3. 如果没有受影响的文章（可能是 DB/缓存不同步），bump 所有版本号
  */
 async function invalidateTagRelatedCache(
   context: DbContext,
   affectedPosts: Array<{ id: number; slug: string }>,
 ) {
-  // 1. 无论如何都清除 publicList
-  await CacheService.deleteKey(context, TAGS_CACHE_KEYS.publicList);
+  // 1. 无论如何都轮换标签云 generation
+  await CacheService.bumpVersion(context, "tags:list");
 
   if (affectedPosts.length > 0) {
-    // 2. 精确失效受影响的文章
-    const tasks: Array<Promise<void>> = [];
-
-    // Bump post list version
-    tasks.push(CacheService.bumpVersion(context, "posts:list"));
-
-    // Invalidate each affected post's detail cache
-    const version = await CacheService.getVersion(context, "posts:detail");
-    for (const post of affectedPosts) {
-      tasks.push(
-        CacheService.deleteKey(
-          context,
-          POSTS_CACHE_KEYS.detail(version, post.slug),
-        ),
-      );
-    }
-
-    // Purge CDN for affected posts and list pages
+    // 2. 轮换文章缓存 generation 并清理受影响文章的 CDN 缓存
     const cdnUrls = ["/", "/posts"];
     for (const post of affectedPosts) {
       cdnUrls.push(`/post/${encodeURIComponent(post.slug)}`);
     }
-    tasks.push(purgeCDNCache(context.env, { urls: cdnUrls }));
 
-    await Promise.all(tasks);
+    await Promise.all([
+      CacheService.bumpVersion(context, "posts:list"),
+      CacheService.bumpVersion(context, "posts:detail"),
+      purgeCDNCache(context.env, { urls: cdnUrls }),
+    ]);
   } else {
-    // 3. 保守策略：可能是 DB/KV 不同步，bump 所有版本号
+    // 3. 保守策略：可能是 DB/缓存不同步，bump 所有版本号
     await Promise.all([
       CacheService.bumpVersion(context, "posts:detail"),
       CacheService.bumpVersion(context, "posts:list"),

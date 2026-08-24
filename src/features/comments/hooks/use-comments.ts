@@ -62,6 +62,14 @@ export function useComments(target?: CommentTargetInput) {
         queryKey: COMMENTS_KEYS.mine,
         exact: false,
       });
+
+      // 明确的成功反馈：区分"直接发布"与"进入 AI 审核"
+      const status = result.data?.status;
+      if (status === "published") {
+        toast.success(m.comments_toast_submit_published());
+      } else {
+        toast.success(m.comments_toast_submit_verifying());
+      }
     },
   });
 
