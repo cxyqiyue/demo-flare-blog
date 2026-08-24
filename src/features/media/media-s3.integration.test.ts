@@ -2,13 +2,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_CONFIG } from "@/features/config/config.schema";
 import * as ConfigRepo from "@/features/config/data/config.data";
+import * as S3Upload from "@/features/image-hosting/s3/s3-upload";
 import * as PostService from "@/features/posts/services/posts.service";
 import { PostMediaTable } from "@/lib/db/schema";
-import * as S3Upload from "@/features/image-hosting/s3/s3-upload";
-import * as LinkAccessService from "./service/link-access.service";
-import * as MediaRepo from "./data/media.data";
-import * as MediaService from "./service/media.service";
 import { err, ok, unwrap } from "@/lib/errors";
+import * as MediaRepo from "./data/media.data";
+import * as LinkAccessService from "./service/link-access.service";
+import * as MediaService from "./service/media.service";
 
 /**
  * MediaService S3 media-library tests
@@ -55,12 +55,10 @@ describe("MediaService S3 media library", () => {
     vi.spyOn(S3Upload, "deleteS3Object").mockResolvedValue(
       ok({ success: true }),
     );
-    vi.spyOn(S3Upload, "deleteS3Objects").mockImplementation(async (_cfg, keys) =>
-      ok({ deleted: keys.length }),
+    vi.spyOn(S3Upload, "deleteS3Objects").mockImplementation(
+      async (_cfg, keys) => ok({ deleted: keys.length }),
     );
-    vi.spyOn(S3Upload, "moveS3Object").mockResolvedValue(
-      ok({ success: true }),
-    );
+    vi.spyOn(S3Upload, "moveS3Object").mockResolvedValue(ok({ success: true }));
     vi.spyOn(S3Upload, "moveS3Objects").mockImplementation(async (_cfg, keys) =>
       ok({ moved: keys.length }),
     );
@@ -91,39 +89,41 @@ describe("MediaService S3 media library", () => {
   // ============================================
   describe("directory browsing", () => {
     it("should list the REAL bucket root: pathPrefix appears as a normal folder", async () => {
-      vi.mocked(S3Upload.listS3Objects).mockImplementation(async (_cfg, options = {}) => {
-        const prefix = options.prefix ?? "";
-        if (prefix === "") {
-          // Root of the bucket: a loose file, the configured pathPrefix
-          // folder and its zero-byte marker object.
-          return ok({
-            objects: [
-              { key: "images/blog/", size: 0, lastModified: "" },
-              { key: "readme.txt", size: 12, lastModified: "" },
-            ],
-            prefixes: ["assets", "images"],
-            isTruncated: false,
-          });
-        }
-        if (prefix === "images/") {
-          return ok({
-            objects: [],
-            prefixes: ["images/blog"],
-            isTruncated: false,
-          });
-        }
-        if (prefix === "images/blog/") {
-          return ok({
-            objects: [
-              { key: "images/blog/a.png", size: 100, lastModified: "" },
-              { key: "images/blog/b.jpg", size: 200, lastModified: "" },
-            ],
-            prefixes: [],
-            isTruncated: false,
-          });
-        }
-        return ok({ objects: [], prefixes: [], isTruncated: false });
-      });
+      vi.mocked(S3Upload.listS3Objects).mockImplementation(
+        async (_cfg, options = {}) => {
+          const prefix = options.prefix ?? "";
+          if (prefix === "") {
+            // Root of the bucket: a loose file, the configured pathPrefix
+            // folder and its zero-byte marker object.
+            return ok({
+              objects: [
+                { key: "images/blog/", size: 0, lastModified: "" },
+                { key: "readme.txt", size: 12, lastModified: "" },
+              ],
+              prefixes: ["assets", "images"],
+              isTruncated: false,
+            });
+          }
+          if (prefix === "images/") {
+            return ok({
+              objects: [],
+              prefixes: ["images/blog"],
+              isTruncated: false,
+            });
+          }
+          if (prefix === "images/blog/") {
+            return ok({
+              objects: [
+                { key: "images/blog/a.png", size: 100, lastModified: "" },
+                { key: "images/blog/b.jpg", size: 200, lastModified: "" },
+              ],
+              prefixes: [],
+              isTruncated: false,
+            });
+          }
+          return ok({ objects: [], prefixes: [], isTruncated: false });
+        },
+      );
 
       // Root shows folders first 鈥?NOT the images inside images/blog directly
       const root = await MediaService.listExternalDirectory(adminContext, {
@@ -251,16 +251,13 @@ describe("MediaService S3 media library", () => {
 
       // The uploader receives the EXACT folder being viewed (WYSIWYG) —
       // no pathPrefix prepending, no double "images/blog/images".
-      const capturedFolder = vi.mocked(S3Upload.uploadToS3ForMediaLibrary)
-        .mock.calls[0][2];
+      const capturedFolder = vi.mocked(S3Upload.uploadToS3ForMediaLibrary).mock
+        .calls[0][2];
       expect(capturedFolder).toBe("images/blog");
 
       // D1 record stores the same full key the uploader returned
       const storedKey = "images/blog/mock-1.png";
-      const stored = await MediaRepo.getMediaByKey(
-        adminContext.db,
-        storedKey,
-      );
+      const stored = await MediaRepo.getMediaByKey(adminContext.db, storedKey);
       expect(stored).toBeDefined();
       expect(stored?.provider).toBe("s3");
       expect(stored?.key).not.toContain("images/blog/images");
@@ -327,11 +324,7 @@ describe("MediaService S3 media library", () => {
         .values({ postId, mediaId: linked.id });
 
       vi.mocked(S3Upload.listAllS3Keys).mockResolvedValue(
-        ok([
-          "images/blog/",
-          "images/blog/free.png",
-          "images/blog/linked.png",
-        ]),
+        ok(["images/blog/", "images/blog/free.png", "images/blog/linked.png"]),
       );
 
       const result = unwrap(
@@ -356,7 +349,10 @@ describe("MediaService S3 media library", () => {
         await MediaRepo.getMediaByKey(adminContext.db, "images/blog/free.png"),
       ).toBeUndefined();
       expect(
-        await MediaRepo.getMediaByKey(adminContext.db, "images/blog/linked.png"),
+        await MediaRepo.getMediaByKey(
+          adminContext.db,
+          "images/blog/linked.png",
+        ),
       ).toBeDefined();
     });
   });
@@ -497,23 +493,22 @@ describe("MediaService S3 media library", () => {
   // ============================================
   describe("protected-mode S3 proxy", () => {
     it("should resolve the upstream via authenticated SigV4 GetObject, not a public URL", async () => {
-      const spy = vi
-        .spyOn(S3Upload, "fetchS3ImageStream")
-        .mockResolvedValue(
-          ok(
-            new Response("image-bytes", {
-              status: 200,
-              headers: { "content-type": "image/png" },
-            }),
-          ),
-        );
+      const spy = vi.spyOn(S3Upload, "fetchS3ImageStream").mockResolvedValue(
+        ok(
+          new Response("image-bytes", {
+            status: 200,
+            headers: { "content-type": "image/png" },
+          }),
+        ),
+      );
 
       const result = await LinkAccessService.resolveProxiedMedia(
         adminContext,
         "s3",
         "images/blog/a.png",
       );
-      expect(result.error).toBeUndefined();
+      // Result 契约：ok() 的 error 为 null（非 undefined）
+      expect(result.error).toBeNull();
       expect(await result.data?.text()).toBe("image-bytes");
       expect(result.data?.headers.get("content-type")).toBe("image/png");
 

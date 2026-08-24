@@ -97,6 +97,8 @@ export async function checkForUpdate(
   try {
     let data: UpdateCheckResult;
 
+    // 管理后台会轮询该接口；TTL 过短会持续产生 KV 写入（删除也计入
+    // 每日配额），更新检查 1 小时的时效足够
     if (force) {
       data = await fetcher();
       context.executionCtx.waitUntil(
@@ -104,7 +106,7 @@ export async function checkForUpdate(
           context,
           VERSION_CACHE_KEYS.updateCheck,
           JSON.stringify(data),
-          { ttl: "5m" },
+          { ttl: "1h" },
         ),
       );
     } else {
@@ -113,7 +115,7 @@ export async function checkForUpdate(
         VERSION_CACHE_KEYS.updateCheck,
         UpdateCheckResultSchema,
         fetcher,
-        { ttl: "5m" },
+        { ttl: "1h" },
       );
     }
 

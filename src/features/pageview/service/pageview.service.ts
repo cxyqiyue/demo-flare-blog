@@ -1,4 +1,5 @@
 import * as CacheService from "@/features/cache/cache.service";
+import * as EdgeCacheService from "@/features/cache/edge-cache.service";
 import * as PageviewRepo from "@/features/pageview/data/pageview.data";
 import {
   PAGEVIEW_CACHE_KEYS,
@@ -49,7 +50,9 @@ export async function getViewCounts(
 ) {
   if (slugs.length === 0) return {};
 
-  return CacheService.get(
+  // 浏览量缓存键随 slug 组合无上限增长，且高频过期重写，是 KV 写入
+  // 配额的头号消耗源 —— 改存 Cache API（免费），KV 只留版本指针类数据
+  return EdgeCacheService.getJson(
     context,
     PAGEVIEW_CACHE_KEYS.viewCounts(slugs),
     ViewCountsSchema,

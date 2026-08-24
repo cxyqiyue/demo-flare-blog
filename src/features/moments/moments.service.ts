@@ -1,5 +1,6 @@
 import type { JSONContent } from "@tiptap/react";
 import * as CacheService from "@/features/cache/cache.service";
+import * as EdgeCacheService from "@/features/cache/edge-cache.service";
 import { err, ok, type Result } from "@/lib/errors";
 import { purgeCDNCache } from "@/lib/invalidate";
 import * as MomentRepo from "./data/moments.data";
@@ -58,7 +59,9 @@ export async function getPublicMomentsPage(
     };
   };
 
-  return await CacheService.getVersioned(
+  // 5 分钟 TTL + 每次翻页组合都是独立键，KV 写入消耗高 —— 数据本体
+  // 改存 Cache API（免费），版本指针仍走 KV 以保留发布即失效的语义
+  return await EdgeCacheService.getVersionedJson(
     context,
     "moments:page",
     (version) => MOMENTS_CACHE_KEYS.publicPage(version, offset, limit),

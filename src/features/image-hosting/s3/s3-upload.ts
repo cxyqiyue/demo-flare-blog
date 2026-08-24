@@ -102,8 +102,7 @@ function encodeObjectKey(key: string): string {
 
 function buildPublicUrl(cfg: S3Config, key: string): string {
   const base = (
-    cfg.publicUrl?.trim() ||
-    `${cfg.endpoint.replace(/\/+$/, "")}/${cfg.bucket}`
+    cfg.publicUrl?.trim() || `${cfg.endpoint.replace(/\/+$/, "")}/${cfg.bucket}`
   ).replace(/\/+$/, "");
   return `${base}/${encodeObjectKey(key)}`;
 }
@@ -142,6 +141,62 @@ export async function uploadToS3(
 
 // ── Authenticated Read (proxy upstream) ───────────────────────
 
+/** 超过该大小的对象改用流式转发，避免缓冲占用过多 Worker 内存 */
+const S3_PROXY_BUFFER_LIMIT_BYTES = 25 * 1024 * 1024;
+
+interface S3BodyLike {
+  transformToByteArray?: () => Promise<Uint8Array>;
+  transformToWebStream?: () => unknown;
+}
+
+/**
+ * 将 GetObject 输出转换为可安全返回给客户端的 Response。
+ *
+ * 不能把 SDK 的 Body 直接强转成 ReadableStream 塞进 Response：
+ * Workers 运行时下该对象可能不是可用流（或为 undefined），会构造出
+ * "200 + 空响应体"的静默坏图。因此这里：
+ * - Body 缺失 → 抛错，由调用方转成明确的 502；
+ * - 小对象（≤ 限制值）缓冲为完整字节，彻底规避流式转发截断；
+ * - 大对象经 transformToWebStream 流式转发。
+ */
+export async function s3ObjectBodyToResponse(
+  body: unknown,
+  meta: { contentType?: string; contentLength?: number; etag?: string },
+): Promise<Response> {
+  if (!body || typeof body !== "object") {
+    throw new Error("S3 object body is empty");
+  }
+
+  const headers = new Headers();
+  if (meta.contentType) headers.set("content-type", meta.contentType);
+  if (meta.contentLength != null) {
+    headers.set("content-length", String(meta.contentLength));
+  }
+  if (meta.etag) headers.set("etag", meta.etag);
+
+  const sdkBody = body as S3BodyLike;
+  const withinBufferLimit =
+    meta.contentLength == null ||
+    meta.contentLength <= S3_PROXY_BUFFER_LIMIT_BYTES;
+
+  if (withinBufferLimit && typeof sdkBody.transformToByteArray === "function") {
+    const bytes = await sdkBody.transformToByteArray();
+    return new Response(bytes as unknown as BodyInit, {
+      status: 200,
+      headers,
+    });
+  }
+
+  if (typeof sdkBody.transformToWebStream === "function") {
+    const stream = sdkBody.transformToWebStream();
+    if (stream) {
+      return new Response(stream as ReadableStream, { status: 200, headers });
+    }
+  }
+
+  throw new Error("S3 object body is not readable");
+}
+
 /**
  * 经 SigV4 签名回源读取对象（与上传同一条鉴权路径）。
  * 受保护图链模式下，Worker 代理 /media/file/s3/:key 必须用它取内容：
@@ -157,19 +212,12 @@ export async function fetchS3ImageStream(
       new GetObjectCommand({ Bucket: cfg.bucket, Key: key }),
     );
 
-    const headers = new Headers();
-    if (res.ContentType) headers.set("content-type", res.ContentType);
-    if (res.ContentLength != null) {
-      headers.set("content-length", String(res.ContentLength));
-    }
-    if (res.ETag) headers.set("etag", res.ETag);
-
-    return ok(
-      new Response(res.Body as unknown as ReadableStream, {
-        status: 200,
-        headers,
-      }),
-    );
+    const response = await s3ObjectBodyToResponse(res.Body, {
+      contentType: res.ContentType,
+      contentLength: res.ContentLength,
+      etag: res.ETag,
+    });
+    return ok(response);
   } catch (error) {
     return err({
       reason: "S3_FETCH_FAILED",
@@ -198,7 +246,9 @@ export async function listS3Objects(
     continuationToken?: string;
     maxKeys?: number;
   } = {},
-): Promise<Result<S3ListObjectsResult, { reason: "S3_LIST_FAILED"; message: string }>> {
+): Promise<
+  Result<S3ListObjectsResult, { reason: "S3_LIST_FAILED"; message: string }>
+> {
   try {
     const client = createS3Client(cfg);
 
@@ -241,7 +291,9 @@ export async function listS3Objects(
 export async function deleteS3Object(
   cfg: S3Config,
   key: string,
-): Promise<Result<{ success: boolean }, { reason: "S3_DELETE_FAILED"; message: string }>> {
+): Promise<
+  Result<{ success: boolean }, { reason: "S3_DELETE_FAILED"; message: string }>
+> {
   try {
     const client = createS3Client(cfg);
 
@@ -266,7 +318,9 @@ export async function deleteS3Object(
 export async function deleteS3Objects(
   cfg: S3Config,
   keys: string[],
-): Promise<Result<{ deleted: number }, { reason: "S3_DELETE_FAILED"; message: string }>> {
+): Promise<
+  Result<{ deleted: number }, { reason: "S3_DELETE_FAILED"; message: string }>
+> {
   let deleted = 0;
   for (const key of keys) {
     const result = await deleteS3Object(cfg, key);
@@ -282,7 +336,9 @@ export async function renameS3Object(
   cfg: S3Config,
   oldKey: string,
   newKey: string,
-): Promise<Result<{ success: boolean }, { reason: "S3_RENAME_FAILED"; message: string }>> {
+): Promise<
+  Result<{ success: boolean }, { reason: "S3_RENAME_FAILED"; message: string }>
+> {
   try {
     const client = createS3Client(cfg);
 
@@ -316,7 +372,9 @@ export async function moveS3Object(
   cfg: S3Config,
   oldKey: string,
   newKey: string,
-): Promise<Result<{ success: boolean }, { reason: "S3_MOVE_FAILED"; message: string }>> {
+): Promise<
+  Result<{ success: boolean }, { reason: "S3_MOVE_FAILED"; message: string }>
+> {
   try {
     const client = createS3Client(cfg);
 
@@ -359,7 +417,8 @@ export async function listAllS3Keys(
         prefix,
         continuationToken,
       });
-      if (result.error) return err({ reason: "S3_LIST_FAILED", message: result.error.message });
+      if (result.error)
+        return err({ reason: "S3_LIST_FAILED", message: result.error.message });
       allKeys.push(...result.data.objects.map((o) => o.key));
       continuationToken = result.data.nextContinuationToken;
     } while (continuationToken);
@@ -378,11 +437,14 @@ export async function listAllS3Keys(
 export async function moveS3Objects(
   cfg: S3Config,
   keys: Array<{ oldKey: string; newKey: string }>,
-): Promise<Result<{ moved: number }, { reason: "S3_MOVE_FAILED"; message: string }>> {
+): Promise<
+  Result<{ moved: number }, { reason: "S3_MOVE_FAILED"; message: string }>
+> {
   let moved = 0;
   for (const { oldKey, newKey } of keys) {
     const result = await moveS3Object(cfg, oldKey, newKey);
-    if (result.error) return err({ reason: "S3_MOVE_FAILED", message: result.error.message });
+    if (result.error)
+      return err({ reason: "S3_MOVE_FAILED", message: result.error.message });
     moved++;
   }
   return ok({ moved });
@@ -394,10 +456,18 @@ export async function uploadToS3ForMediaLibrary(
   cfg: S3Config,
   file: File,
   folder: string,
-): Promise<Result<
-  { key: string; url: string; fileName: string; mimeType: string; sizeInBytes: number },
-  { reason: "S3_UPLOAD_FAILED"; message: string }
->> {
+): Promise<
+  Result<
+    {
+      key: string;
+      url: string;
+      fileName: string;
+      mimeType: string;
+      sizeInBytes: number;
+    },
+    { reason: "S3_UPLOAD_FAILED"; message: string }
+  >
+> {
   try {
     const ext = file.name.split(".").pop() || "bin";
     const baseName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -422,6 +492,9 @@ export async function uploadToS3ForMediaLibrary(
       sizeInBytes: file.size,
     });
   } catch (error) {
-    return err({ reason: "S3_UPLOAD_FAILED", message: error instanceof Error ? error.message : String(error) });
+    return err({
+      reason: "S3_UPLOAD_FAILED",
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
 }
