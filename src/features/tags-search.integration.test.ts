@@ -162,11 +162,12 @@ describe("Tags & Search Integration", () => {
 
         await waitForBackgroundTasks(adminContext.executionCtx);
 
+        // 标签列表负载不再落入 KV（改为边缘缓存），仅保留版本指针
         const cached = await CacheService.getRaw(
           adminContext,
           TAGS_CACHE_KEYS.publicList,
         );
-        expect(cached).not.toBeNull();
+        expect(cached).toBeNull();
 
         const result2 = await TagService.getPublicTags(adminContext);
         expect(result2).toEqual(result1);

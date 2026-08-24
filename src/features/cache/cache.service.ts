@@ -1,5 +1,4 @@
 import type { z } from "zod";
-import { TAGS_CACHE_KEYS } from "@/features/tags/tags.schema";
 import type { Duration } from "@/lib/duration";
 import { ms } from "@/lib/duration";
 import { purgeSiteCDNCache } from "@/lib/invalidate";
@@ -219,10 +218,16 @@ export async function invalidateSiteCache(
   context: BaseContext & { executionCtx: ExecutionContext },
 ) {
   const purgeTask = purgeSiteCDNCache(context.env);
+  // 全站维护操作：轮换所有公开数据缓存 generation（各 1 次 KV 写，
+  // 仅管理员手动触发，频率极低），让各 colo 的 Cache API 副本全部不可达
   const kvTasks = [
     bumpVersion(context, "posts:list"),
     bumpVersion(context, "posts:detail"),
-    deleteKey(context, TAGS_CACHE_KEYS.publicList),
+    bumpVersion(context, "tags:list"),
+    bumpVersion(context, "moments:page"),
+    bumpVersion(context, "friend-links:list"),
+    bumpVersion(context, "navigation:data"),
+    bumpVersion(context, "config:system"),
   ];
 
   await Promise.all([purgeTask, ...kvTasks]);

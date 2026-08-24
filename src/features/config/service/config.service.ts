@@ -1,5 +1,6 @@
 import { blogConfig } from "@/blog.config";
 import * as CacheService from "@/features/cache/cache.service";
+import * as EdgeCacheService from "@/features/cache/edge-cache.service";
 import type {
   AiProviderInstance,
   ChallengeProvider,
@@ -431,31 +432,30 @@ function resolveCloudflareAnalyticsConfig(
   };
 }
 
+/** 轮换站点配置缓存 generation，使所有 colo 的边缘缓存副本失效 */
+async function bumpConfigCache(context: {
+  env: Env;
+}): Promise<void> {
+  await CacheService.bumpVersion({ env: context.env }, "config:system");
+}
+
 export async function getSystemConfig(
   context: DbContext & { executionCtx: ExecutionContext },
 ) {
-  const config = await CacheService.get(
+  // 站点配置是每个 SSR/API 请求的高频读取：KV 方案下每个 colo 每个过期周期
+  // 都会产生 KV 写入，累积消耗可观。改存 Cache API（零配额），
+  // 失效语义由 bumpVersion("config:system") 轮换 generation 保留。
+  const config = await EdgeCacheService.getVersionedJson(
     context,
-    CONFIG_CACHE_KEYS.system,
+    "config:system",
+    (version) => [...CONFIG_CACHE_KEYS.system, version],
     SystemConfigSchema,
     async () =>
       resolveSystemConfig(await ConfigRepo.getSystemConfig(context.db)),
+    { ttl: "1h" },
   );
 
-  const normalizedConfig = resolveSystemConfig(config);
-
-  if (JSON.stringify(config) !== JSON.stringify(normalizedConfig)) {
-    context.executionCtx.waitUntil(
-      CacheService.set(
-        context,
-        CONFIG_CACHE_KEYS.system,
-        JSON.stringify(normalizedConfig),
-        { ttl: "1h" },
-      ),
-    );
-  }
-
-  return normalizedConfig;
+  return resolveSystemConfig(config);
 }
 
 export async function getSiteConfig(
@@ -473,7 +473,7 @@ export async function updateSystemConfig(
   const nextConfig = resolveSystemConfig(data);
 
   await ConfigRepo.upsertSystemConfig(context.db, nextConfig);
-  await CacheService.deleteKey(context, CONFIG_CACHE_KEYS.system);
+  await bumpConfigCache(context);
 
   if (hasSiteConfigChanged(currentConfig, nextConfig)) {
     await purgeSiteCDNCache(context.env);
@@ -501,7 +501,7 @@ export async function updateSystemConfigSection(
   });
 
   await ConfigRepo.upsertSystemConfig(context.db, nextConfig);
-  await CacheService.deleteKey(context, CONFIG_CACHE_KEYS.system);
+  await bumpConfigCache(context);
 
   if (
     input.section === "site" &&

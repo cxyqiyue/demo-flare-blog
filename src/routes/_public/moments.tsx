@@ -115,14 +115,19 @@ function MomentsPage() {
           toast.error(m.moments_create_error());
           return false;
         }
-        await queryClient.refetchQueries({ queryKey: pageQueryKey });
+        // 服务端已在响应前同步轮换缓存 generation，这里立即 refetch
+        // 即可拿到最新数据；成功后给出明确反馈
+        await queryClient.refetchQueries({
+          queryKey: MOMENTS_KEYS.publicPage,
+        });
+        toast.success(m.moments_create_success());
         return true;
       } catch {
         toast.error(m.moments_create_error());
         return false;
       }
     },
-    [queryClient, pageQueryKey],
+    [queryClient],
   );
 
   const onDeleteMoment = useCallback(
@@ -144,6 +149,7 @@ function MomentsPage() {
             };
           },
         );
+        toast.success(m.moments_delete_success());
         return true;
       } catch {
         toast.error(m.moments_delete_error());
@@ -167,14 +173,19 @@ function MomentsPage() {
           toast.error(m.moments_update_error());
           return false;
         }
-        await queryClient.refetchQueries({ queryKey: pageQueryKey });
+        // 服务端已在响应前同步轮换缓存 generation，这里立即 refetch
+        // 即可拿到最新数据；成功后给出明确反馈
+        await queryClient.refetchQueries({
+          queryKey: MOMENTS_KEYS.publicPage,
+        });
+        toast.success(m.moments_update_success());
         return true;
       } catch {
         toast.error(m.moments_update_error());
         return false;
       }
     },
-    [queryClient, pageQueryKey],
+    [queryClient],
   );
 
   const handlePageChange = (nextPage: number) => {

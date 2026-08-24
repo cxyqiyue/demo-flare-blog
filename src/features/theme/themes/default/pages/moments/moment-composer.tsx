@@ -1,8 +1,14 @@
 import type { JSONContent } from "@tiptap/react";
-import { useState } from "react";
-import { MomentEditor } from "@/features/moments/components/moment-editor";
+import { lazy, Suspense, useState } from "react";
 import { collectImageUrls } from "@/features/moments/components/moment-editor-config";
 import { m } from "@/paraglide/messages";
+
+// TipTap 编辑器体积大，且仅在管理员展开发布框时挂载，按需加载
+const MomentEditor = lazy(() =>
+  import("@/features/moments/components/moment-editor").then((mod) => ({
+    default: mod.MomentEditor,
+  })),
+);
 
 interface MomentComposerProps {
   onCreate: (content: JSONContent, images: string[]) => Promise<boolean>;
@@ -35,7 +41,9 @@ export function MomentComposer({ onCreate }: MomentComposerProps) {
         </h3>
       </div>
 
-      <MomentEditor onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+      <Suspense fallback={null}>
+        <MomentEditor onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+      </Suspense>
     </div>
   );
 }

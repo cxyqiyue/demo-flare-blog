@@ -98,6 +98,14 @@ export const FuwariCommentItem = memo(
                 </span>
               )}
 
+              {isAuthor &&
+                (comment.status === "verifying" ||
+                  comment.status === "pending") && (
+                  <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 rounded-md leading-none">
+                    {m.comments_item_moderating()}
+                  </span>
+                )}
+
               {isReply && replyToName && (
                 <span className="text-xs fuwari-text-30">
                   {m.comments_item_reply_to({

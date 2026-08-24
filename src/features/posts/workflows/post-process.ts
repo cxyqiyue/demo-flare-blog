@@ -75,7 +75,27 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
 
     if (shouldSkip || !initialPost) return;
 
-    // 2. Generate summary
+    // 2. Persist the highlighted public snapshot used by SSR/read paths.
+    await step.do("build public content", async () => {
+      const db = getDb(this.env);
+      const post = await PostRepo.findPostById(db, postId);
+      if (!post) return;
+
+      const publicContentJson = post.contentJson
+        ? await highlightCodeBlocks(post.contentJson)
+        : null;
+
+      await PostRepo.updatePublicContentSnapshot(db, postId, publicContentJson);
+    });
+
+    // 3. Invalidate caches EARLY so the new post is visible immediately.
+    //    AI 摘要生成可能耗时数分钟（含重试），不能让它阻塞内容可见性；
+    //    摘要完成后再做第二次轮换刷新列表/详情中的摘要字段。
+    await step.do("invalidate caches", async () => {
+      await invalidatePostCaches(this.env, initialPost.slug);
+    });
+
+    // 4. Generate summary
     const updatedPost = await step.do(
       `generate summary for post ${postId}`,
       {
@@ -103,20 +123,7 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
     const postForSideEffects = updatedPost ?? initialPost;
     if (!postForSideEffects) return;
 
-    // 3. Persist the highlighted public snapshot used by SSR/read paths.
-    await step.do("build public content", async () => {
-      const db = getDb(this.env);
-      const post = await PostRepo.findPostById(db, postId);
-      if (!post) return;
-
-      const publicContentJson = post.contentJson
-        ? await highlightCodeBlocks(post.contentJson)
-        : null;
-
-      await PostRepo.updatePublicContentSnapshot(db, postId, publicContentJson);
-    });
-
-    // 4. Update search index (skip for future posts — ScheduledPublishWorkflow handles it)
+    // 5. Update search index (skip for future posts — ScheduledPublishWorkflow handles it)
     const isFuturePost = !!event.payload.isFuturePost;
 
     if (!isFuturePost) {
@@ -125,12 +132,18 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
       });
     }
 
-    // 5. Invalidate caches
-    await step.do("invalidate caches", async () => {
-      await invalidatePostCaches(this.env, postForSideEffects.slug);
-    });
+    // 6. Re-invalidate caches when a NEW summary was generated, so lists and
+    //    detail pages pick it up instead of serving the pre-summary snapshot
+    //    for the remaining TTL.
+    const summaryChanged =
+      !!updatedPost && updatedPost.summary !== initialPost.summary;
+    if (!isFuturePost && summaryChanged) {
+      await step.do("invalidate caches after summary", async () => {
+        await invalidatePostCaches(this.env, postForSideEffects.slug);
+      });
+    }
 
-    // 6. Update sync hash in KV
+    // 7. Update sync hash in KV
     await step.do("update sync hash", async () => {
       const p = await fetchPost(this.env, postId);
       if (!p) return;
@@ -152,7 +165,7 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
       );
     });
 
-    // 7. Notify subscribers (future posts are handled by ScheduledPublishWorkflow)
+    // 8. Notify subscribers (future posts are handled by ScheduledPublishWorkflow)
     if (!isFuturePost) {
       await step.do("notify subscribers", async () => {
         const p = await fetchPost(this.env, postId);

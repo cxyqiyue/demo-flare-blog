@@ -5,6 +5,8 @@ export type CacheKey =
 export const CACHE_NAMESPACES = {
   POSTS_LIST: "posts:list",
   POSTS_DETAIL: "posts:detail",
+  TAGS_LIST: "tags:list",
+  CONFIG_SYSTEM: "config:system",
   FRIEND_LINKS_LIST: "friend-links:list",
   MOMENTS_LIST: "moments:list",
   MOMENTS_PAGE: "moments:page",

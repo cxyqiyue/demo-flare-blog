@@ -1,4 +1,3 @@
-import * as CacheService from "@/features/cache/cache.service";
 import * as EdgeCacheService from "@/features/cache/edge-cache.service";
 import * as PageviewRepo from "@/features/pageview/data/pageview.data";
 import {
@@ -16,7 +15,9 @@ export async function getPopularPosts(
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  return CacheService.getVersioned(
+  // 首页热门文章按 limit 组合缓存，改存 Cache API（零 KV 配额），
+  // 版本指针沿用 posts:list generation，发布后随列表一起失效
+  return EdgeCacheService.getVersionedJson(
     context,
     "posts:list",
     (version) => [version, ...PAGEVIEW_CACHE_KEYS.popular, limit],

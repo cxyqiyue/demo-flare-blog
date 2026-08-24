@@ -5,7 +5,7 @@ import { CommentEditor } from "./comment-editor";
 
 interface CommentReplyFormProps {
   parentUserName: string;
-  onSubmit: (content: JSONContent) => Promise<void>;
+  onSubmit: (content: JSONContent) => Promise<boolean | undefined>;
   isSubmitting: boolean;
   onCancel: () => void;
   className?: string;

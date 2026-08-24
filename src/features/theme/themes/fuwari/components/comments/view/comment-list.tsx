@@ -21,7 +21,7 @@ interface CommentListProps {
   onDelete?: (commentId: number) => void;
   replyTarget?: { rootId: number; commentId: number; userName: string } | null;
   onCancelReply?: () => void;
-  onSubmitReply?: (content: JSONContent) => Promise<void>;
+  onSubmitReply?: (content: JSONContent) => Promise<boolean | undefined>;
   isSubmittingReply?: boolean;
   initialExpandedRootId?: number;
   highlightCommentId?: number;
@@ -100,7 +100,7 @@ interface RootCommentWithRepliesProps {
   onDelete?: (commentId: number) => void;
   replyTarget?: { rootId: number; commentId: number; userName: string } | null;
   onCancelReply?: () => void;
-  onSubmitReply?: (content: JSONContent) => Promise<void>;
+  onSubmitReply?: (content: JSONContent) => Promise<boolean | undefined>;
   isSubmittingReply?: boolean;
   session: ReturnType<typeof authClient.useSession>["data"];
   highlightCommentId?: number;
@@ -268,7 +268,7 @@ function ReplyForm({
   onCancel,
 }: {
   userName: string;
-  onSubmit: (content: JSONContent) => Promise<void>;
+  onSubmit: (content: JSONContent) => Promise<boolean | undefined>;
   isSubmitting: boolean;
   onCancel: () => void;
 }) {

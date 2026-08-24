@@ -59,18 +59,24 @@ export function FuwariCommentSection({
 
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
 
-  const handleCreateComment = async (content: JSONContent) => {
-    await createComment({
+  const handleCreateComment = async (
+    content: JSONContent,
+  ): Promise<boolean> => {
+    const result = await createComment({
       data: {
         ...target,
         content,
       },
     });
+    // 返回成功与否：编辑器仅在成功时清空内容，失败保留以便重试
+    return !result?.error;
   };
 
-  const handleCreateReply = async (content: JSONContent) => {
-    if (!replyTarget) return;
-    await createComment({
+  const handleCreateReply = async (
+    content: JSONContent,
+  ): Promise<boolean> => {
+    if (!replyTarget) return false;
+    const result = await createComment({
       data: {
         ...target,
         content,
@@ -78,7 +84,10 @@ export function FuwariCommentSection({
         replyToCommentId: replyTarget.commentId,
       },
     });
-    setReplyTarget(null);
+    if (!result?.error) {
+      setReplyTarget(null);
+    }
+    return !result?.error;
   };
 
   const handleDelete = async () => {

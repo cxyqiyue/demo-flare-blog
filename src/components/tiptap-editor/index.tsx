@@ -4,7 +4,7 @@ import type {
   Editor as TiptapEditor,
 } from "@tiptap/react";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { uploadEditorImage } from "@/features/image-hosting/utils/upload-editor-image";
 import { handleServerError } from "@/lib/errors/error-handler";
@@ -20,10 +20,16 @@ import {
 } from "./formula-modal-store";
 import EditorToolbar from "./ui/editor-toolbar";
 import type { FormulaMode } from "./ui/formula-modal";
-import { FormulaModal } from "./ui/formula-modal";
 import type { ModalType } from "./ui/insert-modal";
 import InsertModal from "./ui/insert-modal";
 import { TableBubbleMenu } from "./ui/table-bubble-menu";
+
+// 公式弹窗依赖 katex（体积大），仅在打开时加载
+const FormulaModal = lazy(() =>
+  import("./ui/formula-modal").then((mod) => ({
+    default: mod.FormulaModal,
+  })),
+);
 
 interface EditorProps {
   content?: JSONContent | string;
@@ -252,14 +258,16 @@ export const Editor = memo(function Editor({
       )}
 
       {editable && (
-        <FormulaModal
-          isOpen={formulaModalOpen}
-          mode={formulaPayload.mode}
-          initialLatex={formulaPayload.initialLatex}
-          editContext={formulaPayload.editContext}
-          onClose={() => setFormulaModalOpen(false)}
-          onApply={handleFormulaApply}
-        />
+        <Suspense fallback={null}>
+          <FormulaModal
+            isOpen={formulaModalOpen}
+            mode={formulaPayload.mode}
+            initialLatex={formulaPayload.initialLatex}
+            editContext={formulaPayload.editContext}
+            onClose={() => setFormulaModalOpen(false)}
+            onApply={handleFormulaApply}
+          />
+        </Suspense>
       )}
     </div>
   );

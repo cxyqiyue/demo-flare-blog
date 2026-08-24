@@ -231,14 +231,21 @@ describe("Posts Integration", () => {
       // 等待缓存写入完成
       await waitForBackgroundTasks(adminContext.executionCtx);
 
-      // 验证 KV 中有缓存数据 (key 格式: version:post:slug)
+      // 文章详情负载不再落入 KV（改为边缘缓存），仅保留版本指针
       const version = await CacheService.getVersion(
         adminContext,
         "posts:detail",
       );
       const cacheKey = `${version}:post:cached-post`;
       const cachedData = await env.KV.get(cacheKey, "json");
-      expect(cachedData).not.toBeNull();
+      expect(cachedData).toBeNull();
+
+      // 第二次读取仍能拿到同一篇文章
+      const post2 = await PostService.findPostBySlug(adminContext, {
+        slug: "cached-post",
+      });
+      expect(post2?.id).toBe(post1?.id);
+      expect(post2?.title).toBe(post1?.title);
     });
 
     it("should invalidate cache when version is bumped", async () => {

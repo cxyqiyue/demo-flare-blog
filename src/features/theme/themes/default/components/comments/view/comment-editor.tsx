@@ -12,7 +12,7 @@ import type { ModalType } from "../editor/comment-insert-modal";
 import InsertModal from "../editor/comment-insert-modal";
 
 interface CommentEditorProps {
-  onSubmit: (content: JSONContent) => Promise<void>;
+  onSubmit: (content: JSONContent) => Promise<boolean | undefined>;
   isSubmitting?: boolean;
   autoFocus?: boolean;
   onCancel?: () => void;
@@ -77,8 +77,11 @@ export const CommentEditor = ({
     if (isEmpty || isSubmitting) return;
 
     try {
-      await onSubmit(editor.getJSON());
-      editor.commands.clearContent();
+      const success = await onSubmit(editor.getJSON());
+      // 仅在提交成功后清空内容；失败时保留以便用户重试
+      if (success !== false) {
+        editor.commands.clearContent();
+      }
     } catch (error) {
       // Error handled by parent hook
     }

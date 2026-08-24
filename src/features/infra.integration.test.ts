@@ -513,7 +513,7 @@ describe("Infra Integration", () => {
       });
     });
 
-    it("normalizes legacy cached email config on cache hit", async () => {
+    it("ignores legacy KV cache blobs and never persists config payloads to KV", async () => {
       await context.env.KV.put(
         "system",
         JSON.stringify({
@@ -528,32 +528,26 @@ describe("Infra Integration", () => {
 
       const config = await ConfigService.getSystemConfig(context);
 
+      // 配置缓存已迁移到 Cache API：KV 中的遗留负载不再被读取，
+      // 返回的是数据库（此处为空）配置的规范化结果
       expect(config.email).toEqual({
-        host: "smtp.resend.com",
+        host: "",
         port: 465,
-        username: "resend",
-        password: "re_cached_key",
-        senderName: "Cached Sender",
-        senderAddress: "cached@example.com",
+        username: "",
+        password: "",
+        senderName: "",
+        senderAddress: "",
       });
 
       await waitForBackgroundTasks(context.executionCtx);
 
-      const cached = await context.env.KV.get("system", "json");
-      expect(cached).toMatchObject({
-        email: {
-          host: "smtp.resend.com",
-          port: 465,
-          username: "resend",
-          password: "re_cached_key",
-          senderName: "Cached Sender",
-          senderAddress: "cached@example.com",
-        },
-      });
-      expect(cached).not.toMatchObject({
-        email: expect.objectContaining({
-          apiKey: expect.anything(),
-        }),
+      // 遗留 KV 负载保持原样（不做读时改写），KV 中也不产生新的配置缓存
+      const cached = await context.env.KV.get<{
+        email?: { apiKey?: string };
+      }>("system", "json");
+      expect(cached).not.toBeNull();
+      expect(cached?.email).toMatchObject({
+        apiKey: "re_cached_key",
       });
     });
 
