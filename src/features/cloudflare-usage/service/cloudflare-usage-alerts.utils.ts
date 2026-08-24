@@ -1,6 +1,6 @@
 import {
-  thresholdForService,
   type CfServiceUsage,
+  thresholdForService,
 } from "@/features/cloudflare-usage/cloudflare-usage.schema";
 
 // ── Cloudflare 用量告警：纯逻辑（阈值比对 / 去重 / 内容渲染） ──
@@ -26,6 +26,21 @@ export interface CfAlertStateEntry {
 
 export type CfAlertState = Record<string, CfAlertStateEntry>;
 
+/**
+ * 定时告警的门控条件（纯函数，供 cron 入口与单测共用）。
+ * 只看「启用用量告警」开关 + Token + Account ID：
+ * cloudflareAnalytics.enabled 在设置界面没有任何写入路径（恒为默认值
+ * false），不能作为门控，否则定时检查永远静默退出。
+ */
+export function shouldDispatchUsageAlerts<
+  C extends { apiToken?: string; alert?: { enabled?: boolean } },
+>(
+  ca: C | undefined,
+  accountId: string | undefined,
+): ca is C & { apiToken: string; alert: { enabled: true } } {
+  return Boolean(ca?.alert?.enabled && ca.apiToken && accountId);
+}
+
 function alertLevelOf(row: CfAlertRow): CfAlertLevel {
   return row.percentage >= 100 ? "exhausted" : "threshold";
 }
@@ -38,9 +53,7 @@ const LEVEL_ORDER: Record<CfAlertLevel, number> = {
 /** 找出当前超阈值的服务 */
 export function computeAlertRows(
   services: CfServiceUsage[],
-  thresholds:
-    | Parameters<typeof thresholdForService>[0]
-    | undefined,
+  thresholds: Parameters<typeof thresholdForService>[0] | undefined,
 ): CfAlertRow[] {
   const alerts: CfAlertRow[] = [];
   for (const svc of services) {

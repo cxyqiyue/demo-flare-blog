@@ -5,18 +5,19 @@ import {
   type CfServiceUsage,
 } from "@/features/cloudflare-usage/cloudflare-usage.schema";
 import { fetchAllUsage } from "@/features/cloudflare-usage/lib/cf-graphql";
-import { NOTIFICATION_EVENT } from "@/features/notification/notification.schema";
-import { sendEmail } from "@/features/email/service/email.service";
-import { sendWebhookRequest } from "@/features/webhook/api/webhook.consumer";
 import * as ConfigService from "@/features/config/service/config.service";
+import { sendEmail } from "@/features/email/service/email.service";
+import { NOTIFICATION_EVENT } from "@/features/notification/notification.schema";
+import { sendWebhookRequest } from "@/features/webhook/api/webhook.consumer";
 import { getDb } from "@/lib/db";
 import { serverEnv } from "@/lib/env/server.env";
 import {
+  type CfAlertRow,
+  type CfAlertState,
   computeAlertRows,
   renderUsageAlertContent,
   resolveAlertsToSend,
-  type CfAlertRow,
-  type CfAlertState,
+  shouldDispatchUsageAlerts,
 } from "./cloudflare-usage-alerts.utils";
 
 // ── Cloudflare 用量定时告警（调度入口） ─────────────────────
@@ -25,16 +26,17 @@ import {
 // 去重规则：每服务每自然日只发一次；当日从超阈值档位升档（如 80%→100%）
 // 会再次发送，回落不重发。纯逻辑见 ./cloudflare-usage-alerts.utils.ts。
 
-export {
-  computeAlertRows,
-  renderUsageAlertContent,
-  resolveAlertsToSend,
-} from "./cloudflare-usage-alerts.utils";
 export type {
   CfAlertLevel,
   CfAlertRow,
   CfAlertState,
   CfAlertStateEntry,
+} from "./cloudflare-usage-alerts.utils";
+export {
+  computeAlertRows,
+  renderUsageAlertContent,
+  resolveAlertsToSend,
+  shouldDispatchUsageAlerts,
 } from "./cloudflare-usage-alerts.utils";
 
 function todayUtc(): string {
@@ -55,7 +57,10 @@ export async function checkAndDispatchUsageAlerts(
     const ca = config.cloudflareAnalytics;
     const accountId = env.CLOUDFLARE_ACCOUNT_ID ?? "";
 
-    if (!ca?.enabled || !ca.alert?.enabled || !ca.apiToken || !accountId) {
+    // 门控只看「启用用量告警」开关（后台设置中唯一暴露的开关）：
+    // 旧代码还要求 cloudflareAnalytics.enabled，但该字段无任何 UI 写入
+    // 路径且默认 false，导致定时告警从未真正执行。
+    if (!shouldDispatchUsageAlerts(ca, accountId)) {
       return;
     }
 
@@ -92,18 +97,25 @@ export async function checkAndDispatchUsageAlerts(
       state = null;
     }
 
-    const { toSend, nextState }: {
+    const {
+      toSend,
+      nextState,
+    }: {
       toSend: CfAlertRow[];
       nextState: CfAlertState;
     } = resolveAlertsToSend(alerts, state, day);
 
-    executionCtx.waitUntil(
-      CacheService.set(
-        context,
-        CF_USAGE_CACHE_KEYS.alertState,
-        JSON.stringify(nextState),
-      ),
-    );
+    // 状态无变化时跳过写入：超阈值日每小时都会跑到这里，
+    // 重复写同一份去重状态会白白消耗 KV 写入配额
+    if (JSON.stringify(nextState) !== JSON.stringify(state ?? {})) {
+      executionCtx.waitUntil(
+        CacheService.set(
+          context,
+          CF_USAGE_CACHE_KEYS.alertState,
+          JSON.stringify(nextState),
+        ),
+      );
+    }
 
     if (toSend.length === 0) return;
 

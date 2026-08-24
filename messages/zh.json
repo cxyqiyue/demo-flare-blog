@@ -2350,7 +2350,7 @@
   "settings_link_access_mode_protected": "受保护（校验 Referer）",
   "settings_link_access_allow_empty_referer": "允许无 Referer 的请求",
   "settings_link_access_referer_list_label": "允许的域名（每行一个）",
-  "settings_link_access_referer_list_desc": "受保护模式下可嵌入你图片的域名，如 example.com 或 blog.example.com。",
+  "settings_link_access_referer_list_desc": "受保护模式下可嵌入你图片的外站域名，如 example.com 或 blog.example.com。博客本站域名（请求域名与 DOMAIN/CDN_DOMAIN）始终自动放行，无需填写。",
   "settings_link_access_protected_hint": "R2 原生拦截；S3 / HuggingFace / WebDAV 经本站代理并校验 Referer；Telegram 与 Discord 始终经 Bot API 代理回源；API-Key 图床无法代理，始终返回直链。",
   "settings_link_access_direct_hint": "所有渠道返回原始直链（默认行为）。",
   "settings_guides_title": "渠道配置教程",

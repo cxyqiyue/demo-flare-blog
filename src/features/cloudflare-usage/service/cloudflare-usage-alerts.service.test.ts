@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { CfServiceUsage } from "@/features/cloudflare-usage/cloudflare-usage.schema";
 import {
+  type CfAlertRow,
   computeAlertRows,
   renderUsageAlertContent,
   resolveAlertsToSend,
-  type CfAlertRow,
+  shouldDispatchUsageAlerts,
 } from "./cloudflare-usage-alerts.utils";
 
 const DEFAULT_THRESHOLDS = {
@@ -37,6 +38,47 @@ function svc(
   };
 }
 
+describe("shouldDispatchUsageAlerts", () => {
+  const token = "cf-token";
+
+  it("gates only on alert.enabled + apiToken + accountId", () => {
+    expect(
+      shouldDispatchUsageAlerts(
+        { apiToken: token, alert: { enabled: true } },
+        "account-id",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not require the legacy cloudflareAnalytics.enabled flag (no UI writes it)", () => {
+    const legacyConfig = {
+      enabled: false,
+      apiToken: token,
+      alert: { enabled: true },
+    };
+    expect(shouldDispatchUsageAlerts(legacyConfig, "account-id")).toBe(true);
+  });
+
+  it("returns false when the alert switch is off or credentials are missing", () => {
+    expect(
+      shouldDispatchUsageAlerts(
+        { apiToken: token, alert: { enabled: false } },
+        "account-id",
+      ),
+    ).toBe(false);
+    expect(
+      shouldDispatchUsageAlerts(
+        { apiToken: token, alert: { enabled: true } },
+        "",
+      ),
+    ).toBe(false);
+    expect(
+      shouldDispatchUsageAlerts({ alert: { enabled: true } }, "account-id"),
+    ).toBe(false);
+    expect(shouldDispatchUsageAlerts(undefined, "account-id")).toBe(false);
+  });
+});
+
 describe("computeAlertRows", () => {
   it("flags services at or above their threshold", () => {
     const alerts = computeAlertRows(
@@ -60,7 +102,10 @@ describe("computeAlertRows", () => {
 });
 
 describe("resolveAlertsToSend", () => {
-  const row = (service: string, level: "threshold" | "exhausted"): CfAlertRow => ({
+  const row = (
+    service: string,
+    level: "threshold" | "exhausted",
+  ): CfAlertRow => ({
     service,
     displayName: service,
     metric: "Requests",

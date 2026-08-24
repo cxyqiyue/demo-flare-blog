@@ -2358,7 +2358,7 @@
   "settings_link_access_mode_protected": "Protected (Referer check)",
   "settings_link_access_allow_empty_referer": "Allow requests without a Referer header",
   "settings_link_access_referer_list_label": "Allowed domains (one per line)",
-  "settings_link_access_referer_list_desc": "Domains allowed to embed your images in protected mode, e.g. example.com or blog.example.com.",
+  "settings_link_access_referer_list_desc": "External domains allowed to embed your images in protected mode, e.g. example.com or blog.example.com. Your own site domains (request host and DOMAIN/CDN_DOMAIN) are always allowed automatically — no need to list them.",
   "settings_link_access_protected_hint": "R2 is blocked natively; S3 / HuggingFace / WebDAV are proxied through this site with Referer checked; Telegram & Discord are always proxied via their bot APIs; API-key image beds cannot be proxied and always serve direct links.",
   "settings_link_access_direct_hint": "All channels return original direct URLs (default behavior).",
   "settings_guides_title": "Channel Setup Guides",
