@@ -978,6 +978,7 @@
   "editor_toolbar_underline": "下划线",
   "editor_toolbar_strike": "删除线",
   "editor_toolbar_code": "行内代码",
+  "editor_toolbar_highlight": "高亮",
   "editor_toolbar_code_block": "代码块",
   "editor_toolbar_formula_inline": "行内公式",
   "editor_toolbar_formula_block": "块级公式",

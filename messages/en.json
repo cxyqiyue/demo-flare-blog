@@ -985,6 +985,7 @@
   "editor_toolbar_underline": "Underline",
   "editor_toolbar_strike": "Strikethrough",
   "editor_toolbar_code": "Inline Code",
+  "editor_toolbar_highlight": "Highlight",
   "editor_toolbar_code_block": "Code Block",
   "editor_toolbar_formula_inline": "Inline Math",
   "editor_toolbar_formula_block": "Block Math",

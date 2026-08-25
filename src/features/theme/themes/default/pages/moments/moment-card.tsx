@@ -161,7 +161,7 @@ export function MomentCard({
       ) : (
         <div className="px-6 pt-4">
           {renderedContent ? (
-            <div className="text-sm leading-relaxed text-foreground/90 font-light">
+            <div className="default-md text-sm leading-relaxed text-foreground/90 font-light">
               {renderedContent}
             </div>
           ) : (

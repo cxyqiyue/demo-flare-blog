@@ -1,5 +1,6 @@
 import katex from "katex";
 import { Marked, type RendererThis, type Tokens } from "marked";
+import { preprocessExtendedMarkdown } from "@/lib/markdown/extended-markdown";
 
 /** 标题锚点 id 生成（与文章标题 slugify 规则保持一致） */
 function slugifyHeading(text: string | null | undefined) {
@@ -93,9 +94,12 @@ md.use({
   },
 });
 
-/** Markdown → HTML（含 GFM 表格/任务列表/删除线、代码块、数学公式、标题锚点） */
+/** Markdown → HTML（含 GFM 表格/任务列表/删除线、代码块、数学公式、标题锚点、脚注、高亮、内联 HTML） */
 export function renderMarkdownToHtml(markdown: string): string {
-  const preprocessed = preprocessMath(markdown);
+  const withMath = preprocessMath(markdown);
+  const preprocessed = preprocessExtendedMarkdown(withMath, {
+    renderInline: (raw) => md.parseInline(raw) as string,
+  });
   return md.parse(preprocessed) as string;
 }
 

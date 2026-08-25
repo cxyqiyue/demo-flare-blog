@@ -86,6 +86,43 @@ mark {
   @apply bg-muted text-inherit px-1 py-0.5 rounded-sm transition-colors border-b border-border;
 }
 
+/* 内联 HTML 标签：kbd（文章 / 动态 / 评论通用） */
+kbd {
+  @apply inline-block rounded-sm border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[0.85em] leading-none align-middle shadow-[0_1px_0_rgb(0_0_0_/_8%)];
+}
+
+sub,
+sup {
+  line-height: 0;
+}
+
+/* 原始 HTML 块（details 等经 htmlBlock 节点渲染） */
+.html-block-content {
+  @apply my-6 first:mt-0 last:mb-0;
+}
+
+.html-block-content details {
+  @apply rounded-lg border border-border/60 bg-muted/20;
+}
+
+.html-block-content details > summary {
+  @apply px-4 py-2.5 cursor-pointer select-none font-medium;
+}
+
+.html-block-content details[open] > summary {
+  @apply border-b border-border/40;
+}
+
+.html-block-content details > *:not(summary) {
+  @apply mx-4 my-3;
+}
+
+/* 脚注引用上标 */
+sup.footnote-ref a,
+sup a[href^="#fn-"] {
+  @apply no-underline text-muted-foreground hover:text-foreground transition-colors;
+}
+
 /* Theme Transition: Disable default cross-fade when 'theme-transition' class is present */
 .theme-transition::view-transition-old(root),
 .theme-transition::view-transition-new(root) {
@@ -302,7 +339,7 @@ mark {
 
 .ProseMirror td,
 .ProseMirror th {
-  @apply border border-border box-border min-w-[1em] px-2.5 py-2 relative align-top;
+  @apply border border-foreground/20 box-border min-w-[1em] px-2.5 py-2 relative align-top;
 }
 
 .ProseMirror th {

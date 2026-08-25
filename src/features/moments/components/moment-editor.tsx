@@ -1,23 +1,34 @@
 import type { JSONContent } from "@tiptap/react";
+import type { Editor as TiptapEditor } from "@tiptap/react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import clsx from "clsx";
 import type { LucideIcon } from "lucide-react";
 import {
   Bold,
   Code,
+  Heading2,
+  Highlighter,
   Image as ImageIcon,
   Italic,
   Link as LinkIcon,
+  List,
+  ListOrdered,
+  ListTodo,
   Loader2,
+  Minus,
+  Quote,
   Redo,
   Send,
+  SquareCode,
   Strikethrough,
+  Table as TableIcon,
   Underline as UnderlineIcon,
   Undo,
 } from "lucide-react";
 import { useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { getMomentExtensions } from "@/features/moments/components/moment-editor-config";
+import { createMarkdownPasteHandler } from "@/lib/markdown/markdown-paste-handler";
 import { m } from "@/paraglide/messages";
 
 interface MomentEditorProps {
@@ -62,32 +73,66 @@ export function MomentEditor({
   initialContent,
 }: MomentEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<TiptapEditor | null>(null);
+
+  const handlePaste = useCallback(
+    createMarkdownPasteHandler(() => editorRef.current),
+    [],
+  );
 
   const editor = useEditor({
     extensions: getMomentExtensions(),
     content: initialContent ?? "",
     autofocus: "end",
+    onCreate: ({ editor: e }) => {
+      editorRef.current = e;
+    },
+    onDestroy: () => {
+      editorRef.current = null;
+    },
     editorProps: {
       attributes: {
         class:
           "min-h-[120px] w-full bg-transparent py-3 text-sm leading-relaxed text-foreground focus:outline-none placeholder:text-muted-foreground/30 max-w-none",
       },
+      handlePaste,
     },
   });
 
-  const { isEmpty, isBold, isItalic, isUnderline, isStrike, isCode, isLink } =
-    useEditorState({
-      editor,
-      selector: (ctx) => ({
-        isEmpty: ctx.editor.isEmpty,
-        isBold: ctx.editor.isActive("bold"),
-        isItalic: ctx.editor.isActive("italic"),
-        isUnderline: ctx.editor.isActive("underline"),
-        isStrike: ctx.editor.isActive("strike"),
-        isCode: ctx.editor.isActive("code"),
-        isLink: ctx.editor.isActive("link"),
-      }),
-    });
+  const {
+    isEmpty,
+    isBold,
+    isItalic,
+    isUnderline,
+    isStrike,
+    isCode,
+    isLink,
+    isHeading2,
+    isBulletList,
+    isOrderedList,
+    isTaskList,
+    isBlockquote,
+    isCodeBlock,
+    isHighlight,
+  } = useEditorState({
+    editor,
+    selector: (ctx) => ({
+      isEmpty: ctx.editor.isEmpty,
+      isBold: ctx.editor.isActive("bold"),
+      isItalic: ctx.editor.isActive("italic"),
+      isUnderline: ctx.editor.isActive("underline"),
+      isStrike: ctx.editor.isActive("strike"),
+      isCode: ctx.editor.isActive("code"),
+      isLink: ctx.editor.isActive("link"),
+      isHeading2: ctx.editor.isActive("heading", { level: 2 }),
+      isBulletList: ctx.editor.isActive("bulletList"),
+      isOrderedList: ctx.editor.isActive("orderedList"),
+      isTaskList: ctx.editor.isActive("taskList"),
+      isBlockquote: ctx.editor.isActive("blockquote"),
+      isCodeBlock: ctx.editor.isActive("codeBlock"),
+      isHighlight: ctx.editor.isActive("highlight"),
+    }),
+  });
 
   const insertLink = useCallback(() => {
     if (!editor) return;
@@ -143,6 +188,14 @@ export function MomentEditor({
 
       <div className="flex flex-wrap items-center gap-1 p-1.5 border-b border-border/10 bg-background/50">
         <ToolbarButton
+          onClick={() =>
+            editor?.chain().focus().toggleHeading({ level: 2 }).run()
+          }
+          isActive={isHeading2}
+          icon={Heading2}
+          label={m.editor_toolbar_heading2()}
+        />
+        <ToolbarButton
           onClick={() => editor?.chain().focus().toggleBold().run()}
           isActive={isBold}
           icon={Bold}
@@ -171,6 +224,64 @@ export function MomentEditor({
           isActive={isCode}
           icon={Code}
           label={m.comments_editor_toolbar_code()}
+        />
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().toggleHighlight().run()}
+          isActive={isHighlight}
+          icon={Highlighter}
+          label={m.editor_toolbar_highlight()}
+        />
+
+        <div className="h-4 w-px bg-border/20 mx-1" />
+
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().toggleBulletList().run()}
+          isActive={isBulletList}
+          icon={List}
+          label={m.editor_toolbar_bullet_list()}
+        />
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+          isActive={isOrderedList}
+          icon={ListOrdered}
+          label={m.editor_toolbar_ordered_list()}
+        />
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().toggleTaskList().run()}
+          isActive={isTaskList}
+          icon={ListTodo}
+          label={m.editor_toolbar_task_list()}
+        />
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+          isActive={isBlockquote}
+          icon={Quote}
+          label={m.editor_toolbar_blockquote()}
+        />
+
+        <div className="h-4 w-px bg-border/20 mx-1" />
+
+        <ToolbarButton
+          onClick={() =>
+            editor
+              ?.chain()
+              .focus()
+              .insertTable({ rows: 2, cols: 3, withHeaderRow: true })
+              .run()
+          }
+          icon={TableIcon}
+          label={m.editor_toolbar_table()}
+        />
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+          isActive={isCodeBlock}
+          icon={SquareCode}
+          label={m.editor_toolbar_code_block()}
+        />
+        <ToolbarButton
+          onClick={() => editor?.chain().focus().setHorizontalRule().run()}
+          icon={Minus}
+          label={m.editor_toolbar_horizontal_rule()}
         />
 
         <div className="h-4 w-px bg-border/20 mx-1" />

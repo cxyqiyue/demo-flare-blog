@@ -15,8 +15,8 @@
   --tw-prose-code: var(--fuwari-inline-code-color);
   --tw-prose-pre-code: var(--fuwari-btn-content);
   --tw-prose-pre-bg: var(--fuwari-card-bg);
-  --tw-prose-th-borders: var(--fuwari-meta-divider);
-  --tw-prose-td-borders: var(--fuwari-meta-divider);
+  --tw-prose-th-borders: rgb(0 0 0 / 0.35);
+  --tw-prose-td-borders: rgb(0 0 0 / 0.35);
 
   color: var(--tw-prose-body);
   overflow-wrap: break-word;
@@ -229,6 +229,75 @@
     overflow-y: hidden;
     text-align: center;
   }
+
+  /* 内联 HTML 标签：kbd / sub / sup / mark */
+  kbd {
+    @apply bg-(--fuwari-inline-code-bg) text-(--fuwari-inline-code-color) px-1.5 py-0.5 rounded-md border border-(--fuwari-meta-divider) font-mono text-[0.85em] leading-none align-middle;
+    overflow-wrap: anywhere;
+  }
+
+  sub,
+  sup {
+    line-height: 0;
+  }
+
+  mark {
+    @apply rounded-md px-1 py-0.5;
+    background: color-mix(in srgb, var(--fuwari-primary) 22%, transparent);
+    color: inherit;
+  }
+
+  /* 折叠块等原始 HTML 块 */
+  details {
+    @apply my-4 rounded-lg border border-(--fuwari-meta-divider) bg-(--fuwari-card-bg);
+
+    > summary {
+      @apply px-4 py-2.5 cursor-pointer select-none font-medium;
+    }
+
+    &[open] > summary {
+      @apply border-b border-(--fuwari-meta-divider);
+    }
+
+    > *:not(summary) {
+      @apply mx-4 my-3;
+    }
+  }
+
+  .html-block-content {
+    @apply my-4 first:mt-0 last:mb-0;
+  }
+
+  /* 脚注区块（preprocessExtendedMarkdown 生成） */
+  .footnotes {
+    @apply mt-10 text-sm;
+    color: var(--tw-prose-captions);
+
+    hr {
+      @apply my-4;
+      border-color: var(--tw-prose-hr);
+    }
+
+    ol {
+      @apply my-0 ml-5 list-decimal space-y-1.5;
+    }
+
+    .footnote-backref {
+      @apply no-underline ml-1;
+      &:hover {
+        color: var(--fuwari-primary);
+      }
+    }
+  }
+
+  sup.footnote-ref a,
+  sup a[href^="#fn-"] {
+    @apply no-underline;
+    color: var(--tw-prose-captions);
+    &:hover {
+      color: var(--fuwari-primary);
+    }
+  }
 }
 
 :is(.dark .fuwari-custom-md) {
@@ -246,8 +315,8 @@
   --tw-prose-code: var(--fuwari-inline-code-color);
   --tw-prose-pre-code: var(--fuwari-btn-content);
   --tw-prose-pre-bg: var(--fuwari-card-bg);
-  --tw-prose-th-borders: var(--fuwari-meta-divider);
-  --tw-prose-td-borders: var(--fuwari-meta-divider);
+  --tw-prose-th-borders: rgb(255 255 255 / 0.3);
+  --tw-prose-td-borders: rgb(255 255 255 / 0.3);
 }
 
 :is(.dark .fuwari-custom-md) code span.line:before {
