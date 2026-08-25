@@ -253,6 +253,28 @@ function ChannelGuide({ title, children }: { title: string; children: ReactNode 
   );
 }
 
+function TelegramHandleText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(@[A-Za-z][A-Za-z0-9_]*)/).map((part, index) =>
+        part.startsWith("@") ? (
+          <a
+            key={part + index}
+            href={`https://t.me/${part.slice(1)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline decoration-border underline-offset-2 transition-colors hover:text-foreground"
+          >
+            {part}
+          </a>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
 function StatusDot({ status }: { status: ConnectionStatus }) {
   return (
     <div
@@ -1750,7 +1772,9 @@ export function ImageHostingSettingsSection({
           <p>{m.settings_guide_s3_body()}</p>
         </ChannelGuide>
         <ChannelGuide title={m.settings_guide_telegram_title()}>
-          <p>{m.settings_guide_telegram_body()}</p>
+          <p>
+            <TelegramHandleText text={m.settings_guide_telegram_body()} />
+          </p>
         </ChannelGuide>
         <ChannelGuide title={m.settings_guide_discord_title()}>
           <p>{m.settings_guide_discord_body()}</p>

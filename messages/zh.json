@@ -2366,7 +2366,7 @@
   "settings_guide_s3_title": "S3 兼容存储",
   "settings_guide_s3_body": "在任意 S3 兼容对象存储（AWS S3、阿里云 OSS、腾讯云 COS…）创建桶，填写 Endpoint、Bucket、Region、AccessKeyId 与 SecretAccessKey。公开读取需设置 publicUrl，留空则回退到预签名 URL。多数第三方存储保持 path-style 开启。",
   "settings_guide_telegram_title": "Telegram 渠道",
-  "settings_guide_telegram_body": "1）与 @BotFather 对话，/newbot 创建机器人并保存 token。2）创建私有频道或群组，将机器人设为管理员，获取 chat_id（可将消息转发给 @userinfobot 查询）。3）在上方粘贴 botToken 与 chatId。小图走 sendPhoto，其余走 sendDocument（上限 20MB）。访问图片时始终经 Bot API 回源，天然支持防盗链代理。",
+  "settings_guide_telegram_body": "1）与 @BotFather 对话，/newbot 创建机器人并保存 token。2）创建私有频道或群组，将机器人设为管理员，获取 chat_id（可将消息转发给 @VersaToolsBot 查询）。3）在上方粘贴 botToken 与 chatId。小图走 sendPhoto，其余走 sendDocument（上限 20MB）。访问图片时始终经 Bot API 回源，天然支持防盗链代理。",
   "settings_guide_discord_title": "Discord 渠道",
   "settings_guide_discord_body": "1）在 Discord 开发者门户创建应用、添加 Bot 并复制 token。2）开启 Message Content Intent。3）创建服务器与频道，邀请 Bot 并授予读取/发送附件权限，开启开发者模式后右键频道复制 ID。文件以消息附件形式存储；服务器 Nitro 加成可提升 25MB 上限。",
   "settings_guide_huggingface_title": "HuggingFace 数据集",
