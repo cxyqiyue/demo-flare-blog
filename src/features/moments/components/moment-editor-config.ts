@@ -1,12 +1,25 @@
 import FileHandler from "@tiptap/extension-file-handler";
+import Mathematics from "@tiptap/extension-mathematics";
 import Placeholder from "@tiptap/extension-placeholder";
+import Highlight from "@tiptap/extension-highlight";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
+import TaskItem from "@tiptap/extension-task-item";
+import TaskList from "@tiptap/extension-task-list";
 import type { Editor as TiptapEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { toast } from "sonner";
+import {
+  getActiveFormulaModalOpenerKey,
+  openFormulaModalForEdit,
+} from "@/components/tiptap-editor/formula-modal-store";
 import { uploadEditorImage } from "@/features/image-hosting/utils/upload-editor-image";
+import { CodeBlockExtension } from "@/features/posts/editor/extensions/code-block";
+import { HtmlBlockEditorExtension } from "@/features/posts/editor/extensions/html-block-view";
 import { ImageExtension } from "@/features/posts/editor/extensions/images";
 import type { ImageUploadResult } from "@/features/posts/editor/extensions/upload-image";
 import { ImageUpload } from "@/features/posts/editor/extensions/upload-image";
+import { TableBlockExtension } from "@/features/posts/editor/extensions/table";
 import { showUploadProgressToast } from "@/lib/upload-progress-toast";
 import { m } from "@/paraglide/messages";
 
@@ -46,15 +59,15 @@ function handleFilePaste(editor: TiptapEditor, files: Array<File>) {
   });
 }
 
+/**
+ * 动态编辑器扩展：完整 Markdown 能力
+ * （标题 / 有序无序任务列表 / 引用块 / 代码块高亮 / 表格 / 数学公式 /
+ *   分隔线 / 高亮 mark / 上下标 / 图片）
+ */
 export function getMomentExtensions() {
   return [
     StarterKit.configure({
-      orderedList: false,
-      bulletList: false,
-      listItem: false,
-      heading: false,
-      codeBlock: false,
-      blockquote: false,
+      heading: { levels: [1, 2, 3, 4, 5, 6] },
       code: {
         HTMLAttributes: {
           class:
@@ -82,6 +95,43 @@ export function getMomentExtensions() {
         },
       },
     }),
+    Highlight.configure({
+      HTMLAttributes: {
+        class: "rounded-[2px] px-0.5",
+      },
+    }),
+    Subscript,
+    Superscript,
+    TaskList,
+    TaskItem.configure({
+      nested: true,
+    }),
+    CodeBlockExtension,
+    ...TableBlockExtension,
+    Mathematics.configure({
+      katexOptions: { throwOnError: false },
+      inlineOptions: {
+        onClick: (node, pos) => {
+          openFormulaModalForEdit({
+            latex: node.attrs.latex ?? "",
+            pos,
+            type: "inline",
+            instanceKey: getActiveFormulaModalOpenerKey() ?? undefined,
+          });
+        },
+      },
+      blockOptions: {
+        onClick: (node, pos) => {
+          openFormulaModalForEdit({
+            latex: node.attrs.latex ?? "",
+            pos,
+            type: "block",
+            instanceKey: getActiveFormulaModalOpenerKey() ?? undefined,
+          });
+        },
+      },
+    }),
+    HtmlBlockEditorExtension,
     ImageExtension.configure({
       inline: false,
       HTMLAttributes: {

@@ -110,7 +110,7 @@
 
   th,
   td {
-    @apply border border-border px-2.5 py-2 text-left align-top;
+    @apply border border-foreground/20 px-2.5 py-2 text-left align-top;
   }
 
   th {
@@ -119,6 +119,59 @@
 
   hr {
     @apply my-8 border-border/60;
+  }
+
+  /* 内联 HTML 标签：kbd / sub / sup */
+  kbd {
+    @apply inline-block rounded-sm border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[0.85em] leading-none align-middle shadow-[0_1px_0_rgb(0_0_0_/_8%)];
+  }
+
+  sub,
+  sup {
+    line-height: 0;
+  }
+
+  /* 折叠块等原始 HTML 块 */
+  details {
+    @apply my-6 rounded-lg border border-border/60 bg-muted/20;
+
+    > summary {
+      @apply px-4 py-2.5 cursor-pointer select-none font-medium;
+    }
+
+    &[open] > summary {
+      @apply border-b border-border/40;
+    }
+
+    > *:not(summary) {
+      @apply mx-4 my-3;
+    }
+  }
+
+  .html-block-content {
+    @apply my-6 first:mt-0 last:mb-0;
+  }
+
+  /* 脚注区块（preprocessExtendedMarkdown 生成） */
+  .footnotes {
+    @apply mt-12 text-sm text-muted-foreground;
+
+    hr {
+      @apply my-4 border-border/60;
+    }
+
+    ol {
+      @apply my-0 ml-5 list-decimal space-y-1.5;
+    }
+
+    .footnote-backref {
+      @apply no-underline ml-1 hover:text-foreground transition-colors;
+    }
+  }
+
+  sup.footnote-ref a,
+  sup a[href^="#fn-"] {
+    @apply no-underline text-muted-foreground hover:text-foreground transition-colors;
   }
 
   /* KaTeX / Mathematics */

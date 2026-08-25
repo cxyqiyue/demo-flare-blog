@@ -262,4 +262,84 @@ describe("markdownToJsonContent", () => {
     expect(done.type).toBe("taskItem");
     expect(done.attrs?.checked).toBe(true);
   });
+
+  it("should convert ==highlight== to highlight mark", async () => {
+    const json = await markdownToJsonContent("this is ==important== stuff");
+
+    const p = json.content!.find((n) => n.type === "paragraph")!;
+    const markedText = p.content!.find((n) => n.text === "important");
+    expect(markedText).toBeDefined();
+    expect(markedText!.marks?.map((mk) => mk.type)).toContain("highlight");
+  });
+
+  it("should not highlight inside code spans", async () => {
+    const json = await markdownToJsonContent("keep `==raw==` here");
+
+    expect(JSON.stringify(json)).not.toContain('"highlight"');
+    expect(JSON.stringify(json)).toContain("==raw==");
+  });
+
+  it("should convert <sup>/<sub> tags to marks", async () => {
+    const json = await markdownToJsonContent(
+      "H<sub>2</sub>O and X<sup>2</sup>",
+    );
+
+    const p = json.content!.find((n) => n.type === "paragraph")!;
+    const subText = p.content!.find((n) => n.text === "2");
+    const supText = p.content!.find((n) => n.text === "2" && n !== subText);
+    expect(subText?.marks?.map((mk) => mk.type)).toContain("subscript");
+    expect(supText?.marks?.map((mk) => mk.type)).toContain("superscript");
+  });
+
+  it("should convert <kbd> to inline code", async () => {
+    const json = await markdownToJsonContent("press <kbd>Ctrl</kbd>+<kbd>C</kbd>");
+
+    expect(JSON.stringify(json)).not.toContain("<kbd>");
+    const p = json.content!.find((n) => n.type === "paragraph")!;
+    const codeTexts = p
+      .content!.filter((n) => n.type === "text")
+      .filter((n) =>
+        (n.marks ?? []).some((mk) => mk.type === "code"),
+      )
+      .map((n) => n.text);
+    expect(codeTexts).toEqual(["Ctrl", "C"]);
+  });
+
+  it("should convert <details> blocks to htmlBlock nodes", async () => {
+    const md = [
+      "<details>",
+      "<summary>Click me</summary>",
+      "",
+      "hidden **content**",
+      "",
+      "</details>",
+    ].join("\n");
+    const json = await markdownToJsonContent(md);
+
+    const htmlBlock = json.content!.find((n) => n.type === "htmlBlock");
+    expect(htmlBlock).toBeDefined();
+    const html = htmlBlock!.attrs?.html as string;
+    expect(html).toContain("<summary>Click me</summary>");
+    expect(html).toContain("hidden");
+  });
+
+  it("should convert footnotes to sup refs + end-of-doc list", async () => {
+    const json = await markdownToJsonContent(
+      "Statement[^1] with source[^src].\n\n[^1]: First note.\n[^src]: Second note.",
+    );
+
+    const serialized = JSON.stringify(json);
+    // 引用变为带链接的上标
+    expect(serialized).toContain('"superscript"');
+    expect(serialized).toContain("#fn-1");
+    // 文末出现编号列表（脚注内容）
+    const orderedLists = json.content!.filter(
+      (n) => n.type === "orderedList",
+    );
+    expect(orderedLists.length).toBeGreaterThan(0);
+    const lastList = orderedLists[orderedLists.length - 1];
+    const listText = JSON.stringify(lastList);
+    expect(listText).toContain("First note.");
+    expect(listText).toContain("Second note.");
+  });
 });

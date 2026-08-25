@@ -1,6 +1,9 @@
 import FileHandler from "@tiptap/extension-file-handler";
 import Mathematics from "@tiptap/extension-mathematics";
 import Placeholder from "@tiptap/extension-placeholder";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
+import Highlight from "@tiptap/extension-highlight";
 import TableOfContents from "@tiptap/extension-table-of-contents";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
@@ -13,6 +16,7 @@ import {
 } from "@/components/tiptap-editor/formula-modal-store";
 import { uploadEditorImage } from "@/features/image-hosting/utils/upload-editor-image";
 import { CodeBlockExtension } from "@/features/posts/editor/extensions/code-block";
+import { HtmlBlockEditorExtension } from "@/features/posts/editor/extensions/html-block-view";
 import { ImageExtension } from "@/features/posts/editor/extensions/images";
 import { TableBlockExtension } from "@/features/posts/editor/extensions/table";
 import { BlockQuoteExtension } from "@/features/posts/editor/extensions/typography/block-quote";
@@ -93,10 +97,18 @@ export const extensions = [
     },
   }),
   HeadingExtension.configure({
-    levels: [1, 2, 3, 4],
+    levels: [1, 2, 3, 4, 5, 6],
   }),
   BlockQuoteExtension,
   CodeBlockExtension,
+  Highlight.configure({
+    HTMLAttributes: {
+      class: "rounded-[2px] px-0.5",
+    },
+  }),
+  Subscript,
+  Superscript,
+  HtmlBlockEditorExtension,
   TaskList,
   TaskItem.configure({
     nested: true,

@@ -1,4 +1,6 @@
 import type { JSONContent } from "@tiptap/react";
+import { HtmlBlockNode } from "@/features/posts/editor/extensions/html-block";
+import { preprocessExtendedMarkdown } from "@/lib/markdown/extended-markdown";
 
 function escapeHtmlAttr(s: string): string {
   return s
@@ -101,9 +103,13 @@ function transformTaskLists(html: string): string {
 export async function markdownToJsonContent(
   markdown: string,
 ): Promise<JSONContent> {
-  const preprocessed = preprocessMathInMarkdown(markdown);
-
+  const withMath = preprocessMathInMarkdown(markdown);
   const { marked } = await import("marked");
+  const preprocessed = preprocessExtendedMarkdown(withMath, {
+    renderInline: (raw) => marked.parseInline(raw) as string,
+    normalizeInlineHtml: true,
+  });
+
   let html = await marked(preprocessed);
   html = transformTaskLists(html);
 
@@ -115,6 +121,11 @@ export async function markdownToJsonContent(
   const { default: ImageExt } = await import("@tiptap/extension-image");
   const { default: Mathematics } = await import(
     "@tiptap/extension-mathematics"
+  );
+  const { default: Highlight } = await import("@tiptap/extension-highlight");
+  const { default: Subscript } = await import("@tiptap/extension-subscript");
+  const { default: Superscript } = await import(
+    "@tiptap/extension-superscript"
   );
   const { Table } = await import("@tiptap/extension-table");
   const { default: TableRow } = await import("@tiptap/extension-table-row");
@@ -129,6 +140,10 @@ export async function markdownToJsonContent(
     StarterKit,
     ImageExt,
     Mathematics.configure({ katexOptions: { throwOnError: false } }),
+    Highlight,
+    Subscript,
+    Superscript,
+    HtmlBlockNode,
     Table,
     TableRow,
     TableHeader,
@@ -140,6 +155,20 @@ export async function markdownToJsonContent(
   const { document } = parseHTML(
     `<!DOCTYPE html><html><body>${html}</body></html>`,
   );
+
+  // <details> 等无法映射为 ProseMirror 节点的块级 HTML 包装为 htmlBlock 节点，
+  // 由编辑器 NodeView / 前台 nodeMapping 负责展示。
+  // 注意：使用 DOM API 时传原始 HTML，序列化转义由 DOM 实现负责。
+  const htmlBlocks = Array.from(document.querySelectorAll("details"));
+  for (const el of htmlBlocks) {
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-type", "html-block");
+    wrapper.setAttribute(
+      "data-html",
+      (el as unknown as { outerHTML: string }).outerHTML,
+    );
+    el.replaceWith(wrapper);
+  }
 
   return PMDOMParser.fromSchema(schema)
     .parse(document.body as unknown as Element)

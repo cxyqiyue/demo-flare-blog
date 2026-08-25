@@ -10,6 +10,7 @@ import { uploadEditorImage } from "@/features/image-hosting/utils/upload-editor-
 import { handleServerError } from "@/lib/errors/error-handler";
 import { parseRequestError } from "@/lib/errors/request-errors";
 import { normalizeLinkHref } from "@/lib/links/normalize-link-href";
+import { createMarkdownPasteHandler } from "@/lib/markdown/markdown-paste-handler";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { FormulaModalPayload } from "./formula-modal-store";
@@ -60,12 +61,22 @@ export const Editor = memo(function Editor({
     editContext: { pos: number; type: FormulaMode } | null;
   }>({ mode: "inline", initialLatex: "", editContext: null });
 
+  const editorRef = useRef<TiptapEditor | null>(null);
+  const handlePaste = useCallback(
+    createMarkdownPasteHandler(() => editorRef.current),
+    [],
+  );
+
   const editor = useEditor({
     extensions,
     content,
     editable,
     onCreate: ({ editor: currentEditor }) => {
+      editorRef.current = currentEditor;
       onCreated?.(currentEditor);
+    },
+    onDestroy: () => {
+      editorRef.current = null;
     },
     onUpdate: ({ editor: currentEditor }) => {
       onChange?.(currentEditor.getJSON());
@@ -78,6 +89,7 @@ export const Editor = memo(function Editor({
           contentClassName,
         ),
       },
+      handlePaste,
     },
     immediatelyRender: false,
   });
