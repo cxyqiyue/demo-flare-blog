@@ -13,12 +13,16 @@ export const buildSearchIndexFn = createServerFn({ method: "POST" })
 export const upsertSearchDocFn = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
   .inputValidator(UpsertSearchDocSchema)
-  .handler(({ data, context }) => SearchService.upsert(context, data));
+  .handler(({ data, context }) =>
+    SearchService.upsert(context, data, { immediate: true }),
+  );
 
 export const deleteSearchDocFn = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
   .inputValidator(DeleteSearchDocSchema)
-  .handler(({ data, context }) => SearchService.deleteIndex(context, data));
+  .handler(({ data, context }) =>
+    SearchService.deleteIndex(context, data, { immediate: true }),
+  );
 
 export const getIndexVersionFn = createServerFn()
   .middleware([dbMiddleware])

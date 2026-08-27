@@ -65,6 +65,7 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
 
         <MarkdownContent
           markdown={article.markdown}
+          preRenderedHtml={article.renderedHtml}
           className={markdownClassName}
         />
       </div>

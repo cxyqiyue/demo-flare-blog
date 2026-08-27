@@ -2,6 +2,7 @@ import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import * as CacheService from "@/features/cache/cache.service";
 import * as PostRepo from "@/features/posts/data/posts.data";
+import { POST_RENDER_VERSION } from "@/features/posts/render-version";
 import { POSTS_CACHE_KEYS } from "@/features/posts/schema/posts.schema";
 import * as PostService from "@/features/posts/services/posts.service";
 import { highlightCodeBlocks } from "@/features/posts/utils/content";
@@ -85,14 +86,22 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
         ? await highlightCodeBlocks(post.contentJson)
         : null;
 
-      await PostRepo.updatePublicContentSnapshot(db, postId, publicContentJson);
+      await PostRepo.updatePublicContentSnapshot(
+        db,
+        postId,
+        publicContentJson,
+        POST_RENDER_VERSION,
+      );
     });
 
     // 3. Invalidate caches EARLY so the new post is visible immediately.
     //    AI 摘要生成可能耗时数分钟（含重试），不能让它阻塞内容可见性；
     //    摘要完成后再做第二次轮换刷新列表/详情中的摘要字段。
+    //    fastInvalidatePublicCaches 已轮换版本指针，此处跳过以避免重复 KV 写入。
     await step.do("invalidate caches", async () => {
-      await invalidatePostCaches(this.env, initialPost.slug);
+      await invalidatePostCaches(this.env, initialPost.slug, {
+        skipVersionBump: true,
+      });
     });
 
     // 4. Generate summary
@@ -128,18 +137,28 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
 
     if (!isFuturePost) {
       await step.do("update search index", async () => {
-        return await upsertPostSearchIndex(this.env, postForSideEffects);
+        const result = await upsertPostSearchIndex(
+          this.env,
+          postForSideEffects,
+        );
+        // 搜索索引延迟写入 KV（~5s 去抖），保持 Worker 存活直到写入完成
+        if (result.flushPromise) {
+          this.ctx.waitUntil(result.flushPromise);
+        }
       });
     }
 
     // 6. Re-invalidate caches when a NEW summary was generated, so lists and
     //    detail pages pick it up instead of serving the pre-summary snapshot
     //    for the remaining TTL.
+    //    版本指针已在 fastInvalidatePublicCaches 中轮换，此处仅清理 CDN。
     const summaryChanged =
       !!updatedPost && updatedPost.summary !== initialPost.summary;
     if (!isFuturePost && summaryChanged) {
       await step.do("invalidate caches after summary", async () => {
-        await invalidatePostCaches(this.env, postForSideEffects.slug);
+        await invalidatePostCaches(this.env, postForSideEffects.slug, {
+          skipVersionBump: true,
+        });
       });
     }
 

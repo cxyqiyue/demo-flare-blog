@@ -68,7 +68,11 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
         ) : null}
 
         <main className="max-w-none min-w-0 overflow-x-clip text-foreground leading-relaxed font-serif">
-          <MarkdownContent markdown={article.markdown} className="default-md" />
+          <MarkdownContent
+            markdown={article.markdown}
+            preRenderedHtml={article.renderedHtml}
+            className="default-md"
+          />
         </main>
       </article>
 

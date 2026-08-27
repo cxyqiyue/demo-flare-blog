@@ -5,6 +5,7 @@ import * as EdgeCacheService from "@/features/cache/edge-cache.service";
 import { syncPostMedia } from "@/features/posts/data/post-media.data";
 import * as PostRevisionRepo from "@/features/posts/data/post-revisions.data";
 import * as PostRepo from "@/features/posts/data/posts.data";
+import { POST_RENDER_VERSION } from "@/features/posts/render-version";
 import type {
   AdjacentPostsResponse,
   BatchUpdatePostsStatusInput,
@@ -119,15 +120,32 @@ export async function findPostBySlug(
     if (!post) return null;
 
     let contentJson = post.publicContentJson ?? post.contentJson;
+    let needsUpdate = false;
+
     // Backward-compatible fallback for posts that haven't been reprocessed yet.
-    // New publishes should read pre-highlighted content from `publicContentJson`.
     if (!post.publicContentJson && contentJson) {
       contentJson = await highlightCodeBlocks(contentJson);
+      needsUpdate = true;
+    }
+
+    // 懒加载重新渲染：当渲染管线变更（POST_RENDER_VERSION 递增）时，
+    // 重新对 contentJson 应用 Shiki 高亮并更新 D1 缓存。
+    if (
+      !needsUpdate &&
+      contentJson &&
+      post.publicContentRenderVersion !== POST_RENDER_VERSION
+    ) {
+      contentJson = await highlightCodeBlocks(contentJson);
+      needsUpdate = true;
+    }
+
+    if (needsUpdate && contentJson) {
       context.executionCtx.waitUntil(
         PostRepo.updatePublicContentSnapshot(
           context.db,
           post.id,
           contentJson,
+          POST_RENDER_VERSION,
         ).then(() => undefined),
       );
     }

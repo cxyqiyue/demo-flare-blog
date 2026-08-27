@@ -5,20 +5,36 @@ import { cn } from "@/lib/utils";
 
 interface MarkdownContentProps {
   markdown: string;
+  /** 服务端预渲染的 HTML（含 Shiki 高亮），传入时跳过客户端高亮 */
+  preRenderedHtml?: string | null;
   className?: string;
 }
 
 /**
  * 渲染 Markdown 内容（静态 HTML + 客户端代码高亮）。
- * 服务端/首屏输出与客户端首帧一致，避免 hydration 不匹配；
- * 挂载后通过 effect 将代码块替换为 shiki 高亮结果。
+ *
+ * 支持两种模式：
+ * - preRenderedHtml: 服务端已应用 Shiki 高亮，直接使用，跳过客户端 effect
+ * - 纯 markdown: 服务端/首屏输出与客户端首帧一致，挂载后通过 effect 替换为 shiki 高亮
  */
-export function MarkdownContent({ markdown, className }: MarkdownContentProps) {
+export function MarkdownContent({
+  markdown,
+  preRenderedHtml,
+  className,
+}: MarkdownContentProps) {
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const html = useMemo(() => renderMarkdownToHtml(markdown), [markdown]);
+  const html = useMemo(
+    () => preRenderedHtml ?? renderMarkdownToHtml(markdown),
+    [markdown, preRenderedHtml],
+  );
+
+  // 仅在非预渲染模式下执行客户端 Shiki 高亮
+  const needsClientHighlight = !preRenderedHtml;
 
   useEffect(() => {
+    if (!needsClientHighlight) return;
+
     const root = rootRef.current;
     if (!root) return;
 
@@ -49,7 +65,7 @@ export function MarkdownContent({ markdown, className }: MarkdownContentProps) {
     return () => {
       cancelled = true;
     };
-  }, [markdown]);
+  }, [markdown, needsClientHighlight]);
 
   return (
     <div

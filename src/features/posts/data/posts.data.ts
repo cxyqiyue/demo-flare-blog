@@ -80,6 +80,7 @@ export async function getPosts(
       skillId: PostsTable.skillId,
       createdAt: PostsTable.createdAt,
       updatedAt: PostsTable.updatedAt,
+      publicContentRenderVersion: PostsTable.publicContentRenderVersion,
     })
     .from(PostsTable)
     .limit(Math.min(limit, 50))
@@ -183,6 +184,7 @@ export async function getPostsCursor(
       skillId: PostsTable.skillId,
       createdAt: PostsTable.createdAt,
       updatedAt: PostsTable.updatedAt,
+      publicContentRenderVersion: PostsTable.publicContentRenderVersion,
     })
     .from(PostsTable)
     .$dynamic();
@@ -332,6 +334,7 @@ export async function findPostsBySlugs(db: DB, slugs: string[]) {
       skillId: true,
       createdAt: true,
       updatedAt: true,
+      publicContentRenderVersion: true,
     },
     with: {
       postTags: {
@@ -433,11 +436,15 @@ export async function updatePublicContentSnapshot(
   db: DB,
   id: number,
   publicContentJson: typeof PostsTable.$inferInsert.publicContentJson,
+  renderVersion?: string,
 ) {
   await db
     .update(PostsTable)
     .set({
       publicContentJson,
+      ...(renderVersion !== undefined
+        ? { publicContentRenderVersion: renderVersion }
+        : {}),
       // Snapshot rebuilds should not affect editorial ordering/history.
       updatedAt: sql`${PostsTable.updatedAt}`,
     })
@@ -558,6 +565,7 @@ export async function getPublicPostsByIds(db: DB, ids: Array<number>) {
       skillId: PostsTable.skillId,
       createdAt: PostsTable.createdAt,
       updatedAt: PostsTable.updatedAt,
+      publicContentRenderVersion: PostsTable.publicContentRenderVersion,
     })
     .from(PostsTable)
     .where(and(inArray(PostsTable.id, ids), whereClause));
@@ -577,6 +585,7 @@ const PUBLIC_PAGE_COLUMNS = {
   skillId: PostsTable.skillId,
   createdAt: PostsTable.createdAt,
   updatedAt: PostsTable.updatedAt,
+  publicContentRenderVersion: PostsTable.publicContentRenderVersion,
 } as const;
 
 /**

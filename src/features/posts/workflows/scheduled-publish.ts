@@ -34,7 +34,10 @@ export class ScheduledPublishWorkflow extends WorkflowEntrypoint<Env, Params> {
     });
 
     await step.do("update search index", async () => {
-      await upsertPostSearchIndex(this.env, post);
+      const result = await upsertPostSearchIndex(this.env, post);
+      if (result.flushPromise) {
+        this.ctx.waitUntil(result.flushPromise);
+      }
     });
 
     await step.do("notify subscribers", async () => {

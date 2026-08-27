@@ -6,6 +6,7 @@ import {
   getOramaDb,
   getOramaMeta,
   persistOramaDb,
+  persistOramaDbDeferred,
 } from "@/features/search/model/store";
 import {
   CONTENT_SLICE,
@@ -68,6 +69,7 @@ export async function search(context: DbContext, data: SearchQueryInput) {
 export async function upsert(
   context: { env: Env },
   data: UpsertSearchDocInput,
+  options?: { immediate?: boolean },
 ) {
   const db = await getOramaDb(context.env);
 
@@ -92,17 +94,30 @@ export async function upsert(
     tags: data.tags ?? [],
   });
 
-  await persistOramaDb(context.env, db);
-  return { id: data.id };
+  if (options?.immediate) {
+    await persistOramaDb(context.env, db);
+    return { id: data.id };
+  }
+
+  // 延迟持久化：Workflow 中的多次 upsert/delete 会合并为一次 KV 写入。
+  // 返回 flushPromise 供调方通过 waitUntil 保持 Worker 存活。
+  const flushPromise = persistOramaDbDeferred(context.env, db);
+  return { id: data.id, flushPromise };
 }
 
 export async function deleteIndex(
   context: { env: Env },
   data: DeleteSearchDocInput,
+  options?: { immediate?: boolean },
 ) {
   const db = await getOramaDb(context.env);
   await remove(db, data.id.toString());
-  await persistOramaDb(context.env, db);
+
+  if (options?.immediate) {
+    await persistOramaDb(context.env, db);
+  } else {
+    persistOramaDbDeferred(context.env, db);
+  }
   return { id: data.id };
 }
 

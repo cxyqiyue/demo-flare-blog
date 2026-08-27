@@ -25,6 +25,8 @@ export const PostsTable = sqliteTable(
     publicContentJson: text("public_content_json", {
       mode: "json",
     }).$type<JSONContent>(),
+    /** publicContentJson 的渲染版本号，用于懒加载重新渲染 */
+    publicContentRenderVersion: text("public_content_render_version"),
     status: text("status", { enum: POST_STATUSES }).notNull().default("draft"),
     publishedAt: integer("published_at", { mode: "timestamp" }),
     pinnedAt: integer("pinned_at", { mode: "timestamp" }),
