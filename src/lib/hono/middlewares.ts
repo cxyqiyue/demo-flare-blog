@@ -6,10 +6,6 @@ import {
   isFullSiteChallengeEnabled,
   verifyAltchaSolutionPayload,
 } from "@/features/challenge/service/challenge.service";
-import {
-  FULLSITE_PASS_COOKIE,
-  verifyFullSitePass,
-} from "@/features/challenge/service/fullsite.service";
 import * as ConfigService from "@/features/config/service/config.service";
 import { getLinkAccessSettings } from "@/features/media/service/link-access.service";
 import { getAuth } from "@/lib/auth/auth.server";
@@ -333,41 +329,6 @@ export function isFullSiteProtectedPagePath(path: string): boolean {
   if (FULLSITE_SKIP_PREFIXES.some((p) => path.startsWith(p))) return false;
   if (path === "/") return true;
   return FULLSITE_PUBLIC_PAGE_PREFIXES.some((p) => path.startsWith(p));
-}
-
-/**
- * 判断当前前台页面 GET 请求是否需要全站人机验证门禁：
- * - 仅在「保护全站」且挑战就绪时启用。
- * - 仅对前台页面 GET 请求生效（POST/Server Function/API 不拦截）。
- * - 携带有效通行证 cookie 时放行（返回 false）。
- * 返回 true 表示该请求应在客户端叠加毛玻璃验证遮罩。
- */
-export async function isRequestFullSiteLocked(
-  c: Context<{ Bindings: Env }>,
-): Promise<boolean> {
-  if (c.req.method !== "GET") return false;
-  const path = c.req.path;
-  if (!isFullSiteProtectedPagePath(path)) return false;
-
-  let config;
-  try {
-    config = await getChallengeServerConfig({
-      db: c.get("db"),
-      env: c.env,
-      executionCtx: c.executionCtx,
-    });
-  } catch {
-    // 配置读取失败时放行，避免把人挡在门外
-    return false;
-  }
-
-  if (!isFullSiteChallengeEnabled(config)) return false;
-
-  const cookieHeader = c.req.header("cookie");
-  const passCookie = parseCookie(cookieHeader, FULLSITE_PASS_COOKIE);
-  if (verifyFullSitePass(c.env, passCookie)) return false;
-
-  return true;
 }
 
 /** 从 Cookie 头解析指定 cookie 名对应的值。 */

@@ -38,7 +38,6 @@ import {
   baseMiddleware,
   cacheMiddleware,
   challengeMiddleware,
-  isRequestFullSiteLocked,
   rateLimitMiddleware,
   shieldMiddleware,
 } from "./middlewares";
@@ -313,24 +312,8 @@ app.route("/api/navigation", navigationFaviconRoute);
 // Router之前的防护
 app.all("*", shieldMiddleware);
 
-app.all("*", async (c) => {
-  let request = c.req.raw;
-
-  // 全站人机验证：未验证访客的受保护前台页面在客户端叠加毛玻璃验证遮罩。
-  // 这里通过克隆请求注入标记头，供 SSR loader 读取以决定是否遮蔽正文。
-  if (await isRequestFullSiteLocked(c)) {
-    const cloned = new Request(request.url, {
-      method: request.method,
-      headers: new Headers([
-        ...request.headers.entries(),
-        ["x-fullsite-locked", "1"],
-      ]),
-      body: request.body,
-    });
-    request = cloned;
-  }
-
-  return handler.fetch(request, {
+app.all("*", (c) => {
+  return handler.fetch(c.req.raw, {
     context: {
       env: c.env,
       executionCtx: getExecutionContext(c),

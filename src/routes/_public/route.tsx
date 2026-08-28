@@ -1,10 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { getRequestHeader } from "@tanstack/react-start/server";
 import theme from "@theme";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { AUTH_KEYS } from "@/features/auth/queries";
+import { getFullSiteLockedFn } from "@/features/challenge/api/fullsite.api";
 import { FullSiteGateOverlay } from "@/features/challenge/components/full-site-gate-overlay";
 import { getThemePreloadImages } from "@/features/theme/site-config.helpers";
 import { authClient } from "@/lib/auth/auth.client";
@@ -13,10 +13,12 @@ import { CACHE_CONTROL } from "@/lib/constants";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_public")({
-  beforeLoad: () => ({
-    // 全站人机验证：Hono 层对未验证访客的受保护页面注入此标记头
-    fullSiteLocked: getRequestHeader("x-fullsite-locked") === "1",
-  }),
+  beforeLoad: async ({ location }) => {
+    // 全站人机验证：服务端判定是否锁定（读通行证 cookie + 配置）。
+    // /unsubscribe 为豁免页，始终不叠加遮罩。
+    const locked = await getFullSiteLockedFn();
+    return { fullSiteLocked: locked && location.pathname !== "/unsubscribe" };
+  },
   loader: ({ context }) => ({
     preloadImages: getThemePreloadImages(context.siteConfig),
     fullSiteLocked: context.fullSiteLocked ?? false,
