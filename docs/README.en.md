@@ -246,9 +246,9 @@ Open **Settings → Secrets and variables → Actions** in your repository and c
 
 | Variable | Description |
 | :--- | :--- |
-| `CLOUDFLARE_ZONE_ID` | Zone ID; only needed for automatic CDN purge after deploy |
+| `CLOUDFLARE_ZONE_ID` | Zone ID; used for automatic CDN purge after deploy and automatic DNS record maintenance (optional) |
 | `CLOUDFLARE_PURGE_API_TOKEN` | Purge Token; same as above (optional) |
-| `CDN_DOMAIN` | Standalone CDN domain, preferred during purge |
+| `CDN_DOMAIN` | Standalone CDN domain, preferred during purge. When `DOMAIN` (non-workers.dev) is also set, deploy auto-maintains a **DNS-only (grey-cloud)** CNAME: DOMAIN → CDN_DOMAIN. Requires the Deploy Token to have Zone → DNS → Edit permission (on failure it only warns and does not block deployment) |
 | `GH_TOKEN` | GitHub API Token for version-update checks; create a [Fine-grained PAT](https://github.com/settings/personal-access-tokens/new) to avoid rate limits |
 | `PAGEVIEW_SALT` | Salt for anonymizing pageview hashes, generated with `openssl rand -hex 16` |
 | `TURNSTILE_SECRET_KEY` | (legacy, can be empty) Turnstile Secret Key is now configured in admin Settings → Challenge |

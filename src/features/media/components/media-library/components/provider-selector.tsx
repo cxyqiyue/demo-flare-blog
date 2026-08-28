@@ -1,4 +1,15 @@
-import { Check, ChevronDown, Cloud, Database, Globe, MessageSquare, Send, Upload, Brain, FolderGit2 } from "lucide-react";
+import {
+  Brain,
+  Check,
+  ChevronDown,
+  Cloud,
+  Database,
+  FolderGit2,
+  Globe,
+  MessageSquare,
+  Send,
+  Upload,
+} from "lucide-react";
 import { useState } from "react";
 import type { MediaProvider } from "@/features/media/media.schema";
 import { cn } from "@/lib/utils";
@@ -28,7 +39,7 @@ export function ProviderSelector({
   const current = providers.find((p) => p.id === currentId);
   const Icon = current ? (PROVIDER_ICONS[current.type] ?? Upload) : Upload;
 
-  if (providers.length <= 1) return null;
+  if (providers.length === 0) return null;
 
   return (
     <div className="relative">
@@ -79,7 +90,9 @@ export function ProviderSelector({
                   <span className="flex-1 truncate">{p.name}</span>
                   <div className="flex items-center gap-2">
                     {p.canList && (
-                      <span className="text-[9px] uppercase tracking-wider opacity-50">CRUD</span>
+                      <span className="text-[9px] uppercase tracking-wider opacity-50">
+                        CRUD
+                      </span>
                     )}
                     {p.canUpload && !p.canList && (
                       <Upload size={8} className="opacity-50" />

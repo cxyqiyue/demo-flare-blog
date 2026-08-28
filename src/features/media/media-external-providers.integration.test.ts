@@ -2,15 +2,15 @@ import { createAdminTestContext, seedUser } from "tests/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_CONFIG } from "@/features/config/config.schema";
 import * as ConfigRepo from "@/features/config/data/config.data";
-import * as PostService from "@/features/posts/services/posts.service";
-import { PostMediaTable } from "@/lib/db/schema";
-import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
 import * as DiscordChannelApi from "@/features/image-hosting/channels/discord";
 import * as HuggingFaceChannelApi from "@/features/image-hosting/channels/huggingface";
+import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
 import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
+import * as PostService from "@/features/posts/services/posts.service";
+import { PostMediaTable } from "@/lib/db/schema";
+import { err, ok, unwrap } from "@/lib/errors";
 import * as MediaRepo from "./data/media.data";
 import * as MediaService from "./service/media.service";
-import { err, ok, unwrap } from "@/lib/errors";
 
 /**
  * MediaService external channel tests (telegram / discord / huggingface / webdav)
@@ -67,18 +67,20 @@ describe("MediaService external channels", () => {
       HuggingFaceChannelApi,
       "listHuggingFaceDirectory",
     ).mockResolvedValue(ok({ files: [], folders: [] }));
-    vi.spyOn(HuggingFaceChannelApi, "listAllHuggingFacePaths").mockResolvedValue(
-      ok([]),
-    );
+    vi.spyOn(
+      HuggingFaceChannelApi,
+      "listAllHuggingFacePaths",
+    ).mockResolvedValue(ok([]));
     vi.spyOn(HuggingFaceChannelApi, "deleteHuggingFaceFiles").mockResolvedValue(
       ok({ deleted: 0 }),
     );
     vi.spyOn(HuggingFaceChannelApi, "moveHuggingFaceFile").mockResolvedValue(
       ok({ success: true }),
     );
-    vi.spyOn(HuggingFaceChannelApi, "createHuggingFaceFolder").mockResolvedValue(
-      ok({ success: true }),
-    );
+    vi.spyOn(
+      HuggingFaceChannelApi,
+      "createHuggingFaceFolder",
+    ).mockResolvedValue(ok({ success: true }));
     vi.spyOn(WebDavChannelApi, "uploadToWebDavChannel").mockResolvedValue(
       err({ reason: "WEBDAV_UPLOAD_FAILED", message: "not mocked" }),
     );
@@ -231,9 +233,7 @@ describe("MediaService external channels", () => {
         keys: ["telegram/1700000000-abc.png"],
       });
       expect(result).toEqual({ deleted: 1, skipped: 0 });
-      expect(
-        TelegramChannelApi.deleteTelegramMessage,
-      ).not.toHaveBeenCalled();
+      expect(TelegramChannelApi.deleteTelegramMessage).not.toHaveBeenCalled();
     });
 
     it("should refuse rename/move (messages have no paths)", async () => {
@@ -496,9 +496,9 @@ describe("MediaService external channels", () => {
         .insert(PostMediaTable)
         .values({ postId, mediaId: linked.id });
 
-      vi.mocked(HuggingFaceChannelApi.listAllHuggingFacePaths).mockResolvedValue(
-        ok(["blog/free.png", "blog/linked.png"]),
-      );
+      vi.mocked(
+        HuggingFaceChannelApi.listAllHuggingFacePaths,
+      ).mockResolvedValue(ok(["blog/free.png", "blog/linked.png"]));
 
       const result = unwrap(
         await MediaService.deleteFolders(adminContext, {
@@ -512,9 +512,9 @@ describe("MediaService external channels", () => {
         skippedFiles: 1,
       });
 
-      const deletedPaths =
-        vi.mocked(HuggingFaceChannelApi.deleteHuggingFaceFiles).mock
-          .calls[0][1];
+      const deletedPaths = vi.mocked(
+        HuggingFaceChannelApi.deleteHuggingFaceFiles,
+      ).mock.calls[0][1];
       expect(deletedPaths).toEqual(["blog/free.png"]);
 
       expect(
@@ -534,10 +534,9 @@ describe("MediaService external channels", () => {
         }),
       );
       expect(result).toEqual({ key: "images/newdir", name: "newdir" });
-      expect(HuggingFaceChannelApi.createHuggingFaceFolder).toHaveBeenCalledWith(
-        expect.anything(),
-        "images/newdir",
-      );
+      expect(
+        HuggingFaceChannelApi.createHuggingFaceFolder,
+      ).toHaveBeenCalledWith(expect.anything(), "images/newdir");
     });
   });
 
@@ -607,9 +606,7 @@ describe("MediaService external channels", () => {
         "photos/new.jpg",
       );
       expect(updated?.fileName).toBe("new.jpg");
-      expect(updated?.url).toBe(
-        "https://cdn-dav.example.com/photos/new.jpg",
-      );
+      expect(updated?.url).toBe("https://cdn-dav.example.com/photos/new.jpg");
     });
 
     it("should rename a folder via MOVE and rewrite all D1 keys + urls", async () => {
@@ -735,6 +732,30 @@ describe("MediaService external channels", () => {
         canCreateFolder: true,
       });
     });
+
+    it("should mark Cloudflare R2 as the default channel on a fresh deployment", async () => {
+      await seedImageHosting({});
+
+      const providers = await MediaService.getMediaProviders(adminContext);
+      const byId = Object.fromEntries(providers.map((p) => [p.id, p]));
+
+      expect(byId.r2).toBeDefined();
+      expect(byId.r2?.name).toBe("Cloudflare R2");
+      expect(byId.r2?.isDefault).toBe(true);
+    });
+
+    it("should move the default channel to the explicitly active provider", async () => {
+      await seedImageHosting({
+        activeProvider: "telegram",
+        telegram: { botToken: "t", chatId: "c", proxyUrl: "" },
+      });
+
+      const providers = await MediaService.getMediaProviders(adminContext);
+      const byId = Object.fromEntries(providers.map((p) => [p.id, p]));
+
+      expect(byId.r2?.isDefault).toBe(false);
+      expect(byId.telegram?.isDefault).toBe(true);
+    });
   });
 
   // ============================================
@@ -776,7 +797,12 @@ describe("MediaService external channels", () => {
     it("should expose per-provider maxFileSizeBytes to the UI", async () => {
       await seedImageHosting({
         r2Native: { articleEnabled: true },
-        telegram: { botToken: "t", chatId: "c", proxyUrl: "", maxFileSizeMb: 20 },
+        telegram: {
+          botToken: "t",
+          chatId: "c",
+          proxyUrl: "",
+          maxFileSizeMb: 20,
+        },
         discord: { botToken: "b", channelId: "c", proxyUrl: "", isNitro: true },
         huggingface: { token: "hf", repo: "user/repo" },
         webdav: { baseUrl: "https://dav.example.com" },

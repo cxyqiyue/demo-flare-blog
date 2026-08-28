@@ -111,9 +111,9 @@ In your GitHub repository, go to Settings -> Secrets and variables -> Actions, c
 | Variable Name | Description |
 | :--- | :--- |
 | `GH_TOKEN` | Used to check for version updates. The workflow maps this to runtime `GITHUB_TOKEN`. To avoid GitHub API rate limits (since multiple Workers share IPs), configure a [Fine-grained Personal Access Token](https://github.com/settings/personal-access-tokens/new) with default permissions. |
-| `CLOUDFLARE_ZONE_ID` | Your Cloudflare Zone ID. Only needed for automatic CDN cache purging after deploy. If omitted, the purge step is skipped. |
+| `CLOUDFLARE_ZONE_ID` | Your Cloudflare Zone ID. Needed for automatic CDN purge after deploy and automatic `DOMAIN → CDN_DOMAIN` CNAME maintenance. If omitted, both steps are skipped. |
 | `CLOUDFLARE_PURGE_API_TOKEN` | The CDN Purge Token from Phase 1, Step 5A. Only needed for automatic CDN cache purging. |
-| `CDN_DOMAIN` | Optional standalone CDN domain such as `cdn.example.com`, preferred when purging cache |
+| `CDN_DOMAIN` | Optional standalone CDN domain such as `cdn.example.com`, preferred when purging cache. When set together with `DOMAIN` (a non-`workers.dev` domain), the deploy workflow automatically creates/updates a **DNS-only (grey-cloud)** CNAME record `DOMAIN → CDN_DOMAIN`, so your blog domain resolves through the preferred CDN network without proxying. The `CLOUDFLARE_API_TOKEN` Deployment Token must include **Zone → DNS → Edit** permission on the zone. If the DNS update fails, the workflow only logs a warning and continues, so you may add the CNAME manually after the deployment finishes. |
 | `PAGEVIEW_SALT` | Salt for anonymizing pageview visitor hashes. Generate with `openssl rand -hex 16`. |
 | `UMAMI_SRC` | Umami client-side tracking proxy URL (e.g., `https://cloud.umami.is`) |
 | `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key for CAPTCHA |

@@ -105,6 +105,7 @@ describe("ImageHostingService", () => {
         status: 200,
       });
       await seedImageHosting({
+        activeProvider: null,
         apiProviders: [
           {
             id: "imgbb-1",
@@ -146,6 +147,7 @@ describe("ImageHostingService", () => {
         },
       });
       await seedImageHosting({
+        activeProvider: null,
         apiProviders: [
           {
             id: "ffsky-1",
@@ -184,6 +186,7 @@ describe("ImageHostingService", () => {
         body: { data: { url: "https://i.ibb.co/imgbb.png" }, success: true },
       });
       await seedImageHosting({
+        activeProvider: null,
         apiProviders: [
           {
             id: "imgbb-1",
@@ -239,6 +242,7 @@ describe("ImageHostingService", () => {
       });
       vi.stubGlobal("fetch", fetchMock);
       await seedImageHosting({
+        activeProvider: null,
         apiProviders: [
           {
             id: "imgbb-1",
@@ -285,6 +289,7 @@ describe("ImageHostingService", () => {
       );
       vi.stubGlobal("fetch", fetchMock);
       await seedImageHosting({
+        activeProvider: null,
         apiProviders: [
           {
             id: "imgbb-1",
@@ -356,6 +361,7 @@ describe("ImageHostingService", () => {
         }),
       });
       await seedImageHosting({
+        activeProvider: null,
         apiProviders: [
           {
             id: "imgbb-1",
@@ -388,6 +394,7 @@ describe("ImageHostingService", () => {
         }),
       );
       await seedImageHosting({
+        activeProvider: null,
         apiProviders: [
           {
             id: "imgbb-1",
@@ -482,6 +489,7 @@ describe("ImageHostingService", () => {
   describe("getCommentImageHostingConfig", () => {
     it("should enable s3 comments when s3 commentEnabled is on", async () => {
       await seedImageHosting({
+        activeProvider: null,
         s3: {
           commentEnabled: true,
           provider: "aws",
@@ -541,6 +549,7 @@ describe("ImageHostingService", () => {
   describe("getArticleImageHostingConfig", () => {
     it("should enable when s3 article is on", async () => {
       await seedImageHosting({
+        activeProvider: null,
         s3: {
           articleEnabled: true,
           commentEnabled: false,
@@ -568,6 +577,7 @@ describe("ImageHostingService", () => {
 
     it("should enable when api key provider article is on", async () => {
       await seedImageHosting({
+        activeProvider: null,
         apiProviders: [
           {
             id: "imgbb-1",

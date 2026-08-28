@@ -246,9 +246,9 @@ src/
 
 | 变量名 | 说明 |
 | :--- | :--- |
-| `CLOUDFLARE_ZONE_ID` | Zone ID，仅需要部署后自动 Purge CDN 时填写 |
+| `CLOUDFLARE_ZONE_ID` | Zone ID，用于部署后自动 Purge CDN 与自动维护 DNS 记录（可选） |
 | `CLOUDFLARE_PURGE_API_TOKEN` | Purge Token，同上（可选） |
-| `CDN_DOMAIN` | 独立 CDN 域名，purge 时优先使用 |
+| `CDN_DOMAIN` | 独立 CDN 域名，purge 时优先使用；同时设置了 `DOMAIN`（非 workers.dev）时，部署会自动维护一条**仅 DNS（灰云）** 的 CNAME：DOMAIN → CDN_DOMAIN，需 Deploy Token 具备 Zone → DNS → Edit 权限（失败仅告警，不阻断部署） |
 | `GH_TOKEN` | GitHub API Token，用于版本更新检查；建议创建 [Fine-grained PAT](https://github.com/settings/personal-access-tokens/new) 避免限流 |
 | `PAGEVIEW_SALT` | 浏览量匿名化 salt，`openssl rand -hex 16` 生成 |
 | `TURNSTILE_SECRET_KEY` | （旧版，可留空）Turnstile Secret Key 已改为在后台「人机验证」设置中配置 |

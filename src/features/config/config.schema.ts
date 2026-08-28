@@ -133,7 +133,7 @@ export const ImageLinkAccessConfigSchema = z.object({
 
 // ── 图床配置 Schema ─────────────────────────────────────────
 export const ImageHostingConfigSchema = z.object({
-  // 单选互斥：当前激活的图床渠道（null = 使用旧版优先级链兼容模式）
+  // 单选互斥：当前激活的图床渠道（默认 R2 Native；null = 使用旧版优先级链兼容模式）
   activeProvider: z
     .enum([
       "r2-native",
@@ -375,7 +375,7 @@ export const DEFAULT_CONFIG: SystemConfig = {
     writingInstructions: "",
   },
   imageHosting: {
-    activeProvider: null,
+    activeProvider: "r2-native",
     r2Native: {
       articleEnabled: true,
       commentEnabled: true,

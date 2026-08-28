@@ -122,6 +122,11 @@ jobs:
           EOF
           jq 'del(.[] | select(. == ""))' secrets.json > secrets.clean.json && mv secrets.clean.json secrets.json
 
+      - name: Maintain CDN CNAME DNS record (grey-cloud)
+        # CDN_DOMAIN 配置了优选域名时，自动维护 博客域名(DOMAIN) -> 优选域名 的
+        # CNAME 记录（仅 DNS / 关闭小黄云）。脚本幂等且失败仅告警、不阻断部署。
+        run: bun run scripts/ensure-cdn-cname.ts
+
       - name: Deploy to Cloudflare Workers
         env:
           CLOUDFLARE_ENV: ""

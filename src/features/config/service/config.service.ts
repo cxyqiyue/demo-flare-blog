@@ -8,7 +8,6 @@ import type {
   SystemConfig,
   UpdateSystemConfigSectionInput,
 } from "@/features/config/config.schema";
-import type { ApiKeyProvider } from "@/features/image-hosting/image-hosting.schema";
 import {
   CONFIG_CACHE_KEYS,
   DEFAULT_CONFIG,
@@ -17,6 +16,10 @@ import {
 import * as ConfigRepo from "@/features/config/data/config.data";
 import { FullSiteConfigSchema } from "@/features/config/site-config.schema";
 import type { SocialLink } from "@/features/config/utils/social-platforms";
+import type {
+  ActiveImageHostingProvider,
+  ApiKeyProvider,
+} from "@/features/image-hosting/image-hosting.schema";
 import * as Storage from "@/features/media/data/media.storage";
 import { purgeSiteCDNCache } from "@/lib/invalidate";
 
@@ -169,6 +172,40 @@ function migrateAiConfig(
 }
 
 // ── 图床配置旧版迁移 ─────────────────────────────────────────
+
+/**
+ * 是否已配置任一外部图床渠道（s3 /api-key / telegram / discord / huggingface / webdav，
+ * 含旧版 imgbb / ffsky 字段）。如果配置了外部渠道，activeProvider 保持 null，
+ * 继续走旧版优先级链，避免把老用户的流量从 imgbb/s3 悄悄切到 R2。
+ */
+function hasConfiguredExternalImageHosting(
+  ih: SystemConfig["imageHosting"],
+): boolean {
+  if (!ih) return false;
+  if (ih.s3?.articleEnabled || ih.s3?.commentEnabled) return true;
+  if (ih.apiProviders?.some((p) => p.apiKey?.trim())) return true;
+  if (ih.imgbb?.apiKey?.trim()) return true;
+  if (ih.ffsky?.apiKey?.trim()) return true;
+  if (ih.telegram?.botToken?.trim() && ih.telegram?.chatId?.trim()) return true;
+  if (ih.discord?.botToken?.trim() && ih.discord?.channelId?.trim())
+    return true;
+  if (ih.huggingface?.token?.trim() && ih.huggingface?.repo?.trim())
+    return true;
+  if (ih.webdav?.baseUrl?.trim()) return true;
+  return false;
+}
+
+/**
+ * 解析 activeProvider：显式值优先；未设置时默认 R2 Native（新部署直接选中 R2），
+ * 但存在已配置的外部渠道时保持 null（旧版优先级链，行为不变）。
+ */
+function resolveActiveImageHostingProvider(
+  ih: SystemConfig["imageHosting"],
+): ActiveImageHostingProvider | null {
+  if (ih?.activeProvider != null) return ih.activeProvider;
+  return hasConfiguredExternalImageHosting(ih) ? null : "r2-native";
+}
+
 function migrateImageHostingConfig(
   config: SystemConfig | null | undefined,
 ): SystemConfig["imageHosting"] {
@@ -178,7 +215,7 @@ function migrateImageHostingConfig(
   // 已是新版格式 → 直接使用
   if (ih.r2Native || ih.apiProviders) {
     return {
-      activeProvider: ih.activeProvider ?? null,
+      activeProvider: resolveActiveImageHostingProvider(ih),
       r2Native: ih.r2Native ?? DEFAULT_CONFIG.imageHosting?.r2Native,
       s3: { ...DEFAULT_CONFIG.imageHosting?.s3, ...ih.s3 },
       apiProviders: ih.apiProviders ?? [],
@@ -238,7 +275,7 @@ function migrateImageHostingConfig(
   const hasExternalHosting = apiProviders.length > 0 || !!s3?.articleEnabled;
 
   return {
-    activeProvider: ih.activeProvider ?? null,
+    activeProvider: resolveActiveImageHostingProvider({ ...ih, apiProviders }),
     r2Native: {
       articleEnabled: !hasExternalHosting,
       commentEnabled:
@@ -433,9 +470,7 @@ function resolveCloudflareAnalyticsConfig(
 }
 
 /** 轮换站点配置缓存 generation，使所有 colo 的边缘缓存副本失效 */
-async function bumpConfigCache(context: {
-  env: Env;
-}): Promise<void> {
+async function bumpConfigCache(context: { env: Env }): Promise<void> {
   await CacheService.bumpVersion({ env: context.env }, "config:system");
 }
 

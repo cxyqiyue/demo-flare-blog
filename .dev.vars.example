@@ -18,7 +18,10 @@ GITHUB_CLIENT_SECRET=your-github-client-secret
 CLOUDFLARE_ZONE_ID=your-zone-id
 CLOUDFLARE_PURGE_API_TOKEN=your-purge-api-token
 DOMAIN=blog.example.com
-# 可选：若使用独立 CDN 域名，设置后 purge 时优先使用此域名
+# 可选：独立 CDN 域名；设置后 purge 时优先使用此域名。
+# 若同时设置了 DOMAIN（非 workers.dev），部署时 GitHub Actions 会自动维护一条
+# 仅 DNS（灰云）CNAME：DOMAIN → CDN_DOMAIN（要求部署 Token 具备 Zone → DNS → Edit 权限，
+# 失败仅告警不阻断部署，可部署后手动添加）。
 # CDN_DOMAIN=cdn.example.com
 
 # --- Umami 客户端统计（可选，仅用于前端埋点脚本代理） ---
