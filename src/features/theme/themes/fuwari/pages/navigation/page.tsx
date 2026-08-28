@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Folder, Search } from "lucide-react";
+import { useEffect, useRef } from "react";
 import {
   getHostname,
   useFaviconSource,
@@ -19,6 +20,14 @@ export function NavigationPage({
 }: NavigationPageProps) {
   const grid = useGridPagination();
   const state = useNavigationPageState(data, grid.pageSize);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // 桌面端（具备精确指针）首次进入时自动聚焦搜索框；移动端不抢占，避免弹软键盘
+  useEffect(() => {
+    if (window.matchMedia("(pointer: fine)").matches) {
+      searchInputRef.current?.focus();
+    }
+  }, []);
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -65,6 +74,7 @@ export function NavigationPage({
           className="flex gap-2.5"
         >
           <input
+            ref={searchInputRef}
             type="text"
             value={state.query}
             onChange={(e) => state.setQuery(e.target.value)}
