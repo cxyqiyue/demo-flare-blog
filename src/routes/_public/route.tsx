@@ -1,9 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { getRequestHeader } from "@tanstack/react-start/server";
 import theme from "@theme";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { AUTH_KEYS } from "@/features/auth/queries";
+import { FullSiteGateOverlay } from "@/features/challenge/components/full-site-gate-overlay";
 import { getThemePreloadImages } from "@/features/theme/site-config.helpers";
 import { authClient } from "@/lib/auth/auth.client";
 import { getLogoutAuthErrorMessage } from "@/lib/auth/auth-errors";
@@ -11,8 +13,13 @@ import { CACHE_CONTROL } from "@/lib/constants";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_public")({
+  beforeLoad: () => ({
+    // 全站人机验证：Hono 层对未验证访客的受保护页面注入此标记头
+    fullSiteLocked: getRequestHeader("x-fullsite-locked") === "1",
+  }),
   loader: ({ context }) => ({
     preloadImages: getThemePreloadImages(context.siteConfig),
+    fullSiteLocked: context.fullSiteLocked ?? false,
   }),
   component: PublicLayout,
   headers: () => {
@@ -32,6 +39,8 @@ function PublicLayout() {
   const { data: session, isPending: isSessionPending } =
     authClient.useSession();
   const queryClient = useQueryClient();
+  const loaderData = Route.useLoaderData();
+  const fullSiteLocked = loaderData?.fullSiteLocked ?? false;
 
   const navOptions = [
     { label: m.nav_navigation(), to: "/navigation" as const, id: "navigation" },
@@ -86,6 +95,7 @@ function PublicLayout() {
       >
         <Outlet />
       </theme.PublicLayout>
+      {fullSiteLocked && <FullSiteGateOverlay />}
       <theme.Toaster />
     </>
   );
