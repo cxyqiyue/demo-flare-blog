@@ -142,3 +142,41 @@ describe("resolveSystemConfig imageHosting migration", () => {
     expect(savedTwice.imageHosting?.s3?.pathStyle).toBe(true);
   });
 });
+
+describe("resolveSystemConfig challenge scope", () => {
+  it("defaults scope to auth-only when challenge is absent", () => {
+    const resolved = resolveSystemConfig(null);
+    expect(resolved.challenge?.scope).toBe("auth-only");
+  });
+
+  it("defaults scope to auth-only when provider is set but scope is unset", () => {
+    const resolved = resolveSystemConfig({
+      challenge: { provider: "altcha", altcha: { enabled: true } },
+    });
+    expect(resolved.challenge?.provider).toBe("altcha");
+    expect(resolved.challenge?.scope).toBe("auth-only");
+  });
+
+  it("preserves an explicitly selected full-site scope", () => {
+    const resolved = resolveSystemConfig({
+      challenge: {
+        provider: "turnstile",
+        scope: "full-site",
+        turnstile: { enabled: true },
+      },
+    });
+    expect(resolved.challenge?.scope).toBe("full-site");
+  });
+
+  it("round-trips scope when saving a section twice", () => {
+    const savedOnce = resolveSystemConfig({
+      challenge: { provider: "altcha", scope: "full-site" },
+    });
+    const savedTwice = resolveSystemConfig({
+      ...savedOnce,
+      challenge: { ...savedOnce.challenge, scope: "auth-only" },
+    });
+    expect(savedTwice.challenge?.scope).toBe("auth-only");
+    expect(savedTwice.challenge?.provider).toBe("altcha");
+  });
+});

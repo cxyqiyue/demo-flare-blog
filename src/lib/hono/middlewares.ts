@@ -3,8 +3,13 @@ import { createMiddleware } from "hono/factory";
 import {
   getChallengeServerConfig,
   isChallengeReady,
+  isFullSiteChallengeEnabled,
   verifyAltchaSolutionPayload,
 } from "@/features/challenge/service/challenge.service";
+import {
+  FULLSITE_PASS_COOKIE,
+  verifyFullSitePass,
+} from "@/features/challenge/service/fullsite.service";
 import * as ConfigService from "@/features/config/service/config.service";
 import { getLinkAccessSettings } from "@/features/media/service/link-access.service";
 import { getAuth } from "@/lib/auth/auth.server";
@@ -83,6 +88,24 @@ export const cacheMiddleware = createMiddleware(async (c, next) => {
   const EXCLUDED_PREFIXES = ["/api/auth", "/api/send", "/media/file"];
   if (EXCLUDED_PREFIXES.some((prefix) => path.startsWith(prefix))) {
     return next();
+  }
+
+  // 全站人机验证开启时，受保护的前台页面不能进边缘缓存，
+  // 否则缓存的页面会被未验证访客直接命中，绕过门卫。
+  if (isFullSiteProtectedPagePath(path) && c.env) {
+    try {
+      const config = await getChallengeServerConfig({
+        db: getDb(c.env),
+        env: c.env,
+        executionCtx: c.executionCtx,
+      });
+      if (isFullSiteChallengeEnabled(config)) {
+        return next();
+      }
+    } catch {
+      // 配置读取失败时保守处理：不缓存
+      return next();
+    }
   }
 
   // 防盗链 protected 模式下，/images/* 响应依赖 Referer，不能进边缘缓存
@@ -267,3 +290,106 @@ export const challengeMiddleware = createMiddleware<{ Bindings: Env }>(
     );
   },
 );
+
+/* ======================= Full-site Challenge Gate ====================== */
+/**
+ * 前台「保护全站」前台页面前缀（不含登录/注册、后台、API、静态资源）。
+ * 命中这些路径的 GET 请求需要携带有效的全站通行证 cookie。
+ */
+const FULLSITE_PUBLIC_PAGE_PREFIXES = [
+  "/posts",
+  "/post/",
+  "/search",
+  "/moments",
+  "/friend-links",
+  "/about",
+  "/navigation",
+] as const;
+
+/** 需要被豁免（可自由访问）的路径前缀。 */
+const FULLSITE_SKIP_PREFIXES = [
+  "/api/",
+  "/admin",
+  "/_serverFn/",
+  "/oauth/",
+  "/challenge",
+  "/unsubscribe",
+  "/assets/",
+  "/media/",
+  "/images/",
+  "/favicon",
+  "/apple-touch-icon",
+  "/web-app-manifest",
+  "/stats.js",
+  "/robots.txt",
+  "/atom.xml",
+  "/feed.json",
+  "/rss.xml",
+  "/sitemap.xml",
+  "/site.webmanifest",
+];
+
+/** 该路径是否为需要全站验证保护的前台页面。 */
+export function isFullSiteProtectedPagePath(path: string): boolean {
+  if (FULLSITE_SKIP_PREFIXES.some((p) => path.startsWith(p))) return false;
+  if (path === "/") return true;
+  return FULLSITE_PUBLIC_PAGE_PREFIXES.some((p) => path.startsWith(p));
+}
+
+/**
+ * 全站人机验证门卫：
+ * - 仅在「保护全站」且挑战就绪时启用。
+ * - 仅对前台页面 GET 请求生效（POST/Server Function/API 不拦截）。
+ * - 携带有效通行证 cookie 时直接放行。
+ * - 否则 302 重定向到 /challenge，附上原始路径供验证后跳回。
+ *   同行证 cookie 由 /api/challenge/fullsite/verify 在验证通过后签发。
+ */
+export const fullSiteChallengeMiddleware = createMiddleware<{
+  Bindings: Env;
+}>(
+  async (c, next) => {
+    if (c.req.method !== "GET") return next();
+    const path = c.req.path;
+    if (!isFullSiteProtectedPagePath(path)) return next();
+
+    let config;
+    try {
+      config = await getChallengeServerConfig({
+        db: c.get("db"),
+        env: c.env,
+        executionCtx: c.executionCtx,
+      });
+    } catch {
+      // 配置读取失败时放行，避免把人挡在门外
+      return next();
+    }
+
+    if (!isFullSiteChallengeEnabled(config)) return next();
+
+    // 已有有效通行证 → 放行
+    const cookieHeader = c.req.header("cookie");
+    const passCookie = parseCookie(cookieHeader, FULLSITE_PASS_COOKIE);
+    if (verifyFullSitePass(c.env, passCookie)) return next();
+
+    // 未验证 → 重定向到挑战页
+    const redirect = new URL(c.req.url);
+    const target = new URL("/challenge", c.req.url);
+    target.searchParams.set("redirect", redirect.pathname + redirect.search);
+    return c.redirect(target.toString(), 302);
+  },
+);
+
+/** 从 Cookie 头解析指定 cookie 名对应的值。 */
+export function parseCookie(
+  cookieHeader: string | undefined,
+  name: string,
+): string | undefined {
+  if (!cookieHeader) return undefined;
+  for (const part of cookieHeader.split(";")) {
+    const [key, ...rest] = part.trim().split("=");
+    if (key === name) {
+      return rest.join("=") || undefined;
+    }
+  }
+  return undefined;
+}

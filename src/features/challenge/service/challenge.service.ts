@@ -5,7 +5,10 @@ import {
   parseAltchaSolution,
   verifyAltchaSolution,
 } from "@/features/challenge/pow/altcha";
-import type { ChallengeProvider } from "@/features/config/config.schema";
+import type {
+  ChallengeProvider,
+  ChallengeScope,
+} from "@/features/config/config.schema";
 import * as ConfigService from "@/features/config/service/config.service";
 
 const ALTCHA_SECRET_PREFIX = "altcha-pow-v1:";
@@ -14,6 +17,7 @@ const DEFAULT_ALTCHA_DIFFICULTY = 50_000;
 
 export interface ChallengeServerConfig {
   provider: ChallengeProvider;
+  scope: ChallengeScope;
   altchaDifficulty: number;
   turnstile: {
     enabled: boolean;
@@ -28,6 +32,7 @@ export interface ChallengeServerConfig {
 
 export interface ChallengeClientConfig {
   provider: ChallengeProvider;
+  scope: ChallengeScope;
   siteKey: string;
   difficulty: number;
   fallback: {
@@ -53,6 +58,7 @@ export async function getChallengeServerConfig(
   const challenge = ConfigService.resolveChallengeConfig(config);
   return {
     provider: challenge.provider,
+    scope: challenge.scope,
     altchaDifficulty: challenge.altcha.difficulty ?? DEFAULT_ALTCHA_DIFFICULTY,
     turnstile: {
       enabled: challenge.turnstile.enabled,
@@ -72,6 +78,7 @@ export async function getChallengeClientConfig(
   const server = await getChallengeServerConfig(context);
   return {
     provider: server.provider,
+    scope: server.scope,
     siteKey: server.turnstile.siteKey,
     difficulty: server.altchaDifficulty,
     fallback: server.fallback,
@@ -93,6 +100,13 @@ export function isChallengeReady(config: ChallengeServerConfig): boolean {
     );
   }
   return false;
+}
+
+/** 是否开启了「保护全站」且挑战可执行。 */
+export function isFullSiteChallengeEnabled(
+  config: ChallengeServerConfig,
+): boolean {
+  return config.scope === "full-site" && isChallengeReady(config);
 }
 
 /** 生成一次性、带 TTL 的 ALTCHA challenge（base64 payload）。 */

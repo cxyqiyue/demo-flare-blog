@@ -208,8 +208,14 @@ export const AltchaConfigSchema = z.object({
 /** @deprecated 旧键名，保留兼容；优先使用 AltchaConfigSchema */
 export const PowConfigSchema = AltchaConfigSchema;
 
+export const CHALLENGE_SCOPES = ["auth-only", "full-site"] as const;
+export const ChallengeScopeSchema = z.enum(CHALLENGE_SCOPES);
+export type ChallengeScope = z.infer<typeof ChallengeScopeSchema>;
+
 export const ChallengeConfigSchema = z.object({
   provider: ChallengeProviderSchema.optional(),
+  /** 保护范围：auth-only = 仅登录/注册；full-site = 前台所有页面 + 登录/注册 */
+  scope: ChallengeScopeSchema.optional(),
   pow: PowConfigSchema.optional(),
   altcha: AltchaConfigSchema.optional(),
   turnstile: TurnstileConfigSchema.optional(),
@@ -421,6 +427,7 @@ export const DEFAULT_CONFIG: SystemConfig = {
   },
   challenge: {
     provider: "none",
+    scope: "auth-only",
     pow: {
       enabled: false,
       difficulty: 50000,

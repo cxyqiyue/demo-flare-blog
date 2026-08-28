@@ -26,6 +26,7 @@ import { Route as PublicMomentsRouteImport } from './routes/_public/moments'
 import { Route as PublicFriendLinksRouteImport } from './routes/_public/friend-links'
 import { Route as PublicAboutRouteImport } from './routes/_public/about'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
+import { Route as ChallengeRouteImport } from './routes/challenge'
 import { Route as AuthResetLinkRouteImport } from './routes/_auth/reset-link'
 import { Route as AuthRegisterRouteImport } from './routes/_auth/register'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
@@ -73,6 +74,11 @@ const PublicIndexRoute = PublicIndexRouteImport.update({
 const OauthConsentRoute = OauthConsentRouteImport.update({
   id: '/oauth/consent',
   path: '/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChallengeRoute = ChallengeRouteImport.update({
+  id: '/challenge',
+  path: '/challenge',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UserSubmitFriendLinkRoute = UserSubmitFriendLinkRouteImport.update({
@@ -237,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/admin/tags/': typeof AdminTagsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
   '/admin/posts/edit/$id': typeof AdminPostsEditIdRoute
+  '/challenge': typeof ChallengeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof PublicIndexRoute
@@ -267,6 +274,7 @@ export interface FileRoutesByTo {
   '/admin/tags': typeof AdminTagsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
   '/admin/posts/edit/$id': typeof AdminPostsEditIdRoute
+  '/challenge': typeof ChallengeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -303,6 +311,7 @@ export interface FileRoutesById {
   '/admin/tags/': typeof AdminTagsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
   '/admin/posts/edit/$id': typeof AdminPostsEditIdRoute
+  '/challenge': typeof ChallengeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -337,6 +346,7 @@ export interface FileRouteTypes {
     | '/admin/tags/'
     | '/admin/users/'
     | '/admin/posts/edit/$id'
+    | '/challenge'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -367,6 +377,7 @@ export interface FileRouteTypes {
     | '/admin/tags'
     | '/admin/users'
     | '/admin/posts/edit/$id'
+    | '/challenge'
   id:
     | '__root__'
     | '/_auth'
@@ -402,6 +413,7 @@ export interface FileRouteTypes {
     | '/admin/tags/'
     | '/admin/users/'
     | '/admin/posts/edit/$id'
+    | '/challenge'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -410,6 +422,7 @@ export interface RootRouteChildren {
   UserRouteRoute: typeof UserRouteRouteWithChildren
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   OauthConsentRoute: typeof OauthConsentRoute
+  ChallengeRoute: typeof ChallengeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -461,6 +474,13 @@ declare module '@tanstack/react-router' {
       path: '/oauth/consent'
       fullPath: '/oauth/consent'
       preLoaderRoute: typeof OauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/challenge': {
+      id: '/challenge'
+      path: '/challenge'
+      fullPath: '/challenge'
+      preLoaderRoute: typeof ChallengeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_user/submit-friend-link': {
@@ -760,6 +780,7 @@ const rootRouteChildren: RootRouteChildren = {
   UserRouteRoute: UserRouteRouteWithChildren,
   AdminRouteRoute: AdminRouteRouteWithChildren,
   OauthConsentRoute: OauthConsentRoute,
+  ChallengeRoute: ChallengeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

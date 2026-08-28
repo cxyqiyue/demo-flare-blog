@@ -49,6 +49,7 @@ export function resolveChallengeConfig(
     challenge?.altcha?.enabled ?? challenge?.pow?.enabled ?? false;
   return {
     provider: resolveChallengeProvider(config),
+    scope: challenge?.scope ?? DEFAULT_CONFIG.challenge?.scope ?? "auth-only",
     altcha: {
       enabled: altchaEnabled,
       difficulty:

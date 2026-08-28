@@ -1,4 +1,11 @@
-import { ExternalLink, KeyRound, ShieldCheck, Timer } from "lucide-react";
+import {
+  ExternalLink,
+  Globe,
+  KeyRound,
+  ShieldCheck,
+  Timer,
+  UserRound,
+} from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import type { SystemConfig } from "@/features/config/config.schema";
@@ -10,10 +17,26 @@ const PROVIDER_OPTIONS = [
   { value: "turnstile", label: m.settings_challenge_provider_turnstile() },
 ] as const;
 
+const SCOPE_OPTIONS = [
+  {
+    value: "auth-only",
+    label: m.settings_challenge_scope_auth_only(),
+    desc: m.settings_challenge_scope_auth_only_desc(),
+    icon: UserRound,
+  },
+  {
+    value: "full-site",
+    label: m.settings_challenge_scope_full_site(),
+    desc: m.settings_challenge_scope_full_site_desc(),
+    icon: Globe,
+  },
+] as const;
+
 export function ChallengeSettingsSection() {
   const { register, setValue, watch } = useFormContext<SystemConfig>();
 
   const provider = watch("challenge.provider") ?? "none";
+  const scope = watch("challenge.scope") ?? "auth-only";
   const altchaEnabled = provider === "altcha";
   const turnstileEnabled = provider === "turnstile";
 
@@ -31,6 +54,14 @@ export function ChallengeSettingsSection() {
     });
     setValue("challenge.turnstile.enabled", value === "turnstile", {
       shouldDirty: true,
+    });
+  };
+
+  const setScope = (value: (typeof SCOPE_OPTIONS)[number]["value"]) => {
+    setValue("challenge.scope", value, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
     });
   };
 
@@ -83,6 +114,62 @@ export function ChallengeSettingsSection() {
           })}
         </div>
       </div>
+
+      {/* Protection scope (仅当启用了任意验证方案时展示) */}
+      {provider !== "none" && (
+        <div className="space-y-6 p-8 border-t border-border/20">
+          <div className="flex items-center gap-4">
+            <div className="rounded-sm bg-muted/40 p-2">
+              <ShieldCheck size={16} className="text-muted-foreground" />
+            </div>
+            <div className="space-y-1">
+              <h5 className="text-sm font-medium text-foreground">
+                {m.settings_challenge_scope_title()}
+              </h5>
+              <p className="text-xs text-muted-foreground">
+                {m.settings_challenge_scope_desc()}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {SCOPE_OPTIONS.map(({ value, label, desc, icon: Icon }) => {
+              const selected = scope === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setScope(value)}
+                  className={`flex flex-col gap-3 border px-5 py-5 text-left transition-all ${
+                    selected
+                      ? "border-foreground/60 bg-foreground/5"
+                      : "border-border/20 bg-muted/10 hover:border-border/40"
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    <span
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                        selected ? "border-foreground" : "border-border/40"
+                      }`}
+                    >
+                      {selected && (
+                        <span className="h-2 w-2 rounded-full bg-foreground" />
+                      )}
+                    </span>
+                    <Icon size={14} className="text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">
+                      {label}
+                    </span>
+                  </span>
+                  <span className="text-xs text-muted-foreground leading-relaxed">
+                    {desc}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ALTCHA PoW settings */}
       {altchaEnabled && (

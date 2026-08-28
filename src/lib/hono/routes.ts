@@ -16,6 +16,13 @@ import {
 import { mediaUploadRoute } from "@/features/media/api/hono/upload.route";
 import * as ConfigService from "@/features/config/service/config.service";
 import navigationFaviconRoute from "@/features/navigation/api/hono/favicon.route";
+import {
+  getChallengeServerConfig,
+  isFullSiteChallengeEnabled,
+  verifyAltchaSolutionPayload,
+} from "@/features/challenge/service/challenge.service";
+import { makeFullSitePassCookie } from "@/features/challenge/service/fullsite.service";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 import postsAdjacentRoute from "@/features/posts/api/hono/posts.adjacent.route";
 import postsDetailRoute from "@/features/posts/api/hono/posts.detail.route";
 import postsListRoute from "@/features/posts/api/hono/posts.list.route";
@@ -31,6 +38,7 @@ import {
   baseMiddleware,
   cacheMiddleware,
   challengeMiddleware,
+  fullSiteChallengeMiddleware,
   rateLimitMiddleware,
   shieldMiddleware,
 } from "./middlewares";
@@ -237,6 +245,58 @@ app.post(
   forwardAuthRequest,
 );
 
+// 全站人机验证：验证通过后签发同名通行证 cookie
+app.post(
+  "/api/challenge/fullsite/verify",
+  baseMiddleware,
+  rateLimitMiddleware({
+    capacity: 10,
+    interval: "1m",
+    identifier: createRateLimiterIdentifier,
+  }),
+  async (c) => {
+    const config = await getChallengeServerConfig({
+      db: c.get("db"),
+      env: c.env,
+      executionCtx: c.executionCtx,
+    });
+    if (!isFullSiteChallengeEnabled(config)) {
+      return c.json({ ok: false, code: "CHALLENGE_DISABLED" }, 400);
+    }
+
+    const turnstileToken = c.req.header("X-Turnstile-Token");
+    const altchaSolution = c.req.header("X-Altcha-Solution");
+
+    let verified = false;
+    if (config.provider === "turnstile") {
+      if (turnstileToken) {
+        const result = await verifyTurnstileToken({
+          secretKey: config.turnstile.secretKey,
+          token: turnstileToken,
+        });
+        if (result.success) verified = true;
+      }
+      if (!verified && altchaSolution) {
+        const res = await verifyAltchaSolutionPayload(c.env, altchaSolution);
+        verified = res.ok;
+      }
+    } else if (config.provider === "altcha" && altchaSolution) {
+      const res = await verifyAltchaSolutionPayload(c.env, altchaSolution);
+      verified = res.ok;
+    }
+
+    if (!verified) {
+      return c.json(
+        { ok: false, code: "CHALLENGE_VERIFICATION_FAILED" },
+        403,
+      );
+    }
+
+    c.header("Set-Cookie", makeFullSitePassCookie(c.env));
+    return c.json({ ok: true });
+  },
+);
+
 // Admin export download route
 app.route("/api/admin/export", exportDownloadRoute);
 
@@ -252,6 +312,9 @@ app.route("/api/navigation", navigationFaviconRoute);
 
 // Router之前的防护
 app.all("*", shieldMiddleware);
+
+// 全站人机验证门卫：仅在前台页面、无有效通行证时重定向到 /challenge
+app.all("*", baseMiddleware, fullSiteChallengeMiddleware);
 
 app.all("*", (c) => {
   return handler.fetch(c.req.raw, {
