@@ -55,7 +55,10 @@ export function buildFuwariNodeMappings(): Record<string, NodeRenderer> {
     },
     table: ({ children }) => (
       <div className="overflow-x-auto">
-        <table className="w-max min-w-full" style={{ tableLayout: "auto" }}>
+        <table
+          className="w-full border-collapse content-table"
+          style={{ tableLayout: "auto" }}
+        >
           {children}
         </table>
       </div>

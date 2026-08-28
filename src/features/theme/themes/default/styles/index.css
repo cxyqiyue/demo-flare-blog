@@ -340,6 +340,8 @@ sup a[href^="#fn-"] {
 .ProseMirror td,
 .ProseMirror th {
   @apply border border-foreground/20 box-border min-w-[1em] px-2.5 py-2 relative align-top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .ProseMirror th {

@@ -111,6 +111,8 @@
   th,
   td {
     @apply border border-foreground/20 px-2.5 py-2 text-left align-top;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   th {

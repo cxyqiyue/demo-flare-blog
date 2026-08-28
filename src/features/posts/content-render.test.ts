@@ -47,6 +47,11 @@ describe("published post rendering (markdown mode -> ContentRenderer)", () => {
     const html = renderToStaticMarkup(React.createElement("div", null, el));
 
     expect(html).toContain("<table");
+    // 表格宽度受容器约束（width:100% + auto layout），长内容自动换行而非撑破容器
+    expect(html).toContain(
+      '<table class="w-full border-collapse content-table"',
+    );
+    expect(html).not.toContain("w-max");
     expect(html).toContain("<pre");
     expect(html).toContain('data-type="taskList"');
     expect(html).toContain("<blockquote");

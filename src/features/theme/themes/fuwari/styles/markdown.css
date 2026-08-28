@@ -268,6 +268,24 @@
     @apply my-4 first:mt-0 last:mb-0;
   }
 
+  /* 表格：与编辑器预览一致的边框 + 单元格自动换行 */
+  table {
+    @apply w-full my-4 border-collapse text-left;
+    table-layout: auto;
+  }
+
+  th,
+  td {
+    @apply border border-(--fuwari-meta-divider) px-3 py-2 align-top;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  th {
+    @apply font-medium;
+    background-color: color-mix(in srgb, var(--fuwari-primary) 10%, transparent);
+  }
+
   /* 脚注区块（preprocessExtendedMarkdown 生成） */
   .footnotes {
     @apply mt-10 text-sm;
