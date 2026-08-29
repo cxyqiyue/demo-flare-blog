@@ -14,6 +14,7 @@ import { getDb } from "@/lib/db";
 import type { Duration } from "@/lib/duration";
 import { serverEnv } from "@/lib/env/server.env";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { applyNoCachePageHeaders } from "./challenge-rules";
 import { isPathValid } from "./path-manifest.generated";
 
 declare module "hono" {
@@ -96,11 +97,18 @@ export const cacheMiddleware = createMiddleware(async (c, next) => {
         executionCtx: c.executionCtx,
       });
       if (isFullSiteChallengeEnabled(config)) {
-        return next();
+        await next();
+        // 除跳过 Worker 缓存外，还要强制不缓存页面响应（浏览器/CDN 均 no-store）：
+        // 否则「锁定态」或「已解锁态」的 HTML 一旦被任一层缓存，
+        // 会把验证通过的访客再次带到遮罩前（或反向绕过门卫）。
+        applyNoCachePageHeaders(c.res.headers);
+        return;
       }
     } catch {
-      // 配置读取失败时保守处理：不缓存
-      return next();
+      // 配置读取失败时保守处理：不缓存且禁止缓存
+      await next();
+      applyNoCachePageHeaders(c.res.headers);
+      return;
     }
   }
 

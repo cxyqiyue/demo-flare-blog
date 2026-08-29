@@ -2,8 +2,16 @@ import handler from "@tanstack/react-start/server-entry";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { proxy } from "hono/proxy";
-import { exportDownloadRoute } from "@/features/import-export/api/hono/download.route";
+import {
+  getChallengeServerConfig,
+  isFullSiteChallengeEnabled,
+  verifyAltchaSolutionPayload,
+} from "@/features/challenge/service/challenge.service";
+import { makeFullSitePassCookie } from "@/features/challenge/service/fullsite.service";
+import * as ConfigService from "@/features/config/service/config.service";
 import { imageHostingUploadRoute } from "@/features/image-hosting/api/hono/upload.route";
+import { exportDownloadRoute } from "@/features/import-export/api/hono/download.route";
+import { mediaUploadRoute } from "@/features/media/api/hono/upload.route";
 import {
   getLinkAccessSettings,
   isRefererAllowed,
@@ -13,16 +21,7 @@ import {
   handleImageRequest,
   resolveMediaRequestContext,
 } from "@/features/media/service/media.service";
-import { mediaUploadRoute } from "@/features/media/api/hono/upload.route";
-import * as ConfigService from "@/features/config/service/config.service";
 import navigationFaviconRoute from "@/features/navigation/api/hono/favicon.route";
-import {
-  getChallengeServerConfig,
-  isFullSiteChallengeEnabled,
-  verifyAltchaSolutionPayload,
-} from "@/features/challenge/service/challenge.service";
-import { makeFullSitePassCookie } from "@/features/challenge/service/fullsite.service";
-import { verifyTurnstileToken } from "@/lib/turnstile";
 import postsAdjacentRoute from "@/features/posts/api/hono/posts.adjacent.route";
 import postsDetailRoute from "@/features/posts/api/hono/posts.detail.route";
 import postsListRoute from "@/features/posts/api/hono/posts.list.route";
@@ -33,6 +32,8 @@ import siteDocumentsRoute from "@/features/site-documents/api/hono/site-document
 import tagsRoute from "@/features/tags/api/hono/tags.list.route";
 import wechatVerifyRoute from "@/features/wechat-verify/api/hono/wechat-verify.route";
 import { serverEnv } from "@/lib/env/server.env";
+import { PROTECTED_AUTH_PATHS } from "@/lib/hono/challenge-rules";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 import { createRateLimiterIdentifier, getExecutionContext } from "./helper";
 import {
   baseMiddleware,
@@ -127,7 +128,10 @@ app.get("/images/:key{.+}", async (c) => {
       config,
       ownSiteDomains(c.req.raw, c.env),
     );
-    if (settings.mode === "protected" && !isRefererAllowed(c.req.raw, settings)) {
+    if (
+      settings.mode === "protected" &&
+      !isRefererAllowed(c.req.raw, settings)
+    ) {
       return c.text("Forbidden", 403);
     }
   } catch {
@@ -209,10 +213,7 @@ app.get("/media/file/:provider/:key{.+}", async (c) => {
 
 app.get("/api/auth/*", baseMiddleware, forwardAuthRequest);
 
-const protectedAuthPaths = [
-  "/api/auth/sign-in/email",
-  "/api/auth/sign-up/email",
-] as const;
+const protectedAuthPaths = PROTECTED_AUTH_PATHS;
 
 protectedAuthPaths.forEach((path) => {
   app.post(
@@ -285,10 +286,7 @@ app.post(
     }
 
     if (!verified) {
-      return c.json(
-        { ok: false, code: "CHALLENGE_VERIFICATION_FAILED" },
-        403,
-      );
+      return c.json({ ok: false, code: "CHALLENGE_VERIFICATION_FAILED" }, 403);
     }
 
     c.header("Set-Cookie", makeFullSitePassCookie(c.env));
