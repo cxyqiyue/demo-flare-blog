@@ -1,4 +1,5 @@
 import * as CacheService from "@/features/cache/cache.service";
+import * as TaskProgressRepo from "@/features/import-export/data/task-progress.data";
 import type {
   StartExportInput,
   TaskProgress,
@@ -38,11 +39,11 @@ export async function startExport(
     warnings: [],
   };
 
-  await CacheService.set(
-    context,
-    IMPORT_EXPORT_CACHE_KEYS.exportProgress(taskId),
+  await TaskProgressRepo.saveTaskProgress(
+    context.env,
+    taskId,
+    "export",
     JSON.stringify(initialProgress),
-    { ttl: "24h" },
   );
 
   try {
@@ -61,10 +62,7 @@ export async function startExport(
         error: error instanceof Error ? error.message : String(error),
       }),
     );
-    await CacheService.deleteKey(
-      context,
-      IMPORT_EXPORT_CACHE_KEYS.exportProgress(taskId),
-    );
+    await TaskProgressRepo.deleteTaskProgress(context.env, taskId);
     return err({ reason: "WORKFLOW_CREATE_FAILED" });
   }
 
@@ -149,11 +147,11 @@ export async function startImport(context: BaseContext, files: Array<File>) {
     warnings: [],
   };
 
-  await CacheService.set(
-    context,
-    IMPORT_EXPORT_CACHE_KEYS.importProgress(taskId),
+  await TaskProgressRepo.saveTaskProgress(
+    context.env,
+    taskId,
+    "import",
     JSON.stringify(initialProgress),
-    { ttl: "24h" },
   );
 
   try {
@@ -167,10 +165,7 @@ export async function startImport(context: BaseContext, files: Array<File>) {
         error: error instanceof Error ? error.message : String(error),
       }),
     );
-    await CacheService.deleteKey(
-      context,
-      IMPORT_EXPORT_CACHE_KEYS.importProgress(taskId),
-    );
+    await TaskProgressRepo.deleteTaskProgress(context.env, taskId);
     return err({ reason: "WORKFLOW_CREATE_FAILED" });
   }
 
@@ -178,19 +173,41 @@ export async function startImport(context: BaseContext, files: Array<File>) {
 }
 
 export async function getExportProgress(context: BaseContext, taskId: string) {
-  const raw = await CacheService.getRaw(
-    context,
-    IMPORT_EXPORT_CACHE_KEYS.exportProgress(taskId),
-  );
+  const raw = await readProgress(context, taskId, "export");
   return parseProgress(raw);
 }
 
 export async function getImportProgress(context: BaseContext, taskId: string) {
-  const raw = await CacheService.getRaw(
-    context,
-    IMPORT_EXPORT_CACHE_KEYS.importProgress(taskId),
-  );
+  const raw = await readProgress(context, taskId, "import");
   return parseProgress(raw);
+}
+
+/** 进度读取：D1 权威，其次回退存量 KV（兼容历史任务） */
+async function readProgress(
+  context: BaseContext,
+  taskId: string,
+  type: "export" | "import",
+): Promise<string | null> {
+  // 1) D1 优先
+  try {
+    const record = await TaskProgressRepo.getTaskProgress(context.env, taskId);
+    if (record) return record.progressJson;
+  } catch (err) {
+    console.error(
+      JSON.stringify({
+        message: "read task progress from D1 failed",
+        taskId,
+        error: err instanceof Error ? err.message : String(err),
+      }),
+    );
+  }
+
+  // 2) 回退 KV（部署前已写入的历史进度）
+  const key =
+    type === "export"
+      ? IMPORT_EXPORT_CACHE_KEYS.exportProgress(taskId)
+      : IMPORT_EXPORT_CACHE_KEYS.importProgress(taskId);
+  return await CacheService.getRaw(context, key);
 }
 
 export function getExportDownloadUrl(taskId: string): string {

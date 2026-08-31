@@ -1,6 +1,7 @@
 import { blogConfig } from "@/blog.config";
 import * as CacheService from "@/features/cache/cache.service";
 import * as EdgeCacheService from "@/features/cache/edge-cache.service";
+import { disableKv, enableKv } from "@/features/cache/kv-write-guard";
 import type {
   AiProviderInstance,
   ChallengeProvider,
@@ -347,6 +348,7 @@ export function resolveSystemConfig(
       ...config?.wechatVerify,
     },
     cloudflareAnalytics: resolveCloudflareAnalyticsConfig(config),
+    storage: resolveStorageConfig(config),
     site: resolveSiteConfig(config),
   };
 }
@@ -470,6 +472,14 @@ function resolveCloudflareAnalyticsConfig(
   };
 }
 
+function resolveStorageConfig(
+  config: SystemConfig | null | undefined,
+): SystemConfig["storage"] {
+  return {
+    kvEnabled: config?.storage?.kvEnabled ?? true,
+  };
+}
+
 /** 轮换站点配置缓存 generation，使所有 colo 的边缘缓存副本失效 */
 async function bumpConfigCache(context: { env: Env }): Promise<void> {
   await CacheService.bumpVersion({ env: context.env }, "config:system");
@@ -552,6 +562,16 @@ export async function updateSystemConfigSection(
   ) {
     // 切换防盗链模式后清边缘缓存，保证新校验立即生效
     await purgeSiteCDNCache(context.env);
+  }
+
+  // storage 段：根据新的 kvEnabled 同步 KV 限流状态（启用时立即复位自动禁用标记）
+  if (input.section === "storage") {
+    const kvEnabled = input.data.kvEnabled ?? true;
+    if (kvEnabled) {
+      await enableKv(context.env);
+    } else {
+      await disableKv(context.env);
+    }
   }
 
   return { success: true };

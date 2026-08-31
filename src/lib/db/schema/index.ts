@@ -10,4 +10,5 @@ export * from "./page-views.table";
 export * from "./post-revisions.table";
 export * from "./posts.table";
 export * from "./skills.table";
+export * from "./storage.table";
 export * from "./subscriptions.table";

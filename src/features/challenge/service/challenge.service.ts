@@ -5,11 +5,14 @@ import {
   parseAltchaSolution,
   verifyAltchaSolution,
 } from "@/features/challenge/pow/altcha";
+import { guardedKvPut } from "@/features/cache/kv-write-guard";
 import type {
   ChallengeProvider,
   ChallengeScope,
 } from "@/features/config/config.schema";
 import * as ConfigService from "@/features/config/service/config.service";
+import { getDb } from "@/lib/db";
+import { UsedChallengesTable } from "@/lib/db/schema";
 
 const ALTCHA_SECRET_PREFIX = "altcha-pow-v1:";
 // 默认难度：50000 在主流设备上约 1-3 秒可解出，兼顾防滥用与交互体验
@@ -127,7 +130,9 @@ function usedChallengeKey(challenge: string): string {
 
 /**
  * 校验 ALTCHA PoW 解并标记一次性（replay-guarded）。
- * KV 写入失败时宽容放行，避免把人挡在门外。
+ *
+ * 防重放同时落在 D1（权威，始终可用）与 KV（快路径，经写入保护层）。
+ * 全部失败时宽容放行，避免把人挡在门外。
  */
 export async function verifyAltchaSolutionPayload(
   env: Env,
@@ -144,17 +149,43 @@ export async function verifyAltchaSolutionPayload(
   }
 
   const key = usedChallengeKey(solution.challenge);
+  const challenge = solution.challenge;
+
+  // 1) KV 快路径：已用则拒绝
   try {
     const existing = await env.KV.get(key);
     if (existing !== null) {
       return { ok: false, reason: "used" };
     }
-    await env.KV.put(key, "1", {
-      expirationTtl: ALTCHA_CHALLENGE_TTL_SECONDS,
-    });
   } catch {
+    // KV 不可用则忽略，继续走 D1
+  }
+
+  // 2) D1 权威去重：insert onConflictDoNothing 保证同 challenge 仅首次成功
+  try {
+    const db = getDb(env);
+    const inserted = await db
+      .insert(UsedChallengesTable)
+      .values({ challenge })
+      .onConflictDoNothing()
+      .run();
+    if (inserted.meta.changes === 0) {
+      return { ok: false, reason: "used" };
+    }
+  } catch (err) {
+    console.error(
+      JSON.stringify({
+        message: "challenge replay guard D1 insert failed",
+        error: err instanceof Error ? err.message : String(err),
+      }),
+    );
     return { ok: true, reason: "error" };
   }
+
+  // 3) 尽力写 KV（经保护层，失败不影响——D1 已是权威防重放源）
+  await guardedKvPut(env, key, "1", {
+    expirationTtl: ALTCHA_CHALLENGE_TTL_SECONDS,
+  });
 
   return { ok: true };
 }

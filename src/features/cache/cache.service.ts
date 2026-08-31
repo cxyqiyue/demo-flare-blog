@@ -2,6 +2,7 @@ import type { z } from "zod";
 import type { Duration } from "@/lib/duration";
 import { ms } from "@/lib/duration";
 import { purgeSiteCDNCache } from "@/lib/invalidate";
+import { guardedKvDelete, guardedKvPut } from "./kv-write-guard";
 import { serializeKey } from "./cache.utils";
 import type { CacheKey, CacheNamespace } from "./types";
 
@@ -86,19 +87,23 @@ export async function set(
     ? { expirationTtl: Math.floor(ms(options.ttl) / 1000) }
     : undefined;
 
-  await context.env.KV.put(serializedKey, value, putOptions)
-    .then(() =>
-      console.log(JSON.stringify({ message: "cache set", key: serializedKey })),
-    )
-    .catch((err) =>
-      console.error(
-        JSON.stringify({
-          message: "cache set failed",
-          key: serializedKey,
-          error: String(err),
-        }),
-      ),
+  const written = await guardedKvPut(
+    context.env,
+    serializedKey,
+    value,
+    putOptions,
+  );
+
+  if (written) {
+    console.log(JSON.stringify({ message: "cache set", key: serializedKey }));
+  } else {
+    console.log(
+      JSON.stringify({
+        message: "cache set skipped (kv degraded/disabled)",
+        key: serializedKey,
+      }),
     );
+  }
 }
 
 export async function deleteKey(
@@ -108,17 +113,7 @@ export async function deleteKey(
   const serializedKeys = keys.map(serializeKey);
 
   await Promise.all(
-    serializedKeys.map((key) =>
-      context.env.KV.delete(key).catch((err) =>
-        console.error(
-          JSON.stringify({
-            message: "cache delete failed",
-            key,
-            error: String(err),
-          }),
-        ),
-      ),
-    ),
+    serializedKeys.map((key) => guardedKvDelete(context.env, key)),
   );
 }
 
@@ -171,17 +166,16 @@ export async function bumpVersion(
   const key = `ver:${namespace}`;
   const generation = crypto.randomUUID();
 
-  try {
-    await context.env.KV.put(key, generation);
-  } catch (err) {
-    console.error(
+  const written = await guardedKvPut(context.env, key, generation);
+
+  if (!written) {
+    console.log(
       JSON.stringify({
-        message: "cache bump version failed",
+        message: "cache version bump skipped (kv degraded/disabled)",
         key,
-        error: String(err),
       }),
     );
-    throw err;
+    return;
   }
 
   console.log(

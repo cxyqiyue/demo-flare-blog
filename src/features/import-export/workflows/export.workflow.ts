@@ -1,6 +1,5 @@
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { WorkflowEntrypoint } from "cloudflare:workers";
-import * as CacheService from "@/features/cache/cache.service";
 import * as CommentRepo from "@/features/comments/data/comments.data";
 import type {
   ExportManifest,
@@ -12,6 +11,7 @@ import {
   IMPORT_EXPORT_CACHE_KEYS,
   IMPORT_EXPORT_R2_KEYS,
 } from "@/features/import-export/import-export.schema";
+import * as TaskProgressRepo from "@/features/import-export/data/task-progress.data";
 import { stringifyFrontmatter } from "@/features/import-export/utils/frontmatter";
 import {
   jsonContentToMarkdown,
@@ -331,9 +331,23 @@ export class ExportWorkflow extends WorkflowEntrypoint<
   }
 
   private async updateProgress(key: string, progress: TaskProgress) {
-    const context: BaseContext = { env: this.env };
-    await CacheService.set(context, key, JSON.stringify(progress), {
-      ttl: "24h",
-    });
+    // key = export:progress:<taskId>，提取 taskId 写入 D1（权威，无 KV 配额限制）
+    const taskId = key.slice(key.lastIndexOf(":") + 1);
+    try {
+      await TaskProgressRepo.saveTaskProgress(
+        this.env,
+        taskId,
+        "export",
+        JSON.stringify(progress),
+      );
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          message: "export progress write failed",
+          taskId,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    }
   }
 }

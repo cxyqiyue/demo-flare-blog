@@ -259,6 +259,13 @@ export const CloudflareAnalyticsConfigSchema = z.object({
   alert: CloudflareAnalyticsAlertSchema.optional(),
 });
 
+// ── 存储配置（KV / D1 切换） ────────────────────────────────
+export const StorageConfigSchema = z.object({
+  /** 是否启用 KV 写入（D1 始终开启，无法关闭） */
+  kvEnabled: z.boolean().optional(),
+});
+export type StorageConfig = z.infer<typeof StorageConfigSchema>;
+
 export const CONFIG_SECTIONS = [
   "email",
   "notification",
@@ -270,6 +277,7 @@ export const CONFIG_SECTIONS = [
   "wechatVerify",
   "site",
   "cloudflareAnalytics",
+  "storage",
 ] as const;
 export type ConfigSection = (typeof CONFIG_SECTIONS)[number];
 
@@ -301,6 +309,7 @@ export const UpdateSystemConfigSectionInputSchema = z.discriminatedUnion(
       section: z.literal("cloudflareAnalytics"),
       data: CloudflareAnalyticsConfigSchema,
     }),
+    z.object({ section: z.literal("storage"), data: StorageConfigSchema }),
   ],
 );
 export type UpdateSystemConfigSectionInput = z.infer<
@@ -318,6 +327,7 @@ export const SystemConfigSchema = z.object({
   wechatVerify: WechatVerifyConfigSchema.optional(),
   site: SiteConfigInputSchema.optional(),
   cloudflareAnalytics: CloudflareAnalyticsConfigSchema.optional(),
+  storage: StorageConfigSchema.optional(),
 });
 
 export const createSystemConfigFormSchema = (messages: Messages) =>
@@ -338,6 +348,7 @@ export const createSystemConfigFormSchema = (messages: Messages) =>
     wechatVerify: SystemConfigSchema.shape.wechatVerify,
     site: createSiteConfigInputFormSchema(messages).optional(),
     cloudflareAnalytics: SystemConfigSchema.shape.cloudflareAnalytics,
+    storage: SystemConfigSchema.shape.storage,
   });
 
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
@@ -478,6 +489,9 @@ export const DEFAULT_CONFIG: SystemConfig = {
     },
   },
   site: blogConfig satisfies SiteConfigInput,
+  storage: {
+    kvEnabled: true,
+  },
 };
 
 export const CONFIG_CACHE_KEYS = {

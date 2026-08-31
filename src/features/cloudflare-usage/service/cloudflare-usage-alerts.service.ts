@@ -10,6 +10,7 @@ import { sendEmail } from "@/features/email/service/email.service";
 import { NOTIFICATION_EVENT } from "@/features/notification/notification.schema";
 import { sendWebhookRequest } from "@/features/webhook/api/webhook.consumer";
 import { getDb } from "@/lib/db";
+import { CfAlertStateTable } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server.env";
 import {
   type CfAlertRow,
@@ -86,10 +87,31 @@ export async function checkAndDispatchUsageAlerts(
     if (alerts.length === 0) return;
 
     const day = todayUtc();
-    const raw = await CacheService.getRaw(
-      context,
-      CF_USAGE_CACHE_KEYS.alertState,
-    );
+    const db = getDb(env);
+
+    // 去重状态存 D1（权威，无 KV 配额限制）；回退读取存量 KV 兼容旧数据
+    let raw: string | null = null;
+    try {
+      const row = await db.query.CfAlertStateTable.findFirst({
+        where: (t, { eq }) => eq(t.day, day),
+      });
+      raw = row?.stateJson ?? null;
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          message: "read cf alert state from D1 failed",
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    }
+    if (raw === null) {
+      try {
+        raw = await CacheService.getRaw(context, CF_USAGE_CACHE_KEYS.alertState);
+      } catch {
+        raw = null;
+      }
+    }
+
     let state: CfAlertState | null = null;
     try {
       state = raw ? (JSON.parse(raw) as CfAlertState) : null;
@@ -106,15 +128,24 @@ export async function checkAndDispatchUsageAlerts(
     } = resolveAlertsToSend(alerts, state, day);
 
     // 状态无变化时跳过写入：超阈值日每小时都会跑到这里，
-    // 重复写同一份去重状态会白白消耗 KV 写入配额
+    // 重复写同一份去重状态会白白消耗后端写入
     if (JSON.stringify(nextState) !== JSON.stringify(state ?? {})) {
-      executionCtx.waitUntil(
-        CacheService.set(
-          context,
-          CF_USAGE_CACHE_KEYS.alertState,
-          JSON.stringify(nextState),
-        ),
-      );
+      await db
+        .insert(CfAlertStateTable)
+        .values({ day, stateJson: JSON.stringify(nextState) })
+        .onConflictDoUpdate({
+          target: [CfAlertStateTable.day],
+          set: { stateJson: JSON.stringify(nextState) },
+        })
+        .run()
+        .catch((err) =>
+          console.error(
+            JSON.stringify({
+              message: "write cf alert state to D1 failed",
+              error: err instanceof Error ? err.message : String(err),
+            }),
+          ),
+        );
     }
 
     if (toSend.length === 0) return;

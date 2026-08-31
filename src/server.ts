@@ -32,6 +32,12 @@ export default {
     const { checkAndDispatchUsageAlerts } = await import(
       "@/features/cloudflare-usage/service/cloudflare-usage-alerts.service"
     );
-    await checkAndDispatchUsageAlerts(env, ctx);
+    const { cleanupStorageFallbackTables } = await import(
+      "@/features/cache/storage-maintenance"
+    );
+    await Promise.allSettled([
+      checkAndDispatchUsageAlerts(env, ctx),
+      cleanupStorageFallbackTables(env),
+    ]);
   },
 } satisfies ExportedHandler<Env>;

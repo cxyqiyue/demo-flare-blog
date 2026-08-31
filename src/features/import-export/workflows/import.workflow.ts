@@ -1,11 +1,11 @@
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { WorkflowEntrypoint } from "cloudflare:workers";
-import * as CacheService from "@/features/cache/cache.service";
 import type {
   ImportReport,
   TaskProgress,
 } from "@/features/import-export/import-export.schema";
 import { IMPORT_EXPORT_CACHE_KEYS } from "@/features/import-export/import-export.schema";
+import * as TaskProgressRepo from "@/features/import-export/data/task-progress.data";
 import { parseZip } from "@/features/import-export/utils/zip";
 import {
   enumerateMarkdownPosts,
@@ -225,9 +225,23 @@ export class ImportWorkflow extends WorkflowEntrypoint<
   }
 
   private async updateProgress(key: string, progress: TaskProgress) {
-    const context: BaseContext = { env: this.env };
-    await CacheService.set(context, key, JSON.stringify(progress), {
-      ttl: "24h",
-    });
+    // key = import:progress:<taskId>，提取 taskId 写入 D1（权威，无 KV 配额限制）
+    const taskId = key.slice(key.lastIndexOf(":") + 1);
+    try {
+      await TaskProgressRepo.saveTaskProgress(
+        this.env,
+        taskId,
+        "import",
+        JSON.stringify(progress),
+      );
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          message: "import progress write failed",
+          taskId,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    }
   }
 }

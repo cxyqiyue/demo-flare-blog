@@ -5,6 +5,7 @@ import {
   Check,
   Cloud,
   Cpu,
+  Database,
   Hammer,
   Image as ImageIcon,
   KeyRound,
@@ -28,6 +29,7 @@ import { CloudflareAnalyticsSettingsSection } from "@/features/cloudflare-usage/
 import { MaintenanceSection } from "@/features/config/components/maintenance-section";
 import { SectionSkeleton } from "@/features/config/components/settings-skeleton";
 import { SiteSettingsSection } from "@/features/config/components/site-settings-section";
+import { StorageSettingsSection } from "@/features/config/components/storage-settings-section";
 import type {
   ConfigSection,
   SystemConfig,
@@ -116,6 +118,11 @@ function RouteComponent() {
       label: "Cloudflare",
     },
     {
+      value: "storage",
+      icon: Database,
+      label: "存储",
+    },
+    {
       value: "maintenance",
       icon: Hammer,
       label: m.settings_tab_maintenance(),
@@ -146,6 +153,7 @@ function RouteComponent() {
     webhook: "notification",
     subscription: "subscription",
     cloudflare: "cloudflareAnalytics",
+    storage: "storage",
   };
 
   const methods = useForm<SystemConfig>({
@@ -484,6 +492,18 @@ function RouteComponent() {
                 </p>
               </div>
               <MaintenanceSection />
+            </TabsContent>
+
+            <TabsContent value="storage" className="mt-0 space-y-10">
+              <div className="space-y-2 pb-6 border-b border-border/30">
+                <h2 className="text-2xl font-serif font-medium tracking-tight">
+                  存储管理
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  管理 KV 与 D1 存储后端，KV 达到限额时自动降级到 D1
+                </p>
+              </div>
+              <StorageSettingsSection />
             </TabsContent>
           </div>
         </Tabs>
