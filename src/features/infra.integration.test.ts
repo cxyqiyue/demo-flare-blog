@@ -365,7 +365,7 @@ describe("Infra Integration", () => {
         expect(second).not.toBe(first);
       });
 
-      it("should surface generation write failures", async () => {
+      it("should degrade gracefully when the generation write fails", async () => {
         const context = createTestContext();
         const namespace: CacheNamespace = "posts:list";
         vi.spyOn(context.env.KV, "put").mockRejectedValueOnce(
@@ -374,7 +374,9 @@ describe("Infra Integration", () => {
 
         await expect(
           CacheService.bumpVersion(context, namespace),
-        ).rejects.toThrow("KV unavailable");
+        ).resolves.toBeUndefined();
+
+        expect(await context.env.KV.get(`ver:${namespace}`)).toBeNull();
       });
 
       it("should make the bootstrap cache unreachable after one rotation", async () => {

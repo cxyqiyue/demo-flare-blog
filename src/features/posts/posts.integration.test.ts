@@ -1569,6 +1569,7 @@ describe("Posts Integration", () => {
         Object.create(PostProcessWorkflow.prototype),
         {
           env: adminContext.env,
+          ctx: createMockExecutionCtx(),
         },
       ) as PostProcessWorkflow;
 
@@ -1633,10 +1634,20 @@ describe("Posts Integration", () => {
         }),
       );
 
+      // Publishing bumps the public cache version pointer synchronously and
+      // schedules the workflow; the workflow binding is mocked here, so run the
+      // workflow steps directly to build the public content before the fetch.
+      await PostService.startPostProcessWorkflow(adminContext, {
+        id,
+        status: "published",
+        clientToday: new Date().toISOString().slice(0, 10),
+      });
+
       const workflow = Object.assign(
         Object.create(PostProcessWorkflow.prototype),
         {
           env: adminContext.env,
+          ctx: createMockExecutionCtx(),
         },
       ) as PostProcessWorkflow;
 
