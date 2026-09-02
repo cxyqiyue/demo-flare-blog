@@ -2,10 +2,12 @@ import { createAuthMiddleware } from "@better-auth/core/api";
 import { APIError } from "@better-auth/core/error";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
+import { eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AuthEmail } from "@/features/email/templates/AuthEmail";
 import { createAuthConfig } from "@/lib/auth/auth.config";
 import * as authSchema from "@/lib/db/schema/auth.table";
+import { user } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server.env";
 import type { Locale } from "@/lib/i18n";
 import { m } from "@/paraglide/messages";
@@ -50,6 +52,46 @@ export function getAuth({ db, env }: { db: DB; env: Env }) {
     } catch {
       return LOCALE;
     }
+  }
+
+  /**
+   * 登录时按需同步超级管理员身份：
+   * - 仅当用户邮箱与 ADMIN_EMAIL 一致（大小写不敏感）且数据库 role 非 admin 时才写入，
+   *   正常登录只读不写，避免不必要的数据库压力。
+   * - 解决：数据库 role 被误改 / 首次注册钩子未生效后，无需删除 Workers / D1 重新部署，
+   *   重新登录即可自动恢复超级管理员权限。
+   */
+  async function syncSuperAdminRole(sessionUserId: string) {
+    try {
+      const [found] = await db
+        .select({ email: user.email, role: user.role })
+        .from(user)
+        .where(eq(user.id, sessionUserId))
+        .limit(1);
+      if (!found) return;
+
+      if (
+        found.email.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase() &&
+        found.role !== "admin"
+      ) {
+        await db
+          .update(user)
+          .set({ role: "admin" })
+          .where(eq(user.id, sessionUserId));
+      }
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          message: "syncSuperAdminRole failed",
+          sessionUserId,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+  }
+
+  function isAdminEmail(email: string): boolean {
+    return email.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
   }
 
   return betterAuth({
@@ -143,10 +185,17 @@ export function getAuth({ db, env }: { db: DB; env: Env }) {
       user: {
         create: {
           before: async (user) => {
-            if (user.email === ADMIN_EMAIL) {
+            if (isAdminEmail(user.email)) {
               return { data: { ...user, role: "admin" } };
             }
             return { data: user };
+          },
+        },
+      },
+      session: {
+        create: {
+          after: async (session) => {
+            await syncSuperAdminRole(session.userId);
           },
         },
       },

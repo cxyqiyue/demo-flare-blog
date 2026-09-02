@@ -4,6 +4,7 @@ import {
   getRequestHeaders,
 } from "@tanstack/react-start/server";
 import { getAuth } from "@/lib/auth/auth.server";
+import { isAdmin } from "@/lib/auth/access";
 import { getDb } from "@/lib/db";
 import type { RateLimitOptions } from "@/lib/do/rate-limiter";
 import {
@@ -91,7 +92,9 @@ export const adminMiddleware = createMiddleware({ type: "function" })
   .server(async ({ context, next }) => {
     const session = context.session;
 
-    if (session.user.role !== "admin") {
+    // 超级管理员（ADMIN_EMAIL 持有者）在运行时派生权限，不依赖数据库 role 字段，
+    // 避免数据库 role 被误改 / 未同步导致超管账号被锁定。
+    if (!isAdmin(session.user, context.env)) {
       throw createPermissionError();
     }
 

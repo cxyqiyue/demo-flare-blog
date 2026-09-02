@@ -1,4 +1,4 @@
-import { serverEnv } from "@/lib/env/server.env";
+import { isSuperAdmin } from "@/lib/auth/access";
 import { err, ok, type Result } from "@/lib/errors";
 import * as UserRepo from "./data/users.data";
 import type {
@@ -9,11 +9,6 @@ import type {
   UnbanUserInput,
   UserManageError,
 } from "./users.schema";
-
-function isSuperAdminEmail(email: string, env: Env): boolean {
-  const { ADMIN_EMAIL } = serverEnv(env);
-  return email === ADMIN_EMAIL;
-}
 
 function getActorInfo(user: { email: string; role?: string | null }) {
   return {
@@ -35,12 +30,10 @@ export async function listUsers(
     UserRepo.getUsersCount(context.db, input.search),
   ]);
 
-  const { ADMIN_EMAIL } = serverEnv(context.env);
-
   const mapped = items.map((userItem) => ({
     ...userItem,
     banned: !!userItem.banned,
-    isSuperAdmin: userItem.email === ADMIN_EMAIL,
+    isSuperAdmin: isSuperAdmin(userItem, context.env),
   }));
 
   return {
@@ -50,7 +43,7 @@ export async function listUsers(
       id: context.session.user.id,
       email: actor.email,
       role: actor.role ?? null,
-      isSuperAdmin: actor.email === ADMIN_EMAIL,
+      isSuperAdmin: isSuperAdmin(actor, context.env),
     },
   };
 }
@@ -60,14 +53,14 @@ export async function setUserRole(
   input: SetUserRoleInput,
 ): Promise<Result<{ userId: string; role: string | null }, UserManageError>> {
   const actor = context.session.user;
-  const actorIsSuper = isSuperAdminEmail(actor.email, context.env);
+  const actorIsSuper = isSuperAdmin(actor, context.env);
 
   const target = await UserRepo.getUserById(context.db, input.userId);
   if (!target) {
     return err({ reason: "NOT_FOUND" });
   }
 
-  const targetIsSuper = isSuperAdminEmail(target.email, context.env);
+  const targetIsSuper = isSuperAdmin(target, context.env);
 
   if (targetIsSuper) {
     return err({ reason: "PROTECTED_USER" });
@@ -90,14 +83,14 @@ export async function banUser(
   input: BanUserInput,
 ): Promise<Result<{ userId: string }, UserManageError>> {
   const actor = context.session.user;
-  const actorIsSuper = isSuperAdminEmail(actor.email, context.env);
+  const actorIsSuper = isSuperAdmin(actor, context.env);
 
   const target = await UserRepo.getUserById(context.db, input.userId);
   if (!target) {
     return err({ reason: "NOT_FOUND" });
   }
 
-  const targetIsSuper = isSuperAdminEmail(target.email, context.env);
+  const targetIsSuper = isSuperAdmin(target, context.env);
   if (targetIsSuper) {
     return err({ reason: "PROTECTED_USER" });
   }
@@ -116,14 +109,14 @@ export async function unbanUser(
   input: UnbanUserInput,
 ): Promise<Result<{ userId: string }, UserManageError>> {
   const actor = context.session.user;
-  const actorIsSuper = isSuperAdminEmail(actor.email, context.env);
+  const actorIsSuper = isSuperAdmin(actor, context.env);
 
   const target = await UserRepo.getUserById(context.db, input.userId);
   if (!target) {
     return err({ reason: "NOT_FOUND" });
   }
 
-  const targetIsSuper = isSuperAdminEmail(target.email, context.env);
+  const targetIsSuper = isSuperAdmin(target, context.env);
   if (targetIsSuper) {
     return err({ reason: "PROTECTED_USER" });
   }

@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
+import { isAdmin } from "@/lib/auth/access";
 import { resolveR2NativeMaxBytes } from "@/features/image-hosting/size-limits";
 import { parseUploadMediaInput } from "@/features/media/media.schema";
 import * as MediaService from "@/features/media/service/media.service";
 import { getAuth } from "@/lib/auth/auth.server";
 import { getDb } from "@/lib/db";
-import { serverEnv } from "@/lib/env/server.env";
 import { m } from "@/paraglide/messages";
 
 /**
@@ -33,8 +33,7 @@ async function requireAdmin(c: Ctx): Promise<Response | null> {
   if (!session) {
     return jsonResponse({ ok: false, message: "Unauthorized" }, 401);
   }
-  const env = serverEnv(c.env);
-  if (session.user.email !== env.ADMIN_EMAIL && session.user.role !== "admin") {
+  if (!isAdmin(session.user, c.env)) {
     return jsonResponse({ ok: false, message: "Forbidden" }, 403);
   }
   return null;

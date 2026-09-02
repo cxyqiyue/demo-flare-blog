@@ -23,7 +23,7 @@ export const Route = createFileRoute("/admin")({
     if (!session) {
       throw redirect({ to: "/login" });
     }
-    if (session.user.role !== "admin") {
+    if (session.user.role !== "admin" && !session.user.isSuperAdmin) {
       throw redirect({ to: "/" });
     }
 
