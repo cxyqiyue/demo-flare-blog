@@ -85,9 +85,11 @@ function isFullAccessOwner(context: OwnerContext) {
   return !context.session || isSuperAdmin(context.session.user, context.env);
 }
 
-/** 普通管理员是否可访问某篇由其 authorId 归属的文章（无会话视为全量）。 */
+/** 普通管理员是否可访问某篇由其 authorId 归属的文章（无会话或超级管理员视为全量）。 */
 function isPostOwner(context: OwnerContext, authorId: string | null) {
-  return !context.session || context.session.user.id === authorId;
+  return (
+    isFullAccessOwner(context) || context.session!.user.id === authorId
+  );
 }
 
 /** 列表/计数过滤：普通管理员只看自己的文章，其余全量。 */
