@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import theme from "@theme";
 import { useState } from "react";
@@ -8,7 +8,7 @@ import { AboutMarkdownEditor } from "@/features/about/components/about-markdown-
 import { ABOUT_KEYS, aboutArticleQuery } from "@/features/about/queries";
 import { markdownToPlainText } from "@/features/about/utils/markdown";
 import { siteConfigQuery, siteDomainQuery } from "@/features/config/queries";
-import { authClient } from "@/lib/auth/auth.client";
+import { sessionQuery } from "@/features/auth/queries";
 import { buildCanonicalUrl, canonicalLink } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 
@@ -58,13 +58,14 @@ export const Route = createFileRoute("/_public/about")({
 
 function AboutPage() {
   const { data: article } = useSuspenseQuery(aboutArticleQuery());
-  const { data: session } = authClient.useSession();
+  const { data: session } = useQuery(sessionQuery);
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const isAdmin = session?.user.role === "admin";
-  const showEditor = isAdmin && (editing || !article);
+  const isSuperAdmin = session?.user?.isSuperAdmin === true;
+  const canManageAbout = isSuperAdmin;
+  const showEditor = canManageAbout && (editing || !article);
 
   const onSave = async (title: string, markdown: string): Promise<boolean> => {
     if (saving) return false;
@@ -107,7 +108,7 @@ function AboutPage() {
   return (
     <theme.AboutPage
       article={article}
-      isAdmin={isAdmin}
+      isAdmin={isSuperAdmin}
       onStartEdit={() => setEditing(true)}
     />
   );
