@@ -12,6 +12,10 @@ export interface PostEditorData {
   pinnedAt: Date | null;
   tagIds: Array<number>;
   skillId: number | null;
+  /** 作者用户 ID（超级管理员可修改归属；普通管理员只读） */
+  authorId: string | null;
+  /** 作者昵称（由 authorId 实时派生，用于展示） */
+  author: string | null;
   isSynced: boolean;
   hasPublicCache: boolean;
   visibility: PostVisibility;
@@ -22,6 +26,10 @@ export interface PostEditorData {
 
 export interface PostEditorProps {
   initialData: PostEditorData & { id: number };
+  /** 当前登录用户是否为超级管理员（决定作者字段是否可编辑） */
+  canEditAuthor?: boolean;
+  /** 可选：可被选为作者的账号列表（由服务端提供，供超级管理员选择） */
+  authorCandidates?: Array<{ id: string; name: string; email: string }>;
   onSave: (data: PostEditorData) => Promise<void>;
 }
 
@@ -38,6 +46,8 @@ export const defaultPostData: PostEditorData = {
   pinnedAt: null,
   tagIds: [],
   skillId: null,
+  authorId: null,
+  author: null,
   isSynced: true,
   hasPublicCache: false,
   visibility: "public",

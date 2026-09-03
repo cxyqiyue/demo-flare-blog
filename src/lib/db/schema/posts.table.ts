@@ -8,6 +8,7 @@ import {
   text,
 } from "drizzle-orm/sqlite-core";
 import { createdAt, id, updatedAt } from "./helper";
+import { user } from "./auth.table";
 import { SkillsTable } from "./skills.table";
 
 export const POST_STATUSES = ["draft", "published"] as const;
@@ -44,12 +45,17 @@ export const PostsTable = sqliteTable(
     skillId: integer("skill_id").references(() => SkillsTable.id, {
       onDelete: "set null",
     }),
+    /** 作者/创建者用户 ID。普通管理员只能管理自己创建的文章；超级管理员可管理全部。 */
+    authorId: text("author_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
     createdAt,
     updatedAt,
   },
   (table) => [
     index("published_at_idx").on(table.publishedAt, table.status),
     index("created_at_idx").on(table.createdAt),
+    index("author_id_idx").on(table.authorId),
   ],
 );
 
@@ -81,6 +87,10 @@ export const postsRelations = relations(PostsTable, ({ many, one }) => ({
   skill: one(SkillsTable, {
     fields: [PostsTable.skillId],
     references: [SkillsTable.id],
+  }),
+  author: one(user, {
+    fields: [PostsTable.authorId],
+    references: [user.id],
   }),
 }));
 

@@ -26,7 +26,12 @@ import type { PostEditorData, PostEditorProps } from "./types";
 
 type EditorMode = "wysiwyg" | "markdown" | "preview";
 
-export function PostEditor({ initialData, onSave }: PostEditorProps) {
+export function PostEditor({
+  initialData,
+  onSave,
+  canEditAuthor = false,
+  authorCandidates = [],
+}: PostEditorProps) {
   // Initialize post state from initialData (always provided)
   const [post, setPost] = useState<PostEditorData>(() => ({
     title: initialData.title,
@@ -39,6 +44,8 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
     pinnedAt: initialData.pinnedAt,
     tagIds: initialData.tagIds,
     skillId: initialData.skillId,
+    authorId: initialData.authorId,
+    author: initialData.author,
     isSynced: initialData.isSynced,
     hasPublicCache: initialData.hasPublicCache,
     visibility: initialData.visibility,
@@ -287,6 +294,8 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
         pinnedAt: post.pinnedAt,
         tagIds: snapshot.tagIds,
         skillId: post.skillId,
+        authorId: post.authorId,
+        author: post.author,
         isSynced: snapshot.status === "draft" ? !hasPublicCache : false,
         hasPublicCache,
         visibility: post.visibility,
@@ -400,6 +409,8 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
               isGeneratingSummary={isGeneratingSummary}
               isGeneratingTags={isGeneratingTags}
               isGeneratingPassword={isGeneratingPassword}
+              canEditAuthor={canEditAuthor}
+              authorCandidates={authorCandidates}
               onPostChange={handlePostChange}
               onGenerateSlug={handleGenerateSlug}
               onCalculateReadTime={handleCalculateReadTime}

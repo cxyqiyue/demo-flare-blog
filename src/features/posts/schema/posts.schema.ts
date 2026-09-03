@@ -18,13 +18,19 @@ export const PostSelectSchema = createSelectSchema(PostsTable, {
   pinnedAt: coercedDateNullable,
   createdAt: coercedDate,
   updatedAt: coercedDate,
-}).omit({
-  publicContentJson: true,
-  // 三个字段均属敏感：publicContentJson 是预览快照；
-  // passwordHash/passwordCipher 绝不进入公开 schema。
-  passwordHash: true,
-  passwordCipher: true,
-});
+})
+  .omit({
+    publicContentJson: true,
+    // 三个字段均属敏感：publicContentJson 是预览快照；
+    // passwordHash/passwordCipher 绝不进入公开 schema。
+    passwordHash: true,
+    passwordCipher: true,
+  })
+  // author 为文章作者（用户）的当前昵称；由 authorId 关联 user 表实时派生，
+  // 因此作者昵称变更会同步到历史文章。
+  .extend({
+    author: z.string().nullable(),
+  });
 
 /** 管理端专用：在 select 基础上追加解密后的明文访问密码 */
 export const PostAdminSelectSchema = PostSelectSchema.extend({
@@ -221,6 +227,8 @@ export type PostListItem = Omit<
   "contentJson" | "publicContentJson" | "passwordHash" | "passwordCipher"
 > & {
   tags?: Array<Tag>;
+  /** 作者昵称（由 authorId 关联 user 表实时派生） */
+  author: string | null;
 };
 
 export type PostListResponse = z.infer<typeof PostListResponseSchema>;

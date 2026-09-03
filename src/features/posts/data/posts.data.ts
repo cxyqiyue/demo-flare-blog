@@ -20,6 +20,7 @@ import {
 } from "@/features/posts/data/helper";
 import type { PostListItem } from "@/features/posts/schema/posts.schema";
 import type { PostStatus, PostVisibility, Tag } from "@/lib/db/schema";
+import { user } from "@/lib/db/schema/auth.table";
 import { PostsTable, PostTagsTable, TagsTable } from "@/lib/db/schema";
 
 const DEFAULT_PAGE_SIZE = 12;
@@ -55,6 +56,8 @@ export async function getPosts(
     search?: string;
     sortDir?: SortDirection;
     sortBy?: SortField;
+    /** 仅返回指定作者创建的文章；未提供时不按作者过滤 */
+    authorId?: string;
   } = {},
 ) {
   const {
@@ -66,6 +69,13 @@ export async function getPosts(
   } = options;
   const whereClause = buildPostWhereClause(filters);
   const orderByClause = buildPostOrderByClause(sortDir, sortBy);
+  const conditions = [];
+  if (whereClause) {
+    conditions.push(whereClause);
+  }
+  if (options.authorId) {
+    conditions.push(eq(PostsTable.authorId, options.authorId));
+  }
 
   const posts = await db
     .select({
@@ -80,15 +90,18 @@ export async function getPosts(
       publishedAt: PostsTable.publishedAt,
       pinnedAt: PostsTable.pinnedAt,
       skillId: PostsTable.skillId,
+      authorId: PostsTable.authorId,
+      author: user.name,
       createdAt: PostsTable.createdAt,
       updatedAt: PostsTable.updatedAt,
       publicContentRenderVersion: PostsTable.publicContentRenderVersion,
     })
     .from(PostsTable)
+    .leftJoin(user, eq(PostsTable.authorId, user.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .limit(Math.min(limit, 50))
     .offset(offset)
-    .orderBy(orderByClause)
-    .where(whereClause);
+    .orderBy(orderByClause);
   return posts;
 }
 
@@ -98,13 +111,22 @@ export async function getPostsCount(
     status?: PostStatus;
     publicOnly?: boolean;
     search?: string;
+    /** 仅统计指定作者创建的文章；未提供时不按作者过滤 */
+    authorId?: string;
   } = {},
 ) {
   const whereClause = buildPostWhereClause(options);
+  const conditions = [];
+  if (whereClause) {
+    conditions.push(whereClause);
+  }
+  if (options.authorId) {
+    conditions.push(eq(PostsTable.authorId, options.authorId));
+  }
   const totalNumberofPosts = await db
     .select({ count: count() })
     .from(PostsTable)
-    .where(whereClause);
+    .where(conditions.length > 0 ? and(...conditions) : undefined);
   return totalNumberofPosts[0].count;
 }
 
@@ -189,11 +211,14 @@ export async function getPostsCursor(
       publishedAt: PostsTable.publishedAt,
       pinnedAt: PostsTable.pinnedAt,
       skillId: PostsTable.skillId,
+      authorId: PostsTable.authorId,
+      author: user.name,
       createdAt: PostsTable.createdAt,
       updatedAt: PostsTable.updatedAt,
       publicContentRenderVersion: PostsTable.publicContentRenderVersion,
     })
     .from(PostsTable)
+    .leftJoin(user, eq(PostsTable.authorId, user.id))
     .$dynamic();
 
   if (tagName) {
@@ -296,15 +321,16 @@ export async function findPostById(db: DB, id: number) {
           tag: true,
         },
       },
+      author: true,
     },
   });
 
   if (!post) return null;
 
-  // Flatten tags
+  // Flatten tags and author
   const tags = post.postTags.map((pt) => pt.tag);
-  const { postTags, ...rest } = post;
-  return { ...rest, tags };
+  const { postTags, author, ...rest } = post;
+  return { ...rest, author: author?.name ?? null, tags };
 }
 
 export async function findPostsByIds(db: DB, ids: Array<number>) {
@@ -317,6 +343,7 @@ export async function findPostsByIds(db: DB, ids: Array<number>) {
       slug: PostsTable.slug,
       status: PostsTable.status,
       publishedAt: PostsTable.publishedAt,
+      authorId: PostsTable.authorId,
     })
     .from(PostsTable)
     .where(inArray(PostsTable.id, ids));
@@ -342,6 +369,7 @@ export async function findPostsBySlugs(db: DB, slugs: string[]) {
       publishedAt: true,
       pinnedAt: true,
       skillId: true,
+      authorId: true,
       createdAt: true,
       updatedAt: true,
       publicContentRenderVersion: true,
@@ -350,13 +378,18 @@ export async function findPostsBySlugs(db: DB, slugs: string[]) {
       postTags: {
         with: { tag: true },
       },
+      author: true,
     },
   });
 
-  return posts.map((p) => ({
-    ...p,
-    tags: p.postTags.map((pt) => pt.tag),
-  }));
+  return posts.map((p) => {
+    const { author, ...rest } = p;
+    return {
+      ...rest,
+      author: author?.name ?? null,
+      tags: p.postTags.map((pt) => pt.tag),
+    };
+  });
 }
 
 export async function findPostBySlug(
@@ -378,15 +411,16 @@ export async function findPostBySlug(
           tag: true,
         },
       },
+      author: true,
     },
   });
 
   if (!post) return null;
 
-  // Flatten tags
+  // Flatten tags and author
   const tags = post.postTags.map((pt) => pt.tag);
-  const { postTags, ...rest } = post;
-  return { ...rest, tags };
+  const { postTags, author, ...rest } = post;
+  return { ...rest, author: author?.name ?? null, tags };
 }
 
 /**
@@ -415,10 +449,16 @@ export async function findPostGateBySlug(db: DB, slug: string) {
       createdAt: true,
       updatedAt: true,
       skillId: true,
+      authorId: true,
       publicContentRenderVersion: true,
     },
+    with: {
+      author: { columns: { name: true } },
+    },
   });
-  return post ?? null;
+  if (!post) return null;
+  const { author, ...rest } = post;
+  return { ...rest, author: author?.name ?? null };
 }
 
 export async function updatePost(
@@ -610,11 +650,14 @@ export async function getPublicPostsByIds(db: DB, ids: Array<number>) {
       publishedAt: PostsTable.publishedAt,
       pinnedAt: PostsTable.pinnedAt,
       skillId: PostsTable.skillId,
+      authorId: PostsTable.authorId,
+      author: user.name,
       createdAt: PostsTable.createdAt,
       updatedAt: PostsTable.updatedAt,
       publicContentRenderVersion: PostsTable.publicContentRenderVersion,
     })
     .from(PostsTable)
+    .leftJoin(user, eq(PostsTable.authorId, user.id))
     .where(and(inArray(PostsTable.id, ids), whereClause));
 
   return posts;
@@ -632,6 +675,8 @@ const PUBLIC_PAGE_COLUMNS = {
   publishedAt: PostsTable.publishedAt,
   pinnedAt: PostsTable.pinnedAt,
   skillId: PostsTable.skillId,
+  authorId: PostsTable.authorId,
+  author: user.name,
   createdAt: PostsTable.createdAt,
   updatedAt: PostsTable.updatedAt,
   publicContentRenderVersion: PostsTable.publicContentRenderVersion,
@@ -672,6 +717,7 @@ export async function getPublicPostsPage(
     db
       .select(PUBLIC_PAGE_COLUMNS)
       .from(PostsTable)
+      .leftJoin(user, eq(PostsTable.authorId, user.id))
       .where(regularWhereClause)
       .orderBy(desc(PostsTable.publishedAt), desc(PostsTable.id))
       .limit(limit)
@@ -689,6 +735,7 @@ export async function getPublicPostsPage(
     const pinnedPosts = await db
       .select(PUBLIC_PAGE_COLUMNS)
       .from(PostsTable)
+      .leftJoin(user, eq(PostsTable.authorId, user.id))
       .where(and(publicWhereClause, isNotNull(PostsTable.pinnedAt)))
       .orderBy(desc(PostsTable.pinnedAt));
     items.push(...pinnedPosts);
@@ -830,14 +877,16 @@ export async function findFullPosts(
           tag: true,
         },
       },
+      author: true,
     },
     orderBy: [desc(PostsTable.createdAt)],
   });
 
   return results.map((post) => {
-    const { postTags, ...rest } = post;
+    const { postTags, author, ...rest } = post;
     return {
       ...rest,
+      author: author?.name ?? null,
       tags: postTags.map((pt) => pt.tag),
     };
   });

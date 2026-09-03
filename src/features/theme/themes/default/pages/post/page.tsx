@@ -58,6 +58,15 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
         <header className="space-y-8">
           <div className="space-y-6">
             <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-muted-foreground/60 tracking-wider">
+              {post.author && (
+                <>
+                  <span className="flex items-center gap-1.5">
+                    {m.post_author()}:{" "}
+                    <span className="text-foreground">{post.author}</span>
+                  </span>
+                  <span className="opacity-30">/</span>
+                </>
+              )}
               <span className="flex items-center gap-1.5">
                 {m.post_published_at()}:{" "}
                 <ClientOnly fallback={<span>-</span>}>

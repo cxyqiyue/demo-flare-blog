@@ -1,4 +1,4 @@
-import { count, desc, eq, like, or, sql } from "drizzle-orm";
+import { count, desc, eq, isNull, like, or, sql } from "drizzle-orm";
 import { CommentsTable, user } from "@/lib/db/schema";
 
 export interface GetUsersOptions {
@@ -60,6 +60,14 @@ export async function getUserById(db: DB, userId: string) {
     .limit(1);
 
   return row ?? null;
+}
+
+export async function getAuthorAccountOptions(db: DB) {
+  return db
+    .select({ id: user.id, name: user.name, email: user.email })
+    .from(user)
+    .where(or(isNull(user.banned), eq(user.banned, false)))
+    .orderBy(user.name);
 }
 
 export async function setUserRole(db: DB, userId: string, role: string | null) {

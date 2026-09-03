@@ -59,6 +59,7 @@ import {
   type ViewerAccess,
 } from "@/features/posts/services/post-access.service";
 import { err, ok } from "@/lib/errors";
+import { isSuperAdmin } from "@/lib/auth/access";
 import { purgePostCDNCache } from "@/lib/invalidate";
 
 function stripPublicContentJson<T extends { publicContentJson?: unknown }>(
@@ -67,6 +68,33 @@ function stripPublicContentJson<T extends { publicContentJson?: unknown }>(
   const { publicContentJson: _publicContentJson, ...rest } = post;
   return rest;
 }
+
+/**
+ * 文章归属（owner）作用域所需的最小上下文。
+ * - Web 管理后台经 adminMiddleware 注入 session → 按归属/超管判定。
+ * - MCP 工具没有 session（凭 OAuth scope 鉴权，历史上即全量可见）→ 视为全量管理员。
+ */
+interface OwnerContext {
+  db: DB;
+  env: Env;
+  session?: Session | null;
+}
+
+/** 是否全量权限：无 session（MCP / 无会话）或超级管理员。 */
+function isFullAccessOwner(context: OwnerContext) {
+  return !context.session || isSuperAdmin(context.session.user, context.env);
+}
+
+/** 普通管理员是否可访问某篇由其 authorId 归属的文章（无会话视为全量）。 */
+function isPostOwner(context: OwnerContext, authorId: string | null) {
+  return !context.session || context.session.user.id === authorId;
+}
+
+/** 列表/计数过滤：普通管理员只看自己的文章，其余全量。 */
+function authorScopeFilter(context: OwnerContext) {
+  return isFullAccessOwner(context) ? undefined : context.session!.user.id;
+}
+
 
 /**
  * 发布/下架等状态切换时的同步快速失效：
@@ -256,6 +284,8 @@ function buildGatedShell(
     createdAt: gateMeta.createdAt,
     updatedAt: gateMeta.updatedAt,
     skillId: gateMeta.skillId,
+    authorId: gateMeta.authorId,
+    author: gateMeta.author ?? null,
     publicContentRenderVersion: gateMeta.publicContentRenderVersion,
     tags: [],
     contentJson: null,
@@ -444,7 +474,7 @@ export async function generateSlug(
   return { slug: `${baseSlug}-${maxSuffix + 1}` };
 }
 
-export async function createEmptyPost(context: DbContext) {
+export async function createEmptyPost(context: OwnerContext) {
   const { slug } = await generateSlug(context, { title: "" });
 
   const post = await PostRepo.insertPost(context.db, {
@@ -454,6 +484,8 @@ export async function createEmptyPost(context: DbContext) {
     status: "draft",
     readTimeInMinutes: 1,
     contentJson: null,
+    // 归属作者：Web 管理为当前登录用户；无会话（MCP）置空。
+    authorId: context.session?.user.id ?? null,
   });
 
   // No cache/index operations for drafts
@@ -461,7 +493,9 @@ export async function createEmptyPost(context: DbContext) {
   return { id: post.id };
 }
 
-export async function getPosts(context: DbContext, data: GetPostsInput) {
+export async function getPosts(context: OwnerContext, data: GetPostsInput) {
+  // 普通管理员只能看到自己创建的文章；超级管理员（或无会话的 MCP）可看到全部。
+  const authorId = authorScopeFilter(context);
   return await PostRepo.getPosts(context.db, {
     offset: data.offset ?? 0,
     limit: data.limit ?? 10,
@@ -470,17 +504,20 @@ export async function getPosts(context: DbContext, data: GetPostsInput) {
     search: data.search,
     sortDir: data.sortDir,
     sortBy: data.sortBy,
+    authorId,
   });
 }
 
 export async function getPostsCount(
-  context: DbContext,
+  context: OwnerContext,
   data: GetPostsCountInput,
 ) {
+  const authorId = authorScopeFilter(context);
   return await PostRepo.getPostsCount(context.db, {
     status: data.status,
     publicOnly: data.publicOnly,
     search: data.search,
+    authorId,
   });
 }
 
@@ -499,11 +536,16 @@ export async function findPostBySlugAdmin(
 }
 
 export async function findPostById(
-  context: DbContext,
+  context: OwnerContext,
   data: FindPostByIdInput,
 ) {
   const post = await PostRepo.findPostById(context.db, data.id);
   if (!post) return null;
+
+  // 普通管理员只能读取/编辑自己创建的文章；超级管理员（或无会话的 MCP）可读取全部。
+  if (!isPostOwner(context, post.authorId)) {
+    return null;
+  }
 
   const kvHash = await CacheService.getRaw(
     context,
@@ -549,7 +591,7 @@ export async function findPostById(
 }
 
 export async function updatePost(
-  context: DbContext & { executionCtx: ExecutionContext; env?: Env },
+  context: OwnerContext & { executionCtx: ExecutionContext },
   data: UpdatePostInput,
 ) {
   const existingPost = await PostRepo.findPostById(context.db, data.id);
@@ -557,10 +599,26 @@ export async function updatePost(
     return err({ reason: "POST_NOT_FOUND" });
   }
 
+  const actorIsSuper = isFullAccessOwner(context);
+  // 普通管理员只能更新自己创建的文章；超级管理员（或无会话的 MCP）可更新全部。
+  if (!actorIsSuper && existingPost.authorId !== context.session!.user.id) {
+    return err({ reason: "PERMISSION_DENIED" });
+  }
+
   // 密码门禁：编辑器传来明文 password（不含 passwordHash/passwordCipher）。
   // 服务端在此派生安全字段后落库，确保明文/杂凑的生成只在服务端完成。
   const persisted = { ...data.data };
   delete persisted.password;
+
+  // 作者归属：普通管理员不得修改作者（强制保留原作者）；
+  // 超级管理员可修改 authorId（若编辑器提交）。
+  if (actorIsSuper) {
+    if (data.data.authorId === null || data.data.authorId === "") {
+      delete persisted.authorId;
+    }
+  } else {
+    delete persisted.authorId;
+  }
 
   if (persisted.visibility === "public" || persisted.visibility === "private") {
     // 离开密码门禁：清除密码相关字段，并使已签发解锁令牌失效。
@@ -613,10 +671,17 @@ export async function updatePost(
  * and previously unpublished posts share one timestamp within the batch.
  */
 export async function batchUpdatePostsStatus(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: OwnerContext & { executionCtx: ExecutionContext },
   data: BatchUpdatePostsStatusInput,
 ) {
-  const existing = await PostRepo.findPostsByIds(context.db, data.ids);
+  const actorIsFullAccess = isFullAccessOwner(context);
+  let existing = await PostRepo.findPostsByIds(context.db, data.ids);
+  // 普通管理员批量操作仅作用于自己创建的文章；其他人文章被跳过。
+  if (!actorIsFullAccess) {
+    existing = existing.filter(
+      (post) => post.authorId === context.session!.user.id,
+    );
+  }
   if (existing.length === 0) {
     return ok({ updated: 0, skipped: data.ids.length });
   }
@@ -691,12 +756,17 @@ export async function batchUpdatePostsStatus(
 }
 
 export async function deletePost(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: OwnerContext & { executionCtx: ExecutionContext },
   data: DeletePostInput,
 ) {
   const post = await PostRepo.findPostById(context.db, data.id);
   if (!post) {
     return err({ reason: "POST_NOT_FOUND" });
+  }
+
+  // 普通管理员只能删除自己创建的文章；超级管理员（或无会话的 MCP）可删除全部。
+  if (!isPostOwner(context, post.authorId)) {
+    return err({ reason: "PERMISSION_DENIED" });
   }
 
   await PostRepo.deletePost(context.db, data.id);

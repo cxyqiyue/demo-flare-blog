@@ -17,6 +17,12 @@ export const listUsersFn = createServerFn({
     async ({ data, context }) => await UserService.listUsers(context, data),
   );
 
+export const getPostAuthorManagerFn = createServerFn({
+  method: "GET",
+})
+  .middleware([adminMiddleware])
+  .handler(async ({ context }) => UserService.getPostAuthorManager(context));
+
 export const setUserRoleFn = createServerFn({
   method: "POST",
 })

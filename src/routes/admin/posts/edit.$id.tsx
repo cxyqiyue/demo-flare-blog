@@ -12,6 +12,7 @@ import {
   tagsAdminQueryOptions,
   tagsByPostIdQueryOptions,
 } from "@/features/tags/queries";
+import { getPostAuthorManagerFn } from "@/features/users/api/users.admin.api";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/admin/posts/edit/$id")({
@@ -46,6 +47,10 @@ function EditPost() {
   // Since loader ensures data is in cache, these will have initial data immediately.
   const { data: post } = useQuery(postByIdQuery(postId));
   const { data: tags } = useQuery(tagsByPostIdQueryOptions(postId));
+  const { data: authorManager } = useQuery({
+    queryKey: ["posts", "author-manager"],
+    queryFn: () => getPostAuthorManagerFn(),
+  });
 
   if (!post || !tags) {
     return (
@@ -74,6 +79,8 @@ function EditPost() {
     tagIds: tags.map((t) => t.id),
     skillId: post.skillId,
     pinnedAt: post.pinnedAt,
+    authorId: post.authorId,
+    author: post.author,
     isSynced: post.isSynced,
     hasPublicCache: post.hasPublicCache,
     visibility: post.visibility,
@@ -125,5 +132,12 @@ function EditPost() {
     });
   };
 
-  return <PostEditor initialData={initialData} onSave={handleSave} />;
+  return (
+    <PostEditor
+      initialData={initialData}
+      canEditAuthor={authorManager?.canEdit ?? false}
+      authorCandidates={authorManager?.accounts ?? []}
+      onSave={handleSave}
+    />
+  );
 }

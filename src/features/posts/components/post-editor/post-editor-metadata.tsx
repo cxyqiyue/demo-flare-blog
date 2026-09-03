@@ -27,6 +27,8 @@ interface PostEditorMetadataProps {
   isGeneratingSummary: boolean;
   isGeneratingTags: boolean;
   isGeneratingPassword: boolean;
+  canEditAuthor: boolean;
+  authorCandidates: Array<{ id: string; name: string; email: string }>;
   onPostChange: (updates: Partial<PostEditorData>) => void;
   onGenerateSlug: () => void;
   onCalculateReadTime: () => void;
@@ -42,6 +44,8 @@ export function PostEditorMetadata({
   isGeneratingSummary,
   isGeneratingTags,
   isGeneratingPassword,
+  canEditAuthor,
+  authorCandidates,
   onPostChange,
   onGenerateSlug,
   onCalculateReadTime,
@@ -49,6 +53,14 @@ export function PostEditorMetadata({
   onGenerateTags,
   onGeneratePassword,
 }: PostEditorMetadataProps) {
+  const handleAuthorChange = (authorId: string) => {
+    const candidate = authorCandidates.find((c) => c.id === authorId);
+    onPostChange({
+      authorId: authorId || null,
+      author: candidate?.name ?? null,
+    });
+  };
+
   return (
     <>
       <div className="mb-12">
@@ -115,6 +127,32 @@ export function PostEditorMetadata({
             </div>
           </div>
         )}
+
+        <div className="space-y-3">
+          <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+            {m.editor_meta_author()}
+          </label>
+          {canEditAuthor ? (
+            <select
+              value={post.authorId ?? ""}
+              onChange={(e) => handleAuthorChange(e.target.value)}
+              className="h-auto w-full border-b border-border/40 bg-transparent p-0 px-0 pb-1 text-xs font-mono text-foreground shadow-none focus-visible:ring-0 focus-visible:outline-none"
+            >
+              <option value="">
+                {post.author ?? m.editor_meta_author_placeholder()}
+              </option>
+              {authorCandidates.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="text-xs font-mono text-foreground">
+              {post.author || m.editor_meta_author_placeholder()}
+            </div>
+          )}
+        </div>
 
         <div className="space-y-3">
           <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">

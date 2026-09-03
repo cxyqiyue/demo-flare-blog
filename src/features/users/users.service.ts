@@ -1,4 +1,4 @@
-import { isSuperAdmin } from "@/lib/auth/access";
+import { isAdmin, isSuperAdmin } from "@/lib/auth/access";
 import { err, ok, type Result } from "@/lib/errors";
 import * as UserRepo from "./data/users.data";
 import type {
@@ -18,6 +18,28 @@ function getActorInfo(user: { email: string; role?: string | null }) {
 }
 
 // ============ Admin Methods ============
+
+/**
+ * 返回文章作者归属管理信息：当前用户是否为超级管理员（可编辑作者），
+ * 以及可被选为文章作者的账号（管理员 + 超级管理员）列表。
+ */
+export async function getPostAuthorManager(context: AdminContext) {
+  const canEdit = isSuperAdmin(context.session.user, context.env);
+  if (!canEdit) {
+    return { canEdit: false, accounts: [] };
+  }
+  const accounts = await UserRepo.getAuthorAccountOptions(context.db);
+  return {
+    canEdit: true,
+    accounts: accounts
+      .filter((account) => isAdmin(account, context.env))
+      .map((account) => ({
+        id: account.id,
+        name: account.name,
+        email: account.email,
+      })),
+  };
+}
 
 export async function listUsers(
   context: AdminContext,
