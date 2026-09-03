@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { UserManagementTable } from "@/features/users/components/admin/user-management-table";
+import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
 import { m } from "@/paraglide/messages";
 
 const searchSchema = z.object({
@@ -14,6 +15,7 @@ const searchSchema = z.object({
 export const Route = createFileRoute("/admin/users/")({
   ssr: false,
   validateSearch: searchSchema,
+  beforeLoad: requireSuperAdminRoute,
   component: UsersAdminPage,
   loader: () => {
     return {

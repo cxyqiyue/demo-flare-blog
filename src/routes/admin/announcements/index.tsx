@@ -4,11 +4,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import AnnouncementFormModal from "@/features/announcements/components/admin/announcement-form-modal";
 import { AnnouncementsTable } from "@/features/announcements/components/admin/announcements-table";
+import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
 import type { Announcement } from "@/lib/db/schema";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/admin/announcements/")({
   ssr: false,
+  beforeLoad: requireSuperAdminRoute,
   component: AnnouncementsAdminPage,
   loader: () => ({
     title: m.announcements_admin_title(),

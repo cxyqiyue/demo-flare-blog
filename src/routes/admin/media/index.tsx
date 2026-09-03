@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { MediaLibrary } from "@/features/media/components/media-library";
+import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
 import { m } from "@/paraglide/messages";
 
 const mediaSearchSchema = z.object({
@@ -14,6 +15,7 @@ const mediaSearchSchema = z.object({
 export const Route = createFileRoute("/admin/media/")({
   ssr: false,
   validateSearch: mediaSearchSchema,
+  beforeLoad: requireSuperAdminRoute,
   component: MediaLibrary,
   loader: () => ({
     title: m.media_title(),

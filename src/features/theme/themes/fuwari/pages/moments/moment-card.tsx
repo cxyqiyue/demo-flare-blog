@@ -21,6 +21,8 @@ const MomentEditor = lazy(() =>
 interface MomentCardProps {
   moment: MomentWithStats;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
+  currentUserId?: string | null;
   onToggleLike: (momentId: number) => Promise<boolean>;
   onDelete: (id: number) => Promise<boolean>;
   onUpdate: (
@@ -33,6 +35,8 @@ interface MomentCardProps {
 export function MomentCard({
   moment,
   isAdmin,
+  isSuperAdmin,
+  currentUserId,
   onToggleLike,
   onDelete,
   onUpdate,
@@ -43,6 +47,11 @@ export function MomentCard({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editing, setEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 超管可管理所有动态；普通管理员仅可管理自己发布的动态
+  const canManage =
+    isAdmin &&
+    (isSuperAdmin || moment.authorUserId === currentUserId);
 
   const isLiked = moment.isLiked;
 
@@ -108,7 +117,7 @@ export function MomentCard({
           </div>
         </div>
 
-        {isAdmin && (
+        {canManage && (
           <div className="flex items-center gap-1">
             {!editing && (
               <Button

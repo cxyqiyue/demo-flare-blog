@@ -1,6 +1,7 @@
 import type { JSONContent } from "@tiptap/react";
 import * as CacheService from "@/features/cache/cache.service";
 import * as EdgeCacheService from "@/features/cache/edge-cache.service";
+import { isSuperAdmin } from "@/lib/auth/access";
 import { err, ok, type Result } from "@/lib/errors";
 import { purgeCDNCache } from "@/lib/invalidate";
 import * as MomentRepo from "./data/moments.data";
@@ -129,6 +130,13 @@ export async function updateMoment(
     return err({ reason: "NOT_FOUND" });
   }
 
+  if (
+    !isSuperAdmin(context.session.user, context.env) &&
+    moment.authorUserId !== context.session.user.id
+  ) {
+    return err({ reason: "PERMISSION_DENIED" });
+  }
+
   const content = stripImageNodes(data.content as JSONContent | null);
 
   const updated = await MomentRepo.updateMoment(context.db, data.id, {
@@ -142,12 +150,19 @@ export async function updateMoment(
 }
 
 export async function deleteMoment(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: DbContext & { executionCtx: ExecutionContext } & AuthContext,
   data: DeleteMomentInput,
 ) {
   const moment = await MomentRepo.findMomentById(context.db, data.id);
   if (!moment) {
     return err({ reason: "NOT_FOUND" });
+  }
+
+  if (
+    !isSuperAdmin(context.session.user, context.env) &&
+    moment.authorUserId !== context.session.user.id
+  ) {
+    return err({ reason: "PERMISSION_DENIED" });
   }
 
   await MomentRepo.deleteMoment(context.db, data.id);

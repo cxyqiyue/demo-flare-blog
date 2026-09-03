@@ -17,10 +17,10 @@ import { m } from "@/paraglide/messages";
 
 type Engine = NavigationPublicData["engines"][number];
 
-export function EngineManager() {
-  const { data, isPending } = useAdminNavigationData();
+export function EngineManager({ ownerId }: { ownerId?: string }) {
+  const { data, isPending } = useAdminNavigationData(ownerId);
   const { createEngine, updateEngine, deleteEngine, setDefaultEngine } =
-    useAdminNavigation();
+    useAdminNavigation(ownerId);
 
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Engine | null>(null);

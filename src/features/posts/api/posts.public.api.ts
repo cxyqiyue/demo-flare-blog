@@ -47,14 +47,14 @@ const viewerAccessMiddleware = createMiddleware({ type: "function" })
   });
 
 export const getPostsCursorFn = createServerFn()
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, viewerAccessMiddleware])
   .inputValidator(GetPostsCursorInputSchema)
   .handler(async ({ data, context }) => {
     return await PostService.getPostsCursor(context, data);
   });
 
 export const getPublicPostsPageFn = createServerFn()
-  .middleware([dbMiddleware])
+  .middleware([dbMiddleware, viewerAccessMiddleware])
   .inputValidator(GetPublicPostsPageInputSchema)
   .handler(async ({ data, context }) => {
     return await PostService.getPublicPostsPage(context, data);

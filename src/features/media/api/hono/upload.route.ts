@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { isAdmin } from "@/lib/auth/access";
+import { isAdmin, isSuperAdmin } from "@/lib/auth/access";
 import { resolveR2NativeMaxBytes } from "@/features/image-hosting/size-limits";
 import { parseUploadMediaInput } from "@/features/media/media.schema";
 import * as MediaService from "@/features/media/service/media.service";
@@ -39,6 +39,22 @@ async function requireAdmin(c: Ctx): Promise<Response | null> {
   return null;
 }
 
+/** 超级管理员鉴权（媒体库管理）；失败时返回 Response，否则返回 null。 */
+async function requireSuperAdmin(c: Ctx): Promise<Response | null> {
+  const db = getDb(c.env);
+  const auth = getAuth({ db, env: c.env });
+  const session = await auth.api.getSession({
+    headers: c.req.raw.headers,
+  });
+  if (!session) {
+    return jsonResponse({ ok: false, message: "Unauthorized" }, 401);
+  }
+  if (!isSuperAdmin(session.user, c.env)) {
+    return jsonResponse({ ok: false, message: "Forbidden" }, 403);
+  }
+  return null;
+}
+
 function errorStatus(reason: string): number {
   switch (reason) {
     case "FILE_TOO_LARGE":
@@ -56,15 +72,18 @@ function errorStatus(reason: string): number {
 }
 
 mediaUploadRoute.post("/upload", async (c) => {
-  const denied = await requireAdmin(c);
-  if (denied) return denied;
-
   try {
-    const context = MediaService.resolveMediaRequestContext(c);
     const formData = await c.req.formData();
-    // 媒体库管理员上传：允许任意文件类型，并放宽到 R2 渠道上限。
+    // 媒体库管理上传（UI 直传、允许任意文件类型、放宽到 R2 渠道上限）——仅最高管理员；
+    // 编辑器内传图（source != media-library）——管理员可在写文章时上传配图。
     const isMediaLibrary =
       (formData.get("source") as string | null) === "media-library";
+    const denied = isMediaLibrary
+      ? await requireSuperAdmin(c)
+      : await requireAdmin(c);
+    if (denied) return denied;
+
+    const context = MediaService.resolveMediaRequestContext(c);
     const input = parseUploadMediaInput(
       formData,
       m,
@@ -102,7 +121,7 @@ mediaUploadRoute.post("/upload", async (c) => {
 });
 
 mediaUploadRoute.post("/upload/provider", async (c) => {
-  const denied = await requireAdmin(c);
+  const denied = await requireSuperAdmin(c);
   if (denied) return denied;
 
   try {

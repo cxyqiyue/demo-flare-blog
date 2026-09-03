@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { AddFriendLinkModal } from "@/features/friend-links/components/admin/add-friend-link-modal";
 import { FriendLinkModerationTable } from "@/features/friend-links/components/admin/friend-link-moderation-table";
+import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
 import type { FriendLinkStatus } from "@/lib/db/schema";
 import { m } from "@/paraglide/messages";
 
@@ -20,6 +21,7 @@ const searchSchema = z.object({
 export const Route = createFileRoute("/admin/friend-links/")({
   ssr: false,
   validateSearch: searchSchema,
+  beforeLoad: requireSuperAdminRoute,
   component: FriendLinksAdminPage,
   loader: () => {
     return {

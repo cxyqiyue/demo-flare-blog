@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { GetPublicPostsPageInputSchema } from "@/features/posts/schema/posts.schema";
 import * as PostService from "@/features/posts/services/posts.service";
-import { getServiceContext, setCacheHeaders } from "@/lib/hono/helper";
+import { getServiceContext, getViewerContext, setCacheHeaders } from "@/lib/hono/helper";
 import { baseMiddleware } from "@/lib/hono/middlewares";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -21,8 +21,9 @@ const route = app.get(
   ),
   async (c) => {
     const data = c.req.valid("query");
+    const viewer = await getViewerContext(c);
     const result = await PostService.getPublicPostsPage(
-      getServiceContext(c),
+      { ...getServiceContext(c), viewer },
       data,
     );
     setCacheHeaders(c.res.headers, "public");

@@ -19,7 +19,7 @@ import {
   buildPostWhereClause,
 } from "@/features/posts/data/helper";
 import type { PostListItem } from "@/features/posts/schema/posts.schema";
-import type { PostStatus, Tag } from "@/lib/db/schema";
+import type { PostStatus, PostVisibility, Tag } from "@/lib/db/schema";
 import { PostsTable, PostTagsTable, TagsTable } from "@/lib/db/schema";
 
 const DEFAULT_PAGE_SIZE = 12;
@@ -121,6 +121,8 @@ export async function getPostsCursor(
     publicOnly?: boolean;
     tagName?: string;
     excludePinned?: boolean;
+    /** 列表中允许的可见性；管理员传含 private 的集合，否则默认公开+密码 */
+    allowedVisibilities?: Array<PostVisibility>;
   } = {},
 ): Promise<{
   items: Array<PostListItem>;
@@ -132,10 +134,11 @@ export async function getPostsCursor(
     publicOnly,
     tagName,
     excludePinned,
+    allowedVisibilities,
   } = options;
 
   // Build base conditions from helper
-  const baseConditions = buildPostWhereClause({ publicOnly });
+  const baseConditions = buildPostWhereClause({ publicOnly, allowedVisibilities });
 
   // Add cursor condition if provided
   const conditions = [];
@@ -642,7 +645,12 @@ const PUBLIC_PAGE_COLUMNS = {
  */
 export async function getPublicPostsPage(
   db: DB,
-  options: { offset?: number; limit?: number } = {},
+  options: {
+    offset?: number;
+    limit?: number;
+    /** 列表中允许的可见性；管理员传含 private 的集合，否则默认公开+密码 */
+    allowedVisibilities?: Array<PostVisibility>;
+  } = {},
 ): Promise<{
   items: Array<PostListItem>;
   total: number;
@@ -651,7 +659,10 @@ export async function getPublicPostsPage(
   const offset = options.offset ?? 0;
   const limit = Math.min(options.limit ?? 10, 50);
 
-  const publicWhereClause = buildPostWhereClause({ publicOnly: true });
+  const publicWhereClause = buildPostWhereClause({
+    publicOnly: true,
+    allowedVisibilities: options.allowedVisibilities,
+  });
   const regularWhereClause = and(
     publicWhereClause,
     sql`${PostsTable.pinnedAt} IS NULL`,

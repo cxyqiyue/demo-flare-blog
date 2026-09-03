@@ -13,7 +13,7 @@ import {
   UpdatePostInputSchema,
 } from "@/features/posts/schema/posts.schema";
 import * as PostService from "@/features/posts/services/posts.service";
-import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware } from "@/lib/middlewares";
 
 export const generateSlugFn = createServerFn()
   .middleware([adminMiddleware])
@@ -23,7 +23,7 @@ export const generateSlugFn = createServerFn()
 export const createEmptyPostFn = createServerFn({
   method: "POST",
 })
-  .middleware([superAdminMiddleware])
+  .middleware([adminMiddleware])
   .handler(({ context }) => PostService.createEmptyPost(context));
 
 export const getPostsFn = createServerFn()
@@ -51,21 +51,21 @@ export const findPostByIdFn = createServerFn()
 export const updatePostFn = createServerFn({
   method: "POST",
 })
-  .middleware([superAdminMiddleware])
+  .middleware([adminMiddleware])
   .inputValidator(UpdatePostInputSchema)
   .handler(({ data, context }) => PostService.updatePost(context, data));
 
 export const deletePostFn = createServerFn({
   method: "POST",
 })
-  .middleware([superAdminMiddleware])
+  .middleware([adminMiddleware])
   .inputValidator(DeletePostInputSchema)
   .handler(({ data, context }) => PostService.deletePost(context, data));
 
 export const batchUpdatePostsStatusFn = createServerFn({
   method: "POST",
 })
-  .middleware([superAdminMiddleware])
+  .middleware([adminMiddleware])
   .inputValidator(BatchUpdatePostsStatusInputSchema)
   .handler(({ data, context }) =>
     PostService.batchUpdatePostsStatus(context, data),
@@ -74,19 +74,19 @@ export const batchUpdatePostsStatusFn = createServerFn({
 export const previewSummaryFn = createServerFn({
   method: "POST",
 })
-  .middleware([superAdminMiddleware])
+  .middleware([adminMiddleware])
   .inputValidator(PreviewSummaryInputSchema)
   .handler(({ data, context }) => PostService.previewSummary(context, data));
 
 export const generateArticleFn = createServerFn({
   method: "POST",
 })
-  .middleware([superAdminMiddleware])
+  .middleware([adminMiddleware])
   .inputValidator(GenerateArticleInputSchema)
   .handler(({ data, context }) => PostService.generateArticle(context, data));
 
 export const startPostProcessWorkflowFn = createServerFn()
-  .middleware([superAdminMiddleware])
+  .middleware([adminMiddleware])
   .inputValidator(StartPostProcessInputSchema)
   .handler(({ data, context }) =>
     PostService.startPostProcessWorkflow(context, data),

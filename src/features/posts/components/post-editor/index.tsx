@@ -9,6 +9,7 @@ import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { markdownToJsonContent } from "@/features/import-export/utils/markdown-parser";
 import { jsonContentToMarkdown } from "@/features/import-export/utils/markdown-serializer";
 import { extensions } from "@/features/posts/editor/config";
+import { generateStrongPassword } from "@/features/posts/utils/post-secret";
 import type { PostRevisionSnapshot } from "@/features/posts/schema/post-revisions.schema";
 import { tagsAdminQueryOptions } from "@/features/tags/queries";
 import { ContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
@@ -125,6 +126,14 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
   const handlePostChange = useCallback((updates: Partial<PostEditorData>) => {
     setPost((prev) => ({ ...prev, ...updates }));
   }, []);
+
+  const [isGeneratingPassword, setIsGeneratingPassword] = useState(false);
+  const handleGeneratePassword = useCallback(() => {
+    setIsGeneratingPassword(true);
+    void generateStrongPassword(24)
+      .then((password) => handlePostChange({ password }))
+      .finally(() => setIsGeneratingPassword(false));
+  }, [handlePostChange]);
 
   const scheduleMarkdownConversion = useCallback(
     (source: string) => {
@@ -390,11 +399,13 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
               isCalculatingReadTime={isCalculatingReadTime}
               isGeneratingSummary={isGeneratingSummary}
               isGeneratingTags={isGeneratingTags}
+              isGeneratingPassword={isGeneratingPassword}
               onPostChange={handlePostChange}
               onGenerateSlug={handleGenerateSlug}
               onCalculateReadTime={handleCalculateReadTime}
               onGenerateSummary={handleGenerateSummary}
               onGenerateTags={handleGenerateTags}
+              onGeneratePassword={handleGeneratePassword}
             />
 
             {/* Mode switcher */}

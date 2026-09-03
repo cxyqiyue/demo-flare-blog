@@ -16,10 +16,10 @@ export function navigationPublicDataQuery() {
   });
 }
 
-export function navigationAdminDataQuery() {
+export function navigationAdminDataQuery(ownerId?: string) {
   return queryOptions({
-    queryKey: NAVIGATION_KEYS.admin,
-    queryFn: () => getAdminNavigationDataFn(),
+    queryKey: [...NAVIGATION_KEYS.admin, ownerId ?? "self"],
+    queryFn: () => getAdminNavigationDataFn({ data: { ownerId } }),
     staleTime: 30 * 1000,
   });
 }

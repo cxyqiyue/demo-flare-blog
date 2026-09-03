@@ -45,6 +45,10 @@ import {
   highlightCodeBlocks,
   slugify,
 } from "@/features/posts/utils/content";
+import {
+  ADMIN_LIST_VISIBILITIES,
+  PUBLIC_LIST_VISIBILITIES,
+} from "@/features/posts/data/helper";
 import { isFuturePublishDate } from "@/features/posts/utils/date";
 import { calculatePostHash } from "@/features/posts/utils/sync";
 import { generateTableOfContents } from "@/features/posts/utils/toc";
@@ -86,10 +90,15 @@ async function fastInvalidatePublicCaches(
 }
 
 export async function getPostsCursor(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: DbContext &
+    { executionCtx: ExecutionContext; viewer?: ViewerAccess },
   data: GetPostsCursorInput,
 ) {
   const tagName = normalizePostTagName(data.tagName);
+  const isAdminViewer = context.viewer?.isAdmin === true;
+  const allowedVisibilities = isAdminViewer
+    ? ADMIN_LIST_VISIBILITIES
+    : PUBLIC_LIST_VISIBILITIES;
   const fetcher = async () =>
     await PostRepo.getPostsCursor(context.db, {
       cursor: data.cursor,
@@ -97,10 +106,12 @@ export async function getPostsCursor(
       publicOnly: true,
       tagName,
       excludePinned: data.excludePinned,
+      allowedVisibilities,
     });
 
   // 列表键随分页/游标/标签组合无上限增长，且每次发布后全部重写 ——
-  // 数据本体改存 Cache API（零 KV 配额），KV 只保留版本指针（读多写少）
+  // 数据本体改存 Cache API（零 KV 配额），KV 只保留版本指针（读多写少）。
+  // 管理员视图含私密文章，需与公开列表分开缓存，避免私密元数据泄漏给访客。
   return await EdgeCacheService.getVersionedJson(
     context,
     "posts:list",
@@ -110,6 +121,7 @@ export async function getPostsCursor(
         data.limit ?? 10,
         data.cursor ?? 0,
         tagName,
+        isAdminViewer ? "admin" : "public",
       ),
     PostListResponseSchema,
     fetcher,
@@ -293,16 +305,27 @@ export async function getRelatedPosts(
 }
 
 export async function getPublicPostsPage(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: DbContext &
+    { executionCtx: ExecutionContext; viewer?: ViewerAccess },
   data: GetPublicPostsPageInput,
 ): Promise<PublicPostsPageResponse> {
   const offset = data.offset ?? 0;
   const limit = Math.min(data.limit ?? 10, 50);
+  const isAdminViewer = context.viewer?.isAdmin === true;
+  const allowedVisibilities = isAdminViewer
+    ? ADMIN_LIST_VISIBILITIES
+    : PUBLIC_LIST_VISIBILITIES;
 
   const result = await EdgeCacheService.getVersionedJson(
     context,
     "posts:list",
-    (version) => POSTS_CACHE_KEYS.publicPage(version, offset, limit),
+    (version) =>
+      POSTS_CACHE_KEYS.publicPage(
+        version,
+        offset,
+        limit,
+        isAdminViewer ? "admin" : "public",
+      ),
     PublicPostsPageResponseSchema,
     async () => {
       const { items, total, regularCount } = await PostRepo.getPublicPostsPage(
@@ -310,6 +333,7 @@ export async function getPublicPostsPage(
         {
           offset,
           limit,
+          allowedVisibilities,
         },
       );
       return {

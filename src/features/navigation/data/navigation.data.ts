@@ -1,30 +1,69 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
   BookmarkFoldersTable,
   BookmarksTable,
   SearchEnginesTable,
 } from "@/lib/db/schema";
 
+/**
+ * ownerId 作用域过滤条件。
+ * - includeLegacy=true 时额外匹配 owner_id 为 NULL 的「遗留/未归属」数据
+ *   （这些旧数据视为超管账号的默认数据）。
+ */
+function ownerScope(
+  column: SQLiteColumn,
+  ownerId: string | null,
+  includeLegacy: boolean,
+) {
+  if (ownerId === null) return isNull(column);
+  return includeLegacy
+    ? or(eq(column, ownerId), isNull(column))
+    : eq(column, ownerId);
+}
+
 // ==================== Search Engines ====================
 
-export async function getAllSearchEngines(db: DB) {
+export async function getAllSearchEngines(
+  db: DB,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
   return await db
     .select()
     .from(SearchEnginesTable)
+    .where(ownerScope(SearchEnginesTable.ownerId, ownerId, includeLegacy))
     .orderBy(asc(SearchEnginesTable.sortOrder), asc(SearchEnginesTable.id));
 }
 
-export async function getEnabledSearchEngines(db: DB) {
+export async function getEnabledSearchEngines(
+  db: DB,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
   return await db
     .select()
     .from(SearchEnginesTable)
-    .where(eq(SearchEnginesTable.enabled, true))
+    .where(
+      and(
+        eq(SearchEnginesTable.enabled, true),
+        ownerScope(SearchEnginesTable.ownerId, ownerId, includeLegacy),
+      ),
+    )
     .orderBy(asc(SearchEnginesTable.sortOrder), asc(SearchEnginesTable.id));
 }
 
-export async function findSearchEngineById(db: DB, id: number) {
+export async function findSearchEngineById(
+  db: DB,
+  id: number,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
   return await db.query.SearchEnginesTable.findFirst({
-    where: eq(SearchEnginesTable.id, id),
+    where: and(
+      eq(SearchEnginesTable.id, id),
+      ownerScope(SearchEnginesTable.ownerId, ownerId, includeLegacy),
+    ),
   });
 }
 
@@ -42,37 +81,76 @@ export async function updateSearchEngine(
   data: Partial<
     Omit<typeof SearchEnginesTable.$inferInsert, "id" | "createdAt">
   >,
+  ownerId: string | null,
+  includeLegacy = false,
 ) {
   const [engine] = await db
     .update(SearchEnginesTable)
     .set(data)
-    .where(eq(SearchEnginesTable.id, id))
+    .where(
+      and(
+        eq(SearchEnginesTable.id, id),
+        ownerScope(SearchEnginesTable.ownerId, ownerId, includeLegacy),
+      ),
+    )
     .returning();
   return engine;
 }
 
-export async function deleteSearchEngine(db: DB, id: number) {
-  await db.delete(SearchEnginesTable).where(eq(SearchEnginesTable.id, id));
+export async function deleteSearchEngine(
+  db: DB,
+  id: number,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
+  await db
+    .delete(SearchEnginesTable)
+    .where(
+      and(
+        eq(SearchEnginesTable.id, id),
+        ownerScope(SearchEnginesTable.ownerId, ownerId, includeLegacy),
+      ),
+    );
 }
 
-/** 取消当前默认引擎标记 */
-export async function clearDefaultSearchEngine(db: DB) {
+/** 取消当前默认引擎标记（限定在相同 owner 范围内，避免跨账号冲突） */
+export async function clearDefaultSearchEngine(
+  db: DB,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
   await db
     .update(SearchEnginesTable)
     .set({ isDefault: false })
-    .where(eq(SearchEnginesTable.isDefault, true));
+    .where(
+      and(
+        eq(SearchEnginesTable.isDefault, true),
+        ownerScope(SearchEnginesTable.ownerId, ownerId, includeLegacy),
+      ),
+    );
 }
 
 // ==================== Bookmark Folders ====================
 
-export async function getAllFolders(db: DB) {
+export async function getAllFolders(
+  db: DB,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
   return await db
     .select()
     .from(BookmarkFoldersTable)
+    .where(ownerScope(BookmarkFoldersTable.ownerId, ownerId, includeLegacy))
     .orderBy(asc(BookmarkFoldersTable.sortOrder), asc(BookmarkFoldersTable.id));
 }
 
-export async function getFoldersWithCount(db: DB) {
+export async function getFoldersWithCount(
+  db: DB,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
+  const ownerCond = ownerScope(BookmarkFoldersTable.ownerId, ownerId, includeLegacy);
+  const bookmarkOwnerCond = ownerScope(BookmarksTable.ownerId, ownerId, includeLegacy);
   return await db
     .select({
       id: BookmarkFoldersTable.id,
@@ -85,15 +163,27 @@ export async function getFoldersWithCount(db: DB) {
     .from(BookmarkFoldersTable)
     .leftJoin(
       BookmarksTable,
-      eq(BookmarksTable.folderId, BookmarkFoldersTable.id),
+      and(
+        eq(BookmarksTable.folderId, BookmarkFoldersTable.id),
+        bookmarkOwnerCond,
+      ),
     )
+    .where(ownerCond)
     .groupBy(BookmarkFoldersTable.id)
     .orderBy(asc(BookmarkFoldersTable.sortOrder), asc(BookmarkFoldersTable.id));
 }
 
-export async function findFolderById(db: DB, id: number) {
+export async function findFolderById(
+  db: DB,
+  id: number,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
   return await db.query.BookmarkFoldersTable.findFirst({
-    where: eq(BookmarkFoldersTable.id, id),
+    where: and(
+      eq(BookmarkFoldersTable.id, id),
+      ownerScope(BookmarkFoldersTable.ownerId, ownerId, includeLegacy),
+    ),
   });
 }
 
@@ -114,32 +204,64 @@ export async function updateFolder(
   data: Partial<
     Omit<typeof BookmarkFoldersTable.$inferInsert, "id" | "createdAt">
   >,
+  ownerId: string | null,
+  includeLegacy = false,
 ) {
   const [folder] = await db
     .update(BookmarkFoldersTable)
     .set(data)
-    .where(eq(BookmarkFoldersTable.id, id))
+    .where(
+      and(
+        eq(BookmarkFoldersTable.id, id),
+        ownerScope(BookmarkFoldersTable.ownerId, ownerId, includeLegacy),
+      ),
+    )
     .returning();
   return folder;
 }
 
-export async function deleteFolder(db: DB, id: number) {
+export async function deleteFolder(
+  db: DB,
+  id: number,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
   // 级联删除该文件夹下的所有书签
-  await db.delete(BookmarkFoldersTable).where(eq(BookmarkFoldersTable.id, id));
+  await db
+    .delete(BookmarkFoldersTable)
+    .where(
+      and(
+        eq(BookmarkFoldersTable.id, id),
+        ownerScope(BookmarkFoldersTable.ownerId, ownerId, includeLegacy),
+      ),
+    );
 }
 
 // ==================== Bookmarks ====================
 
-export async function getAllBookmarks(db: DB) {
+export async function getAllBookmarks(
+  db: DB,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
   return await db
     .select()
     .from(BookmarksTable)
+    .where(ownerScope(BookmarksTable.ownerId, ownerId, includeLegacy))
     .orderBy(asc(BookmarksTable.sortOrder), asc(BookmarksTable.id));
 }
 
-export async function findBookmarkById(db: DB, id: number) {
+export async function findBookmarkById(
+  db: DB,
+  id: number,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
   return await db.query.BookmarksTable.findFirst({
-    where: eq(BookmarksTable.id, id),
+    where: and(
+      eq(BookmarksTable.id, id),
+      ownerScope(BookmarksTable.ownerId, ownerId, includeLegacy),
+    ),
   });
 }
 
@@ -163,19 +285,44 @@ export async function updateBookmark(
   db: DB,
   id: number,
   data: Partial<Omit<typeof BookmarksTable.$inferInsert, "id" | "createdAt">>,
+  ownerId: string | null,
+  includeLegacy = false,
 ) {
   const [bookmark] = await db
     .update(BookmarksTable)
     .set(data)
-    .where(eq(BookmarksTable.id, id))
+    .where(
+      and(
+        eq(BookmarksTable.id, id),
+        ownerScope(BookmarksTable.ownerId, ownerId, includeLegacy),
+      ),
+    )
     .returning();
   return bookmark;
 }
 
-export async function deleteBookmark(db: DB, id: number) {
-  await db.delete(BookmarksTable).where(eq(BookmarksTable.id, id));
+export async function deleteBookmark(
+  db: DB,
+  id: number,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
+  await db
+    .delete(BookmarksTable)
+    .where(
+      and(
+        eq(BookmarksTable.id, id),
+        ownerScope(BookmarksTable.ownerId, ownerId, includeLegacy),
+      ),
+    );
 }
 
-export async function deleteAllBookmarks(db: DB) {
-  await db.delete(BookmarksTable);
+export async function deleteAllBookmarks(
+  db: DB,
+  ownerId: string | null,
+  includeLegacy = false,
+) {
+  await db
+    .delete(BookmarksTable)
+    .where(ownerScope(BookmarksTable.ownerId, ownerId, includeLegacy));
 }

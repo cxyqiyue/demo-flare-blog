@@ -9,6 +9,8 @@ import { MomentComposer } from "./moment-composer";
 export function MomentsPage({
   moments,
   isAdmin,
+  isSuperAdmin,
+  currentUserId,
   onToggleLike,
   onCreateMoment,
   onUpdateMoment,
@@ -67,6 +69,8 @@ export function MomentsPage({
                 key={moment.id}
                 moment={moment}
                 isAdmin={isAdmin}
+                isSuperAdmin={isSuperAdmin}
+                currentUserId={currentUserId}
                 onToggleLike={onToggleLike}
                 onDelete={onDeleteMoment}
                 onUpdate={onUpdateMoment}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { CommentModerationTable } from "@/features/comments/components/admin/comment-moderation-table";
+import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
 import type { CommentStatus } from "@/lib/db/schema";
 import { m } from "@/paraglide/messages";
 
@@ -20,6 +21,7 @@ const searchSchema = z.object({
 export const Route = createFileRoute("/admin/comments/")({
   ssr: false,
   validateSearch: searchSchema,
+  beforeLoad: requireSuperAdminRoute,
   component: CommentAdminPage,
   loader: () => {
     return {

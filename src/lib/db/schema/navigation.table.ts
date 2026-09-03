@@ -6,6 +6,7 @@ import {
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+import { user } from "./auth.table";
 import { createdAt, id, updatedAt } from "./helper";
 
 /**
@@ -26,10 +27,12 @@ export const SearchEnginesTable = sqliteTable(
       .notNull()
       .default(false),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
     createdAt,
     updatedAt,
   },
   (table) => [
+    index("search_engines_owner_idx").on(table.ownerId),
     index("search_engines_order_idx").on(table.sortOrder),
     uniqueIndex("search_engines_default_unique")
       .on(table.isDefault)
@@ -46,10 +49,11 @@ export const BookmarkFoldersTable = sqliteTable(
     id,
     name: text("name").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
+    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
     createdAt,
     updatedAt,
   },
-  (table) => [index("bookmark_folders_order_idx").on(table.sortOrder)],
+  (table) => [index("bookmark_folders_owner_idx").on(table.ownerId), index("bookmark_folders_order_idx").on(table.sortOrder)],
 );
 
 /**
@@ -66,10 +70,12 @@ export const BookmarksTable = sqliteTable(
     name: text("name").notNull(),
     url: text("url").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
+    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
     createdAt,
     updatedAt,
   },
   (table) => [
+    index("bookmarks_owner_idx").on(table.ownerId),
     index("bookmarks_folder_order_idx").on(table.folderId, table.sortOrder),
     index("bookmarks_folder_id_idx").on(table.folderId),
   ],

@@ -6,6 +6,8 @@ export interface MomentsPageProps {
   moments: Array<MomentWithStats>;
   /** 当前浏览者是否为管理员（用于展示发布/删除入口） */
   isAdmin: boolean;
+  /** 当前浏览者是否为超级管理员（超管可管理所有动态；普通管理员仅可管理自己的） */
+  isSuperAdmin: boolean;
   /** 当前登录用户 id */
   currentUserId?: string | null;
   /** 点赞 / 取消点赞，返回是否成功 */

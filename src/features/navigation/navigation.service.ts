@@ -1,7 +1,11 @@
 import * as CacheService from "@/features/cache/cache.service";
 import * as EdgeCacheService from "@/features/cache/edge-cache.service";
+import { isSuperAdmin } from "@/lib/auth/access";
+import { eq } from "drizzle-orm";
 import { err, ok } from "@/lib/errors";
+import { serverEnv } from "@/lib/env/server.env";
 import { purgeCDNCache } from "@/lib/invalidate";
+import { user } from "@/lib/db/schema";
 import * as NavigationRepo from "./data/navigation.data";
 import type {
   CreateBookmarkInput,
@@ -24,14 +28,92 @@ import {
   PublicNavigationDataSchema,
 } from "./navigation.schema";
 
+/**
+ * 解析当前操作的目标 owner 作用域。
+ * - 普通管理员：始终限定在自己的 user.id（includeLegacy=false）。
+ * - 超级管理员：默认管理自己账号（含遗留 NULL 数据）；可传入 targetOwnerId
+ *   查看/编辑任意管理员账号（此时不包含遗留数据，遗留数据归属超管本人）。
+ */
+function resolveOwnerScope(
+  actor: { id: string; email: string },
+  env: Env,
+  targetOwnerId?: string | null,
+): { ownerId: string; includeLegacy: boolean } {
+  const actorIsSuper = isSuperAdmin(actor, env);
+  const ownerId = targetOwnerId ?? actor.id;
+  const includeLegacy = actorIsSuper && ownerId === actor.id;
+  return { ownerId, includeLegacy };
+}
+
+/** 访客视图中解析目标的 owner 作用域（非管理员 → 超管账号）。 */
+async function resolvePublicOwnerScope(
+  context: DbContext,
+): Promise<{ ownerId: string | null; includeLegacy: boolean }> {
+  const superAdminEmail = serverEnv(context.env).ADMIN_EMAIL.trim().toLowerCase();
+  const superAdminUser = await context.db.query.user.findFirst({
+    where: eq(user.email, superAdminEmail),
+  });
+  if (superAdminUser) {
+    return { ownerId: superAdminUser.id, includeLegacy: true };
+  }
+  // 未找到超管账号：回退到仅遗留（owner 为 NULL）数据
+  return { ownerId: null, includeLegacy: true };
+}
+
+/**
+ * 列出可作为导航「owner」的账号（用于超管后台的账号选择器）：
+ * 所有普通管理员（role=admin）以及超级管理员（ADMIN_EMAIL 持有者）。
+ */
+export async function getNavigationOwnerAccounts(context: AdminContext) {
+  const superAdminEmail = serverEnv(context.env).ADMIN_EMAIL.trim().toLowerCase();
+  const admins = await context.db
+    .select({ id: user.id, name: user.name, email: user.email, role: user.role })
+    .from(user)
+    .where(eq(user.role, "admin"));
+
+  const accounts = new Map<string, { id: string; name: string; email: string }>();
+  for (const a of admins) {
+    accounts.set(a.id, { id: a.id, name: a.name, email: a.email });
+  }
+  const superAdminUser = await context.db.query.user.findFirst({
+    where: eq(user.email, superAdminEmail),
+  });
+  if (superAdminUser) {
+    accounts.set(superAdminUser.id, {
+      id: superAdminUser.id,
+      name: superAdminUser.name,
+      email: superAdminUser.email,
+    });
+  }
+  return Array.from(accounts.values()).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+}
+
 // ============ Public Methods ============
 
-/** 公开数据：仅返回启用的搜索引擎（书签属于管理员私密数据，不在此暴露） */
+/**
+ * 公开数据：仅返回启用的搜索引擎（书签属于管理员私密数据，不在此暴露）。
+ * 数据来源按「当前访客」切换：非管理员 → 超管账号的引擎；管理员/超管 → 本人账号的引擎。
+ * 缓存键按 owner 区分，避免不同账号数据串扰。
+ */
 export async function getNavigationPublicData(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: DbContext & { executionCtx: ExecutionContext } & {
+    viewerOwner?: { ownerId: string | null; includeLegacy: boolean };
+  },
 ) {
+  const owner =
+    context.viewerOwner ??
+    (await resolvePublicOwnerScope(context));
+
+  const ownerKey = owner.ownerId ?? "legacy";
+
   const fetcher = async () => {
-    const engines = await NavigationRepo.getEnabledSearchEngines(context.db);
+    const engines = await NavigationRepo.getEnabledSearchEngines(
+      context.db,
+      owner.ownerId,
+      owner.includeLegacy,
+    );
 
     return {
       engines: engines.map((engine) => ({
@@ -51,7 +133,7 @@ export async function getNavigationPublicData(
   return await EdgeCacheService.getVersionedJson(
     context,
     "navigation:data",
-    NAVIGATION_CACHE_KEYS.publicData,
+    (version) => NAVIGATION_CACHE_KEYS.publicData(version, ownerKey),
     PublicNavigationDataSchema,
     fetcher,
     { ttl: "7d" },
@@ -60,12 +142,19 @@ export async function getNavigationPublicData(
 
 /** 管理数据：完整返回引擎（含未启用）、文件夹与书签，仅管理员接口可访问 */
 export async function getAdminNavigationData(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
+  targetOwnerId?: string,
 ) {
+  const { ownerId, includeLegacy } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
+
   const [engines, folders, bookmarks] = await Promise.all([
-    NavigationRepo.getAllSearchEngines(context.db),
-    NavigationRepo.getFoldersWithCount(context.db),
-    NavigationRepo.getAllBookmarks(context.db),
+    NavigationRepo.getAllSearchEngines(context.db, ownerId, includeLegacy),
+    NavigationRepo.getFoldersWithCount(context.db, ownerId, includeLegacy),
+    NavigationRepo.getAllBookmarks(context.db, ownerId, includeLegacy),
   ]);
 
   return NavigationPublicDataSchema.parse({
@@ -113,15 +202,30 @@ function invalidateCache(
 // ============ Admin: Search Engines ============
 
 export async function createSearchEngine(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: CreateSearchEngineInput,
+  targetOwnerId?: string,
 ) {
+  const { ownerId, includeLegacy } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
+
   let isDefault = data.isDefault ?? false;
   if (isDefault) {
-    await NavigationRepo.clearDefaultSearchEngine(context.db);
+    await NavigationRepo.clearDefaultSearchEngine(
+      context.db,
+      ownerId,
+      includeLegacy,
+    );
   } else {
     // 没有默认引擎时，首条记录自动成为默认
-    const [first] = await NavigationRepo.getAllSearchEngines(context.db);
+    const [first] = await NavigationRepo.getAllSearchEngines(
+      context.db,
+      ownerId,
+      includeLegacy,
+    );
     if (!first) isDefault = true;
   }
 
@@ -133,6 +237,7 @@ export async function createSearchEngine(
     sortOrder: data.sortOrder ?? 0,
     isDefault,
     enabled: data.enabled ?? true,
+    ownerId,
   });
 
   invalidateCache(context);
@@ -140,12 +245,21 @@ export async function createSearchEngine(
 }
 
 export async function updateSearchEngine(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: UpdateSearchEngineInput,
+  targetOwnerId?: string,
 ) {
+  const { ownerId, includeLegacy } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
+
   const existing = await NavigationRepo.findSearchEngineById(
     context.db,
     data.id,
+    ownerId,
+    includeLegacy,
   );
   if (!existing) {
     return err({ reason: "NOT_FOUND" });
@@ -154,11 +268,15 @@ export async function updateSearchEngine(
   const { id, isDefault, ...updateData } = data;
 
   if (isDefault === true) {
-    await NavigationRepo.clearDefaultSearchEngine(context.db);
+    await NavigationRepo.clearDefaultSearchEngine(
+      context.db,
+      ownerId,
+      includeLegacy,
+    );
   } else if (isDefault === false && existing.isDefault) {
     // 取消默认：如果仍需要默认引擎，则回退到第一条
     const others = (
-      await NavigationRepo.getAllSearchEngines(context.db)
+      await NavigationRepo.getAllSearchEngines(context.db, ownerId, includeLegacy)
     ).filter((engine) => engine.id !== id);
     if (others.length === 0) {
       // 仅此一条引擎，不能取消默认
@@ -166,37 +284,57 @@ export async function updateSearchEngine(
     }
   }
 
-  const updated = await NavigationRepo.updateSearchEngine(context.db, id, {
-    ...updateData,
-    isDefault: isDefault ?? existing.isDefault,
-  });
+  const updated = await NavigationRepo.updateSearchEngine(
+    context.db,
+    id,
+    { ...updateData, isDefault: isDefault ?? existing.isDefault },
+    ownerId,
+    includeLegacy,
+  );
 
   invalidateCache(context);
   return ok(updated);
 }
 
 export async function deleteSearchEngine(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: DeleteSearchEngineInput,
+  targetOwnerId?: string,
 ) {
+  const { ownerId, includeLegacy } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
+
   const existing = await NavigationRepo.findSearchEngineById(
     context.db,
     data.id,
+    ownerId,
+    includeLegacy,
   );
   if (!existing) {
     return err({ reason: "NOT_FOUND" });
   }
 
-  await NavigationRepo.deleteSearchEngine(context.db, data.id);
+  await NavigationRepo.deleteSearchEngine(context.db, data.id, ownerId, includeLegacy);
 
   // 删除默认引擎后，将剩余第一条设为默认
-  const remaining = await NavigationRepo.getAllSearchEngines(context.db);
+  const remaining = await NavigationRepo.getAllSearchEngines(
+    context.db,
+    ownerId,
+    includeLegacy,
+  );
   if (remaining.length > 0) {
     const hasDefault = remaining.some((engine) => engine.isDefault);
     if (!hasDefault) {
-      await NavigationRepo.updateSearchEngine(context.db, remaining[0].id, {
-        isDefault: true,
-      });
+      await NavigationRepo.updateSearchEngine(
+        context.db,
+        remaining[0].id,
+        { isDefault: true },
+        ownerId,
+        includeLegacy,
+      );
     }
   }
 
@@ -205,21 +343,34 @@ export async function deleteSearchEngine(
 }
 
 export async function setDefaultSearchEngine(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: SetDefaultSearchEngineInput,
+  targetOwnerId?: string,
 ) {
+  const { ownerId, includeLegacy } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
+
   const existing = await NavigationRepo.findSearchEngineById(
     context.db,
     data.id,
+    ownerId,
+    includeLegacy,
   );
   if (!existing) {
     return err({ reason: "NOT_FOUND" });
   }
 
-  await NavigationRepo.clearDefaultSearchEngine(context.db);
-  const updated = await NavigationRepo.updateSearchEngine(context.db, data.id, {
-    isDefault: true,
-  });
+  await NavigationRepo.clearDefaultSearchEngine(context.db, ownerId, includeLegacy);
+  const updated = await NavigationRepo.updateSearchEngine(
+    context.db,
+    data.id,
+    { isDefault: true },
+    ownerId,
+    includeLegacy,
+  );
 
   invalidateCache(context);
   return ok(updated);
@@ -228,52 +379,95 @@ export async function setDefaultSearchEngine(
 // ============ Admin: Bookmark Folders ============
 
 export async function createFolder(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: CreateFolderInput,
+  targetOwnerId?: string,
 ) {
+  const { ownerId } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
   const folder = await NavigationRepo.insertFolder(context.db, {
     name: data.name,
     sortOrder: data.sortOrder ?? 0,
+    ownerId,
   });
   invalidateCache(context);
   return ok(folder);
 }
 
 export async function updateFolder(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: UpdateFolderInput,
+  targetOwnerId?: string,
 ) {
-  const existing = await NavigationRepo.findFolderById(context.db, data.id);
+  const { ownerId, includeLegacy } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
+  const existing = await NavigationRepo.findFolderById(
+    context.db,
+    data.id,
+    ownerId,
+    includeLegacy,
+  );
   if (!existing) {
     return err({ reason: "NOT_FOUND" });
   }
 
   const { id, ...updateData } = data;
-  const updated = await NavigationRepo.updateFolder(context.db, id, updateData);
+  const updated = await NavigationRepo.updateFolder(
+    context.db,
+    id,
+    updateData,
+    ownerId,
+    includeLegacy,
+  );
   invalidateCache(context);
   return ok(updated);
 }
 
 export async function deleteFolder(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: DeleteFolderInput,
+  targetOwnerId?: string,
 ) {
-  const existing = await NavigationRepo.findFolderById(context.db, data.id);
+  const { ownerId, includeLegacy } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
+  const existing = await NavigationRepo.findFolderById(
+    context.db,
+    data.id,
+    ownerId,
+    includeLegacy,
+  );
   if (!existing) {
     return err({ reason: "NOT_FOUND" });
   }
 
-  await NavigationRepo.deleteFolder(context.db, data.id);
+  await NavigationRepo.deleteFolder(context.db, data.id, ownerId, includeLegacy);
   invalidateCache(context);
   return ok({ success: true });
 }
 
 export async function deleteFolders(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: DeleteFoldersInput,
+  targetOwnerId?: string,
 ) {
+  const { ownerId, includeLegacy } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
   await Promise.all(
-    data.ids.map((id) => NavigationRepo.deleteFolder(context.db, id)),
+    data.ids.map((id) =>
+      NavigationRepo.deleteFolder(context.db, id, ownerId, includeLegacy),
+    ),
   );
   invalidateCache(context);
   return ok({ deleted: data.ids.length });
@@ -282,24 +476,42 @@ export async function deleteFolders(
 // ============ Admin: Bookmarks ============
 
 export async function createBookmark(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: CreateBookmarkInput,
+  targetOwnerId?: string,
 ) {
+  const { ownerId } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
   const bookmark = await NavigationRepo.insertBookmark(context.db, {
     folderId: data.folderId ?? null,
     name: data.name,
     url: data.url,
     sortOrder: data.sortOrder ?? 0,
+    ownerId,
   });
   invalidateCache(context);
   return ok(bookmark);
 }
 
 export async function updateBookmark(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: UpdateBookmarkInput,
+  targetOwnerId?: string,
 ) {
-  const existing = await NavigationRepo.findBookmarkById(context.db, data.id);
+  const { ownerId, includeLegacy } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
+  const existing = await NavigationRepo.findBookmarkById(
+    context.db,
+    data.id,
+    ownerId,
+    includeLegacy,
+  );
   if (!existing) {
     return err({ reason: "NOT_FOUND" });
   }
@@ -309,31 +521,52 @@ export async function updateBookmark(
     context.db,
     id,
     updateData,
+    ownerId,
+    includeLegacy,
   );
   invalidateCache(context);
   return ok(updated);
 }
 
 export async function deleteBookmark(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: DeleteBookmarkInput,
+  targetOwnerId?: string,
 ) {
-  const existing = await NavigationRepo.findBookmarkById(context.db, data.id);
+  const { ownerId, includeLegacy } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
+  const existing = await NavigationRepo.findBookmarkById(
+    context.db,
+    data.id,
+    ownerId,
+    includeLegacy,
+  );
   if (!existing) {
     return err({ reason: "NOT_FOUND" });
   }
 
-  await NavigationRepo.deleteBookmark(context.db, data.id);
+  await NavigationRepo.deleteBookmark(context.db, data.id, ownerId, includeLegacy);
   invalidateCache(context);
   return ok({ success: true });
 }
 
 export async function deleteBookmarks(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: DeleteBookmarksInput,
+  targetOwnerId?: string,
 ) {
+  const { ownerId, includeLegacy } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
   await Promise.all(
-    data.ids.map((id) => NavigationRepo.deleteBookmark(context.db, id)),
+    data.ids.map((id) =>
+      NavigationRepo.deleteBookmark(context.db, id, ownerId, includeLegacy),
+    ),
   );
   invalidateCache(context);
   return ok({ deleted: data.ids.length });
@@ -342,17 +575,27 @@ export async function deleteBookmarks(
 // ============ Admin: Import ============
 
 export async function importBookmarks(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: AdminContext & { executionCtx: ExecutionContext },
   data: ImportBookmarksInput,
+  targetOwnerId?: string,
 ) {
+  const { ownerId, includeLegacy } = resolveOwnerScope(
+    context.session.user,
+    context.env,
+    targetOwnerId,
+  );
   const { replace, items } = data;
 
   if (replace) {
-    await NavigationRepo.deleteAllBookmarks(context.db);
-    const existingFolders = await NavigationRepo.getAllFolders(context.db);
+    await NavigationRepo.deleteAllBookmarks(context.db, ownerId, includeLegacy);
+    const existingFolders = await NavigationRepo.getAllFolders(
+      context.db,
+      ownerId,
+      includeLegacy,
+    );
     await Promise.all(
       existingFolders.map((folder) =>
-        NavigationRepo.deleteFolder(context.db, folder.id),
+        NavigationRepo.deleteFolder(context.db, folder.id, ownerId, includeLegacy),
       ),
     );
   }
@@ -364,13 +607,14 @@ export async function importBookmarks(
     let folderId: number | null = null;
     if (item.folderName) {
       const existingFolder = (
-        await NavigationRepo.getAllFolders(context.db)
+        await NavigationRepo.getAllFolders(context.db, ownerId, includeLegacy)
       ).find((folder) => folder.name === item.folderName);
       const folder = existingFolder
         ? existingFolder
         : await NavigationRepo.insertFolder(context.db, {
             name: item.folderName,
             sortOrder: 0,
+            ownerId,
           });
       folderId = folder.id;
     }
@@ -382,6 +626,7 @@ export async function importBookmarks(
         name: bookmark.name,
         url: bookmark.url,
         sortOrder: index + 1,
+        ownerId,
       })),
     );
     importCount += inserted.length;

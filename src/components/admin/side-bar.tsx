@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   BookOpenCheck,
@@ -19,7 +19,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
-import { AUTH_KEYS } from "@/features/auth/queries";
+import { AUTH_KEYS, sessionQuery } from "@/features/auth/queries";
 import { authClient } from "@/lib/auth/auth.client";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -30,6 +30,8 @@ interface NavItem {
   icon: React.ElementType;
   label: string;
   exact: boolean;
+  /** 仅超级管理员可见的后台模块；普通管理员在后台只保留文章管理与导航管理 */
+  superAdminOnly?: boolean;
 }
 
 export function SideBar({
@@ -41,7 +43,7 @@ export function SideBar({
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: session } = authClient.useSession();
+  const { data: session } = useQuery(sessionQuery);
   const user = session?.user;
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -88,36 +90,42 @@ export function SideBar({
       icon: Tag,
       label: m.admin_sidebar_tags(),
       exact: false,
+      superAdminOnly: true,
     },
     {
       path: "/admin/skills",
       icon: BookOpenCheck,
       label: m.admin_sidebar_skills(),
       exact: false,
+      superAdminOnly: true,
     },
     {
       path: "/admin/media",
       icon: ImageIcon,
       label: m.admin_sidebar_media(),
       exact: false,
+      superAdminOnly: true,
     },
     {
       path: "/admin/comments",
       icon: MessageSquare,
       label: m.admin_sidebar_comments(),
       exact: false,
+      superAdminOnly: true,
     },
     {
       path: "/admin/users",
       icon: Users,
       label: m.admin_sidebar_users(),
       exact: false,
+      superAdminOnly: true,
     },
     {
       path: "/admin/friend-links",
       icon: Link2,
       label: m.admin_sidebar_friend_links(),
       exact: false,
+      superAdminOnly: true,
     },
     {
       path: "/admin/navigation",
@@ -130,8 +138,15 @@ export function SideBar({
       icon: Megaphone,
       label: m.admin_sidebar_announcements(),
       exact: false,
+      superAdminOnly: true,
     },
   ] satisfies Array<NavItem>;
+
+  // 普通管理员在后台只保留：仪表盘、文章管理、导航管理
+  const isSuper = user?.isSuperAdmin === true;
+  const visibleNavItems = navItems.filter(
+    (item) => isSuper || !item.superAdminOnly,
+  );
 
   return (
     <>
@@ -169,7 +184,7 @@ export function SideBar({
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}

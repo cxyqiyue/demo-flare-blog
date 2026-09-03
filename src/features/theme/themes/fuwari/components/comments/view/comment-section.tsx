@@ -41,9 +41,10 @@ export function FuwariCommentSection({
       }) ?? {},
   });
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useInfiniteQuery(
-      rootCommentsByTargetInfiniteQuery(target, session?.user.id),
-    );
+    useInfiniteQuery({
+      ...rootCommentsByTargetInfiniteQuery(target, session?.user.id),
+      enabled: !!session,
+    });
 
   const rootComments = data?.pages.flatMap((page) => page.items) ?? [];
   const totalCount = data?.pages[0]?.total ?? 0;
@@ -132,15 +133,17 @@ export function FuwariCommentSection({
     return () => window.removeEventListener("hashchange", handleAnchor);
   }, [isLoading, data]);
 
-  if (isLoading || !data) {
+  if (session && (isLoading || !data)) {
     return <FuwariCommentSectionSkeleton />;
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold fuwari-text-90">
-        {m.comments_count({ count: totalCount })}
-      </h2>
+      {session && (
+        <h2 className="text-xl font-bold fuwari-text-90">
+          {m.comments_count({ count: totalCount })}
+        </h2>
+      )}
 
       {/* Main Editor */}
       {session ? (
@@ -162,33 +165,39 @@ export function FuwariCommentSection({
         </div>
       )}
 
-      {/* Comments List */}
-      <FuwariCommentList
-        rootComments={rootComments}
-        target={target}
-        onReply={(rootIdArg, commentId, userName) =>
-          setReplyTarget({ rootId: rootIdArg, commentId, userName })
-        }
-        onDelete={(id) => setCommentToDelete(id)}
-        replyTarget={replyTarget}
-        onCancelReply={() => setReplyTarget(null)}
-        onSubmitReply={handleCreateReply}
-        isSubmittingReply={isCreating}
-        initialExpandedRootId={rootId}
-        highlightCommentId={highlightCommentId}
-      />
+      {/* Comments List — 仅登录后可见；未登录访客完全封锁评论区内容 */}
+      {session && (
+        <>
+          <FuwariCommentList
+            rootComments={rootComments}
+            target={target}
+            onReply={(rootIdArg, commentId, userName) =>
+              setReplyTarget({ rootId: rootIdArg, commentId, userName })
+            }
+            onDelete={(id) => setCommentToDelete(id)}
+            replyTarget={replyTarget}
+            onCancelReply={() => setReplyTarget(null)}
+            onSubmitReply={handleCreateReply}
+            isSubmittingReply={isCreating}
+            initialExpandedRootId={rootId}
+            highlightCommentId={highlightCommentId}
+          />
 
-      {/* Load More Root Comments */}
-      {hasNextPage && (
-        <div className="flex justify-center pt-4">
-          <button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="fuwari-btn-regular h-10 px-6 text-sm rounded-lg disabled:opacity-50"
-          >
-            {isFetchingNextPage ? m.comments_loading() : m.comments_load_more()}
-          </button>
-        </div>
+          {/* Load More Root Comments */}
+          {hasNextPage && (
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="fuwari-btn-regular h-10 px-6 text-sm rounded-lg disabled:opacity-50"
+              >
+                {isFetchingNextPage
+                  ? m.comments_loading()
+                  : m.comments_load_more()}
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Delete Confirmation Modal */}

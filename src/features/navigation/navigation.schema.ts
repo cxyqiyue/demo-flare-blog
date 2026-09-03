@@ -71,7 +71,8 @@ export const NavigationPublicDataSchema = PublicNavigationDataSchema.extend({
 
 // ==================== Cache ====================
 export const NAVIGATION_CACHE_KEYS = {
-  publicData: (version: string) => ["navigation", "public", version] as const,
+  publicData: (version: string, ownerKey: string) =>
+    ["navigation", "public", ownerKey, version] as const,
 } as const;
 
 // ==================== Admin inputs ====================

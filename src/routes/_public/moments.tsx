@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import theme from "@theme";
 import type { JSONContent } from "@tiptap/react";
@@ -16,7 +16,7 @@ import {
   publicMomentsPageQuery,
 } from "@/features/moments/queries";
 import type { MomentsPageResponse } from "@/features/moments/moments.schema";
-import { authClient } from "@/lib/auth/auth.client";
+import { sessionQuery } from "@/features/auth/queries";
 import { m } from "@/paraglide/messages";
 
 const MOMENTS_PER_PAGE = 5;
@@ -65,7 +65,10 @@ function MomentsPage() {
   const { data: pageData } = useSuspenseQuery(
     publicMomentsPageQuery({ offset, limit: MOMENTS_PER_PAGE }),
   );
-  const { data: session } = authClient.useSession();
+  const { data: session } = useQuery(sessionQuery);
+  const user = session?.user;
+  const isAdmin = user?.role === "admin" || user?.isSuperAdmin === true;
+  const isSuperAdmin = user?.isSuperAdmin === true;
   const queryClient = useQueryClient();
 
   const pageQueryKey = [...MOMENTS_KEYS.publicPage, offset, MOMENTS_PER_PAGE];
@@ -197,7 +200,9 @@ function MomentsPage() {
   return (
     <theme.MomentsPage
       moments={pageData.items}
-      isAdmin={session?.user.role === "admin"}
+      isAdmin={isAdmin}
+      isSuperAdmin={isSuperAdmin}
+      currentUserId={user?.id ?? null}
       onToggleLike={onToggleLike}
       onCreateMoment={onCreateMoment}
       onUpdateMoment={onUpdateMoment}

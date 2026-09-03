@@ -228,10 +228,16 @@ export type PostItem = z.infer<typeof PostItemSchema>;
 export type PostWithToc = z.infer<typeof PostWithTocSchema>;
 
 export const POSTS_CACHE_KEYS = {
-  list: (version: string, limit: number, cursor: number, tagName?: string) =>
+  list: (
+    version: string,
+    limit: number,
+    cursor: number,
+    tagName?: string,
+    scope: "public" | "admin" = "public",
+  ) =>
     tagName === undefined
-      ? (["posts", "list", version, limit, cursor, "all"] as const)
-      : (["posts", "list", version, limit, cursor, "tag", tagName] as const),
+      ? (["posts", "list", scope, version, limit, cursor, "all"] as const)
+      : (["posts", "list", scope, version, limit, cursor, "tag", tagName] as const),
   detail: (version: string, slug: string) => [version, "post", slug] as const,
   /** 受限文章的门禁壳（无正文，可公共缓存；正文响应一律 no-store） */
   detailGated: (version: string, slug: string) =>
@@ -239,8 +245,8 @@ export const POSTS_CACHE_KEYS = {
   related: (slug: string, limit?: number) =>
     ["posts", "related-ids", slug, limit] as const,
   syncHash: (id: number) => `post_hash:${id}` as const,
-  publicPage: (version: string, offset: number, limit: number) =>
-    [version, "posts", "page", offset, limit] as const,
+    publicPage: (version: string, offset: number, limit: number, scope: "public" | "admin" = "public") =>
+      [version, "posts", "page", scope, offset, limit] as const,
   adjacent: (version: string, slug: string) =>
     [version, "post", slug, "adjacent"] as const,
 } as const;

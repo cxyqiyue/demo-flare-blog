@@ -26,11 +26,13 @@ interface PostEditorMetadataProps {
   isCalculatingReadTime: boolean;
   isGeneratingSummary: boolean;
   isGeneratingTags: boolean;
+  isGeneratingPassword: boolean;
   onPostChange: (updates: Partial<PostEditorData>) => void;
   onGenerateSlug: () => void;
   onCalculateReadTime: () => void;
   onGenerateSummary: () => void;
   onGenerateTags: () => void;
+  onGeneratePassword: () => void;
 }
 
 export function PostEditorMetadata({
@@ -39,11 +41,13 @@ export function PostEditorMetadata({
   isCalculatingReadTime,
   isGeneratingSummary,
   isGeneratingTags,
+  isGeneratingPassword,
   onPostChange,
   onGenerateSlug,
   onCalculateReadTime,
   onGenerateSummary,
   onGenerateTags,
+  onGeneratePassword,
 }: PostEditorMetadataProps) {
   return (
     <>
@@ -201,6 +205,18 @@ export function PostEditorMetadata({
               placeholder={m.editor_visibility_password_placeholder()}
               className="h-auto w-full border-b border-border/40 bg-transparent p-0 px-0 pb-1 text-xs font-mono text-foreground shadow-none focus-visible:ring-0"
             />
+            <button
+              onClick={onGeneratePassword}
+              disabled={isGeneratingPassword}
+              className="flex items-center gap-1 text-[9px] font-mono text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {isGeneratingPassword ? (
+                <Loader2 size={8} className="animate-spin" />
+              ) : (
+                <Sparkles size={8} />
+              )}
+              {m.editor_meta_auto_generate()}
+            </button>
             <div className="flex items-center gap-2">
               <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
                 {m.editor_visibility_channel_label()}

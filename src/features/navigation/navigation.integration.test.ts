@@ -1,4 +1,8 @@
-import { createAdminTestContext, testRequest } from "tests/test-utils";
+import {
+  createAdminTestContext,
+  seedUser,
+  testRequest,
+} from "tests/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "@/lib/hono";
 import * as NavigationService from "./navigation.service";
@@ -6,8 +10,16 @@ import * as NavigationService from "./navigation.service";
 describe("NavigationService", () => {
   let adminContext: ReturnType<typeof createAdminTestContext>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     adminContext = createAdminTestContext();
+    // 导航归 admin 账号所有（owner_id 外键），需先存在对应 user
+    await seedUser(adminContext.db, {
+      id: "admin-user-id",
+      name: "Admin User",
+      email: "admin@example.com",
+      emailVerified: true,
+      role: "admin",
+    });
   });
 
   describe("Public Data", () => {

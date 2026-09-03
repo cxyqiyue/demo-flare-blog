@@ -61,8 +61,8 @@ function resolvePaged<T>(items: T[], page: number, pageSize: number) {
   };
 }
 
-export function BookmarkManager() {
-  const { data, isPending } = useAdminNavigationData();
+export function BookmarkManager({ ownerId }: { ownerId?: string }) {
+  const { data, isPending } = useAdminNavigationData(ownerId);
   const {
     createFolder,
     updateFolder,
@@ -72,7 +72,7 @@ export function BookmarkManager() {
     updateBookmark,
     deleteBookmark,
     deleteBookmarks,
-  } = useAdminNavigation();
+  } = useAdminNavigation(ownerId);
 
   const [filter, setFilter] = useState<number | "all" | "none">("all");
   const [showImport, setShowImport] = useState(false);

@@ -45,9 +45,10 @@ export const CommentSection = ({
       }) ?? {},
   });
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useInfiniteQuery(
-      rootCommentsByTargetInfiniteQuery(target, session?.user.id),
-    );
+    useInfiniteQuery({
+      ...rootCommentsByTargetInfiniteQuery(target, session?.user.id),
+      enabled: !!session,
+    });
 
   const rootComments = data?.pages.flatMap((page) => page.items) ?? [];
   const totalCount = data?.pages[0]?.total ?? 0;
@@ -144,7 +145,7 @@ export const CommentSection = ({
     };
   }, [isLoading, data]);
 
-  if (isLoading || !data) {
+  if (session && (isLoading || !data)) {
     return <CommentSectionSkeleton className={className} />;
   }
 
@@ -188,34 +189,40 @@ export const CommentSection = ({
         </div>
       )}
 
-      {/* Comments List */}
-      <CommentList
-        rootComments={rootComments}
-        target={target}
-        onReply={(rootIdArg, commentId, userName) =>
-          setReplyTarget({ rootId: rootIdArg, commentId, userName })
-        }
-        onDelete={(id) => setCommentToDelete(id)}
-        replyTarget={replyTarget}
-        onCancelReply={() => setReplyTarget(null)}
-        onSubmitReply={handleCreateReply}
-        isSubmittingReply={isCreating}
-        initialExpandedRootId={rootId}
-        highlightCommentId={highlightCommentId}
-      />
+      {/* Comments List — 仅登录后可见；未登录访客完全封锁评论区内容 */}
+      {session && (
+        <>
+          <CommentList
+            rootComments={rootComments}
+            target={target}
+            onReply={(rootIdArg, commentId, userName) =>
+              setReplyTarget({ rootId: rootIdArg, commentId, userName })
+            }
+            onDelete={(id) => setCommentToDelete(id)}
+            replyTarget={replyTarget}
+            onCancelReply={() => setReplyTarget(null)}
+            onSubmitReply={handleCreateReply}
+            isSubmittingReply={isCreating}
+            initialExpandedRootId={rootId}
+            highlightCommentId={highlightCommentId}
+          />
 
-      {/* Load More Root Comments */}
-      {hasNextPage && (
-        <div className="flex justify-center pt-8">
-          <Button
-            variant="outline"
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-bold border-border hover:bg-foreground hover:text-background transition-all"
-          >
-            {isFetchingNextPage ? m.comments_loading() : m.comments_load_more()}
-          </Button>
-        </div>
+          {/* Load More Root Comments */}
+          {hasNextPage && (
+            <div className="flex justify-center pt-8">
+              <Button
+                variant="outline"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-bold border-border hover:bg-foreground hover:text-background transition-all"
+              >
+                {isFetchingNextPage
+                  ? m.comments_loading()
+                  : m.comments_load_more()}
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Delete Confirmation Modal */}

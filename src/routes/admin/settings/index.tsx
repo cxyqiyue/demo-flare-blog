@@ -45,6 +45,7 @@ import { useEmailConnection } from "@/features/email/hooks/use-email-connection"
 import { ImageHostingSettingsSection } from "@/features/image-hosting/components/image-hosting-settings-section";
 import { useImageHostingConnection } from "@/features/image-hosting/hooks/use-image-hosting-connection";
 import { OAuthClientsSection } from "@/features/oauth-clients/components/oauth-clients-section";
+import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
 import { SubscriptionSettingsSection } from "@/features/subscription/components/subscription-settings-section";
 import { WebhookSettingsSection } from "@/features/webhook/components/webhook-settings-section";
 import { WechatVerifySettingsSection } from "@/features/wechat-verify/components/wechat-verify-settings-section";
@@ -53,6 +54,7 @@ import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/admin/settings/")({
   ssr: false,
+  beforeLoad: requireSuperAdminRoute,
   component: RouteComponent,
   loader: () => ({
     title: m.settings_admin_title(),
