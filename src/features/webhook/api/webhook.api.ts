@@ -8,7 +8,7 @@ import {
 } from "@/features/webhook/webhook.helpers";
 import { webhookEndpointSchema } from "@/features/webhook/webhook.schema";
 import { serverEnv } from "@/lib/env/server.env";
-import { adminMiddleware } from "@/lib/middlewares";
+import { superAdminMiddleware } from "@/lib/middlewares";
 
 const testWebhookInputSchema = z.object({
   endpoint: webhookEndpointSchema,
@@ -17,7 +17,7 @@ const testWebhookInputSchema = z.object({
 export const testWebhookFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(testWebhookInputSchema)
   .handler(async ({ context, data }) => {
     const resolvedEventType =

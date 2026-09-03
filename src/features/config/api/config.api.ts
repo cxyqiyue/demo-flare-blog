@@ -6,7 +6,7 @@ import {
   UpdateSystemConfigSectionInputSchema,
 } from "@/features/config/config.schema";
 import * as ConfigService from "@/features/config/service/config.service";
-import { adminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 import { m } from "@/paraglide/messages";
 
 export const getSystemConfigFn = createServerFn()
@@ -16,7 +16,7 @@ export const getSystemConfigFn = createServerFn()
 export const updateSystemConfigFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(SystemConfigSchema)
   .handler(({ context, data }) =>
     ConfigService.updateSystemConfig(context, data),
@@ -25,7 +25,7 @@ export const updateSystemConfigFn = createServerFn({
 export const updateSystemConfigSectionFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(UpdateSystemConfigSectionInputSchema)
   .handler(({ context, data }) =>
     ConfigService.updateSystemConfigSection(context, data),
@@ -36,7 +36,7 @@ const SiteAssetUploadInputSchema = z.instanceof(FormData);
 export const uploadSiteAssetFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(SiteAssetUploadInputSchema)
   .handler(async ({ data, context }) => {
     const input = parseSiteAssetUploadInput(data, m);

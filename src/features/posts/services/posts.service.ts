@@ -6,6 +6,11 @@ import { syncPostMedia } from "@/features/posts/data/post-media.data";
 import * as PostRevisionRepo from "@/features/posts/data/post-revisions.data";
 import * as PostRepo from "@/features/posts/data/posts.data";
 import { POST_RENDER_VERSION } from "@/features/posts/render-version";
+import {
+  decryptPassword,
+  encryptPassword,
+  hashPassword,
+} from "@/features/posts/utils/post-secret";
 import type {
   AdjacentPostsResponse,
   BatchUpdatePostsStatusInput,
@@ -44,6 +49,11 @@ import { isFuturePublishDate } from "@/features/posts/utils/date";
 import { calculatePostHash } from "@/features/posts/utils/sync";
 import { generateTableOfContents } from "@/features/posts/utils/toc";
 import * as SearchService from "@/features/search/service/search.service";
+import {
+  hasPostUnlock,
+  UNAUTHENTICATED_VIEWER,
+  type ViewerAccess,
+} from "@/features/posts/services/post-access.service";
 import { err, ok } from "@/lib/errors";
 import { purgePostCDNCache } from "@/lib/invalidate";
 
@@ -110,12 +120,15 @@ export async function getPostsCursor(
 }
 
 export async function findPostBySlug(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: DbContext &
+    { executionCtx: ExecutionContext; viewer?: ViewerAccess },
   data: FindPostBySlugInput,
 ) {
-  const fetcher = async () => {
+  const viewer = context.viewer ?? UNAUTHENTICATED_VIEWER;
+  const fetchContent = async () => {
     const post = await PostRepo.findPostBySlug(context.db, data.slug, {
       publicOnly: true,
+      excludeRestricted: false,
     });
     if (!post) return null;
 
@@ -154,17 +167,89 @@ export async function findPostBySlug(
       ...stripPublicContentJson(post),
       contentJson,
       toc: generateTableOfContents(contentJson),
+      gate: null,
     };
   };
 
+  // 门禁预检：只取轻量字段，先于任何缓存读取。
+  const gateMeta = await PostRepo.findPostGateBySlug(context.db, data.slug);
+  if (!gateMeta) return null;
+
+  if (gateMeta.visibility === "public") {
+    return await EdgeCacheService.getVersionedJson(
+      context,
+      "posts:detail",
+      (version) => POSTS_CACHE_KEYS.detail(version, data.slug),
+      PostWithTocSchema,
+      fetchContent,
+      { ttl: "7d" },
+    );
+  }
+
+  const buildShell = async () => buildGatedShell(gateMeta);
+
+  // 私密：仅管理员可读（无口令解锁）。
+  if (gateMeta.visibility === "private") {
+    if (viewer.isAdmin) {
+      return await fetchContent();
+    }
+    return await EdgeCacheService.getVersionedJson(
+      context,
+      "posts:detail",
+      (version) => POSTS_CACHE_KEYS.detailGated(version, data.slug),
+      PostWithTocSchema,
+      buildShell,
+      { ttl: "7d" },
+    );
+  }
+
+  // 密码保护：解锁令牌（无 DB/Session 开销）优先，兜底管理员。
+  const unlocked = await hasPostUnlock(
+    context.env,
+    gateMeta.id,
+    gateMeta.passwordHash,
+    viewer.unlockTokens,
+  );
+  if (unlocked) {
+    return await fetchContent();
+  }
+  if (viewer.isAdmin) {
+    return await fetchContent();
+  }
   return await EdgeCacheService.getVersionedJson(
     context,
     "posts:detail",
-    (version) => POSTS_CACHE_KEYS.detail(version, data.slug),
+    (version) => POSTS_CACHE_KEYS.detailGated(version, data.slug),
     PostWithTocSchema,
-    fetcher,
+    buildShell,
     { ttl: "7d" },
   );
+}
+
+/** 受限文章的公开壳：仅元信息，无正文；gate 指示前台渲染门禁形态 */
+function buildGatedShell(
+  gateMeta: NonNullable<Awaited<ReturnType<typeof PostRepo.findPostGateBySlug>>>,
+) {
+  return {
+    id: gateMeta.id,
+    slug: gateMeta.slug,
+    title: gateMeta.title,
+    summary: gateMeta.summary,
+    readTimeInMinutes: gateMeta.readTimeInMinutes,
+    status: gateMeta.status,
+    visibility: gateMeta.visibility,
+    passwordChannel: gateMeta.passwordChannel,
+    publishedAt: gateMeta.publishedAt,
+    pinnedAt: gateMeta.pinnedAt,
+    createdAt: gateMeta.createdAt,
+    updatedAt: gateMeta.updatedAt,
+    skillId: gateMeta.skillId,
+    publicContentRenderVersion: gateMeta.publicContentRenderVersion,
+    tags: [],
+    contentJson: null,
+    toc: null,
+    gate: gateMeta.visibility === "password" ? ("password" as const) : ("private" as const),
+  };
 }
 
 export async function getRelatedPosts(
@@ -421,7 +506,22 @@ export async function findPostById(
     isSynced = dbHash === kvHash;
   }
 
-  return { ...stripPublicContentJson(post), isSynced, hasPublicCache };
+  // 管理端读取：解密访问密码明文供编辑器展示；绝不进公开响应。
+  const password = await decryptPassword(post.passwordCipher, context.env);
+  const publicPost = stripPublicContentJson(post);
+  const { passwordHash: _passwordHash, passwordCipher: _passwordCipher, ...rest } =
+    publicPost;
+  void _passwordHash;
+  void _passwordCipher;
+
+  return {
+    ...rest,
+    visibility: post.visibility,
+    password,
+    passwordChannel: post.passwordChannel,
+    isSynced,
+    hasPublicCache,
+  };
 }
 
 export async function updatePost(
@@ -433,7 +533,25 @@ export async function updatePost(
     return err({ reason: "POST_NOT_FOUND" });
   }
 
-  const updatedPost = await PostRepo.updatePost(context.db, data.id, data.data);
+  // 密码门禁：编辑器传来明文 password（不含 passwordHash/passwordCipher）。
+  // 服务端在此派生安全字段后落库，确保明文/杂凑的生成只在服务端完成。
+  const persisted = { ...data.data };
+  delete persisted.password;
+
+  if (persisted.visibility === "public" || persisted.visibility === "private") {
+    // 离开密码门禁：清除密码相关字段，并使已签发解锁令牌失效。
+    persisted.passwordHash = null;
+    persisted.passwordCipher = null;
+  } else if (persisted.visibility === "password") {
+    const plain = data.data.password;
+    if (typeof plain === "string" && plain !== "") {
+      persisted.passwordHash = await hashPassword(plain);
+      persisted.passwordCipher = await encryptPassword(plain, context.env);
+    }
+    // 留空 = 保持现有密码（改密码才派生新字段）。
+  }
+
+  const updatedPost = await PostRepo.updatePost(context.db, data.id, persisted);
   if (!updatedPost) {
     return err({ reason: "POST_NOT_FOUND" });
   }

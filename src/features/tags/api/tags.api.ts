@@ -10,7 +10,7 @@ import {
   UpdateTagInputSchema,
 } from "@/features/tags/tags.schema";
 import * as TagService from "@/features/tags/tags.service";
-import { adminMiddleware, dbMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, dbMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 
 // ============ Public API ============
 
@@ -33,28 +33,28 @@ export const getTagsAdminFn = createServerFn()
 export const createTagFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(CreateTagInputSchema)
   .handler(({ data, context }) => TagService.createTag(context, data));
 
 export const updateTagFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(UpdateTagInputSchema)
   .handler(({ data, context }) => TagService.updateTag(context, data));
 
 export const deleteTagFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(DeleteTagInputSchema)
   .handler(({ data, context }) => TagService.deleteTag(context, data));
 
 export const setPostTagsFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(SetPostTagsInputSchema)
   .handler(({ data, context }) => TagService.setPostTags(context, data));
 
@@ -73,7 +73,7 @@ export const getTagsWithCountAdminFn = createServerFn()
 export const generateTagsFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(GenerateTagsInputSchema)
   .handler(async ({ data, context }) => {
     return await AIService.generateTags(

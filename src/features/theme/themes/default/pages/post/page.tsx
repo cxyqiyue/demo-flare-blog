@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowUp, Pencil, Share2, Sparkles } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { PostGateShell } from "@/features/posts/components/post-gate-shell";
 import type { PostPageProps } from "@/features/theme/contract/pages";
 import { ContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
 import { authClient } from "@/lib/auth/auth.client";
@@ -119,7 +120,7 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
           {/* Floating TOC for Large Screens */}
           <aside className="hidden xl:block absolute left-full ml-12 top-0 h-full">
             <div className="sticky top-32 w-60">
-              <TableOfContents headers={post.toc} />
+              <TableOfContents headers={post.toc ?? []} />
             </div>
           </aside>
 
@@ -200,11 +201,12 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
           </span>
         </button>
       </div>
+
+      {/* 受限文章门禁：未解锁时以毛玻璃遮罩覆盖全页，不泄露正文 */}
+      <PostGateShell post={post} />
     </div>
   );
 }
-
-// Import ClientOnly inline to avoid circular dependency
 function ClientOnly({
   children,
   fallback,

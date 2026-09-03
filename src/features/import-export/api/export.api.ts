@@ -4,12 +4,12 @@ import {
   StartExportInputSchema,
 } from "@/features/import-export/import-export.schema";
 import * as ImportExportService from "@/features/import-export/import-export.service";
-import { adminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 
 export const startExportFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(StartExportInputSchema)
   .handler(async ({ data, context }) => {
     console.log(

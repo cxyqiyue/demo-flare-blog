@@ -76,6 +76,9 @@ function EditPost() {
     pinnedAt: post.pinnedAt,
     isSynced: post.isSynced,
     hasPublicCache: post.hasPublicCache,
+    visibility: post.visibility,
+    password: post.password ?? "",
+    passwordChannel: post.passwordChannel ?? "",
   };
 
   const handleSave = async (data: PostEditorData) => {

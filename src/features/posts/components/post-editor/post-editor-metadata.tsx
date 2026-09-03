@@ -14,6 +14,12 @@ const STATUS_LABELS: Record<PostEditorData["status"], () => string> = {
   published: m.editor_status_published,
 };
 
+const VISIBILITY_OPTIONS = [
+  { value: "public", label: m.editor_visibility_public },
+  { value: "private", label: m.editor_visibility_private },
+  { value: "password", label: m.editor_visibility_password },
+] as const;
+
 interface PostEditorMetadataProps {
   post: PostEditorData;
   isGeneratingSlug: boolean;
@@ -158,6 +164,58 @@ export function PostEditorMetadata({
             </button>
           </div>
         </div>
+
+        <div className="space-y-3">
+          <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+            {m.editor_meta_visibility()}
+          </label>
+          <div className="flex items-center gap-4">
+            {VISIBILITY_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => onPostChange({ visibility: option.value })}
+                className={`
+                  text-[10px] font-mono uppercase tracking-wider transition-colors
+                  ${
+                    post.visibility === option.value
+                      ? "border-b border-foreground font-bold text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }
+                `}
+              >
+                {option.label()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {post.visibility === "password" && (
+          <div className="col-span-1 space-y-3 md:col-span-3">
+            <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+              {m.editor_visibility_password_label()}
+            </label>
+            <Input
+              type="password"
+              value={post.password || ""}
+              onChange={(e) => onPostChange({ password: e.target.value })}
+              placeholder={m.editor_visibility_password_placeholder()}
+              className="h-auto w-full border-b border-border/40 bg-transparent p-0 px-0 pb-1 text-xs font-mono text-foreground shadow-none focus-visible:ring-0"
+            />
+            <div className="flex items-center gap-2">
+              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+                {m.editor_visibility_channel_label()}
+              </label>
+              <Input
+                type="text"
+                value={post.passwordChannel || ""}
+                onChange={(e) =>
+                  onPostChange({ passwordChannel: e.target.value })
+                }
+                className="h-auto flex-1 border-b border-border/40 bg-transparent p-0 px-0 pb-1 text-xs font-mono text-foreground shadow-none focus-visible:ring-0"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="col-span-1 space-y-3 md:col-span-3">
           <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">

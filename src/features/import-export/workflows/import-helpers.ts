@@ -237,6 +237,8 @@ export async function importSinglePost(
     summary: normalized.summary ?? null,
     contentJson,
     status: normalized.status === "draft" ? "draft" : "published",
+    visibility: normalized.visibility ?? "public",
+    passwordChannel: normalized.passwordChannel ?? null,
     readTimeInMinutes: normalized.readTimeInMinutes,
     publishedAt: normalized.publishedAt
       ? new Date(normalized.publishedAt)

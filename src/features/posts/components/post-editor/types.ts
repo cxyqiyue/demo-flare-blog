@@ -1,5 +1,5 @@
 import type { JSONContent } from "@tiptap/react";
-import type { PostStatus } from "@/lib/db/schema";
+import type { PostStatus, PostVisibility } from "@/lib/db/schema";
 
 export interface PostEditorData {
   title: string;
@@ -14,6 +14,10 @@ export interface PostEditorData {
   skillId: number | null;
   isSynced: boolean;
   hasPublicCache: boolean;
+  visibility: PostVisibility;
+  /** 明文访问密码（仅编辑器内持有，服务端加密后落库） */
+  password: string;
+  passwordChannel: string;
 }
 
 export interface PostEditorProps {
@@ -36,4 +40,7 @@ export const defaultPostData: PostEditorData = {
   skillId: null,
   isSynced: true,
   hasPublicCache: false,
+  visibility: "public",
+  password: "",
+  passwordChannel: "",
 };

@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { adminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 import * as VersionService from "../service/version.service";
 
 export const checkUpdateFn = createServerFn()
@@ -7,5 +7,5 @@ export const checkUpdateFn = createServerFn()
   .handler(({ context }) => VersionService.checkForUpdate(context));
 
 export const forceCheckUpdateFn = createServerFn()
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .handler(({ context }) => VersionService.checkForUpdate(context, true));

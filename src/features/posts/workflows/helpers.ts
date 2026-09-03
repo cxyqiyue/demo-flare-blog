@@ -38,12 +38,18 @@ export async function upsertPostSearchIndex(
   post: {
     id: number;
     slug: string;
+    visibility: string;
     title: string;
     summary: string | null;
     contentJson: Parameters<typeof SearchService.upsert>[1]["contentJson"];
     tags: Array<{ name: string }>;
   },
 ) {
+  // 受限文章不进搜索索引，避免正文内容泄露
+  if (post.visibility !== "public") {
+    return { id: post.id };
+  }
+
   return await SearchService.upsert(
     { env },
     {

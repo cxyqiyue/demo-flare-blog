@@ -131,6 +131,7 @@ export async function rebuildIndex(context: DbContext) {
   const posts = await db.query.PostsTable.findMany({
     where: and(
       eq(PostsTable.status, "published"),
+      eq(PostsTable.visibility, "public"),
       lte(PostsTable.publishedAt, new Date()),
     ),
     with: {

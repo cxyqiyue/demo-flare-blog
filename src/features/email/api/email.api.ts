@@ -5,15 +5,15 @@ import { TestEmailConnectionSchema } from "@/features/email/email.schema";
 import * as EmailService from "@/features/email/service/email.service";
 import { EMAIL_UNSUBSCRIBE_TYPES } from "@/lib/db/schema";
 import {
-  adminMiddleware,
   authMiddleware,
   dbMiddleware,
+  superAdminMiddleware,
 } from "@/lib/middlewares";
 
 export const testEmailConnectionFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(TestEmailConnectionSchema)
   .handler(({ context, data }) =>
     EmailService.testEmailConnection(context, data),

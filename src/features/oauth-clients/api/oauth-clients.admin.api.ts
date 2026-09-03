@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { adminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 import {
   DeleteOAuthConnectionInputSchema,
   RenameOAuthClientInputSchema,
@@ -13,7 +13,7 @@ export const getOAuthConnectionsFn = createServerFn()
 export const renameOAuthClientFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(RenameOAuthClientInputSchema)
   .handler(({ context, data }) =>
     OAuthClientService.renameOAuthClient(context, data),
@@ -22,7 +22,7 @@ export const renameOAuthClientFn = createServerFn({
 export const deleteOAuthConnectionFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(DeleteOAuthConnectionInputSchema)
   .handler(({ context, data }) =>
     OAuthClientService.deleteOAuthConnection(context, data.consentId),

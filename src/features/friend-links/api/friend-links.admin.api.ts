@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { adminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 import {
   ApproveFriendLinkInputSchema,
   CreateFriendLinkInputSchema,
@@ -21,7 +21,7 @@ export const getAllFriendLinksFn = createServerFn()
 export const createFriendLinkFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(CreateFriendLinkInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -31,7 +31,7 @@ export const createFriendLinkFn = createServerFn({
 export const updateFriendLinkFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(UpdateFriendLinkInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -41,7 +41,7 @@ export const updateFriendLinkFn = createServerFn({
 export const approveFriendLinkFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(ApproveFriendLinkInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -51,7 +51,7 @@ export const approveFriendLinkFn = createServerFn({
 export const rejectFriendLinkFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(RejectFriendLinkInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -61,7 +61,7 @@ export const rejectFriendLinkFn = createServerFn({
 export const deleteFriendLinkFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(DeleteFriendLinkInputSchema)
   .handler(
     async ({ data, context }) =>

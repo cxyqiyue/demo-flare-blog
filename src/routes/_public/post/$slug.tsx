@@ -6,6 +6,7 @@ import { z } from "zod";
 import { siteConfigQuery, siteDomainQuery } from "@/features/config/queries";
 import { recordPageViewFn } from "@/features/pageview/api/pageview.api";
 import { postBySlugQuery, relatedPostsQuery } from "@/features/posts/queries";
+import { CACHE_CONTROL } from "@/lib/constants";
 import {
   buildArticleJsonLd,
   buildCanonicalUrl,
@@ -81,6 +82,12 @@ export const Route = createFileRoute("/_public/post/$slug")({
   },
   pendingComponent: () => <theme.PostPageSkeleton />,
   pendingMs: __THEME_CONFIG__.pendingMs,
+  headers: ({ loaderData }) => {
+    // 受限文章（私密/密码）若已解锁，SSR 页面会携带正文，绝不能进入共享缓存；
+    // 未解锁时渲染的是壳，同样走 no-store（壳的 JSON 已由 detailGated 边缘缓存）。
+    const isRestricted = loaderData?.post?.visibility !== "public";
+    return isRestricted ? CACHE_CONTROL.private : CACHE_CONTROL.public;
+  },
 });
 
 function RouteComponent() {

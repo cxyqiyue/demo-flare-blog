@@ -75,6 +75,8 @@ export async function getPosts(
       readTimeInMinutes: PostsTable.readTimeInMinutes,
       slug: PostsTable.slug,
       status: PostsTable.status,
+      visibility: PostsTable.visibility,
+      passwordChannel: PostsTable.passwordChannel,
       publishedAt: PostsTable.publishedAt,
       pinnedAt: PostsTable.pinnedAt,
       skillId: PostsTable.skillId,
@@ -179,6 +181,8 @@ export async function getPostsCursor(
       readTimeInMinutes: PostsTable.readTimeInMinutes,
       slug: PostsTable.slug,
       status: PostsTable.status,
+      visibility: PostsTable.visibility,
+      passwordChannel: PostsTable.passwordChannel,
       publishedAt: PostsTable.publishedAt,
       pinnedAt: PostsTable.pinnedAt,
       skillId: PostsTable.skillId,
@@ -262,6 +266,7 @@ export async function getPublishedPostsForSitemapBatch(
     .where(
       and(
         eq(PostsTable.status, "published"),
+        eq(PostsTable.visibility, "public"),
         isNotNull(PostsTable.publishedAt),
         sql`date(${PostsTable.publishedAt}, 'unixepoch') <= date('now')`,
         cursor
@@ -329,6 +334,8 @@ export async function findPostsBySlugs(db: DB, slugs: string[]) {
       readTimeInMinutes: true,
       slug: true,
       status: true,
+      visibility: true,
+      passwordChannel: true,
       publishedAt: true,
       pinnedAt: true,
       skillId: true,
@@ -352,11 +359,14 @@ export async function findPostsBySlugs(db: DB, slugs: string[]) {
 export async function findPostBySlug(
   db: DB,
   slug: string,
-  options: { publicOnly?: boolean } = {},
+  options: { publicOnly?: boolean; excludeRestricted?: boolean } = {},
 ) {
-  const { publicOnly = false } = options;
+  const { publicOnly = false, excludeRestricted = true } = options;
 
-  const whereClause = buildPostWhereClause({ publicOnly });
+  const whereClause = buildPostWhereClause({
+    publicOnly,
+    excludeRestricted,
+  });
   const post = await db.query.PostsTable.findFirst({
     where: and(eq(PostsTable.slug, slug), whereClause),
     with: {
@@ -374,6 +384,38 @@ export async function findPostBySlug(
   const tags = post.postTags.map((pt) => pt.tag);
   const { postTags, ...rest } = post;
   return { ...rest, tags };
+}
+
+/**
+ * 轻量门禁预检：只取鉴权所需 + 壳渲染所需字段（不取 contentJson，
+ * 避免公开详情热路径多拉正文大字段）。仅命中已发布的文章。
+ */
+export async function findPostGateBySlug(db: DB, slug: string) {
+  const whereClause = buildPostWhereClause({
+    publicOnly: true,
+    excludeRestricted: false,
+  });
+  const post = await db.query.PostsTable.findFirst({
+    where: and(eq(PostsTable.slug, slug), whereClause),
+    columns: {
+      id: true,
+      slug: true,
+      status: true,
+      visibility: true,
+      passwordHash: true,
+      passwordChannel: true,
+      title: true,
+      summary: true,
+      readTimeInMinutes: true,
+      publishedAt: true,
+      pinnedAt: true,
+      createdAt: true,
+      updatedAt: true,
+      skillId: true,
+      publicContentRenderVersion: true,
+    },
+  });
+  return post ?? null;
 }
 
 export async function updatePost(
@@ -560,6 +602,8 @@ export async function getPublicPostsByIds(db: DB, ids: Array<number>) {
       readTimeInMinutes: PostsTable.readTimeInMinutes,
       slug: PostsTable.slug,
       status: PostsTable.status,
+      visibility: PostsTable.visibility,
+      passwordChannel: PostsTable.passwordChannel,
       publishedAt: PostsTable.publishedAt,
       pinnedAt: PostsTable.pinnedAt,
       skillId: PostsTable.skillId,
@@ -580,6 +624,8 @@ const PUBLIC_PAGE_COLUMNS = {
   readTimeInMinutes: PostsTable.readTimeInMinutes,
   slug: PostsTable.slug,
   status: PostsTable.status,
+  visibility: PostsTable.visibility,
+  passwordChannel: PostsTable.passwordChannel,
   publishedAt: PostsTable.publishedAt,
   pinnedAt: PostsTable.pinnedAt,
   skillId: PostsTable.skillId,

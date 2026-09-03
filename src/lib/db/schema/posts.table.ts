@@ -12,6 +12,8 @@ import { SkillsTable } from "./skills.table";
 
 export const POST_STATUSES = ["draft", "published"] as const;
 
+export const POST_VISIBILITIES = ["public", "private", "password"] as const;
+
 export const PostsTable = sqliteTable(
   "posts",
   {
@@ -28,6 +30,15 @@ export const PostsTable = sqliteTable(
     /** publicContentJson 的渲染版本号，用于懒加载重新渲染 */
     publicContentRenderVersion: text("public_content_render_version"),
     status: text("status", { enum: POST_STATUSES }).notNull().default("draft"),
+    visibility: text("visibility", { enum: POST_VISIBILITIES })
+      .notNull()
+      .default("public"),
+    /** 访问密码的 SHA-256 摘要，用于恒时校验；明文永不入库 */
+    passwordHash: text("password_hash"),
+    /** 访问密码的 AES-256-GCM 密文，仅在管理端按需解密展示 */
+    passwordCipher: text("password_cipher"),
+    /** 获取访问密码的渠道链接（前台「获取密码」按钮跳转） */
+    passwordChannel: text("password_channel"),
     publishedAt: integer("published_at", { mode: "timestamp" }),
     pinnedAt: integer("pinned_at", { mode: "timestamp" }),
     skillId: integer("skill_id").references(() => SkillsTable.id, {
@@ -92,3 +103,4 @@ export const postTagsRelations = relations(PostTagsTable, ({ one }) => ({
 export type Tag = typeof TagsTable.$inferSelect;
 export type Post = typeof PostsTable.$inferSelect;
 export type PostStatus = (typeof POST_STATUSES)[number];
+export type PostVisibility = (typeof POST_VISIBILITIES)[number];

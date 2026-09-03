@@ -6,7 +6,7 @@ import {
   ModerateCommentInputSchema,
 } from "@/features/comments/comments.schema";
 import * as CommentService from "@/features/comments/comments.service";
-import { adminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 
 // Admin API - Get all comments with filters
 export const getAllCommentsFn = createServerFn()
@@ -21,7 +21,7 @@ export const getAllCommentsFn = createServerFn()
 export const moderateCommentFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(ModerateCommentInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -36,7 +36,7 @@ export const moderateCommentFn = createServerFn({
 export const adminDeleteCommentFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(DeleteCommentInputSchema)
   .handler(
     async ({ data, context }) =>

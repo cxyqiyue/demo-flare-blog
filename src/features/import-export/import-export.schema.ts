@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { POST_STATUSES } from "@/lib/db/schema";
+import { POST_STATUSES, POST_VISIBILITIES } from "@/lib/db/schema";
 
 export const ImportExportLocaleSchema = z.enum(["zh", "en"]);
 
@@ -71,6 +71,8 @@ export const PostFrontmatterSchema = z.object({
   slug: z.string().default(""),
   summary: z.string().optional().nullable(),
   status: z.enum(POST_STATUSES).default("published"),
+  visibility: z.enum(POST_VISIBILITIES).optional(),
+  passwordChannel: z.string().optional().nullable(),
   publishedAt: z.string().optional().nullable(),
   createdAt: z.string().optional().nullable(),
   updatedAt: z.string().optional().nullable(),

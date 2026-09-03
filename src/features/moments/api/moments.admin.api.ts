@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { adminMiddleware } from "@/lib/middlewares";
+import { superAdminMiddleware } from "@/lib/middlewares";
 import {
   CreateMomentInputSchema,
   DeleteMomentInputSchema,
@@ -10,7 +10,7 @@ import * as MomentService from "../moments.service";
 export const createMomentFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(CreateMomentInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -20,7 +20,7 @@ export const createMomentFn = createServerFn({
 export const updateMomentFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(UpdateMomentInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -30,7 +30,7 @@ export const updateMomentFn = createServerFn({
 export const deleteMomentFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(DeleteMomentInputSchema)
   .handler(
     async ({ data, context }) =>

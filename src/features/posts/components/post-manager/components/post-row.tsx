@@ -74,6 +74,10 @@ export function PostRow({
       {/* Middle side: Status */}
       <div className="md:col-span-3 flex items-center gap-4">
         <StatusBadge status={post.status} />
+        <VisibilityBadge
+          visibility={post.visibility}
+          passwordChannel={post.passwordChannel}
+        />
       </div>
 
       {/* Right Side: Date & Actions (Desktop Split) */}
@@ -174,6 +178,31 @@ function StatusBadge({ status }: { status: string }) {
           ? m.admin_posts_status_draft()
           : m.admin_posts_status_pending()}{" "}
       ]
+    </Badge>
+  );
+}
+
+function VisibilityBadge({
+  visibility,
+  passwordChannel,
+}: {
+  visibility: PostListItem["visibility"];
+  passwordChannel: PostListItem["passwordChannel"];
+}) {
+  if (visibility === "public") return null;
+
+  const label =
+    visibility === "private"
+      ? m.access_gate_eyebrow_private()
+      : m.access_gate_eyebrow_password();
+
+  return (
+    <Badge
+      variant="outline"
+      className="text-[9px] px-2 py-0.5 uppercase tracking-widest font-mono font-normal rounded-none border border-border/50 shadow-none bg-transparent text-violet-600 border-violet-500/30"
+      title={passwordChannel ?? undefined}
+    >
+      [{label}]
     </Badge>
   );
 }

@@ -8,7 +8,7 @@ import {
   UpdateSkillInputSchema,
 } from "@/features/skills/skills.schema";
 import * as SkillService from "@/features/skills/skills.service";
-import { adminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 
 export const getSkillsFn = createServerFn()
   .middleware([adminMiddleware])
@@ -27,28 +27,28 @@ export const getSkillByIdFn = createServerFn()
 export const createSkillFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(CreateSkillInputSchema)
   .handler(({ data, context }) => SkillService.createSkill(context, data));
 
 export const updateSkillFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(UpdateSkillInputSchema)
   .handler(({ data, context }) => SkillService.updateSkill(context, data));
 
 export const deleteSkillFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(DeleteSkillInputSchema)
   .handler(({ data, context }) => SkillService.deleteSkill(context, data));
 
 export const importSkillsFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(ImportSkillsInputSchema)
   .handler(({ data, context }) =>
     SkillService.importSkillsFromMarkdown(context, data),

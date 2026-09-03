@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import type { PostPageProps } from "@/features/theme/contract/pages";
 import { FuwariCommentSection } from "@/features/theme/themes/fuwari/components/comments/view/comment-section";
 import { ContentRenderer } from "@/features/theme/themes/fuwari/components/content/content-renderer";
+import { PostGateShell } from "@/features/posts/components/post-gate-shell";
 import { authClient } from "@/lib/auth/auth.client";
 import { m } from "@/paraglide/messages";
 import { PostMeta } from "./components/post-meta";
@@ -30,7 +31,7 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
           width: "max(var(--fuwari-toc-width), 0px)",
         }}
       >
-        <TableOfContents headers={post.toc} />
+        <TableOfContents headers={post.toc ?? []} />
       </div>
 
       {/* Main Post Container */}
@@ -121,6 +122,9 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
       >
         <FuwariCommentSection postId={post.id} />
       </div>
+
+      {/* 受限文章门禁：未解锁时以毛玻璃遮罩覆盖全页，不泄露正文 */}
+      <PostGateShell post={post} />
     </div>
   );
 }

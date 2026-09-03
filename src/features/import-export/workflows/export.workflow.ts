@@ -97,6 +97,8 @@ export class ExportWorkflow extends WorkflowEntrypoint<
             slug: post.slug,
             summary: post.summary ?? undefined,
             status: post.status,
+            visibility: post.visibility,
+            passwordChannel: post.passwordChannel ?? undefined,
             publishedAt: post.publishedAt?.toISOString(),
             createdAt: post.createdAt.toISOString(),
             updatedAt: post.updatedAt.toISOString(),

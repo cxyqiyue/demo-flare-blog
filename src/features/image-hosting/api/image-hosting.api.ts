@@ -5,16 +5,16 @@ import {
 } from "@/features/image-hosting/image-hosting.schema";
 import * as ImageHostingService from "@/features/image-hosting/image-hosting.service";
 import {
-  adminMiddleware,
   authMiddleware,
   createRateLimitMiddleware,
   dbMiddleware,
+  superAdminMiddleware,
 } from "@/lib/middlewares";
 
 export const uploadToImageHostingFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(UploadImageHostingInputSchema)
   .handler(({ data, context }) =>
     ImageHostingService.uploadForArticle(context, data),
@@ -23,7 +23,7 @@ export const uploadToImageHostingFn = createServerFn({
 export const testImageHostingConnectionFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(TestImageHostingConnectionInputSchema)
   .handler(({ data }) => ImageHostingService.testConnection(data));
 

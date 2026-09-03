@@ -40,6 +40,9 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
     skillId: initialData.skillId,
     isSynced: initialData.isSynced,
     hasPublicCache: initialData.hasPublicCache,
+    visibility: initialData.visibility,
+    password: initialData.password,
+    passwordChannel: initialData.passwordChannel,
   }));
 
   // Sync state when initialData updates (e.g. after background refetch/invalidation)
@@ -277,6 +280,9 @@ export function PostEditor({ initialData, onSave }: PostEditorProps) {
         skillId: post.skillId,
         isSynced: snapshot.status === "draft" ? !hasPublicCache : false,
         hasPublicCache,
+        visibility: post.visibility,
+        password: post.password,
+        passwordChannel: post.passwordChannel,
       };
 
       setPost(restoredPost);

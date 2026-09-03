@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Link2,
   LogOut,
+  Megaphone,
   MessageSquare,
   Tag,
   User,
@@ -122,6 +123,12 @@ export function SideBar({
       path: "/admin/navigation",
       icon: Compass,
       label: m.admin_sidebar_navigation(),
+      exact: false,
+    },
+    {
+      path: "/admin/announcements",
+      icon: Megaphone,
+      label: m.admin_sidebar_announcements(),
       exact: false,
     },
   ] satisfies Array<NavItem>;

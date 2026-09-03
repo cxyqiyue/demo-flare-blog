@@ -27,6 +27,7 @@ import postsDetailRoute from "@/features/posts/api/hono/posts.detail.route";
 import postsListRoute from "@/features/posts/api/hono/posts.list.route";
 import postsPageRoute from "@/features/posts/api/hono/posts.page.route";
 import postsRelatedRoute from "@/features/posts/api/hono/posts.related.route";
+import postsUnlockRoute from "@/features/posts/api/hono/posts.unlock.route";
 import searchRoute from "@/features/search/api/hono/search.route";
 import siteDocumentsRoute from "@/features/site-documents/api/hono/site-documents.route";
 import tagsRoute from "@/features/tags/api/hono/tags.list.route";
@@ -61,6 +62,7 @@ const publicApi = new Hono<{ Bindings: Env }>()
   .route("/post", postsDetailRoute)
   .route("/post", postsAdjacentRoute)
   .route("/post", postsRelatedRoute)
+  .route("/post", postsUnlockRoute)
   .route("/tags", tagsRoute)
   .route("/search", searchRoute);
 

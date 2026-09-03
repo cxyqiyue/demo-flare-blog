@@ -4,21 +4,21 @@ import {
   UpsertSearchDocSchema,
 } from "@/features/search/search.schema";
 import * as SearchService from "@/features/search/service/search.service";
-import { adminMiddleware, dbMiddleware } from "@/lib/middlewares";
+import { dbMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 
 export const buildSearchIndexFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .handler(({ context }) => SearchService.rebuildIndex(context));
 
 export const upsertSearchDocFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(UpsertSearchDocSchema)
   .handler(({ data, context }) =>
     SearchService.upsert(context, data, { immediate: true }),
   );
 
 export const deleteSearchDocFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(DeleteSearchDocSchema)
   .handler(({ data, context }) =>
     SearchService.deleteIndex(context, data, { immediate: true }),

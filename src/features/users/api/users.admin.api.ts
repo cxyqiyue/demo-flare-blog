@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { adminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 import {
   BanUserInputSchema,
   GetUsersInputSchema,
@@ -20,7 +20,7 @@ export const listUsersFn = createServerFn({
 export const setUserRoleFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(SetUserRoleInputSchema)
   .handler(
     async ({ data, context }) => await UserService.setUserRole(context, data),
@@ -29,7 +29,7 @@ export const setUserRoleFn = createServerFn({
 export const banUserFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(BanUserInputSchema)
   .handler(
     async ({ data, context }) => await UserService.banUser(context, data),
@@ -38,7 +38,7 @@ export const banUserFn = createServerFn({
 export const unbanUserFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(UnbanUserInputSchema)
   .handler(
     async ({ data, context }) => await UserService.unbanUser(context, data),

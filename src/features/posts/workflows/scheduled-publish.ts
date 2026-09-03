@@ -41,6 +41,7 @@ export class ScheduledPublishWorkflow extends WorkflowEntrypoint<Env, Params> {
     });
 
     await step.do("notify subscribers", async () => {
+      if (post.visibility !== "public") return;
       await SubscriptionService.notifySubscribersOfNewPost(
         { db: getDb(this.env), env: this.env },
         { id: post.id, title: post.title, slug: post.slug },

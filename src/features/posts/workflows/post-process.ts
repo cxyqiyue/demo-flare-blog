@@ -185,7 +185,8 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
     });
 
     // 8. Notify subscribers (future posts are handled by ScheduledPublishWorkflow)
-    if (!isFuturePost) {
+    //    受限文章不推送订阅通知。
+    if (!isFuturePost && postForSideEffects.visibility === "public") {
       await step.do("notify subscribers", async () => {
         const p = await fetchPost(this.env, postId);
         if (!p || p.status !== "published") return;

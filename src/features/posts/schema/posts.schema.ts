@@ -20,14 +20,31 @@ export const PostSelectSchema = createSelectSchema(PostsTable, {
   updatedAt: coercedDate,
 }).omit({
   publicContentJson: true,
+  // 三个字段均属敏感：publicContentJson 是预览快照；
+  // passwordHash/passwordCipher 绝不进入公开 schema。
+  passwordHash: true,
+  passwordCipher: true,
+});
+
+/** 管理端专用：在 select 基础上追加解密后的明文访问密码 */
+export const PostAdminSelectSchema = PostSelectSchema.extend({
+  password: z.string().nullable(),
 });
 export const PostInsertSchema = createInsertSchema(PostsTable);
 export const PostUpdateSchema = createUpdateSchema(PostsTable, {
   contentJson: NullableJsonContentSchema.optional(),
   publicContentJson: NullableJsonContentSchema.optional(),
-}).omit({
-  publicContentJson: true,
-});
+})
+  .omit({
+    publicContentJson: true,
+  })
+  .extend({
+    /**
+     * 编辑器提交的明文访问密码（非 DB 列）。服务端在 updatePost 中据此派生
+     * passwordHash/passwordCipher 后落库，明文不外传、不缓存。
+     */
+    password: z.string().max(512).optional(),
+  });
 
 export const PostItemSchema = PostSelectSchema.omit({
   contentJson: true,
@@ -38,15 +55,26 @@ export const PostListResponseSchema = z.object({
   items: z.array(PostItemSchema),
   nextCursor: z.number().nullable(),
 });
+
+/** 前台可见的受限门禁类型：私密 / 密码保护 */
+export const POST_GATES = ["private", "password"] as const;
+export const PostGateSchema = z.enum(POST_GATES);
+export type PostGate = z.infer<typeof PostGateSchema>;
+
 export const PostWithTocSchema = PostSelectSchema.extend({
+  // 受限门禁时 contentJson/toc 为 null（壳不携带正文）
+  contentJson: NullableJsonContentSchema,
   tags: z.array(TagSelectSchema).optional(),
-  toc: z.array(
-    z.object({
-      id: z.string(),
-      text: z.string(),
-      level: z.number(),
-    }),
-  ),
+  toc: z
+    .array(
+      z.object({
+        id: z.string(),
+        text: z.string(),
+        level: z.number(),
+      }),
+    )
+    .nullish(),
+  gate: PostGateSchema.nullish(),
 }).nullable();
 
 export function normalizePostTagName(
@@ -188,7 +216,10 @@ export type BatchUpdatePostsStatusInput = z.infer<
 export type PreviewSummaryInput = z.infer<typeof PreviewSummaryInputSchema>;
 export type StartPostProcessInput = z.infer<typeof StartPostProcessInputSchema>;
 export type GenerateArticleInput = z.infer<typeof GenerateArticleInputSchema>;
-export type PostListItem = Omit<Post, "contentJson" | "publicContentJson"> & {
+export type PostListItem = Omit<
+  Post,
+  "contentJson" | "publicContentJson" | "passwordHash" | "passwordCipher"
+> & {
   tags?: Array<Tag>;
 };
 
@@ -202,6 +233,9 @@ export const POSTS_CACHE_KEYS = {
       ? (["posts", "list", version, limit, cursor, "all"] as const)
       : (["posts", "list", version, limit, cursor, "tag", tagName] as const),
   detail: (version: string, slug: string) => [version, "post", slug] as const,
+  /** 受限文章的门禁壳（无正文，可公共缓存；正文响应一律 no-store） */
+  detailGated: (version: string, slug: string) =>
+    [version, "post", slug, "gate"] as const,
   related: (slug: string, limit?: number) =>
     ["posts", "related-ids", slug, limit] as const,
   syncHash: (id: number) => `post_hash:${id}` as const,

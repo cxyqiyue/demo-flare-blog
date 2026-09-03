@@ -10,6 +10,8 @@ export function buildPostWhereClause(options: {
   status?: PostStatus;
   publicOnly?: boolean; // For public pages - checks publishedAt <= now
   search?: string;
+  /** 公开查询默认排除受限（private/password）文章；详情壳路径显式关掉 */
+  excludeRestricted?: boolean;
 }) {
   const whereClauses = [];
 
@@ -26,6 +28,11 @@ export function buildPostWhereClause(options: {
     whereClauses.push(
       sql`date(${PostsTable.publishedAt}, 'unixepoch') <= date('now')`,
     );
+  }
+
+  // 受限文章不进入列表/相邻/相关/RSS/sitemap 等公开聚合
+  if (options.publicOnly && options.excludeRestricted !== false) {
+    whereClauses.push(eq(PostsTable.visibility, "public"));
   }
 
   // Search by title

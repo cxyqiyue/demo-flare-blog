@@ -2,14 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { GetProgressInputSchema } from "@/features/import-export/import-export.schema";
 import * as ImportExportService from "@/features/import-export/import-export.service";
-import { adminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 
 const UploadForImportInputSchema = z.instanceof(FormData);
 
 export const uploadForImportFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(UploadForImportInputSchema)
   .handler(async ({ data: formData, context }) => {
     const files = formData

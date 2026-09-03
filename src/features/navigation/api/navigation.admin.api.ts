@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { adminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 import { m } from "@/paraglide/messages";
 import {
   createBookmarkInputSchema,
@@ -26,7 +26,7 @@ export const getAdminNavigationDataFn = createServerFn({ method: "GET" })
   );
 
 export const createSearchEngineFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(createSearchEngineInputSchema(m))
   .handler(
     async ({ data, context }) =>
@@ -34,7 +34,7 @@ export const createSearchEngineFn = createServerFn({ method: "POST" })
   );
 
 export const updateSearchEngineFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(updateSearchEngineInputSchema(m))
   .handler(
     async ({ data, context }) =>
@@ -42,7 +42,7 @@ export const updateSearchEngineFn = createServerFn({ method: "POST" })
   );
 
 export const deleteSearchEngineFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(deleteSearchEngineInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -50,7 +50,7 @@ export const deleteSearchEngineFn = createServerFn({ method: "POST" })
   );
 
 export const setDefaultSearchEngineFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(setDefaultSearchEngineInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -58,7 +58,7 @@ export const setDefaultSearchEngineFn = createServerFn({ method: "POST" })
   );
 
 export const createFolderFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(createFolderInputSchema(m))
   .handler(
     async ({ data, context }) =>
@@ -66,7 +66,7 @@ export const createFolderFn = createServerFn({ method: "POST" })
   );
 
 export const updateFolderFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(updateFolderInputSchema(m))
   .handler(
     async ({ data, context }) =>
@@ -74,7 +74,7 @@ export const updateFolderFn = createServerFn({ method: "POST" })
   );
 
 export const deleteFolderFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(deleteFolderInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -82,7 +82,7 @@ export const deleteFolderFn = createServerFn({ method: "POST" })
   );
 
 export const deleteFoldersFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(deleteFoldersInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -90,7 +90,7 @@ export const deleteFoldersFn = createServerFn({ method: "POST" })
   );
 
 export const createBookmarkFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(createBookmarkInputSchema(m))
   .handler(
     async ({ data, context }) =>
@@ -98,7 +98,7 @@ export const createBookmarkFn = createServerFn({ method: "POST" })
   );
 
 export const updateBookmarkFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(updateBookmarkInputSchema(m))
   .handler(
     async ({ data, context }) =>
@@ -106,7 +106,7 @@ export const updateBookmarkFn = createServerFn({ method: "POST" })
   );
 
 export const deleteBookmarkFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(deleteBookmarkInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -114,7 +114,7 @@ export const deleteBookmarkFn = createServerFn({ method: "POST" })
   );
 
 export const deleteBookmarksFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(deleteBookmarksInputSchema)
   .handler(
     async ({ data, context }) =>
@@ -122,7 +122,7 @@ export const deleteBookmarksFn = createServerFn({ method: "POST" })
   );
 
 export const importBookmarksFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(importBookmarksInputSchema(m))
   .handler(
     async ({ data, context }) =>

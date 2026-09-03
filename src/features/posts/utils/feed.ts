@@ -46,6 +46,7 @@ export async function buildFeed(env: Env, executionCtx: ExecutionContext) {
     .where(
       and(
         eq(PostsTable.status, "published"),
+        eq(PostsTable.visibility, "public"),
         lte(PostsTable.publishedAt, new Date()),
       ),
     )

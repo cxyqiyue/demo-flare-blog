@@ -78,7 +78,10 @@ export const CommentsTable = sqliteTable(
   ],
 );
 
-export const EMAIL_UNSUBSCRIBE_TYPES = ["reply_notification"] as const;
+export const EMAIL_UNSUBSCRIBE_TYPES = [
+  "reply_notification",
+  "announcement",
+] as const;
 
 export const EmailUnsubscriptionsTable = sqliteTable(
   "email_unsubscriptions",

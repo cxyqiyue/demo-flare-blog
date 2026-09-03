@@ -12,7 +12,7 @@ import { createNotificationExampleEvent, getWebhookExampleLabel } from "@/featur
 import { NOTIFICATION_EVENT } from "@/features/notification/notification.schema";
 import * as ConfigService from "@/features/config/service/config.service";
 import { serverEnv } from "@/lib/env/server.env";
-import { adminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 
 export const getCloudflareUsageFn = createServerFn({
   method: "GET",
@@ -23,7 +23,7 @@ export const getCloudflareUsageFn = createServerFn({
 export const refreshCloudflareUsageFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .handler(({ context }) => refreshCloudflareUsage(context));
 
 export const getCloudflareAlertStatusFn = createServerFn({
@@ -47,7 +47,7 @@ export const testCloudflareConnectionFn = createServerFn({
 export const testCloudflareAlertEmailFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .handler(async ({ context }) => {
     const { ADMIN_EMAIL, LOCALE } = serverEnv(context.env);
     const result = await sendEmail(context, {
@@ -71,7 +71,7 @@ export const testCloudflareAlertEmailFn = createServerFn({
 export const testCloudflareAlertWebhookFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .handler(async ({ context }) => {
     const config = await ConfigService.getSystemConfig(context);
     const webhooks = config?.notification?.webhooks ?? [];

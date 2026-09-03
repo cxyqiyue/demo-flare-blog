@@ -17,13 +17,13 @@ import {
 } from "@/features/media/media.schema";
 import * as MediaService from "@/features/media/service/media.service";
 import { resolveR2NativeMaxBytes } from "@/features/image-hosting/size-limits";
-import { adminMiddleware } from "@/lib/middlewares";
+import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 import { m } from "@/paraglide/messages";
 
 export const uploadImageFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(UploadMediaInputSchema)
   .handler(({ data, context }) => {
     // 媒体库管理员上传：允许任意文件类型，并放宽到 R2 渠道上限。
@@ -44,7 +44,7 @@ export const uploadImageFn = createServerFn({
 export const uploadToProviderFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(UploadMediaInputSchema)
   .handler(({ data, context }) => {
     const providerId = data.get("providerId") as string;
@@ -59,7 +59,7 @@ export const uploadToProviderFn = createServerFn({
 export const deleteImageFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(MediaKeyInputSchema)
   .handler(({ data, context }) =>
     MediaService.deleteImage(context, assertMediaKey(data.key, m)),
@@ -95,7 +95,7 @@ export const getTotalMediaSizeFn = createServerFn()
 export const updateMediaNameFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(UpdateMediaNameInputSchema)
   .handler(({ data, context }) => MediaService.updateMediaName(context, data));
 
@@ -109,21 +109,21 @@ export const getMediaDirectoryFn = createServerFn()
 export const createMediaFolderFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(CreateMediaFolderInputSchema)
   .handler(({ data, context }) => MediaService.createFolder(context, data));
 
 export const renameMediaFolderFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(RenameMediaFolderInputSchema)
   .handler(({ data, context }) => MediaService.renameFolder(context, data));
 
 export const deleteMediaFoldersFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(DeleteMediaFoldersInputSchema)
   .handler(({ data, context }) => MediaService.deleteFolders(context, data));
 
@@ -139,14 +139,14 @@ export const listExternalDirectoryFn = createServerFn()
 export const deleteExternalFilesFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(DeleteExternalFilesInputSchema)
   .handler(({ data, context }) => MediaService.deleteExternalFiles(context, data));
 
 export const createExternalFolderFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(
     z.object({
       providerId: z.string(),
@@ -159,6 +159,6 @@ export const createExternalFolderFn = createServerFn({
 export const moveMediaFileFn = createServerFn({
   method: "POST",
 })
-  .middleware([adminMiddleware])
+  .middleware([superAdminMiddleware])
   .inputValidator(MoveMediaFileInputSchema)
   .handler(({ data, context }) => MediaService.moveMediaFile(context, data));
