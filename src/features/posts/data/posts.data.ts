@@ -441,6 +441,7 @@ export async function findPostGateBySlug(db: DB, slug: string) {
       visibility: true,
       passwordHash: true,
       passwordChannel: true,
+      passwordHint: true,
       title: true,
       summary: true,
       readTimeInMinutes: true,

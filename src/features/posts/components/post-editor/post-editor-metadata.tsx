@@ -237,7 +237,7 @@ export function PostEditorMetadata({
               {m.editor_visibility_password_label()}
             </label>
             <Input
-              type="password"
+              type="text"
               value={post.password || ""}
               onChange={(e) => onPostChange({ password: e.target.value })}
               placeholder={m.editor_visibility_password_placeholder()}
@@ -266,6 +266,20 @@ export function PostEditorMetadata({
                   onPostChange({ passwordChannel: e.target.value })
                 }
                 className="h-auto flex-1 border-b border-border/40 bg-transparent p-0 px-0 pb-1 text-xs font-mono text-foreground shadow-none focus-visible:ring-0"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+                {m.editor_visibility_hint_label()}
+              </label>
+              <Input
+                type="text"
+                value={post.passwordHint || ""}
+                onChange={(e) =>
+                  onPostChange({ passwordHint: e.target.value })
+                }
+                placeholder={m.editor_visibility_hint_placeholder()}
+                className="h-auto w-full border-b border-border/40 bg-transparent p-0 px-0 pb-1 text-xs font-mono text-foreground shadow-none focus-visible:ring-0"
               />
             </div>
           </div>

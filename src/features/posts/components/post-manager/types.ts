@@ -3,7 +3,11 @@ import type { Post } from "@/lib/db/schema";
 /** Post without contentJson fields for list views */
 export type PostListItem = Omit<
   Post,
-  "contentJson" | "publicContentJson" | "passwordHash" | "passwordCipher"
+  | "contentJson"
+  | "publicContentJson"
+  | "passwordHash"
+  | "passwordCipher"
+  | "passwordHint"
 >;
 
 /** Status filter options for posts list */

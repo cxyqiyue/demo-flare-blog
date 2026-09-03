@@ -22,6 +22,7 @@ export interface PostEditorData {
   /** 明文访问密码（仅编辑器内持有，服务端加密后落库） */
   password: string;
   passwordChannel: string;
+  passwordHint: string;
 }
 
 export interface PostEditorProps {
@@ -53,4 +54,5 @@ export const defaultPostData: PostEditorData = {
   visibility: "public",
   password: "",
   passwordChannel: "",
+  passwordHint: "",
 };

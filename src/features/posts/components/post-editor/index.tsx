@@ -51,6 +51,7 @@ export function PostEditor({
     visibility: initialData.visibility,
     password: initialData.password,
     passwordChannel: initialData.passwordChannel,
+    passwordHint: initialData.passwordHint,
   }));
 
   // Sync state when initialData updates (e.g. after background refetch/invalidation)
@@ -301,6 +302,7 @@ export function PostEditor({
         visibility: post.visibility,
         password: post.password,
         passwordChannel: post.passwordChannel,
+        passwordHint: post.passwordHint,
       };
 
       setPost(restoredPost);

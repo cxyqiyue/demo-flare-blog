@@ -30,6 +30,8 @@ export const PostSelectSchema = createSelectSchema(PostsTable, {
   // 因此作者昵称变更会同步到历史文章。
   .extend({
     author: z.string().nullable(),
+    // 密码获取提示为可选内容：列表/部分公开响应不携带该字段。
+    passwordHint: z.string().nullish(),
   });
 
 /** 管理端专用：在 select 基础上追加解密后的明文访问密码 */
@@ -81,6 +83,7 @@ export const PostWithTocSchema = PostSelectSchema.extend({
     )
     .nullish(),
   gate: PostGateSchema.nullish(),
+  passwordHint: z.string().nullish(),
 }).nullable();
 
 export function normalizePostTagName(
@@ -224,7 +227,11 @@ export type StartPostProcessInput = z.infer<typeof StartPostProcessInputSchema>;
 export type GenerateArticleInput = z.infer<typeof GenerateArticleInputSchema>;
 export type PostListItem = Omit<
   Post,
-  "contentJson" | "publicContentJson" | "passwordHash" | "passwordCipher"
+  | "contentJson"
+  | "publicContentJson"
+  | "passwordHash"
+  | "passwordCipher"
+  | "passwordHint"
 > & {
   tags?: Array<Tag>;
   /** 作者昵称（由 authorId 关联 user 表实时派生） */

@@ -86,6 +86,7 @@ function EditPost() {
     visibility: post.visibility,
     password: post.password ?? "",
     passwordChannel: post.passwordChannel ?? "",
+    passwordHint: post.passwordHint ?? "",
   };
 
   const handleSave = async (data: PostEditorData) => {

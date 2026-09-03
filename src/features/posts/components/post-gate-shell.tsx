@@ -70,11 +70,17 @@ export function PostGateShell({ post }: PostGateShellProps) {
       mode={mode}
       title={post.title}
       channel={post.passwordChannel}
+      hint={post.passwordHint}
       error={error}
       isSubmitting={isSubmitting}
       onSubmitPassword={mode === "password" ? handleSubmitPassword : undefined}
       onOpenChange={() => {
-        // 门禁不可关闭：未解锁时不允许绕过遮罩查看正文。
+        // 关闭门禁 = 返回上一步（通常为文章列表）避免卡在受限页。
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.href = "/";
+        }
       }}
     />
   );
