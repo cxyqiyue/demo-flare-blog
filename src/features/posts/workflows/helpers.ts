@@ -47,7 +47,7 @@ export async function upsertPostSearchIndex(
 ) {
   // 受限文章不进搜索索引，避免正文内容泄露
   if (post.visibility !== "public") {
-    return { id: post.id };
+    return { id: post.id, flushPromise: undefined };
   }
 
   return await SearchService.upsert(
