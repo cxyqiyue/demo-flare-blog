@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { AuthEmail } from "@/features/email/templates/AuthEmail";
 import { seedAdminNavigationOnFirstLogin } from "@/features/navigation/navigation.service";
 import { createAuthConfig } from "@/lib/auth/auth.config";
+import { resolveGravatarEmailAvatar } from "@/lib/auth/gravatar";
 import * as authSchema from "@/lib/db/schema/auth.table";
 import { user } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server.env";
@@ -93,6 +94,44 @@ export function getAuth({ db, env }: { db: DB; env: Env }) {
 
   function isAdminEmail(email: string): boolean {
     return email.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
+  }
+
+  /**
+   * 邮箱账号登录后按需同步头像：
+   * - 仅当用户 image 为空（邮箱注册账号没有头像）时，尝试用邮箱的
+   *   Gravatar 头像回填，避免覆盖用户手动设置的头像，也避免重复网络请求。
+   * - 只有该邮箱确实存在 Gravatar 真实头像时才写库；否则保持空，
+   *   前端继续显示首字母/图标 fallback。
+   * - GitHub OAuth 登录的头像由 better-auth 内置自动写入，此处不会覆盖。
+   */
+  async function syncEmailAvatarOnLogin(sessionUserId: string) {
+    try {
+      const [found] = await db
+        .select({ email: user.email, image: user.image })
+        .from(user)
+        .where(eq(user.id, sessionUserId))
+        .limit(1);
+      if (!found || found.email.trim() === "" || (found.image ?? "").trim() !== "") {
+        return;
+      }
+      const avatar = await resolveGravatarEmailAvatar(found.email, {
+        size: 256,
+      });
+      if (!avatar) return;
+      await db
+        .update(user)
+        .set({ image: avatar })
+        .where(eq(user.id, sessionUserId));
+    } catch (error) {
+      // 头像同步失败不应影响登录流程。
+      console.error(
+        JSON.stringify({
+          message: "syncEmailAvatarOnLogin failed",
+          sessionUserId,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
   }
 
   return betterAuth({
@@ -202,6 +241,8 @@ export function getAuth({ db, env }: { db: DB; env: Env }) {
               { db, env },
               session.userId,
             );
+            // 邮箱账号登录后自动回填 Gravatar 头像（image 为空时才写库）
+            await syncEmailAvatarOnLogin(session.userId);
           },
         },
       },
