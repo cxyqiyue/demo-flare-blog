@@ -166,6 +166,41 @@ describe("Import/Export Integration", () => {
       expect(tagNames).toEqual(["TypeScript", "测试"]);
     });
 
+    it("should preserve visibility/passwordChannel from frontmatter on import", async () => {
+      const frontmatter: PostFrontmatter = {
+        title: "Password Protected",
+        slug: "password-roundtrip",
+        status: "published",
+        visibility: "password",
+        passwordChannel: "post",
+        readTimeInMinutes: 1,
+        tags: [],
+      };
+
+      const zipFiles = buildNativeZipFiles([
+        {
+          slug: "password-roundtrip",
+          frontmatter,
+          markdown: "Hello\n",
+          contentJson: SAMPLE_CONTENT,
+        },
+      ]);
+
+      const entries = enumerateNativePosts(zipFiles);
+      const result = await importSinglePost(
+        env,
+        zipFiles,
+        entries[0],
+        "native",
+      );
+      expect(result.skipped).toBeUndefined();
+
+      const post = await PostRepo.findPostBySlug(db, "password-roundtrip");
+      expect(post).not.toBeNull();
+      expect(post!.visibility).toBe("password");
+      expect(post!.passwordChannel).toBe("post");
+    });
+
     it("should import a post without content.json (markdown fallback)", async () => {
       const frontmatter: PostFrontmatter = {
         title: "Markdown Only",

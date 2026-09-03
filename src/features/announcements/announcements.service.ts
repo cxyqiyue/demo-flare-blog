@@ -139,13 +139,15 @@ export async function sendAnnouncement(
 
   // 3. 逐封发送，更新投递状态
   let sentCount = 0;
+  // 一次性拉取全部投递，避免循环内重复全表查询（N+1）；
+  // 仅处理仍为 pending/failed 的投递，已 sent 的不重复发信（幂等重试）。
+  const deliveries = await AnnouncementRepo.findAnnouncementDeliveries(
+    context.db,
+    data.id,
+  );
   for (const recipient of recipients) {
-    const deliveries = await AnnouncementRepo.findAnnouncementDeliveries(
-      context.db,
-      data.id,
-    );
     const delivery = deliveries.find((d) => d.userId === recipient.userId);
-    if (!delivery) continue;
+    if (!delivery || delivery.status === "sent") continue;
 
     const result = await EmailService.sendEmail(context, {
       to: delivery.email,
@@ -214,11 +216,11 @@ export async function resendAnnouncement(
 
   let sentCount = 0;
   let failedCount = 0;
+  const deliveries = await AnnouncementRepo.findAnnouncementDeliveries(
+    context.db,
+    data.id,
+  );
   for (const target of targets) {
-    const deliveries = await AnnouncementRepo.findAnnouncementDeliveries(
-      context.db,
-      data.id,
-    );
     const delivery = deliveries.find((d) => d.userId === target.userId);
     if (!delivery) continue;
 

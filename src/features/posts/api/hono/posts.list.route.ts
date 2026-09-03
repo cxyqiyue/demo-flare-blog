@@ -16,7 +16,7 @@ const route = app.get(
     "query",
     GetPostsCursorInputSchema.extend({
       cursor: z.coerce.number().optional(),
-      limit: z.coerce.number().optional(),
+      limit: z.coerce.number().int().min(1).max(50).optional(),
     }),
   ),
   async (c) => {

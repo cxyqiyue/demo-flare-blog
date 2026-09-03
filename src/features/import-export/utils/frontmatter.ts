@@ -62,6 +62,18 @@ export function normalizeFrontmatter(
     mapped.status = "published";
   }
 
+  // visibility & passwordChannel — 文章访问权限（公开/私密/密码）
+  if (
+    data.visibility === "public" ||
+    data.visibility === "private" ||
+    data.visibility === "password"
+  ) {
+    mapped.visibility = data.visibility;
+  }
+  if (typeof data.passwordChannel === "string") {
+    mapped.passwordChannel = data.passwordChannel;
+  }
+
   // publishedAt — 多种字段名
   const dateSource = data.publishedAt ?? data.date ?? data.published_at;
   if (dateSource) {

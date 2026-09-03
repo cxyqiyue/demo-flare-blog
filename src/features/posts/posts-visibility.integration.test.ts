@@ -6,6 +6,7 @@ import {
   waitForBackgroundTasks,
 } from "tests/test-utils";
 import { describe, expect, it } from "vitest";
+import postsDetailRoute from "@/features/posts/api/hono/posts.detail.route";
 import postsUnlockRoute from "@/features/posts/api/hono/posts.unlock.route";
 import { POST_RENDER_VERSION } from "@/features/posts/render-version";
 import * as PostRepo from "@/features/posts/data/posts.data";
@@ -215,6 +216,46 @@ describe("Posts Visibility Integration", () => {
       { slug },
     );
     expect(bodyText(post?.contentJson)).toBe(SECRET_BODY);
+  });
+
+  it("hono detail route honors the unlock cookie on the client path (gate → content)", async () => {
+    const { slug, passwordHash } = await seedGatedPost(adminContext, {
+      visibility: "password",
+      password: "route-pass",
+      slug: "honor-cookie-client-path",
+    });
+    const gateMeta = await PostRepo.findPostGateBySlug(adminContext.db, slug);
+
+    // 客户端未解锁：hono 详情路由（/api/post/:slug）返回门禁壳
+    const shellRes = await testRequest(
+      postsDetailRoute,
+      `/${slug}`,
+      { method: "GET" },
+      env,
+    );
+    expect(shellRes.status).toBe(200);
+    // biome-ignore lint/suspicious/noExplicitAny: test helper
+    const shellBody = (await shellRes.json()) as any;
+    expect(shellBody.gate).toBe("password");
+    expect(shellBody.contentJson).toBeNull();
+
+    // 解锁后，携带 Set-Cookie 令牌的同一路由应返回正文（gate → null）
+    const token = await createUnlockCookieValue(
+      anonymousContext.env,
+      gateMeta?.id ?? 0,
+      passwordHash ?? "",
+    );
+    const unlockedRes = await testRequest(
+      postsDetailRoute,
+      `/${slug}`,
+      { method: "GET", headers: { Cookie: `blog_post_unlock=${token}` } },
+      env,
+    );
+    expect(unlockedRes.status).toBe(200);
+    // biome-ignore lint/suspicious/noExplicitAny: test helper
+    const unlockedBody = (await unlockedRes.json()) as any;
+    expect(unlockedBody.gate).toBeNull();
+    expect(bodyText(unlockedBody.contentJson)).toBe(SECRET_BODY);
   });
 
   it("verify-password route rejects wrong password and private posts", async () => {

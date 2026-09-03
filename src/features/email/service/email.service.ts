@@ -2,7 +2,7 @@ import { type AuthType, WorkerMailer } from "worker-mailer";
 import * as ConfigService from "@/features/config/service/config.service";
 import * as EmailData from "@/features/email/data/email.data";
 import type { TestEmailConnectionInput } from "@/features/email/email.schema";
-import { verifyUnsubscribeToken } from "@/features/email/email.utils";
+import { verifyUnsubscribeToken, generateUnsubscribeToken } from "@/features/email/email.utils";
 import type { EmailUnsubscribeType } from "@/lib/db/schema";
 import { isNotInProduction, serverEnv } from "@/lib/env/server.env";
 import { err, ok } from "@/lib/errors";
@@ -232,6 +232,26 @@ export async function sendEmail(
     return err({ reason: "EMAIL_DISABLED" });
   }
 
+  // 带退订能力的邮件：追加退订链接 footer + List-Unsubscribe 头，
+  // 否则退订机制（仅退订后可过滤）对收件人是死路。
+  let html = options.html;
+  let headers = options.headers ? { ...options.headers } : {};
+  if (options.unsubscribe) {
+    const env = serverEnv(context.env);
+    const token = await generateUnsubscribeToken(
+      env.BETTER_AUTH_SECRET,
+      options.unsubscribe.userId,
+      options.unsubscribe.type,
+    );
+    const unsubscribeUrl = `https://${env.DOMAIN}/unsubscribe?userId=${options.unsubscribe.userId}&type=${options.unsubscribe.type}&token=${token}`;
+    headers = {
+      ...headers,
+      "List-Unsubscribe": `<${unsubscribeUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    };
+    html = `${html}<div style="padding-top:20px;border-top:1px solid #f9f9f9;margin-top:20px;"><p style="font-size:12px;color:#999;margin:0;">${m.email_comment_reply_unsubscribe_hint({}, { locale: env.LOCALE })}<a href="${unsubscribeUrl}" style="color:#999;text-decoration:underline;margin-left:4px;">${m.email_comment_reply_unsubscribe_action({}, { locale: env.LOCALE })}</a></p></div>`;
+  }
+
   try {
     const security = resolveTransportSecurity(email.port);
 
@@ -253,8 +273,8 @@ export async function sendEmail(
         },
         to: options.to,
         subject: options.subject,
-        html: options.html,
-        headers: options.headers,
+        html,
+        headers,
       },
     );
   } catch (error) {

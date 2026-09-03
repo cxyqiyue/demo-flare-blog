@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { getStorageStatusFn } from "@/features/config/api/storage.api";
 import type { SystemConfig } from "@/features/config/config.schema";
+import { m } from "@/paraglide/messages";
 import { cn } from "@/lib/utils";
 
 type StorageStatus = {
@@ -49,11 +50,10 @@ export function StorageSettingsSection() {
             </div>
             <div className="space-y-1">
               <h5 className="text-sm font-medium text-foreground">
-                KV 存储（缓存 / 搜索索引）
+                {m.settings_storage_section_kv_title()}
               </h5>
               <p className="text-xs text-muted-foreground">
-                Cloudflare KV 免费额度限制为每天 1000 次写入。开启时优先使用 KV
-                提升性能，达到安全阈值后自动降级到 D1。
+                {m.settings_storage_section_kv_desc()}
               </p>
             </div>
           </div>
@@ -62,11 +62,10 @@ export function StorageSettingsSection() {
           <div className="flex items-center justify-between gap-4 border border-border/20 bg-muted/10 p-5">
             <div className="space-y-1">
               <p className="text-sm font-medium text-foreground">
-                启用 KV 写入
+                {m.settings_storage_enable_kv()}
               </p>
               <p className="text-xs text-muted-foreground">
-                关闭后，所有依赖 KV 的功能（缓存、搜索索引、防重放等）自动切换到
-                D1 运行，博客功能保持正常。
+                {m.settings_storage_enable_kv_desc()}
               </p>
             </div>
             <button
@@ -94,7 +93,7 @@ export function StorageSettingsSection() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                当前状态
+                {m.settings_storage_current_status()}
               </p>
               <button
                 type="button"
@@ -106,27 +105,31 @@ export function StorageSettingsSection() {
                 ) : (
                   <RefreshCw size={12} />
                 )}
-                刷新
+                {m.settings_storage_refresh()}
               </button>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="border border-border/20 bg-muted/10 p-4">
-                <p className="text-xs text-muted-foreground">状态</p>
+                <p className="text-xs text-muted-foreground">
+                  {m.settings_storage_status_label()}
+                </p>
                 <p className="mt-1 text-sm font-medium text-foreground">
                   {status === undefined && !isFetching
-                    ? "加载中…"
+                    ? m.settings_storage_status_loading()
                     : kv?.enabled
-                      ? "正常使用 KV"
+                      ? m.settings_storage_status_normal()
                       : kv?.autoDisabled
-                        ? "已达额度，自动降级到 D1"
+                        ? m.settings_storage_status_auto_disabled()
                         : kv?.userDisabled
-                          ? "已手动关闭，降级到 D1"
-                          : "降级到 D1"}
+                          ? m.settings_storage_status_user_disabled()
+                          : m.settings_storage_status_fallback()}
                 </p>
               </div>
               <div className="border border-border/20 bg-muted/10 p-4">
-                <p className="text-xs text-muted-foreground">今日 KV 写入</p>
+                <p className="text-xs text-muted-foreground">
+                  {m.settings_storage_count_today()}
+                </p>
                 <p className="mt-1 text-sm font-medium text-foreground">
                   {kvCount} / {kvLimit}
                 </p>
@@ -145,9 +148,13 @@ export function StorageSettingsSection() {
                 </div>
               </div>
               <div className="border border-border/20 bg-muted/10 p-4">
-                <p className="text-xs text-muted-foreground">自动恢复</p>
+                <p className="text-xs text-muted-foreground">
+                  {m.settings_storage_auto_recovery()}
+                </p>
                 <p className="mt-1 text-sm font-medium text-foreground">
-                  {kv?.autoDisabled ? "次日 0 点自动恢复" : "关闭时不自动恢复"}
+                  {kv?.autoDisabled
+                    ? m.settings_storage_auto_recovery_on()
+                    : m.settings_storage_auto_recovery_off()}
                 </p>
               </div>
             </div>
@@ -163,15 +170,16 @@ export function StorageSettingsSection() {
           </div>
           <div className="space-y-2">
             <h5 className="text-sm font-medium text-foreground">
-              D1 数据库（始终开启，无法关闭）
+              {m.settings_storage_d1_title()}
             </h5>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              D1 是博客的系统数据库，承载文章、评论、浏览统计、导入导出进度等全部核心数据。
-              它没有写入配额限制，是 KV 降级时的永久兜底后端，始终保持开启状态。
+              {m.settings_storage_d1_desc()}
             </p>
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span className="text-xs text-muted-foreground">D1 在线</span>
+              <span className="text-xs text-muted-foreground">
+                {m.settings_storage_d1_online()}
+              </span>
             </div>
           </div>
         </div>
@@ -180,24 +188,14 @@ export function StorageSettingsSection() {
       {/* 降级说明 */}
       <section className="border border-border/30 bg-background/50 p-8">
         <div className="space-y-3">
-          <h5 className="text-sm font-medium text-foreground">降级行为说明</h5>
+          <h5 className="text-sm font-medium text-foreground">
+            {m.settings_storage_fallback_title()}
+          </h5>
           <ul className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-            <li>
-              · 达到 KV 写入安全阈值（{kvLimit} 次/日）或手动关闭后，系统自动将
-              KV 写入切换到 D1，博客所有功能保持正常。
-            </li>
-            <li>
-              · 缓存代际指针不再写入 KV，公开数据按 Cache API 的 TTL 自然过期后回源
-              D1，功能不受影响，仅缓存刷新略有延迟。
-            </li>
-            <li>
-              · 搜索索引、人机验证防重放、导入导出进度、用量告警去重、自动快照节流
-              等均切换到 D1 表存储。
-            </li>
-            <li>
-              · 恢复策略：因达到限额自动降级后，次日 0 点自动恢复 KV；若为手动关闭，
-              需在此页面重新开启。
-            </li>
+            <li>{m.settings_storage_fallback_1()}</li>
+            <li>{m.settings_storage_fallback_2()}</li>
+            <li>{m.settings_storage_fallback_3()}</li>
+            <li>{m.settings_storage_fallback_4()}</li>
           </ul>
         </div>
       </section>

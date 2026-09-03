@@ -531,6 +531,14 @@ export async function updateSystemConfig(
     await purgeSiteCDNCache(context.env);
   }
 
+  // storage 段：根据新的 kvEnabled 同步 KV 限流状态（启用时立即复位自动禁用标记）
+  const kvEnabled = nextConfig.storage?.kvEnabled ?? true;
+  if (kvEnabled) {
+    await enableKv(context.env);
+  } else {
+    await disableKv(context.env);
+  }
+
   return { success: true };
 }
 

@@ -47,12 +47,14 @@ export async function getAllTagsWithCount(
     .$dynamic();
 
   if (publicOnly) {
-    // Only count published posts
+    // Only count published & publicly-visible posts
+    // (private/password posts 对前台不可对待，不应计入公开标签数)
     query
       .innerJoin(PostsTable, eq(PostTagsTable.postId, PostsTable.id))
       .where(
         and(
           eq(PostsTable.status, "published"),
+          eq(PostsTable.visibility, "public"),
           lte(PostsTable.publishedAt, new Date()),
         ),
       )

@@ -313,7 +313,36 @@ export async function uploadToProvider(
       height: null,
     });
   } catch (e) {
-    console.error(JSON.stringify({ message: "media db insert failed after provider upload", provider, key, error: e instanceof Error ? e.message : String(e) }));
+    // D1 记录写入失败：尽力清理远端对象，并向调用方返回失败，
+    // 避免「返回成功但媒体库无记录 / 无法受访问控制保护」的不一致状态。
+    context.executionCtx.waitUntil(
+      deleteUploadedMediaBestEffortForService(
+        context,
+        provider,
+        key,
+      ).catch((rollbackError) =>
+        console.error(
+          JSON.stringify({
+            message: "provider upload rollback failed",
+            provider,
+            key,
+            error:
+              rollbackError instanceof Error
+                ? rollbackError.message
+                : String(rollbackError),
+          }),
+        ),
+      ),
+    );
+    console.error(
+      JSON.stringify({
+        message: "media db insert failed after provider upload",
+        provider,
+        key,
+        error: e instanceof Error ? e.message : String(e),
+      }),
+    );
+    return err({ reason: "MEDIA_RECORD_CREATE_FAILED" });
   }
 
   // 对外返回按访问模式计算后的图链（Telegram/Discord 恒为代理地址）
@@ -324,6 +353,76 @@ export async function uploadToProvider(
     url,
   );
   return ok({ url: accessUrl });
+}
+
+/** 尽力删除刚上传到外部渠道的远端对象（用于 D1 记录写入失败后的回滚）。 */
+async function deleteUploadedMediaBestEffortForService(
+  context: DbContext & { executionCtx: ExecutionContext },
+  provider: string,
+  key: string,
+): Promise<void> {
+  const config = await ConfigService.getSystemConfig(context);
+  const ih = config?.imageHosting;
+  try {
+    switch (provider) {
+      case "r2":
+      case "r2-native":
+        await Storage.deleteFromR2(context.env, key);
+        break;
+      case "telegram": {
+        const { messageId } = TelegramChannelApi.parseTelegramKey(key);
+        if (/^\d+$/.test(messageId) && ih?.telegram?.botToken) {
+          await TelegramChannelApi.deleteTelegramMessage(
+            ih.telegram as TelegramChannel,
+            messageId,
+          );
+        }
+        break;
+      }
+      case "discord": {
+        const dcConfig = resolveDiscordConfig(config);
+        if (dcConfig) {
+          await DiscordChannelApi.deleteDiscordMessage(dcConfig, key);
+        }
+        break;
+      }
+      case "s3": {
+        const cfg = resolveS3ConfigForMedia(config);
+        if (cfg) {
+          await deleteS3Objects(cfg, [key]);
+        }
+        break;
+      }
+      case "huggingface":
+        if (ih?.huggingface?.token && ih?.huggingface?.repo) {
+          await HuggingFaceChannelApi.deleteHuggingFaceFiles(
+            ih.huggingface as HuggingFaceChannel,
+            [key],
+          );
+        }
+        break;
+      case "webdav":
+        if (ih?.webdav?.baseUrl) {
+          await WebDavChannelApi.deleteWebDavPaths(
+            ih.webdav as WebDAVChannel,
+            [key],
+          );
+        }
+        break;
+      default:
+        // api-key 图床（imgbb/ffsky）无远程删除能力；记录未写入不影响安全。
+        break;
+    }
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        message: "provider upload rollback delete failed",
+        provider,
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+  }
 }
 
 export async function deleteImage(

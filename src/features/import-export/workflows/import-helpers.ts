@@ -231,13 +231,24 @@ export async function importSinglePost(
   }
 
   // 7. Insert post
+  const visibility = normalized.visibility ?? "public";
+  // 导出不包含密码明文/哈希；密码受限文章导入后需管理员重设密码，
+  // 否则保持锁死 -> 提示管理员，避免静默降级为公开。
+  if (visibility === "password" && !metadata.password) {
+    warnings.push(
+      m.import_export_import_warning_password_not_preserved(
+        { title },
+        { locale },
+      ),
+    );
+  }
   const post = await PostRepo.insertPost(db, {
     title,
     slug,
     summary: normalized.summary ?? null,
     contentJson,
     status: normalized.status === "draft" ? "draft" : "published",
-    visibility: normalized.visibility ?? "public",
+    visibility,
     passwordChannel: normalized.passwordChannel ?? null,
     readTimeInMinutes: normalized.readTimeInMinutes,
     publishedAt: normalized.publishedAt
