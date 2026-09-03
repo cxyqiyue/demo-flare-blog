@@ -90,6 +90,77 @@ export async function getNavigationOwnerAccounts(context: AdminContext) {
   );
 }
 
+/**
+ * 管理员账号「首次登录」时初始化其导航管理的搜索引擎：
+ * - 将超级管理员当前生效的全部搜索引擎（自身 + 遗留 NULL 数据）复制给该管理员，
+ *   使其中导航管理面板看到的默认引擎与超管一致，后续可独立个性化设置。
+ * - 书签/文件夹保持为空（不复制，属管理员私密数据，需自行创建/导入）。
+ * - 非管理员、超管本人、或已有自有引擎的管理员均跳过，幂等。
+ */
+export async function seedAdminNavigationOnFirstLogin(
+  context: DbContext,
+  targetUserId: string,
+): Promise<void> {
+  try {
+    const [targetUser] = await context.db
+      .select({ id: user.id, email: user.email, role: user.role })
+      .from(user)
+      .where(eq(user.id, targetUserId))
+      .limit(1);
+    if (!targetUser) return;
+
+    // 仅普通管理员需要初始化；超管本身可见遗留默认引擎，无需复制
+    if (targetUser.role !== "admin") return;
+    if (isSuperAdmin(targetUser, context.env)) return;
+
+    // 已有自有引擎 → 已初始化过，跳过（幂等）
+    const existing = await NavigationRepo.getAllSearchEngines(
+      context.db,
+      targetUserId,
+      false,
+    );
+    if (existing.length > 0) return;
+
+    // 复制来源：超管当前生效的全部引擎（自身 owner + 遗留 NULL）
+    const superAdminEmail = serverEnv(context.env).ADMIN_EMAIL.trim().toLowerCase();
+    const superAdminUser = await context.db.query.user.findFirst({
+      where: eq(user.email, superAdminEmail),
+    });
+    if (!superAdminUser) return;
+
+    const source = await NavigationRepo.getAllSearchEngines(
+      context.db,
+      superAdminUser.id,
+      true,
+    );
+    if (source.length === 0) return;
+
+    await NavigationRepo.insertSearchEnginesBatch(
+      context.db,
+      source.map((engine) => ({
+        name: engine.name,
+        urlTemplate: engine.urlTemplate,
+        iconUrl: engine.iconUrl,
+        domain: engine.domain,
+        sortOrder: engine.sortOrder,
+        // 全局唯一索引仅允许一条 is_default=1（归属超管/遗留）；复制的管理员副本不设默认，
+        // 默认引擎仍由超管集合提供，功能一致，后续管理员可在自己集合内自行设置
+        isDefault: false,
+        enabled: engine.enabled,
+        ownerId: targetUserId,
+      })),
+    );
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        message: "seedAdminNavigationOnFirstLogin failed",
+        targetUserId,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+  }
+}
+
 // ============ Public Methods ============
 
 /**

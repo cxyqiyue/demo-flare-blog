@@ -1,5 +1,6 @@
 import {
   createAdminTestContext,
+  createMockSession,
   seedUser,
   testRequest,
 } from "tests/test-utils";
@@ -412,6 +413,113 @@ describe("NavigationService", () => {
       expect(data.bookmarks).toHaveLength(1);
       expect(data.bookmarks[0].name).toBe("Fresh");
     });
+  });
+});
+
+describe("First-login Navigation seeding", () => {
+  let ctx: ReturnType<typeof createAdminTestContext>;
+  const memberSession = (id: string, email: string, role: string | null) =>
+    createMockSession({
+      user: {
+        id,
+        name: "Member Admin",
+        email,
+        emailVerified: true,
+        role: role as "admin" | null,
+      },
+    });
+  const adminDataFor = (session: ReturnType<typeof createMockSession>) =>
+    NavigationService.getAdminNavigationData(
+      createAdminTestContext({ session }),
+    );
+
+  beforeEach(() => {
+    ctx = createAdminTestContext();
+    // 超管：测试环境 ADMIN_EMAIL = admin@example.com
+  });
+
+  it("copies super admin's search engines (but not bookmarks) to a brand-new admin", async () => {
+    await seedUser(ctx.db, {
+      id: "super-admin",
+      name: "Super Admin",
+      email: "admin@example.com",
+      emailVerified: true,
+      role: "admin",
+    });
+    await seedUser(ctx.db, {
+      id: "member-admin",
+      name: "Member Admin",
+      email: "member@example.com",
+      emailVerified: true,
+      role: "admin",
+    });
+
+    const superAdminSource = await adminDataFor(
+      createMockSession({
+        user: {
+          id: "admin-user-id",
+          name: "Admin User",
+          email: "admin@example.com",
+          emailVerified: true,
+          role: "admin",
+        },
+      }),
+    );
+    expect(superAdminSource.engines.length).toBeGreaterThanOrEqual(11);
+
+    await NavigationService.seedAdminNavigationOnFirstLogin(
+      { db: ctx.db, env: ctx.env },
+      "member-admin",
+    );
+
+    const data = await adminDataFor(memberSession("member-admin", "member@example.com", "admin"));
+    expect(data.engines.length).toBe(superAdminSource.engines.length);
+    expect(data.bookmarks).toHaveLength(0);
+    expect(data.folders).toHaveLength(0);
+
+    // 副本默认引擎标记为空：全局唯一默认仍归属超管/遗留集合，功能上默认一致
+    const defaults = data.engines.filter((engine) => engine.isDefault);
+    expect(defaults).toHaveLength(0);
+  });
+
+  it("is idempotent and does not duplicate engines on subsequent logins", async () => {
+    await seedUser(ctx.db, {
+      id: "member-2",
+      name: "Member Two",
+      email: "member2@example.com",
+      emailVerified: true,
+      role: "admin",
+    });
+
+    await NavigationService.seedAdminNavigationOnFirstLogin(
+      { db: ctx.db, env: ctx.env },
+      "member-2",
+    );
+    const before = await adminDataFor(memberSession("member-2", "member2@example.com", "admin"));
+
+    await NavigationService.seedAdminNavigationOnFirstLogin(
+      { db: ctx.db, env: ctx.env },
+      "member-2",
+    );
+    const after = await adminDataFor(memberSession("member-2", "member2@example.com", "admin"));
+    expect(after.engines.length).toBe(before.engines.length);
+  });
+
+  it("skips non-admin and super admin accounts", async () => {
+    await seedUser(ctx.db, {
+      id: "plain-user",
+      name: "Plain User",
+      email: "plain@example.com",
+      emailVerified: true,
+      role: null,
+    });
+
+    await NavigationService.seedAdminNavigationOnFirstLogin(
+      { db: ctx.db, env: ctx.env },
+      "plain-user",
+    );
+    const data = await adminDataFor(memberSession("plain-user", "plain@example.com", null));
+    expect(data.engines).toHaveLength(0);
   });
 });
 

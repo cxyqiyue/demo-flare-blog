@@ -75,6 +75,15 @@ export async function insertSearchEngine(
   return engine;
 }
 
+/** 批量插入搜索引擎（用于首次登录时为普通管理员复制超管的引擎集合） */
+export async function insertSearchEnginesBatch(
+  db: DB,
+  data: Array<typeof SearchEnginesTable.$inferInsert>,
+) {
+  if (data.length === 0) return [];
+  return await db.insert(SearchEnginesTable).values(data).returning();
+}
+
 export async function updateSearchEngine(
   db: DB,
   id: number,

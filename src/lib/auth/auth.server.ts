@@ -5,6 +5,7 @@ import { betterAuth } from "better-auth/minimal";
 import { eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AuthEmail } from "@/features/email/templates/AuthEmail";
+import { seedAdminNavigationOnFirstLogin } from "@/features/navigation/navigation.service";
 import { createAuthConfig } from "@/lib/auth/auth.config";
 import * as authSchema from "@/lib/db/schema/auth.table";
 import { user } from "@/lib/db/schema";
@@ -196,6 +197,11 @@ export function getAuth({ db, env }: { db: DB; env: Env }) {
         create: {
           after: async (session) => {
             await syncSuperAdminRole(session.userId);
+            // 首次登录时初始化管理员账号的导航搜索引擎（从超管复制，幂等）
+            await seedAdminNavigationOnFirstLogin(
+              { db, env },
+              session.userId,
+            );
           },
         },
       },
