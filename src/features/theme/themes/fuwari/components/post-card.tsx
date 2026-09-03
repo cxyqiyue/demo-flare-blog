@@ -7,6 +7,7 @@ import {
   Flame,
   Pin,
   Tag,
+  User,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PostItem } from "@/features/posts/schema/posts.schema";
@@ -94,6 +95,14 @@ export function PostCard({
               </ClientOnly>
             </time>
           </div>
+          {post.author && (
+            <div className="flex items-center">
+              <div className="fuwari-meta-icon">
+                <User size={20} strokeWidth={1.5} />
+              </div>
+              <span className="text-sm font-medium">{post.author}</span>
+            </div>
+          )}
           {tagNames.length > 0 && (
             <div className="flex items-center">
               <div className="fuwari-meta-icon">

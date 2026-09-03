@@ -1,5 +1,5 @@
 import { ClientOnly, Link } from "@tanstack/react-router";
-import { Eye, Pin } from "lucide-react";
+import { Eye, Pin, User } from "lucide-react";
 import { memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PostItem as PostItemType } from "@/features/posts/schema/posts.schema";
@@ -33,6 +33,15 @@ export const PostItem = memo(
                   {formatDate(post.publishedAt)}
                 </ClientOnly>
               </time>
+              {post.author && (
+                <>
+                  <span className="opacity-30">/</span>
+                  <span className="flex items-center gap-1 whitespace-nowrap text-muted-foreground/60">
+                    <User size={12} />
+                    {post.author}
+                  </span>
+                </>
+              )}
               {post.tags && post.tags.length > 0 && (
                 <>
                   <span className="opacity-30">/</span>
