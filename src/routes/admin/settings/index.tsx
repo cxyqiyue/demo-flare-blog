@@ -332,7 +332,7 @@ function RouteComponent() {
                       value={value}
                       className={cn(
                         "flex items-center justify-center px-3 py-2.5 rounded-full text-[10px] font-mono uppercase tracking-[0.15em] transition-all duration-300 border-none shadow-none group shrink-0 whitespace-nowrap lg:w-full lg:justify-start lg:px-4 lg:py-3 lg:rounded-none lg:border-l-2 lg:border-transparent",
-                        "text-muted-foreground data-[state=active]:bg-foreground data-[state=active]:text-background lg:data-[state=active]:bg-muted/30 lg:data-[state=active]:text-foreground lg:data-[state=active]:border-foreground",
+                        "text-muted-foreground data-[state=active]:bg-foreground data-[state=active]:text-background lg:data-[state=active]:bg-foreground lg:data-[state=active]:text-background lg:data-[state=active]:border-foreground",
                         isActive ? "pl-3 pr-4" : "px-3",
                       )}
                     >
