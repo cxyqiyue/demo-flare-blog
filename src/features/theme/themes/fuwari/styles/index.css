@@ -617,6 +617,132 @@
   border-color: color-mix(in oklab, var(--fuwari-primary) 18%, transparent);
 }
 
+/* 4d) White-base contrast — the default admin's faint greys (--border
+      oklch .85, --muted .93, washed-out `border-border/NN` hairlines and
+      tiny `text-muted-foreground/NN` labels) are nearly invisible on the
+      fuwari white card base. Retoken the semantic variables inside the
+      admin so EVERY `border-border/NN` / `bg-muted/NN` /
+      `text-muted-foreground/NN` utility picks up a stronger base at
+      runtime (Tailwind compiles these to color-mix against the var), and
+      force the structural hairline borders to one calm, visible tone.
+      Scope is .admin-layout (+ portal) so default & the public fuwari
+      site are untouched. */
+.admin-layout {
+  --border: oklch(0.78 0.025 var(--fuwari-hue));
+  --muted: oklch(0.9 0.02 var(--fuwari-hue));
+  --muted-foreground: oklch(0.42 0.03 var(--fuwari-hue));
+  --input: rgba(0, 0, 0, 0.08);
+}
+.dark .admin-layout {
+  --border: oklch(0.36 0.025 var(--fuwari-hue));
+  --muted: oklch(0.34 0.03 var(--fuwari-hue));
+  --muted-foreground: oklch(0.72 0.03 var(--fuwari-hue));
+  --input: rgba(255, 255, 255, 0.09);
+}
+body:has(.admin-layout) {
+  --border: oklch(0.78 0.025 var(--fuwari-hue));
+  --muted: oklch(0.9 0.02 var(--fuwari-hue));
+  --muted-foreground: oklch(0.42 0.03 var(--fuwari-hue));
+}
+.dark body:has(.admin-layout) {
+  --border: oklch(0.36 0.025 var(--fuwari-hue));
+  --muted: oklch(0.34 0.03 var(--fuwari-hue));
+  --muted-foreground: oklch(0.72 0.03 var(--fuwari-hue));
+}
+
+/* Force the structural hairline/divider borders to a single calm visible
+   tone regardless of the low opacity suffix, so cards, table rows,
+   toolbars and panels read as defined shapes on white. */
+.admin-layout
+:is(
+  .border-border,
+  .border-border\/20,
+  .border-border\/25,
+  .border-border\/30,
+  .border-border\/40,
+  .border-border\/50
+) {
+  border-color: oklch(0.72 0.025 var(--fuwari-hue));
+}
+.dark
+  .admin-layout
+  :is(
+    .border-border,
+    .border-border\/20,
+    .border-border\/25,
+    .border-border\/30,
+    .border-border\/40,
+    .border-border\/50
+  ) {
+  border-color: oklch(0.34 0.025 var(--fuwari-hue));
+}
+
+/* Tiny / faded muted labels (9-12px, often with /50../70 opacity) get a
+   darker, un-faded tone so they stay legible on white. */
+.admin-layout
+:is(
+  .text-muted-foreground\/40,
+  .text-muted-foreground\/50,
+  .text-muted-foreground\/60,
+  .text-muted-foreground\/70,
+  .text-muted-foreground\/80
+) {
+  color: oklch(0.4 0.03 var(--fuwari-hue));
+}
+.dark
+  .admin-layout
+  :is(
+    .text-muted-foreground\/40,
+    .text-muted-foreground\/50,
+    .text-muted-foreground\/60,
+    .text-muted-foreground\/70,
+    .text-muted-foreground\/80
+  ) {
+  color: oklch(0.75 0.03 var(--fuwari-hue));
+}
+
+/* Surface washes (table headers, hover rows, subtler panels) that vanish
+   on white get a soft but visible tint. */
+.admin-layout
+:is(
+  .bg-muted\/5,
+  .bg-muted\/10,
+  .bg-muted\/20,
+  .bg-accent\/5,
+  .bg-accent\/10,
+  .bg-secondary\/10,
+  .bg-background\/50
+) {
+  background-color: oklch(0.92 0.02 var(--fuwari-hue));
+}
+.dark
+  .admin-layout
+  :is(
+    .bg-muted\/5,
+    .bg-muted\/10,
+    .bg-muted\/20,
+    .bg-accent\/5,
+    .bg-accent\/10,
+    .bg-secondary\/10,
+    .bg-background\/50
+  ) {
+  background-color: oklch(0.3 0.025 var(--fuwari-hue));
+}
+
+/* Secondary / outline / ghost buttons need a clearly visible border &
+   text on white; and outline buttons currently use a near-invisible
+   `border-border/40`. */
+.admin-layout button.bg-muted {
+  background-color: oklch(0.92 0.02 var(--fuwari-hue));
+}
+.admin-layout .border.bg-transparent {
+  border-color: oklch(0.7 0.03 var(--fuwari-hue));
+}
+.admin-layout .hover\:bg-muted\/30:hover,
+.admin-layout .hover\:bg-accent\/50:hover {
+  background-color: oklch(0.93 0.025 var(--fuwari-hue));
+}
+
 /* ─────────────────────────────────────────────────────────────────────
    5) Inputs — fuwari gives fields a soft tinted surface and rounded
       corners instead of the default bottom-rule / square look.
