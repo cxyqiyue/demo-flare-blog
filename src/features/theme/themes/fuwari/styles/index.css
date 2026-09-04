@@ -62,6 +62,109 @@
     --fuwari-toc-btn-hover: oklch(0.22 0.02 var(--fuwari-hue));
     --fuwari-toc-btn-active: oklch(0.25 0.02 var(--fuwari-hue));
   }
+
+  /* ── Fuwari 语义化变量（供后台管理及通用 UI 组件使用） ──
+     这些变量与 default 主题的语义化 class 一一对应，取值映射到 fuwari 的
+     oklch 配色，使后台在 fuwari 主题下呈现一致的视觉风格。 */
+  :root {
+    --background: var(--fuwari-page-bg);
+    --foreground: oklch(0.25 0.025 var(--fuwari-hue));
+
+    --muted: oklch(0.93 0.02 var(--fuwari-hue));
+    --muted-foreground: oklch(0.45 0.03 var(--fuwari-hue));
+
+    --popover: var(--fuwari-card-bg);
+    --popover-foreground: oklch(0.25 0.025 var(--fuwari-hue));
+
+    --border: oklch(0.85 0.015 var(--fuwari-hue));
+    --input: var(--fuwari-input-bg);
+
+    --primary: var(--fuwari-primary);
+    --primary-foreground: white;
+
+    --secondary: var(--fuwari-btn-regular-bg);
+    --secondary-foreground: var(--fuwari-btn-content);
+
+    --accent: var(--fuwari-btn-regular-bg);
+    --accent-foreground: var(--fuwari-btn-content);
+
+    --ring: var(--fuwari-primary);
+
+    --destructive: oklch(0.58 0.22 27);
+    --destructive-foreground: white;
+
+    --warning: oklch(0.8 0.15 80);
+    --warning-foreground: oklch(0.25 0.04 80);
+
+    --info: oklch(0.6 0.15 240);
+    --info-foreground: white;
+
+    --selection: var(--fuwari-primary);
+    --selection-foreground: white;
+  }
+
+  .dark {
+    --background: var(--fuwari-page-bg);
+    --foreground: oklch(0.92 0.015 var(--fuwari-hue));
+
+    --muted: var(--fuwari-btn-regular-bg);
+    --muted-foreground: oklch(0.68 0.03 var(--fuwari-hue));
+
+    --popover: var(--fuwari-card-bg);
+    --popover-foreground: oklch(0.92 0.015 var(--fuwari-hue));
+
+    --border: oklch(0.3 0.02 var(--fuwari-hue));
+    --input: var(--fuwari-input-bg);
+
+    --primary: var(--fuwari-primary);
+    --primary-foreground: black;
+
+    --secondary: var(--fuwari-btn-regular-bg);
+    --secondary-foreground: var(--fuwari-btn-content);
+
+    --accent: var(--fuwari-btn-regular-bg);
+    --accent-foreground: var(--fuwari-btn-content);
+
+    --ring: var(--fuwari-primary);
+
+    --destructive: oklch(0.6 0.2 27);
+    --destructive-foreground: white;
+
+    --warning: oklch(0.8 0.14 80);
+    --warning-foreground: oklch(0.2 0.04 80);
+
+    --info: oklch(0.65 0.14 240);
+    --info-foreground: white;
+
+    --selection: var(--fuwari-primary);
+    --selection-foreground: black;
+  }
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-selection: var(--selection);
+  --color-selection-foreground: var(--selection-foreground);
 }
 
 @layer components {
