@@ -535,24 +535,33 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   4) Background hierarchy — this is the biggest source of "disjointed"
-      feel. The default admin uses `--background` for BOTH the page base
-      and every panel, so in default they coincide (white on white,
-      separated only by a stroke). Fuwari splits these into two distinct
-      tones: a soft page base (`--fuwari-page-bg`) with elevated cards
-      (`--fuwari-card-bg`). Re-map each role inside `.admin-layout` so
-      the admin gets the same calm two-layer depth as the public site:
-        - root shell  -> page base
-        - top header  -> page base (scrolls with the content)
-        - everything  -> `bg-background` becomes a card/panel tone
-      The sidebar, being a standalone column, becomes an elevated card
-      just like the public fuwari sidebar.
+   4) Background hierarchy — the biggest source of "disjointed" feel.
+      The default admin uses `--background` for BOTH the page base and
+      every panel, AND it leaves most content surfaces transparent
+      (table rows, list items, form areas) so they "show" the page base.
+      In default that base is white, so transparent content reads as a
+      clean white surface against its text. Mapping the fuwari page base
+      to the soft purple `--fuwari-page-bg` earlier turned all that
+      transparent content purple, clashing with the text everywhere.
+
+      Fix: adopt a WHITE base for the admin. The page shell and top
+      header use the elevated card tone (white / near-black in dark), so
+      every transparent content area naturally shows white and reads
+      clearly. `bg-background` panels stay on the same white tone and are
+      separated by stroke + rounding (same as default, but softened).
+      The sidebar — the one structural column that must read as a layer
+      against that white scape — takes the soft `--fuwari-page-bg` tone,
+      restoring the calm two-layer depth of the public fuwari layout.
+        - root shell  -> white (card tone)
+        - top header  -> white (card tone)
+        - everything  -> `bg-background` panels stay white + stroke
+        - sidebar     -> soft page-base tone (the distinctive layer)
    ───────────────────────────────────────────────────────────────────── */
 .admin-layout {
-  background-color: var(--fuwari-page-bg);
+  background-color: var(--fuwari-card-bg);
 }
 .admin-layout > main > header {
-  background-color: var(--fuwari-page-bg);
+  background-color: var(--fuwari-card-bg);
 }
 
 /* Actually every surface in the admin -- including the many
@@ -578,6 +587,14 @@
 }
 .admin-layout .bg-background\/80:not([class~="inset-0"]) {
   background-color: var(--fuwari-card-bg);
+}
+
+/* The sidebar is the one structural column that should read as its own
+   layer against the white content scape — the soft fuwari page tone,
+   echoing the public site's sidebar nestling on the page base. Its
+   `border-r + bg-background` combo is unique to it. */
+.admin-layout aside.bg-background.border-r {
+  background-color: var(--fuwari-page-bg);
 }
 
 /* 4b) Cards & panels — the rectangular outlined panels become rounded
