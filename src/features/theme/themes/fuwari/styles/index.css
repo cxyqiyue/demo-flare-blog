@@ -554,20 +554,50 @@
 .admin-layout > main > header {
   background-color: var(--fuwari-page-bg);
 }
-.admin-layout .bg-background {
+
+/* Actually every surface in the admin -- including the many
+   `bg-background/30..98` translucent variants (section panels, sticky
+   table headers, dashed fields, dropdowns, cards) -- must become a solid
+   elevated card tone so content reads clearly against the page base.
+   Exclude true `inset-0` overlays (modals / drawers), which must stay
+   translucent so the page beneath stays visible. */
+.admin-layout
+:is(
+  .bg-background,
+  .bg-background\/30,
+  .bg-background\/40,
+  .bg-background\/50,
+  .bg-background\/60,
+  .bg-background\/70,
+  .bg-background\/90,
+  .bg-background\/95,
+  .bg-background\/96,
+  .bg-background\/98
+):not([class~="inset-0"]) {
+  background-color: var(--fuwari-card-bg);
+}
+.admin-layout .bg-background\/80:not([class~="inset-0"]) {
   background-color: var(--fuwari-card-bg);
 }
 
-/* 4b) Cards & panels — default's outlined, rectangular panels become
-      fuwari's rounded, softly-shadowed cards on the card background.
-      `border.bg-muted` keeps its tinted surface (only softened). */
+/* 4b) Cards & panels — the rectangular outlined panels become rounded
+      fuwari cards on the elevated card tone. */
 .admin-layout .border.bg-background {
   border-radius: var(--fa-radius);
-  background-color: var(--fa-card-bg);
   box-shadow: var(--fa-shadow);
 }
-.admin-layout .border.bg-muted {
+
+/* 4c) "Box" content — tinted explainer / info / status panels (the
+      `border + bg-muted/10|/20` divs) take on the article AI-summary
+      look: a soft primary wash + faint primary border + rounding, so
+      they read as distinct emphasised boxes next to the plain white
+      content cards instead of flat grey. Skeleton loaders (animate-pulse)
+      and bare `.bg-muted` surfacists are left untouched. */
+.admin-layout div.border.bg-muted\/10,
+.admin-layout div.border.bg-muted\/20 {
   border-radius: var(--fa-radius-md);
+  background: color-mix(in oklab, var(--fuwari-primary) 6%, transparent);
+  border-color: color-mix(in oklab, var(--fuwari-primary) 18%, transparent);
 }
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -608,4 +638,69 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
 .admin-layout .hover\:bg-foreground:hover.text-background,
 .admin-layout .hover\:bg-foreground:hover.bg-transparent {
   color: var(--fuwari-btn-content);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Portal modals & drawers
+   ----------------------------------------------------------------
+   Confirmation dialogs and many new/edit modals render through
+   `createPortal(document.body)`, so they live OUTSIDE `.admin-layout` and
+   the scoped rules above cannot reach them — leaving the dialogs in the
+   default theme (serif titles, grid corners, black confirmation button)
+   while the rest of the admin has become fuwari. That clash is another
+   source of the "disjointed" feel.
+
+   Because the fuwari stylesheet only ships when THEME=fuwari, and these
+   rules are gated on `body:has(.admin-layout)` (only present on the admin
+   routes), they fire solely inside the fuwari admin — they never touch
+   the default theme nor the fuwari public site. Give the dialog shell a
+   rounded white card and settle its internal default-isms into the same
+   sans-serif / primary system as the rest of the admin.
+
+   Top-level tokens (--fuwari-*) are used here because the portal lives
+   outside the .admin-layout token scope.
+   ═══════════════════════════════════════════════════════════════════════ */
+body:has(.admin-layout) div:not(.admin-layout).relative.bg-background.border,
+body:has(.admin-layout) aside.relative.bg-background {
+  border-radius: var(--fuwari-radius-large);
+  background-color: var(--fuwari-card-bg);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 4px 24px rgb(0 0 0 / 0.1);
+}
+
+/* Settle dialog-internal default-isms only while the admin is open. */
+body:has(.admin-layout) :is(h1, h2, h3, h4, h5, h6),
+body:has(.admin-layout) .font-serif,
+body:has(.admin-layout) .font-mono {
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+body:has(.admin-layout) .font-serif {
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+body:has(.admin-layout) .tracking-widest,
+body:has(.admin-layout) .tracking-\[0\.2em\],
+body:has(.admin-layout) .tracking-\[0\.15em\],
+body:has(.admin-layout) .tracking-\[0\.12em\],
+body:has(.admin-layout) .tracking-\[0\.1em\] {
+  letter-spacing: 0.01em;
+}
+body:has(.admin-layout) .uppercase {
+  text-transform: none;
+}
+body:has(.admin-layout) .rounded-none,
+body:has(.admin-layout) .rounded-sm {
+  border-radius: 0.75rem;
+}
+body:has(.admin-layout) .bg-foreground {
+  background-color: var(--fuwari-primary);
+}
+body:has(.admin-layout) .bg-foreground.text-background {
+  color: #fff;
+}
+.dark body:has(.admin-layout) .bg-foreground.text-background {
+  color: rgb(0 0 0 / 0.78);
 }
