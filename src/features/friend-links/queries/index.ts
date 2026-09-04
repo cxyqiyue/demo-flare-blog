@@ -3,6 +3,7 @@ import type { FriendLinkStatus } from "@/lib/db/schema";
 import { getAllFriendLinksFn } from "../api/friend-links.admin.api";
 import {
   getApprovedFriendLinksFn,
+  getFriendLinksConfigFn,
   getMyFriendLinksFn,
 } from "../api/friend-links.user.api";
 
@@ -11,6 +12,7 @@ export const FRIEND_LINKS_KEYS = {
   approved: ["friend-links", "approved"] as const,
   mine: ["friend-links", "mine"] as const,
   admin: ["friend-links", "admin"] as const,
+  config: ["friend-links", "config"] as const,
 };
 
 export function myFriendLinksQuery() {
@@ -33,5 +35,12 @@ export function allFriendLinksQuery(
   return queryOptions({
     queryKey: [...FRIEND_LINKS_KEYS.admin, options],
     queryFn: () => getAllFriendLinksFn({ data: options }),
+  });
+}
+
+export function friendLinksConfigQuery() {
+  return queryOptions({
+    queryKey: FRIEND_LINKS_KEYS.config,
+    queryFn: () => getFriendLinksConfigFn(),
   });
 }

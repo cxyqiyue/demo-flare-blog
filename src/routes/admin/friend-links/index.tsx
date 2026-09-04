@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { AddFriendLinkModal } from "@/features/friend-links/components/admin/add-friend-link-modal";
 import { FriendLinkModerationTable } from "@/features/friend-links/components/admin/friend-link-moderation-table";
+import { FriendLinksConfigEditor } from "@/features/friend-links/components/admin/friend-links-config-editor";
 import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
 import type { FriendLinkStatus } from "@/lib/db/schema";
 import { m } from "@/paraglide/messages";
@@ -112,6 +113,19 @@ function FriendLinksAdminPage() {
         {/* Content Area */}
         <div className="min-h-100">
           <FriendLinkModerationTable status={currentStatus} page={page} />
+        </div>
+
+        {/* 本站信息 & 申请须知 */}
+        <div className="pt-14 border-t border-border/30">
+          <div className="mb-8 space-y-1">
+            <h2 className="font-serif text-2xl font-medium tracking-tight text-foreground">
+              {m.friend_links_site_info_section_title()}
+            </h2>
+            <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+              {m.friend_links_site_info_section_tag()}
+            </p>
+          </div>
+          <FriendLinksConfigEditor />
         </div>
       </div>
 

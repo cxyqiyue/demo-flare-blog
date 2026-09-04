@@ -1,9 +1,14 @@
 import { Link } from "@tanstack/react-router";
+import { SiteInfoAndApplyRules } from "@/features/friend-links/components/site-info-and-apply-rules";
 import type { FriendLinksPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
 import { FriendCard } from "./components/friend-card";
 
-export function FriendLinksPage({ links }: FriendLinksPageProps) {
+export function FriendLinksPage({
+  links,
+  siteInfo,
+  applyRules,
+}: FriendLinksPageProps) {
   return (
     <div className="flex flex-col gap-4 w-full">
       {/* Header Banner representing the current page */}
@@ -46,6 +51,11 @@ export function FriendLinksPage({ links }: FriendLinksPageProps) {
             <p className="text-lg">{m.friend_links_fuwari_no_links()}</p>
           </div>
         )}
+      </div>
+
+      {/* 本站信息 & 申请须知 */}
+      <div className="fuwari-card-base p-6 md:p-8 fuwari-onload-animation">
+        <SiteInfoAndApplyRules siteInfo={siteInfo} applyRules={applyRules} />
       </div>
     </div>
   );

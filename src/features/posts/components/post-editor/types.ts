@@ -22,6 +22,8 @@ export interface PostEditorData {
   /** 明文访问密码（仅编辑器内持有，服务端加密后落库） */
   password: string;
   passwordChannel: string;
+  /** 密码获取提示（可选填写的文本提示，前台密码弹窗展示） */
+  passwordHint: string;
 }
 
 export interface PostEditorProps {
@@ -53,4 +55,5 @@ export const defaultPostData: PostEditorData = {
   visibility: "public",
   password: "",
   passwordChannel: "",
+  passwordHint: "",
 };

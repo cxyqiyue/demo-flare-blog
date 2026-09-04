@@ -40,6 +40,8 @@ export const PostsTable = sqliteTable(
     passwordCipher: text("password_cipher"),
     /** 获取访问密码的渠道链接（前台「获取密码」按钮跳转） */
     passwordChannel: text("password_channel"),
+    /** 密码获取提示：管理端可选填写的文本提示，前台密码弹窗内展示 */
+    passwordHint: text("password_hint"),
     publishedAt: integer("published_at", { mode: "timestamp" }),
     pinnedAt: integer("pinned_at", { mode: "timestamp" }),
     skillId: integer("skill_id").references(() => SkillsTable.id, {

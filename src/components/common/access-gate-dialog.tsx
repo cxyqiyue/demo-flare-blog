@@ -1,5 +1,5 @@
 import { ClientOnly } from "@tanstack/react-router";
-import { Loader2, X } from "lucide-react";
+import { ArrowLeft, ExternalLink, Loader2, X } from "lucide-react";
 import type React from "react";
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
@@ -21,6 +21,7 @@ interface AccessGateDialogProps {
   mode: AccessGateMode;
   title?: string;
   channel?: string | null;
+  hint?: string | null;
   error?: AccessGateError | null;
   isSubmitting?: boolean;
   isSuccess?: boolean;
@@ -42,6 +43,7 @@ function AccessGateDialogInternal({
   mode,
   title,
   channel,
+  hint,
   error,
   isSubmitting = false,
   isSuccess = false,
@@ -75,6 +77,13 @@ function AccessGateDialogInternal({
         ? m.access_gate_desc_login()
         : m.access_gate_desc_password();
 
+  const handleChannelOpen = () => {
+    if (!channel) return;
+    const url = channel.trim();
+    const target = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    window.open(target, "_blank", "noopener,noreferrer");
+  };
+
   return createPortal(
     <div
       className={`fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 transition-all duration-300 ${
@@ -82,23 +91,24 @@ function AccessGateDialogInternal({
       }`}
     >
       <div
-        className="absolute inset-0 bg-background/90 backdrop-blur-sm"
-        onClick={() => {
-          if (!isSubmitting) onOpenChange(false);
-        }}
+        className="absolute inset-0 bg-background/70 backdrop-blur-sm"
+        aria-hidden="true"
       />
 
       <div
-        className={`relative w-full max-w-md bg-background border border-border/30 flex flex-col transform transition-all duration-300 ${
+        role="dialog"
+        aria-modal="true"
+        className={`relative w-full max-w-md bg-background border border-border/30 shadow-2xl flex flex-col transform transition-all duration-300 ${
           open ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
         }`}
       >
-        <div className="px-6 pt-8 pb-4 flex items-start justify-between">
+        {/* Header */}
+        <div className="px-7 pt-7 pb-5 flex items-start justify-between border-b border-border/30">
           <div className="space-y-2 min-w-0">
-            <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground/60">
+            <p className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground/60">
               [ {eyebrow} ]
             </p>
-            <h2 className="text-2xl font-serif font-medium text-foreground truncate">
+            <h2 className="text-xl font-serif font-medium tracking-tight text-foreground truncate">
               {title || (mode === "private" ? m.access_gate_title_private() : mode === "login" ? m.access_gate_title_login() : m.access_gate_title_password())}
             </h2>
           </div>
@@ -106,20 +116,32 @@ function AccessGateDialogInternal({
             type="button"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
-            className="p-2 -mr-2 text-muted-foreground/50 hover:text-foreground transition-colors disabled:opacity-50"
+            className="p-2 -mr-1 -mt-1 text-muted-foreground/50 hover:text-foreground transition-colors disabled:opacity-50"
             aria-label={m.common_close()}
           >
             <X size={16} strokeWidth={1.5} />
           </button>
         </div>
 
-        <div className="px-6 pb-8">
-          <p className="text-base text-muted-foreground/80 leading-relaxed font-light">
+        {/* Body */}
+        <div className="px-7 py-6">
+          <p className="text-sm text-muted-foreground/80 leading-relaxed font-light">
             {desc}
           </p>
 
           {mode === "password" ? (
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+              {hint && hint.trim() !== "" && (
+                <div className="px-4 py-3 bg-muted/20 border-l-2 border-foreground/30">
+                  <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/70 mb-1">
+                    {m.access_gate_hint_label()}
+                  </p>
+                  <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                    {hint}
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label
                   htmlFor="access-gate-password"
@@ -146,17 +168,38 @@ function AccessGateDialogInternal({
                 </p>
               )}
 
-              {channel && (
-                <p className="text-xs text-muted-foreground/70">
-                  {m.access_gate_channel_tip({ channel })}
-                </p>
+              {channel && channel.trim() !== "" && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground/70">
+                    {m.access_gate_channel_tip()}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleChannelOpen}
+                    className="w-full gap-2 rounded-none font-mono text-[11px] uppercase tracking-widest"
+                  >
+                    <ExternalLink size={12} />
+                    <span>{m.access_gate_get_password_btn()}</span>
+                  </Button>
+                </div>
               )}
 
-              <div className="flex justify-end pt-2">
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isSubmitting || isSuccess}
+                  className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  <ArrowLeft size={12} />
+                  <span>{m.access_gate_back_btn()}</span>
+                </button>
+
                 <Button
                   type="submit"
                   disabled={isSubmitting || isSuccess || !password.trim()}
-                  className="flex items-center justify-center gap-2"
+                  className="flex items-center justify-center gap-2 rounded-none font-mono text-[11px] uppercase tracking-widest"
                 >
                   {isSubmitting && <Loader2 size={12} className="animate-spin" />}
                   <span>

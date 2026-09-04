@@ -57,6 +57,34 @@ export const SUBSCRIPTION_TEMPLATE_PLACEHOLDERS = [
   "{{siteName}}",
 ] as const;
 
+// ── 友链：本站信息 & 申请须知 ────────────────────────────────
+export const FRIEND_LINK_APPLY_RULES_MAX = 5;
+
+const applyRuleSchema = z.object({
+  id: z.string(),
+  content: z.string().max(1000).optional(),
+});
+
+const friendLinkSiteInfoSchema = z.object({
+  /** 站点/博主名称 */
+  name: z.string().max(100).optional(),
+  /** 站点/博主地址（Markdown 链接，前台渲染为可点击链接） */
+  url: z.string().max(500).optional(),
+  /** 描述 */
+  description: z.string().max(1000).optional(),
+  /** 头像（Markdown 链接，前台渲染为图片） */
+  avatar: z.string().max(500).optional(),
+  /** 邮箱 */
+  email: z.string().max(200).optional(),
+});
+
+export const FriendLinksConfigSchema = z.object({
+  siteInfo: friendLinkSiteInfoSchema.optional(),
+  applyRules: z.array(applyRuleSchema).max(FRIEND_LINK_APPLY_RULES_MAX).optional(),
+});
+export type FriendLinksConfig = z.infer<typeof FriendLinksConfigSchema>;
+export type FriendLinkApplyRule = z.infer<typeof applyRuleSchema>;
+
 export const SubscriptionConfigSchema = z.object({
   allUserNotifyEnabled: z.boolean().optional(),
   templateSubject: z.string().max(300).optional(),
@@ -278,6 +306,7 @@ export const CONFIG_SECTIONS = [
   "site",
   "cloudflareAnalytics",
   "storage",
+  "friendLinks",
 ] as const;
 export type ConfigSection = (typeof CONFIG_SECTIONS)[number];
 
@@ -310,6 +339,10 @@ export const UpdateSystemConfigSectionInputSchema = z.discriminatedUnion(
       data: CloudflareAnalyticsConfigSchema,
     }),
     z.object({ section: z.literal("storage"), data: StorageConfigSchema }),
+    z.object({
+      section: z.literal("friendLinks"),
+      data: FriendLinksConfigSchema,
+    }),
   ],
 );
 export type UpdateSystemConfigSectionInput = z.infer<
@@ -328,6 +361,7 @@ export const SystemConfigSchema = z.object({
   site: SiteConfigInputSchema.optional(),
   cloudflareAnalytics: CloudflareAnalyticsConfigSchema.optional(),
   storage: StorageConfigSchema.optional(),
+  friendLinks: FriendLinksConfigSchema.optional(),
 });
 
 export const createSystemConfigFormSchema = (messages: Messages) =>
@@ -349,6 +383,7 @@ export const createSystemConfigFormSchema = (messages: Messages) =>
     site: createSiteConfigInputFormSchema(messages).optional(),
     cloudflareAnalytics: SystemConfigSchema.shape.cloudflareAnalytics,
     storage: SystemConfigSchema.shape.storage,
+    friendLinks: SystemConfigSchema.shape.friendLinks,
   });
 
 export type SystemConfig = z.infer<typeof SystemConfigSchema>;
@@ -491,6 +526,16 @@ export const DEFAULT_CONFIG: SystemConfig = {
   site: blogConfig satisfies SiteConfigInput,
   storage: {
     kvEnabled: true,
+  },
+  friendLinks: {
+    siteInfo: {
+      name: "",
+      url: "",
+      description: "",
+      avatar: "",
+      email: "",
+    },
+    applyRules: [],
   },
 };
 

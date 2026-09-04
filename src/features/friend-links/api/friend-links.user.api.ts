@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import * as ConfigService from "@/features/config/service/config.service";
 import {
   authMiddleware,
   createRateLimitMiddleware,
@@ -28,6 +29,13 @@ export const getApprovedFriendLinksFn = createServerFn()
   .middleware([dbMiddleware])
   .handler(async ({ context }) => {
     return await FriendLinkService.getApprovedFriendLinks(context);
+  });
+
+export const getFriendLinksConfigFn = createServerFn()
+  .middleware([dbMiddleware])
+  .handler(async ({ context }) => {
+    const config = await ConfigService.getSystemConfig(context);
+    return config.friendLinks ?? { siteInfo: {}, applyRules: [] };
   });
 
 export const getMyFriendLinksFn = createServerFn()

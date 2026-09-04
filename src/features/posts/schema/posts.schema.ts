@@ -30,6 +30,7 @@ export const PostSelectSchema = createSelectSchema(PostsTable, {
   // 因此作者昵称变更会同步到历史文章。
   .extend({
     author: z.string().nullable(),
+    passwordHint: z.string().nullable(),
   });
 
 /** 管理端专用：在 select 基础上追加解密后的明文访问密码 */

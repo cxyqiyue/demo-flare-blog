@@ -350,6 +350,20 @@ export function resolveSystemConfig(
     cloudflareAnalytics: resolveCloudflareAnalyticsConfig(config),
     storage: resolveStorageConfig(config),
     site: resolveSiteConfig(config),
+    friendLinks: resolveFriendLinksConfig(config),
+  };
+}
+
+function resolveFriendLinksConfig(
+  config: SystemConfig | null | undefined,
+): SystemConfig["friendLinks"] {
+  return {
+    siteInfo: {
+      ...DEFAULT_CONFIG.friendLinks?.siteInfo,
+      ...config?.friendLinks?.siteInfo,
+    },
+    applyRules:
+      config?.friendLinks?.applyRules ?? DEFAULT_CONFIG.friendLinks?.applyRules ?? [],
   };
 }
 

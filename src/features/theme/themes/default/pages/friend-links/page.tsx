@@ -1,10 +1,15 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
+import { SiteInfoAndApplyRules } from "@/features/friend-links/components/site-info-and-apply-rules";
 import type { FriendLinksPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
 import { FriendLinkCard } from "./friend-link-card";
 
-export function FriendLinksPage({ links }: FriendLinksPageProps) {
+export function FriendLinksPage({
+  links,
+  siteInfo,
+  applyRules,
+}: FriendLinksPageProps) {
   return (
     <div className="w-full max-w-3xl mx-auto pb-20 px-6 md:px-0">
       {/* Header */}
@@ -36,6 +41,9 @@ export function FriendLinksPage({ links }: FriendLinksPageProps) {
           </div>
         )}
       </div>
+
+      {/* 本站信息 & 申请须知 */}
+      <SiteInfoAndApplyRules siteInfo={siteInfo} applyRules={applyRules} />
 
       {/* Submit CTA */}
       <div className="mt-20 pt-10 border-t border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-6">

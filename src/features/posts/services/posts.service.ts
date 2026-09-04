@@ -281,6 +281,7 @@ function buildGatedShell(
     status: gateMeta.status,
     visibility: gateMeta.visibility,
     passwordChannel: gateMeta.passwordChannel,
+    passwordHint: gateMeta.passwordHint,
     publishedAt: gateMeta.publishedAt,
     pinnedAt: gateMeta.pinnedAt,
     createdAt: gateMeta.createdAt,
@@ -587,6 +588,7 @@ export async function findPostById(
     visibility: post.visibility,
     password,
     passwordChannel: post.passwordChannel,
+    passwordHint: post.passwordHint,
     isSynced,
     hasPublicCache,
   };
