@@ -415,37 +415,99 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   Fuwari admin backend — visual system overlay
+   Fuwari admin backend — systematic visual system overlay
    ----------------------------------------------------------------
-   Transforms the default admin shell into fuwari's rounded / card /
-   primary-colour visual language. Scoped strictly to `.admin-layout`
-   so the public site and the default theme are unaffected.
+   Converts the default admin shell into fuwari's rounded / card /
+   primary-colour, sans-serif design language as ONE coherent system,
+   rather than a few scattered patches. Scoped strictly to
+   `.admin-layout`, so the public site and the default theme are
+   completely unaffected.
+
+   The default admin has a distinctive "newsroom / terminal" language:
+   serif titles, mono labels, forced uppercase + wide tracking, 9-11px
+   micro type, right-angle corners and inverted black/white emphasis.
+   Every one of those traits is remapped below to fuwari's calm, rounded,
+   primary-coloured system so nothing "default" leaks through.
+
+   Fuwari design tokens reused: --fuwari-primary / -hover / -active,
+   --fuwari-radius-large (1rem), --fuwari-card-bg, --fuwari-btn-*,
+   --fuwari-input-*.
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* 1) Typography: fuwari uses a clean sans stack — drop the serif headings
-      and mono-heavy labels that belong to the default design language. */
-.admin-layout,
-.admin-layout :is(h1, h2, h3, h4, h5, h6) {
-  font-family:
+.admin-layout {
+  /* Fuwari admin design tokens (scoped) */
+  --fa-font:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --fa-radius: var(--fuwari-radius-large); /* 1rem — cards, modals, big ctas */
+  --fa-radius-md: 0.75rem; /* rounded-lg — inputs, buttons, pills */
+  --fa-card-bg: var(--fuwari-card-bg);
+  --fa-input-bg: var(--fuwari-input-bg, rgb(0 0 0 / 0.05));
+  --fa-shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 2px 12px rgb(0 0 0 / 0.05);
+  font-family: var(--fa-font);
 }
 
+/* ─────────────────────────────────────────────────────────────────────
+   1) Typography — one clean sans stack for EVERYTHING. The default's
+      serif headings and mono micro-labels are what read most as "default";
+      sink them all into the fuwari sans system.
+   ───────────────────────────────────────────────────────────────────── */
+.admin-layout :is(h1, h2, h3, h4, h5, h6),
+.admin-layout .font-serif,
+.admin-layout .font-mono {
+  font-family: var(--fa-font);
+}
+
+.admin-layout :is(h1, h2, h3, h4, h5, h6),
 .admin-layout .font-serif {
-  font-family:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
   letter-spacing: -0.02em;
+  font-weight: 600;
 }
 
-.admin-layout :is(h1, h2, h3, h4, h5, h6) {
+/* Sink the default's ultra-tight tracking on display / labels. */
+.admin-layout .tracking-tight {
   letter-spacing: -0.02em;
 }
+/* Sink the default's exaggerated wide tracking on "editorial" labels. */
+.admin-layout .tracking-widest,
+.admin-layout .tracking-wider,
+.admin-layout .tracking-\[0\.2em\],
+.admin-layout .tracking-\[0\.15em\],
+.admin-layout .tracking-\[0\.12em\],
+.admin-layout .tracking-\[0\.1em\] {
+  letter-spacing: 0.01em;
+}
 
-/* 2) Emphasis — the default admin uses inverted black/white for primary
-      actions & active states; fuwari uses its primary colour instead. */
+/* Drop the forced caps that give labels their "terminal" feel. */
+.admin-layout .uppercase {
+  text-transform: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   2) Radius — convert every right-angle into fuwari's soft rounding
+      so no straight rectangle remains.
+   ───────────────────────────────────────────────────────────────────── */
+.admin-layout .rounded-none,
+.admin-layout .rounded-sm {
+  border-radius: var(--fa-radius-md);
+}
+.admin-layout .rounded {
+  border-radius: var(--fa-radius-md);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   3) Emphasis — the default admin uses inverted black/white for primary
+      actions & active states; fuwari uses its primary colour, with a
+      matching hover/active ramp.
+   ───────────────────────────────────────────────────────────────────── */
 .admin-layout .bg-foreground {
   background-color: var(--fuwari-primary);
+}
+.admin-layout .bg-foreground\/90 {
+  background-color: var(--fuwari-primary-hover);
+}
+.admin-layout .bg-foreground\/80 {
+  background-color: var(--fuwari-primary-hover);
 }
 .admin-layout .hover\:bg-foreground:hover {
   background-color: var(--fuwari-primary-hover);
@@ -453,30 +515,72 @@
 .admin-layout .hover\:bg-foreground\/90:hover {
   background-color: var(--fuwari-primary-hover);
 }
+.admin-layout .hover\:bg-foreground\/80:hover {
+  background-color: var(--fuwari-primary-hover);
+}
+.admin-layout .active\:bg-foreground\/80:active {
+  background-color: var(--fuwari-primary-active);
+}
 
-.admin-layout .bg-foreground.text-background {
+/* Match the text colour sit on top of the primary fill. */
+.admin-layout .bg-foreground.text-background,
+.admin-layout .bg-foreground\/90.text-background,
+.admin-layout .bg-foreground\/80.text-background {
   color: #fff;
 }
-.dark .admin-layout .bg-foreground.text-background {
+.dark .admin-layout .bg-foreground.text-background,
+.dark .admin-layout .bg-foreground\/90.text-background,
+.dark .admin-layout .bg-foreground\/80.text-background {
   color: rgb(0 0 0 / 0.78);
 }
 
-/* 3) Cards — convert the default rectangular outlined panels into fuwari's
-      rounded, softly-shadowed cards. */
-.admin-layout .border.bg-background {
-  border-radius: var(--fuwari-radius-large);
-  background-color: var(--fuwari-card-bg);
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.04),
-    0 2px 10px rgb(0 0 0 / 0.04);
+/* ─────────────────────────────────────────────────────────────────────
+   4) Cards & panels — default's outlined, rectangular panels become
+      fuwari's rounded, softly-shadowed cards on the card background.
+   ───────────────────────────────────────────────────────────────────── */
+.admin-layout .border.bg-background,
+.admin-layout .border.bg-muted {
+  border-radius: var(--fa-radius);
+  background-color: var(--fa-card-bg);
+  box-shadow: var(--fa-shadow);
 }
 
-/* 4) Sidebar/Tabs active item — rounded primary pill instead of inverted
-      square, and primary-coloured active borders/underlines. */
-.admin-layout aside nav .border-foreground,
-.admin-layout [data-state="active"].border-foreground {
-  border-radius: var(--fuwari-radius-large);
+/* ─────────────────────────────────────────────────────────────────────
+   5) Inputs — fuwari gives fields a soft tinted surface and rounded
+      corners instead of the default bottom-rule / square look.
+   ───────────────────────────────────────────────────────────────────── */
+.admin-layout
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+  [type="color"]
+):not([type="hidden"]),
+.admin-layout textarea,
+.admin-layout select {
+  border-radius: var(--fa-radius-md);
+  background-color: var(--fa-input-bg);
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   6) Active borders / underlines — repoint from black to the primary.
+   ───────────────────────────────────────────────────────────────────── */
 .admin-layout .border-foreground {
   border-color: var(--fuwari-primary);
+}
+.admin-layout aside nav .border-foreground,
+.admin-layout [data-state="active"].border-foreground,
+.admin-layout [data-selected="true"].border-foreground {
+  border-radius: var(--fa-radius-md);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   7) Sidebar & pagination micro-typography — the active pill, nav item
+      and page-number states align with the primary-colour system.
+   ───────────────────────────────────────────────────────────────────── */
+.admin-layout aside nav .rounded-none,
+.admin-layout aside nav .rounded-sm,
+.admin-layout aside nav .rounded {
+  border-radius: var(--fa-radius-md);
+}
+.admin-layout .hover\:bg-foreground:hover.text-background,
+.admin-layout .hover\:bg-foreground:hover.bg-transparent {
+  color: var(--fuwari-btn-content);
 }
