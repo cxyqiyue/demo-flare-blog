@@ -439,11 +439,11 @@
   --fa-font:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
-  --fa-radius: var(--fuwari-radius-large); /* 1rem — cards, modals, big ctas */
-  --fa-radius-md: 0.75rem; /* rounded-lg — inputs, buttons, pills */
+  --fa-radius: 1.25rem; /* cards, modals, big ctas — generously rounded */
+  --fa-radius-md: 0.9rem; /* inputs, buttons, pills — soft & modern */
   --fa-card-bg: var(--fuwari-card-bg);
   --fa-input-bg: var(--fuwari-input-bg, rgb(0 0 0 / 0.05));
-  --fa-shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 2px 12px rgb(0 0 0 / 0.05);
+  --fa-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 6px 24px rgb(0 0 0 / 0.06);
   font-family: var(--fa-font);
 }
 
@@ -598,10 +598,17 @@
 }
 
 /* 4b) Cards & panels — the rectangular outlined panels become rounded
-      fuwari cards on the elevated card tone. */
+      fuwari cards on the elevated card tone. The generous radius + soft
+      shadow make them "lift" off the white base; the outline is softened
+      to a faint hairline so cards read as layered surfaces rather than
+      stiff outlined boxes (mirrors the front-end border-black/5 look). */
 .admin-layout .border.bg-background {
   border-radius: var(--fa-radius);
   box-shadow: var(--fa-shadow);
+  border-color: rgb(0 0 0 / 0.06);
+}
+.dark .admin-layout .border.bg-background {
+  border-color: rgb(255 255 255 / 0.08);
 }
 
 /* 4c) "Box" content — tinted explainer / info / status panels (the
@@ -741,6 +748,46 @@ body:has(.admin-layout) {
 .admin-layout .hover\:bg-muted\/30:hover,
 .admin-layout .hover\:bg-accent\/50:hover {
   background-color: oklch(0.93 0.025 var(--fuwari-hue));
+}
+
+/* 4e) Rounded & airy — drop the "management console" stiffness by giving
+      interactive and layered surfaces the soft, modern fuwari feel:
+      rounder pills/buttons, a softer header, gentle primary-tinted hover
+      feedback on rows & lists (front-end hover:bg-btn-plain language),
+      and slightly taller line-height for calm white-space. Scoped to the
+      admin so default + the public site are untouched. */
+.admin-layout :is(.rounded-md, .rounded-lg, .rounded-[0.5rem]) {
+  border-radius: var(--fa-radius-md);
+}
+
+/* Primary CTA buttons get a generous pill-like radius so they feel
+   tactile rather than boxy. */
+.admin-layout .rounded-none.h-9,
+.admin-layout .rounded-none.h-10 {
+  border-radius: var(--fa-radius);
+}
+
+/* Softer, calmer top header: blend it into the canvas and drop the harsh
+   underline for a faint hairline + soft shadow. */
+.admin-layout > main > header {
+  border-bottom-color: rgb(0 0 0 / 0.05);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.02);
+}
+.dark .admin-layout > main > header {
+  border-bottom-color: rgb(255 255 255 / 0.06);
+}
+
+/* Gentle primary-tinted hover on rows & list items (instead of flat grey)
+   for a modern, alive feel — matches front-end hover:bg-btn-plain. */
+.admin-layout tr:hover,
+.admin-layout [role="row"]:hover,
+.admin-layout [class*="hover:bg-muted"]:hover,
+.admin-layout [class*="hover:bg-accent"]:hover {
+  background-color: color-mix(
+    in oklab,
+    var(--fuwari-primary) 2.5%,
+    var(--fuwari-card-bg)
+  );
 }
 
 /* ─────────────────────────────────────────────────────────────────────
