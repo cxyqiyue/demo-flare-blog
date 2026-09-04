@@ -30,7 +30,8 @@ function getThemeStyles(): ThemeStyles {
           "text-sm font-medium fuwari-text-50 hover:text-(--fuwari-primary) transition-colors break-all no-underline",
         valueText: "text-sm font-medium fuwari-text-75 break-all",
         markdown: (color) =>
-          `text-sm font-medium leading-relaxed ${color} [&_p]:my-0 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_a]:text-(--fuwari-primary) [&_a]:no-underline`,
+          `text-sm font-medium leading-relaxed ${color} [&_p]:my-0 [&_p]:inline [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_a]:text-(--fuwari-primary) [&_a]:no-underline`,
+
         divider: "border-b border-(--fuwari-meta-divider)",
       };
     case "default":
@@ -44,7 +45,8 @@ function getThemeStyles(): ThemeStyles {
           "text-sm text-muted-foreground hover:text-foreground transition-colors break-all no-underline",
         valueText: "text-sm text-foreground break-all",
         markdown: (color) =>
-          `text-sm leading-relaxed ${color} [&_p]:my-0 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_a]:no-underline [&_a:hover]:underline`,
+          `text-sm leading-relaxed ${color} [&_p]:my-0 [&_p]:inline [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_a]:no-underline [&_a:hover]:underline`,
+
         divider: "border-b border-border/40",
       };
   }
