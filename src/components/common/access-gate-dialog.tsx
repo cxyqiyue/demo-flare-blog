@@ -3,8 +3,6 @@ import { ArrowLeft, ExternalLink, Loader2, X } from "lucide-react";
 import type React from "react";
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { m } from "@/paraglide/messages";
 
 export type AccessGateMode = "private" | "password" | "login";
@@ -91,32 +89,37 @@ function AccessGateDialogInternal({
       }`}
     >
       <div
-        className="absolute inset-0 bg-background/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-background/90 backdrop-blur-md"
         aria-hidden="true"
       />
 
       <div
         role="dialog"
         aria-modal="true"
-        className={`relative w-full max-w-md bg-background border border-border/40 rounded-lg shadow-xl flex flex-col transform transition-all duration-300 ${
+        className={`relative w-full max-w-md bg-background border border-border/20 shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
           open ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
         }`}
       >
         {/* Header */}
-        <div className="px-7 pt-7 pb-5 flex items-start justify-between border-b border-border/30">
-          <div className="space-y-2 min-w-0">
-            <p className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground/60">
+        <div className="px-6 sm:px-8 pt-6 pb-5 flex items-start justify-between border-b border-border/10">
+          <div className="space-y-1.5 min-w-0">
+            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground/60">
               [ {eyebrow} ]
             </p>
-            <h2 className="text-xl font-serif font-medium tracking-tight text-foreground truncate">
-              {title || (mode === "private" ? m.access_gate_title_private() : mode === "login" ? m.access_gate_title_login() : m.access_gate_title_password())}
+            <h2 className="text-xs font-mono uppercase tracking-widest text-foreground">
+              {title ||
+                (mode === "private"
+                  ? m.access_gate_title_private()
+                  : mode === "login"
+                    ? m.access_gate_title_login()
+                    : m.access_gate_title_password())}
             </h2>
           </div>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
-            className="p-2 -mr-1 -mt-1 text-muted-foreground/50 hover:text-foreground transition-colors disabled:opacity-50"
+            className="p-1 -mr-1 -mt-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             aria-label={m.common_close()}
           >
             <X size={16} strokeWidth={1.5} />
@@ -124,32 +127,32 @@ function AccessGateDialogInternal({
         </div>
 
         {/* Body */}
-        <div className="px-7 py-6">
-          <p className="text-sm text-muted-foreground/80 leading-relaxed font-light">
+        <div className="p-6 sm:p-8 space-y-8">
+          <p className="text-sm font-light text-muted-foreground/80 leading-relaxed">
             {desc}
           </p>
 
           {mode === "password" ? (
-            <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-8">
               {hint && hint.trim() !== "" && (
-                <div className="px-4 py-3 bg-muted/20 border-l-2 border-foreground/30">
-                  <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-muted-foreground/70 mb-1">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/70">
                     {m.access_gate_hint_label()}
                   </p>
-                  <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                  <p className="text-sm leading-relaxed text-muted-foreground/90 whitespace-pre-wrap">
                     {hint}
                   </p>
                 </div>
               )}
 
-              <div>
+              <div className="space-y-2 group">
                 <label
                   htmlFor="access-gate-password"
-                  className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70"
+                  className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 group-focus-within:text-foreground transition-colors"
                 >
                   {m.access_gate_input_label()}
                 </label>
-                <Input
+                <input
                   id="access-gate-password"
                   type="password"
                   value={password}
@@ -158,48 +161,47 @@ function AccessGateDialogInternal({
                   autoComplete="off"
                   autoFocus
                   disabled={isSubmitting || isSuccess}
-                  className="mt-2"
+                  className="w-full bg-transparent border-0 border-b border-border/40 text-foreground font-mono text-sm py-2 focus:border-foreground focus:outline-none transition-all placeholder:text-muted-foreground/30 rounded-none shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
               {error && (
-                <p role="alert" className="text-xs text-destructive">
+                <p role="alert" className="text-[10px] font-mono uppercase tracking-widest text-destructive">
                   {errorMessage[error]()}
                 </p>
               )}
 
               {channel && channel.trim() !== "" && (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground/70">
+                <div className="space-y-3">
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">
                     {m.access_gate_channel_tip()}
                   </p>
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
                     onClick={handleChannelOpen}
-                    className="w-full gap-2 rounded-lg font-mono text-[11px] uppercase tracking-widest"
+                    className="text-[10px] font-mono font-bold uppercase tracking-widest text-foreground hover:opacity-70 transition-opacity inline-flex items-center gap-2"
                   >
-                    <ExternalLink size={12} />
+                    <ExternalLink size={12} strokeWidth={1.5} />
                     <span>{m.access_gate_get_password_btn()}</span>
-                  </Button>
+                  </button>
                 </div>
               )}
 
-              <div className="flex items-center justify-between gap-3 pt-2">
+              <div className="flex items-center justify-between gap-4 pt-2 border-t border-border/10">
                 <button
                   type="button"
                   onClick={() => onOpenChange(false)}
                   disabled={isSubmitting || isSuccess}
-                  className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-50"
+                  className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  <ArrowLeft size={12} />
+                  <ArrowLeft size={12} className="-ml-1" />
                   <span>{m.access_gate_back_btn()}</span>
                 </button>
 
-                <Button
+                <button
                   type="submit"
                   disabled={isSubmitting || isSuccess || !password.trim()}
-                  className="flex items-center justify-center gap-2 rounded-lg shadow-none font-mono text-[11px] uppercase tracking-widest"
+                  className="text-[10px] font-mono font-bold uppercase tracking-widest text-foreground hover:opacity-70 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed inline-flex items-center gap-2"
                 >
                   {isSubmitting && <Loader2 size={12} className="animate-spin" />}
                   <span>
@@ -209,17 +211,20 @@ function AccessGateDialogInternal({
                         ? m.access_gate_password_success()
                         : m.access_gate_submit()}
                   </span>
-                </Button>
+                </button>
               </div>
             </form>
           ) : mode === "login" ? (
-            <div className="mt-6 flex items-center justify-between gap-4">
-              <p className="text-xs text-muted-foreground/70">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-sm font-light text-muted-foreground/80">
                 {m.access_gate_login_hint()}
               </p>
-              <Button asChild>
-                <a href={loginUrl}>{m.access_gate_login_cta()}</a>
-              </Button>
+              <a
+                href={loginUrl}
+                className="text-[10px] font-mono font-bold uppercase tracking-widest text-foreground hover:opacity-70 transition-opacity shrink-0"
+              >
+                {m.access_gate_login_cta()}
+              </a>
             </div>
           ) : null}
         </div>
