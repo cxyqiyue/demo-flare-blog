@@ -535,14 +535,39 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   4) Cards & panels — default's outlined, rectangular panels become
-      fuwari's rounded, softly-shadowed cards on the card background.
+   4) Background hierarchy — this is the biggest source of "disjointed"
+      feel. The default admin uses `--background` for BOTH the page base
+      and every panel, so in default they coincide (white on white,
+      separated only by a stroke). Fuwari splits these into two distinct
+      tones: a soft page base (`--fuwari-page-bg`) with elevated cards
+      (`--fuwari-card-bg`). Re-map each role inside `.admin-layout` so
+      the admin gets the same calm two-layer depth as the public site:
+        - root shell  -> page base
+        - top header  -> page base (scrolls with the content)
+        - everything  -> `bg-background` becomes a card/panel tone
+      The sidebar, being a standalone column, becomes an elevated card
+      just like the public fuwari sidebar.
    ───────────────────────────────────────────────────────────────────── */
-.admin-layout .border.bg-background,
-.admin-layout .border.bg-muted {
+.admin-layout {
+  background-color: var(--fuwari-page-bg);
+}
+.admin-layout > main > header {
+  background-color: var(--fuwari-page-bg);
+}
+.admin-layout .bg-background {
+  background-color: var(--fuwari-card-bg);
+}
+
+/* 4b) Cards & panels — default's outlined, rectangular panels become
+      fuwari's rounded, softly-shadowed cards on the card background.
+      `border.bg-muted` keeps its tinted surface (only softened). */
+.admin-layout .border.bg-background {
   border-radius: var(--fa-radius);
   background-color: var(--fa-card-bg);
   box-shadow: var(--fa-shadow);
+}
+.admin-layout .border.bg-muted {
+  border-radius: var(--fa-radius-md);
 }
 
 /* ─────────────────────────────────────────────────────────────────────
