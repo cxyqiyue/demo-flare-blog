@@ -42,11 +42,9 @@ export function FriendLinksPage({
         )}
       </div>
 
-      {/* 本站信息 & 申请须知（与「申请加入」同容器） */}
+      {/* 本站信息 & 申请须知（与「申请加入」同容器，内部左右两栏表格） */}
       <div className="mt-20 pt-10 border-t border-border/40 space-y-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <SiteInfoAndApplyRules siteInfo={siteInfo} applyRules={applyRules} />
-        </div>
+        <SiteInfoAndApplyRules siteInfo={siteInfo} applyRules={applyRules} />
 
         {/* Submit CTA */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-10 border-t border-border/40">
