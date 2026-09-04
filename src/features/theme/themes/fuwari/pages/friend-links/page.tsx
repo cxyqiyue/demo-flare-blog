@@ -11,7 +11,7 @@ export function FriendLinksPage({
 }: FriendLinksPageProps) {
   return (
     <div className="flex flex-col gap-4 w-full">
-      {/* Header Banner representing the current page */}
+      {/* Header Banner representing the current page + 本站信息/申请须知/申请按钮 */}
       <div
         className="fuwari-card-base p-6 md:p-8 relative overflow-hidden flex flex-col items-center justify-center min-h-56 fuwari-onload-animation bg-linear-to-br from-(--fuwari-primary)/5 to-transparent"
         style={{ animationDelay: "150ms" }}
@@ -28,6 +28,10 @@ export function FriendLinksPage({
         >
           {m.friend_links_fuwari_apply()}
         </Link>
+
+        <div className="mt-8 w-full max-w-2xl flex flex-col gap-6 z-10">
+          <SiteInfoAndApplyRules siteInfo={siteInfo} applyRules={applyRules} />
+        </div>
       </div>
 
       {/* Links Grid */}
@@ -51,11 +55,6 @@ export function FriendLinksPage({
             <p className="text-lg">{m.friend_links_fuwari_no_links()}</p>
           </div>
         )}
-      </div>
-
-      {/* 本站信息 & 申请须知 */}
-      <div className="fuwari-card-base p-6 md:p-8 fuwari-onload-animation">
-        <SiteInfoAndApplyRules siteInfo={siteInfo} applyRules={applyRules} />
       </div>
     </div>
   );

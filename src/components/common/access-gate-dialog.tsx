@@ -98,7 +98,7 @@ function AccessGateDialogInternal({
       <div
         role="dialog"
         aria-modal="true"
-        className={`relative w-full max-w-md bg-background border border-border/30 shadow-2xl flex flex-col transform transition-all duration-300 ${
+        className={`relative w-full max-w-md bg-background border border-border/40 rounded-lg shadow-xl flex flex-col transform transition-all duration-300 ${
           open ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
         }`}
       >
@@ -177,7 +177,7 @@ function AccessGateDialogInternal({
                     type="button"
                     variant="outline"
                     onClick={handleChannelOpen}
-                    className="w-full gap-2 rounded-none font-mono text-[11px] uppercase tracking-widest"
+                    className="w-full gap-2 rounded-lg font-mono text-[11px] uppercase tracking-widest"
                   >
                     <ExternalLink size={12} />
                     <span>{m.access_gate_get_password_btn()}</span>
@@ -199,7 +199,7 @@ function AccessGateDialogInternal({
                 <Button
                   type="submit"
                   disabled={isSubmitting || isSuccess || !password.trim()}
-                  className="flex items-center justify-center gap-2 rounded-none font-mono text-[11px] uppercase tracking-widest"
+                  className="flex items-center justify-center gap-2 rounded-lg shadow-none font-mono text-[11px] uppercase tracking-widest"
                 >
                   {isSubmitting && <Loader2 size={12} className="animate-spin" />}
                   <span>
