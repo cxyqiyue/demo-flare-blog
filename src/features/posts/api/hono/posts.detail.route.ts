@@ -23,7 +23,11 @@ const route = app.get(
       { ...getServiceContext(c), viewer },
       { slug },
     );
-    setCacheHeaders(c.res.headers, "public");
+    // 受限文章（私密/密码）的响应依赖解锁 cookie，绝不能进入共享/CDN 缓存：
+    // 否则已解锁用户在解锁后重拉该端点时可能命中缓存的门禁壳（gate 非空），
+    // 前台门禁不会自动解除。仅公开文章可被公共缓存。
+    const isRestricted = !!result && result.visibility !== "public";
+    setCacheHeaders(c.res.headers, isRestricted ? "private" : "public");
     return c.json(result);
   },
 );
