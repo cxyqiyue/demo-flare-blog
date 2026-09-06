@@ -428,7 +428,7 @@ function RouteComponent() {
           >
             <div
               ref={tabsScrollRef}
-              className="sticky top-18 z-40 -mx-4 overflow-x-auto no-scrollbar bg-(--fuwari-page-bg)/85 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:top-24 lg:mx-0 lg:self-start lg:overflow-visible lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none"
+              className="sticky top-20 z-40 -mx-4 overflow-x-auto no-scrollbar bg-(--fuwari-page-bg)/85 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:mx-0 lg:self-start lg:overflow-visible lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none"
             >
               <TabsList className="min-w-max grow sm:min-w-0 sm:flex-wrap sm:max-w-full sm:justify-start lg:w-full lg:min-w-0 lg:flex-col lg:flex-wrap lg:justify-start lg:gap-1 lg:p-1.5 lg:shrink-0">
                 {tabItems.map(({ value, icon: Icon, label }) => (

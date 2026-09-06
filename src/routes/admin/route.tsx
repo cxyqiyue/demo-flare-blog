@@ -52,57 +52,53 @@ function AdminLayout() {
 
 if (isFuwari) {
     return (
-      <div className="admin-layout fuwari-admin relative min-h-screen bg-(--fuwari-page-bg) font-sans">
-        <div className="flex flex-col lg:flex-row items-stretch">
-          {/* Full-height sticky sidebar column, pinned to the left edge —
-              mirrors default theme's full-width frame layout */}
-          <SideBar
-            isMobileSidebarOpen={isMobileSidebarOpen}
-            closeMobileSidebar={closeMobileSidebar}
-          />
+      <div className="admin-layout fuwari-admin relative h-dvh overflow-hidden bg-(--fuwari-page-bg) flex font-sans">
+        <SideBar
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          closeMobileSidebar={closeMobileSidebar}
+        />
 
-          {/* Main area: fills the remaining width, content max-w-7xl */}
-          <div className="flex-1 min-w-0 flex flex-col">
-            <div className="sticky top-0 z-50">
-              <div className="fuwari-card-base rounded-t-none! md:rounded-t-none! rounded-b-2xl flex items-center justify-between gap-4 h-18 px-0 sm:px-4 md:px-6 overflow-x-auto overscroll-x-contain">
-                <div className="flex items-center gap-3 min-w-0">
-                  <button
-                    onClick={() => setIsMobileSidebarOpen(true)}
-                    className="lg:hidden fuwari-btn-regular rounded-lg h-10 w-10 shrink-0 active:scale-90 hover:text-(--fuwari-primary) transition-colors"
-                    aria-label={m.admin_layout_open_navigation()}
-                  >
-                    <Menu size={18} strokeWidth={1.5} />
-                  </button>
-                  <Breadcrumbs />
-                </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Link
-                    to="/admin/settings"
-                    className="fuwari-btn-regular rounded-lg h-10 w-10 active:scale-90 hover:text-(--fuwari-primary) transition-colors"
-                    title={m.admin_layout_settings()}
-                    aria-label={m.admin_layout_settings()}
-                  >
-                    <Settings size={18} strokeWidth={1.5} />
-                  </Link>
-                  <Link
-                    to="/"
-                    className="fuwari-btn-regular rounded-lg h-10 pl-3 pr-4 flex items-center gap-2 text-sm font-medium fuwari-text-75 hover:text-(--fuwari-primary) transition-colors"
-                  >
-                    <ArrowUpRight size={16} strokeWidth={1.5} />
-                    <span>{m.admin_layout_back_to_site()}</span>
-                  </Link>
-                </div>
-              </div>
+        {/* Main Content Area — same frame skeleton as default theme */}
+        <main className="flex-1 flex flex-col min-w-0 min-h-0">
+          {/* Top Header: solid bar (not a card), matches default's frame */}
+          <header className="h-20 border-b border-border/30 bg-(--fuwari-card-bg) flex items-center justify-between gap-4 px-4 sm:px-6 md:px-10 sticky top-0 z-30 shrink-0 overflow-x-auto overscroll-x-contain">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                onClick={() => setIsMobileSidebarOpen(true)}
+                className="lg:hidden fuwari-btn-regular rounded-lg h-10 w-10 shrink-0 active:scale-90 hover:text-(--fuwari-primary) transition-colors"
+                aria-label={m.admin_layout_open_navigation()}
+              >
+                <Menu size={18} strokeWidth={1.5} />
+              </button>
+              <Breadcrumbs />
             </div>
 
-            <main className="flex-1 min-w-0 px-0 sm:px-4 md:px-6 pb-12">
-              <div className="mx-auto max-w-7xl flex flex-col gap-5 lg:gap-6 fuwari-onload-animation">
-                <Outlet />
-              </div>
-            </main>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Link
+                to="/admin/settings"
+                className="fuwari-btn-regular rounded-lg h-10 w-10 active:scale-90 hover:text-(--fuwari-primary) transition-colors"
+                title={m.admin_layout_settings()}
+                aria-label={m.admin_layout_settings()}
+              >
+                <Settings size={18} strokeWidth={1.5} />
+              </Link>
+              <Link
+                to="/"
+                className="fuwari-btn-regular rounded-lg h-10 pl-3 pr-4 flex items-center gap-2 text-sm font-medium fuwari-text-75 hover:text-(--fuwari-primary) transition-colors"
+              >
+                <ArrowUpRight size={16} strokeWidth={1.5} />
+                <span>{m.admin_layout_back_to_site()}</span>
+              </Link>
+            </div>
+          </header>
+
+          {/* Content Scroll: inner scrolling region, spacious padding */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-6 md:p-12 custom-scrollbar">
+            <div className="mx-auto max-w-7xl flex flex-col gap-5 lg:gap-6 fuwari-onload-animation">
+              <Outlet />
+            </div>
           </div>
-        </div>
+        </main>
         <Toaster />
       </div>
     );
