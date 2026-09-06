@@ -231,6 +231,7 @@ export function MediaLibrary() {
           />
 
           {/* Content */}
+          <div className="fuwari-card-base p-4 sm:p-6">
           {isPending ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-6">
               {Array.from({ length: 12 }).map((_, i) => (
@@ -315,6 +316,7 @@ export function MediaLibrary() {
               onRefetch={refetch}
             />
           )}
+          </div>
         </div>
 
         {/* --- Upload Modal --- */}
