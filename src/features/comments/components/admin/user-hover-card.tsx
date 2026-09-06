@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/hover-card";
 import { getUserStatsFn } from "@/features/comments/api/comments.admin.api";
 import { COMMENTS_KEYS } from "@/features/comments/queries";
+import { isFuwari } from "@/lib/theme-mode";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -31,6 +32,85 @@ export function UserHoverCard({ user, children }: UserHoverCardProps) {
     ...userStatsQuery(user.id),
     enabled: !!user.id,
   });
+
+  if (isFuwari) {
+    return (
+      <HoverCard>
+        <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+        <HoverCardContent
+          className="w-80 max-w-[calc(100vw-2rem)] p-0 overflow-hidden"
+          align="start"
+        >
+          <div className="p-5 space-y-4">
+            {/* User Profile Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-1">
+                <h4 className="text-lg font-bold fuwari-text-90 truncate">
+                  {user.name}
+                </h4>
+                <p className="text-xs fuwari-text-30">
+                  ID / {user.id.slice(0, 12)}...
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-(--fuwari-btn-regular-bg)">
+                {user.image ? (
+                  <img
+                    src={user.image}
+                    className="w-full h-full object-cover"
+                    alt={user.name}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-lg font-bold fuwari-text-50">
+                    {user.name.slice(0, 1)}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4 pt-3 border-t border-(--fuwari-input-border)">
+              <div className="space-y-1">
+                <div className="text-xs font-bold fuwari-text-30">
+                  {m.comments_admin_user_joined_at()}
+                </div>
+                <p className="text-sm fuwari-text-75">
+                  {isLoading || !stats
+                    ? m.comments_loading()
+                    : formatDate(stats.registeredAt).split(" ")[0]}
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-xs font-bold fuwari-text-30">
+                  {m.comments_admin_user_activity()}
+                </div>
+                <p className="text-sm fuwari-text-75">
+                  {isLoading || !stats
+                    ? "..."
+                    : m.comments_count({ count: stats.totalComments })}
+                </p>
+              </div>
+
+              <div className="col-span-2 space-y-1 pt-2">
+                <div className="text-xs font-bold text-orange-600/80">
+                  {m.comments_admin_user_risk()}
+                </div>
+                <p className="text-sm text-orange-600">
+                  {isLoading || !stats
+                    ? "..."
+                    : stats.rejectedComments === 0
+                      ? m.comments_admin_user_risk_clear()
+                      : m.comments_admin_user_risk_flagged({
+                          count: stats.rejectedComments,
+                        })}
+                </p>
+              </div>
+            </div>
+          </div>
+        </HoverCardContent>
+      </HoverCard>
+    );
+  }
 
   return (
     <HoverCard>

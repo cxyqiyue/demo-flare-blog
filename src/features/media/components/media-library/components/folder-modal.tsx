@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 interface FolderModalProps {
@@ -47,6 +48,88 @@ function FolderModalInternal({
     if (!clean || isSubmitting) return;
     onSubmit(clean);
   };
+
+  if (isFuwari) {
+    return createPortal(
+      <div
+        className={`fixed inset-0 z-100 flex items-center justify-center p-4 transition-all duration-300 ${
+          isOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <div
+          className="absolute inset-0 bg-black/30 backdrop-blur-sm dark:bg-black/40"
+          onClick={onClose}
+        />
+
+        <div
+          className={`
+            relative w-full max-w-md fuwari-card-base shadow-2xl
+            transform transition-all duration-300
+            ${isOpen ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}
+          `}
+        >
+          <div className="px-6 pt-6 pb-4 flex items-start justify-between">
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold fuwari-text-90">
+                {mode === "create"
+                  ? m.media_folder_create_title()
+                  : m.media_folder_rename_title()}
+              </h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 -mr-2 fuwari-text-50 hover:text-(--fuwari-primary) transition-colors"
+            >
+              <X size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          <div className="px-6 py-4 space-y-4">
+            {parentLabel && (
+              <div className="flex items-center gap-2 text-sm fuwari-text-50">
+                <FolderPlus size={14} strokeWidth={1.5} />
+                <span className="truncate">{parentLabel}</span>
+              </div>
+            )}
+            <Input
+              ref={inputRef}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+              }}
+              placeholder={m.media_folder_name_placeholder()}
+              className="w-full"
+            />
+          </div>
+
+          <div className="px-6 pb-6 pt-4 flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              {m.media_folder_btn_cancel()}
+            </Button>
+            <Button
+              onClick={submit}
+              disabled={isSubmitting || !name.trim()}
+              className="gap-2"
+            >
+              {isSubmitting ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <FolderPlus size={14} />
+              )}
+              {mode === "create"
+                ? m.media_folder_create_btn()
+                : m.media_folder_rename_btn()}
+            </Button>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
 
   return createPortal(
     <div

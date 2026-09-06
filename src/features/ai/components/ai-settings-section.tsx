@@ -1,6 +1,8 @@
 import {
+  ChevronDown,
   Cpu,
   KeyRound,
+  Loader2,
   PenLine,
   PlugZap,
   Plus,
@@ -23,6 +25,7 @@ import {
   type AiProviderInstance,
 } from "@/features/config/config.schema";
 import type { Result } from "@/lib/errors";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -44,8 +47,6 @@ const COMPAT_TYPE_LABELS: Record<AiCompatType, string> = {
   "claude-compatible": "Claude Compatible",
   "gemini-compatible": "Gemini Compatible",
 };
-
-
 
 function skillLabel(name: AiBlogSkillType): string {
   if (name === "docs") return m.settings_ai_skill_docs();
@@ -74,11 +75,7 @@ export function AiSettingsSection({
   const [echo, setEcho] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const {
-    register,
-    setValue,
-    watch,
-  } = useFormContext<SystemConfig>();
+  const { register, setValue, watch } = useFormContext<SystemConfig>();
 
   const aiConfig = watch("ai");
   const activeProviderId = aiConfig?.activeProviderId;
@@ -187,6 +184,27 @@ export function AiSettingsSection({
     ? !!activeProvider?.baseUrl?.trim() && !!activeProvider?.model?.trim()
     : true;
 
+  if (isFuwari) {
+    return (
+      <FuwariAiSettingsSection
+        activeProviderId={activeProviderId}
+        providers={providers}
+        aiConfig={aiConfig}
+        status={status}
+        echo={echo}
+        editingId={editingId}
+        setEditingId={setEditingId}
+        onSelectWorkersAi={handleSelectWorkersAi}
+        onSelectProvider={handleSelectProvider}
+        onAddProvider={handleAddProvider}
+        onDeleteProvider={handleDeleteProvider}
+        onUpdateProvider={updateProvider}
+        onTest={handleTest}
+        canTest={canTest}
+      />
+    );
+  }
+
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
       <div className="border border-border/30 bg-background/50 overflow-hidden divide-y divide-border/20">
@@ -287,7 +305,8 @@ export function AiSettingsSection({
                             {p.name || COMPAT_TYPE_LABELS[p.type]}
                           </p>
                           <p className="text-xs text-muted-foreground truncate">
-                            {p.model || m.settings_ai_provider_model_unconfigured()}
+                            {p.model ||
+                              m.settings_ai_provider_model_unconfigured()}
                           </p>
                         </div>
                       </button>
@@ -296,9 +315,7 @@ export function AiSettingsSection({
                       </span>
                       <button
                         type="button"
-                        onClick={() =>
-                          setEditingId(isExpanded ? null : p.id)
-                        }
+                        onClick={() => setEditingId(isExpanded ? null : p.id)}
                         className="shrink-0 p-1.5 text-muted-foreground hover:text-foreground transition-colors"
                       >
                         <svg
@@ -563,6 +580,405 @@ export function AiSettingsSection({
             {m.settings_ai_test_echo()}
           </p>
           <p className="mt-2 font-serif italic text-foreground/80">{echo}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FuwariAiSettingsSection({
+  activeProviderId,
+  providers,
+  aiConfig,
+  status,
+  echo,
+  editingId,
+  setEditingId,
+  onSelectWorkersAi,
+  onSelectProvider,
+  onAddProvider,
+  onDeleteProvider,
+  onUpdateProvider,
+  onTest,
+  canTest,
+}: {
+  activeProviderId?: string;
+  providers: AiProviderInstance[];
+  aiConfig?: SystemConfig["ai"];
+  status: ConnectionStatus;
+  echo: string;
+  editingId: string | null;
+  setEditingId: (id: string | null) => void;
+  onSelectWorkersAi: () => void;
+  onSelectProvider: (id: string) => void;
+  onAddProvider: (type: AiCompatType) => void;
+  onDeleteProvider: (id: string) => void;
+  onUpdateProvider: (
+    id: string,
+    field: keyof AiProviderInstance,
+    value: string,
+  ) => void;
+  onTest: () => void;
+  canTest: boolean;
+}) {
+  const { register, setValue } = useFormContext<SystemConfig>();
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* ── 内置 Cloudflare AI ── */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+        <div className="flex items-center gap-4 mb-5">
+          <div className="h-10 w-10 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center shrink-0">
+            <Cpu size={18} className="fuwari-text-50" />
+          </div>
+          <div className="space-y-0.5 min-w-0">
+            <h5 className="text-base font-bold fuwari-text-90">
+              {m.settings_ai_builtin_title()}
+            </h5>
+            <p className="text-xs sm:text-sm fuwari-text-50">
+              {m.settings_ai_builtin_desc()}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onSelectWorkersAi}
+          className={cn(
+            "w-full flex items-center justify-between rounded-xl border p-3 md:p-4 text-left transition-all",
+            !activeProviderId
+              ? "border-(--fuwari-primary)/60 bg-(--fuwari-primary)/10"
+              : "border-(--fuwari-input-border) hover:border-(--fuwari-primary)/40",
+          )}
+        >
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
+            <span
+              className={cn(
+                "h-3 w-3 shrink-0 rounded-full border",
+                !activeProviderId
+                  ? "border-(--fuwari-primary) bg-(--fuwari-primary)"
+                  : "border-(--fuwari-input-border)",
+              )}
+            />
+            <div className="space-y-1 min-w-0">
+              <p className="text-sm font-bold fuwari-text-90">
+                Cloudflare Workers AI
+              </p>
+              <p className="text-xs sm:text-sm fuwari-text-50 line-clamp-2">
+                {m.settings_ai_builtin_desc_full()}
+              </p>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      {/* ── 第三方 AI 供应商 ── */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+        <div className="flex items-center gap-4 mb-5">
+          <div className="h-10 w-10 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center shrink-0">
+            <Server size={18} className="fuwari-text-50" />
+          </div>
+          <div className="space-y-0.5 min-w-0">
+            <h5 className="text-base font-bold fuwari-text-90">
+              {m.settings_ai_third_party_title()}
+            </h5>
+            <p className="text-xs sm:text-sm fuwari-text-50">
+              {m.settings_ai_third_party_desc()}
+            </p>
+          </div>
+        </div>
+
+        {providers.length > 0 && (
+          <div className="flex flex-col gap-3">
+            {providers.map((p) => {
+              const isActive = activeProviderId === p.id;
+              const isExpanded = editingId === p.id;
+              return (
+                <div
+                  key={p.id}
+                  className={cn(
+                    "rounded-xl border transition-colors",
+                    isActive
+                      ? "border-(--fuwari-primary)/60"
+                      : "border-(--fuwari-input-border)",
+                  )}
+                >
+                  <div className="flex items-center gap-2 md:gap-3 p-3 md:p-4">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        isActive ? onSelectWorkersAi() : onSelectProvider(p.id)
+                      }
+                      className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 text-left"
+                    >
+                      <span
+                        className={cn(
+                          "h-3 w-3 shrink-0 rounded-full border",
+                          isActive
+                            ? "border-(--fuwari-primary) bg-(--fuwari-primary)"
+                            : "border-(--fuwari-input-border)",
+                        )}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold fuwari-text-90 truncate">
+                          {p.name || COMPAT_TYPE_LABELS[p.type]}
+                        </span>
+                        <span className="block text-xs sm:text-sm fuwari-text-50 truncate">
+                          {p.model ||
+                            m.settings_ai_provider_model_unconfigured()}
+                        </span>
+                      </span>
+                    </button>
+                    <span className="hidden sm:inline rounded-lg bg-(--fuwari-btn-regular-bg) px-2.5 py-1 text-xs font-medium fuwari-text-50 shrink-0">
+                      {COMPAT_TYPE_LABELS[p.type]}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(isExpanded ? null : p.id)}
+                      className="shrink-0 p-1.5 text-muted-foreground hover:text-(--fuwari-primary) transition-colors"
+                      aria-label="toggle"
+                    >
+                      <ChevronDown
+                        className={cn(
+                          "w-4 h-4 transition-transform",
+                          isExpanded && "rotate-180",
+                        )}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteProvider(p.id)}
+                      className="shrink-0 p-1.5 text-muted-foreground hover:text-red-500 transition-colors"
+                      aria-label="delete"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="border-t border-(--fuwari-input-border) p-3 md:p-4 space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold fuwari-text-50">
+                          {m.settings_ai_provider_name_label()}
+                        </label>
+                        <Input
+                          value={p.name}
+                          onChange={(e) =>
+                            onUpdateProvider(p.id, "name", e.target.value)
+                          }
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold fuwari-text-50">
+                            Base URL
+                          </label>
+                          <Input
+                            value={p.baseUrl ?? ""}
+                            onChange={(e) =>
+                              onUpdateProvider(p.id, "baseUrl", e.target.value)
+                            }
+                            placeholder={`https://...`}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold fuwari-text-50">
+                            Model
+                          </label>
+                          <Input
+                            value={p.model ?? ""}
+                            onChange={(e) =>
+                              onUpdateProvider(p.id, "model", e.target.value)
+                            }
+                            placeholder="gpt-4o-mini"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-bold fuwari-text-50">
+                          API Key
+                        </label>
+                        <div className="relative">
+                          <Input
+                            type="password"
+                            value={p.apiKey ?? ""}
+                            onChange={(e) =>
+                              onUpdateProvider(p.id, "apiKey", e.target.value)
+                            }
+                            placeholder="sk-..."
+                            className="pr-10"
+                          />
+                          <KeyRound
+                            size={14}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2 mt-5">
+          {(AI_COMPAT_TYPES as readonly AiCompatType[]).map((type) => (
+            <Button
+              key={type}
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onAddProvider(type)}
+              className="h-9 rounded-xl px-4 text-xs font-medium fuwari-text-75 hover:text-(--fuwari-primary)"
+            >
+              <Plus size={12} className="mr-2" />
+              {COMPAT_TYPE_LABELS[type]}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Blog Writing Skill ── */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+        <div className="flex items-center gap-4 mb-5">
+          <div className="h-10 w-10 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center shrink-0">
+            <PenLine size={18} className="fuwari-text-50" />
+          </div>
+          <div className="space-y-0.5 min-w-0">
+            <h5 className="text-base font-bold fuwari-text-90">
+              {m.settings_ai_skill_title()}
+            </h5>
+            <p className="text-xs sm:text-sm fuwari-text-50">
+              {m.settings_ai_skill_desc()}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {AI_BLOG_SKILL_TYPES.map((name) => {
+            const isActive = aiConfig?.blogSkillType === name;
+            return (
+              <button
+                key={name}
+                type="button"
+                onClick={() => {
+                  setValue("ai.blogSkillType", name, {
+                    shouldDirty: true,
+                  });
+                }}
+                className={cn(
+                  "flex items-start gap-2 md:gap-3 rounded-xl border p-3 md:p-4 text-left transition-all",
+                  isActive
+                    ? "border-(--fuwari-primary)/60 bg-(--fuwari-primary)/10"
+                    : "border-(--fuwari-input-border) hover:border-(--fuwari-primary)/40",
+                )}
+              >
+                <span
+                  className={cn(
+                    "mt-1 h-3 w-3 shrink-0 rounded-full border",
+                    isActive
+                      ? "border-(--fuwari-primary) bg-(--fuwari-primary)"
+                      : "border-(--fuwari-input-border)",
+                  )}
+                />
+                <span className="space-y-1 min-w-0">
+                  <span className="block text-sm font-bold fuwari-text-90">
+                    {skillLabel(name)}
+                  </span>
+                  <span className="block text-xs sm:text-sm leading-relaxed fuwari-text-50 line-clamp-3">
+                    {skillDescription(name)}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Writing Instructions ── */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+        <div className="flex items-center gap-4 mb-5">
+          <div className="h-10 w-10 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center shrink-0">
+            <PenLine size={18} className="fuwari-text-50" />
+          </div>
+          <div className="space-y-0.5 min-w-0">
+            <h5 className="text-base font-bold fuwari-text-90">
+              {m.settings_ai_writing_instructions_title()}
+            </h5>
+            <p className="text-xs sm:text-sm fuwari-text-50">
+              {m.settings_ai_writing_instructions_desc()}
+            </p>
+          </div>
+        </div>
+
+        <Textarea
+          rows={7}
+          placeholder={m.settings_ai_writing_instructions_ph()}
+          {...register("ai.writingInstructions")}
+        />
+      </div>
+
+      {/* ── Test Toolbar ── */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation flex flex-col items-center justify-between gap-4 sm:flex-row">
+        <div className="flex items-center gap-4 md:gap-6">
+          <div className="flex items-center gap-2 md:gap-3">
+            <span
+              className={cn(
+                "h-2.5 w-2.5 rounded-full transition-all duration-700",
+                status === "SUCCESS"
+                  ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]"
+                  : status === "ERROR"
+                    ? "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.5)]"
+                    : status === "TESTING"
+                      ? "animate-pulse bg-amber-500"
+                      : "bg-muted-foreground/20",
+              )}
+            />
+            <span className="text-xs sm:text-sm font-bold fuwari-text-75">
+              {status === "SUCCESS"
+                ? m.settings_ai_test_success()
+                : status === "ERROR"
+                  ? m.settings_ai_test_error()
+                  : status === "TESTING"
+                    ? m.settings_ai_test_testing()
+                    : m.settings_ai_test_idle()}
+            </span>
+          </div>
+
+          <span className="hidden h-4 w-px bg-(--fuwari-input-border) md:block" />
+
+          <span className="hidden text-xs sm:text-sm fuwari-text-50 md:block">
+            {status === "IDLE"
+              ? m.settings_ai_test_hint_idle()
+              : m.settings_ai_test_hint_current()}
+          </span>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onTest}
+          disabled={status === "TESTING" || !canTest}
+          className="h-10 rounded-xl px-6 text-sm font-medium fuwari-text-75 hover:text-(--fuwari-primary) disabled:opacity-40 h-9 sm:h-10"
+        >
+          {status === "TESTING" ? (
+            <Loader2 size={14} className="mr-2 animate-spin" />
+          ) : (
+            <PlugZap size={14} className="mr-2" />
+          )}
+          {status === "TESTING"
+            ? m.settings_ai_test_btn_testing()
+            : m.settings_ai_test_btn_send()}
+        </Button>
+      </div>
+
+      {status === "SUCCESS" && echo && (
+        <div className="fuwari-card-base p-4 sm:p-5 md:p-6">
+          <p className="text-xs font-bold text-emerald-600">
+            {m.settings_ai_test_echo()}
+          </p>
+          <p className="mt-2 text-sm fuwari-text-75">{echo}</p>
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import type { SystemConfig } from "@/features/config/config.schema";
 import type { Result } from "@/lib/errors";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import { EmailCredentialsPanel } from "./email-credentials-panel";
 import { EmailDocPanel } from "./email-doc-panel";
@@ -82,6 +83,52 @@ export function EmailServiceSection({
       });
     }
   };
+
+  if (isFuwari) {
+    return (
+      <div className="flex flex-col gap-4">
+        <EmailDocPanel />
+
+        <EmailNotificationScope
+          adminEmailEnabled={adminEmailEnabled}
+          userEmailEnabled={userEmailEnabled}
+          onToggleAdmin={(checked) =>
+            setValue("notification.admin.channels.email", checked, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            })
+          }
+          onToggleUser={(checked) =>
+            setValue("notification.user.emailEnabled", checked, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            })
+          }
+        />
+
+        <EmailCredentialsPanel<SystemConfig>
+          register={register}
+          showPassword={showPassword}
+          hostError={errors.email?.host?.message}
+          portError={errors.email?.port?.message}
+          usernameError={errors.email?.username?.message}
+          passwordError={errors.email?.password?.message}
+          senderNameError={errors.email?.senderName?.message}
+          senderAddressError={errors.email?.senderAddress?.message}
+          onTogglePasswordVisibility={() => setShowPassword((prev) => !prev)}
+          onFieldChange={() => setStatus("IDLE")}
+        />
+
+        <EmailTestToolbar
+          status={status}
+          isConfigured={isConfigured}
+          onTest={handleTest}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700">

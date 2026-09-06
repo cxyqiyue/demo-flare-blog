@@ -2,6 +2,7 @@ import { Loader2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn, formatDate, formatTimeAgo } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import {
@@ -36,6 +37,130 @@ export function PostEditorHistoryList({
 }: PostEditorHistoryListProps) {
   const allSelected =
     revisions.length > 0 && selectedRevisionIds.length === revisions.length;
+
+  if (isFuwari) {
+    return (
+      <div className="min-h-0 border-b border-(--fuwari-input-border) lg:border-r lg:border-b-0">
+        <div className="border-b border-(--fuwari-input-border) px-4 py-3 space-y-3">
+          <p className="text-sm font-bold fuwari-text-75">
+            {m.editor_history_list_title()}
+          </p>
+
+          {revisions.length > 0 && (
+            <div className="flex items-center justify-between gap-3">
+              <label className="flex items-center gap-2 text-sm fuwari-text-50">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={onToggleSelectAll}
+                  aria-label={m.editor_history_select_all()}
+                />
+                <span>
+                  {selectedRevisionIds.length > 0
+                    ? m.editor_history_selected_count({
+                        count: String(selectedRevisionIds.length),
+                      })
+                    : m.editor_history_select_all()}
+                </span>
+              </label>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-destructive hover:text-destructive"
+                disabled={selectedRevisionIds.length === 0 || isDeleting}
+                onClick={onDeleteSelected}
+              >
+                <Trash2 size={14} strokeWidth={1.5} />
+                <span className="ml-2">
+                  {m.editor_history_delete_selected()}
+                </span>
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="custom-scrollbar h-full overflow-y-auto p-2">
+          {isLoading ? (
+            <div className="flex items-center gap-2 px-4 py-6 text-sm fuwari-text-50">
+              <Loader2 size={14} className="animate-spin" />
+              {m.editor_history_loading()}
+            </div>
+          ) : revisions.length > 0 ? (
+            revisions.map((revision) => {
+              const isActive = revision.id === selectedRevisionId;
+              const isChecked = selectedRevisionIds.includes(revision.id);
+              return (
+                <div
+                  key={revision.id}
+                  className={cn(
+                    "mb-2 rounded-xl border px-4 py-3 transition-colors",
+                    isActive
+                      ? "border-(--fuwari-primary) bg-(--fuwari-primary)/5"
+                      : "border-(--fuwari-input-border) hover:border-(--fuwari-primary)/50 hover:bg-(--fuwari-btn-plain-bg-hover)",
+                  )}
+                >
+                  <div className="mb-3 flex items-start gap-3">
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={(checked) =>
+                        onToggleSelection(revision.id, checked)
+                      }
+                      aria-label={m.editor_history_select_revision()}
+                      className="mt-1"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => onSelect(revision.id)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        {(() => {
+                          const ReasonIcon = getRevisionReasonIcon(
+                            revision.reason,
+                          );
+                          return (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "shrink-0 gap-1 rounded-lg",
+                                getRevisionReasonColorClass(revision.reason),
+                              )}
+                            >
+                              <ReasonIcon size={12} strokeWidth={1.5} />
+                              {getRevisionReasonLabel(revision.reason)}
+                            </Badge>
+                          );
+                        })()}
+                        <span className="text-xs sm:text-sm fuwari-text-30">
+                          {formatTimeAgo(revision.createdAt)}
+                        </span>
+                      </div>
+
+                      <p className="line-clamp-2 text-sm font-bold fuwari-text-90">
+                        {revision.title.trim() || m.common_untitled()}
+                      </p>
+                      <p className="mt-2 line-clamp-2 text-xs sm:text-sm leading-5 fuwari-text-50">
+                        {revision.summary?.trim() ||
+                          m.editor_history_no_summary()}
+                      </p>
+                      <p className="mt-3 text-xs sm:text-sm fuwari-text-30">
+                        {formatDate(revision.createdAt, { includeTime: true })}
+                      </p>
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="px-4 py-8 text-sm fuwari-text-50">
+              {m.editor_history_empty()}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-0 border-b border-border/30 lg:border-r lg:border-b-0">

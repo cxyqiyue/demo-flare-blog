@@ -11,6 +11,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import Toaster from "@/components/ui/toaster";
 import { sessionQuery } from "@/features/auth/queries";
 import { CACHE_CONTROL } from "@/lib/constants";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 // 管理后台跟随当前激活主题（THEME 变量），使用当前主题的样式
 import "@theme/styles/index.css";
@@ -48,6 +49,61 @@ export const Route = createFileRoute("/admin")({
 function AdminLayout() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const closeMobileSidebar = () => setIsMobileSidebarOpen(false);
+
+  if (isFuwari) {
+    return (
+      <div className="admin-layout fuwari-admin relative min-h-screen bg-(--fuwari-page-bg) font-sans">
+        <div className="mx-auto max-w-(--fuwari-page-width) px-0 md:px-4 pb-8">
+          {/* Top bar: slim floating card, mirrors fuwari navbar rhythm */}
+          <div className="sticky top-0 z-50">
+            <div className="fuwari-card-base rounded-t-none! md:rounded-t-none! rounded-b-2xl flex items-center justify-between gap-4 h-18 overflow-x-auto overscroll-x-contain">
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  onClick={() => setIsMobileSidebarOpen(true)}
+                  className="lg:hidden fuwari-btn-regular rounded-lg h-10 w-10 shrink-0 active:scale-90 hover:text-(--fuwari-primary) transition-colors"
+                  aria-label={m.admin_layout_open_navigation()}
+                >
+                  <Menu size={18} strokeWidth={1.5} />
+                </button>
+                <Breadcrumbs />
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Link
+                  to="/admin/settings"
+                  className="fuwari-btn-regular rounded-lg h-10 w-10 active:scale-90 hover:text-(--fuwari-primary) transition-colors"
+                  title={m.admin_layout_settings()}
+                  aria-label={m.admin_layout_settings()}
+                >
+                  <Settings size={18} strokeWidth={1.5} />
+                </Link>
+                <Link
+                  to="/"
+                  className="fuwari-btn-regular rounded-lg h-10 px-4 active:scale-90 hover:text-(--fuwari-primary) transition-colors hidden sm:flex items-center gap-2 text-sm font-medium fuwari-text-75"
+                >
+                  <ArrowUpRight size={16} strokeWidth={1.5} />
+                  <span>{m.admin_layout_back_to_site()}</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Content grid: sidebar column + main column */}
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-[17.5rem_1fr] gap-4">
+            <SideBar
+              isMobileSidebarOpen={isMobileSidebarOpen}
+              closeMobileSidebar={closeMobileSidebar}
+            />
+
+            <main className="order-1 lg:order-2 min-w-0 flex flex-col gap-4 fuwari-onload-animation">
+              <Outlet />
+            </main>
+          </div>
+        </div>
+        <Toaster />
+      </div>
+    );
+  }
 
   return (
     <div className="h-dvh overflow-hidden bg-background text-foreground flex relative font-sans admin-layout">

@@ -1,7 +1,9 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getNavigationOwnerAccountsFn } from "@/features/navigation/api/navigation.admin.api";
+import { useState } from "react";
 import { sessionQuery } from "@/features/auth/queries";
+import { getNavigationOwnerAccountsFn } from "@/features/navigation/api/navigation.admin.api";
+import { isFuwari } from "@/lib/theme-mode";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { BookmarkManager } from "./bookmark-manager";
 import { EngineManager } from "./engine-manager";
@@ -31,6 +33,108 @@ export function NavigationAdminPage() {
     { key: "engines" as const, label: m.navigation_admin_tab_engines() },
     { key: "bookmarks" as const, label: m.navigation_admin_tab_bookmarks() },
   ];
+
+  if (isFuwari) {
+    return (
+      <div className="flex flex-col gap-4">
+        {/* Header */}
+        <div
+          className="fuwari-card-base p-4 sm:p-5 md:p-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 fuwari-onload-animation"
+          style={{ animationDelay: "100ms" }}
+        >
+          <div className="space-y-1">
+            <h1 className="text-lg sm:text-xl font-bold fuwari-text-90">
+              {m.navigation_admin_title()}
+            </h1>
+            <p className="text-xs sm:text-sm fuwari-text-50">
+              {m.navigation_admin_tag()}
+            </p>
+          </div>
+
+          {/* 账号（owner）选择器：仅超管可见 */}
+          {isSuperAdmin && (
+            <div className="flex items-center gap-3">
+              <label className="text-sm fuwari-text-50">
+                {m.navigation_admin_account_label()}
+              </label>
+              <select
+                value={selectedOwnerId ?? myId ?? ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "__self__") {
+                    setSelectedOwnerId(undefined);
+                  } else {
+                    setSelectedOwnerId(value);
+                  }
+                }}
+                className="bg-(--fuwari-input-bg) border border-(--fuwari-input-border) rounded-xl px-3 py-2 text-sm fuwari-text-90 focus:border-(--fuwari-primary)/50 focus:outline-none transition-colors min-w-52"
+              >
+                {accountsPending ? (
+                  <option value="">
+                    {m.navigation_admin_account_switch()}…
+                  </option>
+                ) : (
+                  <>
+                    <option value="__self__">
+                      {m.navigation_admin_account_my()} (
+                      {myAccountName(ownerAccounts, myId)})
+                    </option>
+                    {ownerAccounts
+                      ?.filter((account) => account.id !== myId)
+                      .map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.name} ({account.email})
+                        </option>
+                      ))}
+                  </>
+                )}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 fuwari-onload-animation"
+          style={{ animationDelay: "150ms" }}
+        >
+          <nav className="flex items-center gap-1 rounded-xl bg-(--fuwari-btn-regular-bg) p-1 overflow-x-auto overscroll-x-contain no-scrollbar max-w-full">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={cn(
+                  "shrink-0 rounded-lg px-4 py-2 text-sm transition-colors whitespace-nowrap",
+                  activeTab === tab.key
+                    ? "bg-(--fuwari-primary)/10 text-(--fuwari-primary) font-semibold"
+                    : "fuwari-text-75 hover:text-(--fuwari-primary)",
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+          {ownerId && (
+            <span className="text-sm fuwari-text-30">
+              → {m.navigation_admin_account_switch()}
+            </span>
+          )}
+        </div>
+
+        {/* Content */}
+        <div
+          className="min-h-100 fuwari-onload-animation"
+          style={{ animationDelay: "200ms" }}
+        >
+          {activeTab === "engines" ? (
+            <EngineManager ownerId={ownerId} />
+          ) : (
+            <BookmarkManager ownerId={ownerId} />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -70,7 +174,8 @@ export function NavigationAdminPage() {
               ) : (
                 <>
                   <option value="__self__">
-                    {m.navigation_admin_account_my()} ({myAccountName(ownerAccounts, myId)})
+                    {m.navigation_admin_account_my()} (
+                    {myAccountName(ownerAccounts, myId)})
                   </option>
                   {ownerAccounts
                     ?.filter((account) => account.id !== myId)
@@ -106,7 +211,9 @@ export function NavigationAdminPage() {
             </button>
           ))}
         </nav>
-        {ownerId && <span className="text-xs font-mono text-muted-foreground">→</span>}
+        {ownerId && (
+          <span className="text-xs font-mono text-muted-foreground">→</span>
+        )}
       </div>
 
       {/* Content */}

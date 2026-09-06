@@ -1,5 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 interface AdminPaginationProps {
@@ -62,8 +63,18 @@ export function AdminPagination({
   const endItem = Math.min(startItem + currentPageItemCount - 1, totalItems);
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-8 pt-8 border-t border-border/30 mt-8">
-      <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+    <div
+      className={`flex flex-col sm:flex-row items-center justify-between gap-8 pt-8 ${
+        isFuwari ? "" : "border-t border-border/30 mt-8"
+      }`}
+    >
+      <div
+        className={
+          isFuwari
+            ? "text-sm fuwari-text-50"
+            : "text-[10px] font-mono text-muted-foreground uppercase tracking-widest"
+        }
+      >
         {m.admin_pagination_info({
           startItem,
           endItem,
@@ -74,33 +85,57 @@ export function AdminPagination({
       <div className="flex items-center gap-2 max-w-full overflow-x-auto overscroll-x-contain">
         {/* Previous Button */}
         <Button
-          variant="outline"
-          size="icon"
+          variant={isFuwari ? "secondary" : "outline"}
+          size={isFuwari ? "sm" : "icon"}
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="h-8 w-8 shrink-0 rounded-none border-border/30 hover:bg-foreground hover:text-background hover:border-foreground transition-all disabled:opacity-20"
+          className={
+            isFuwari
+              ? "h-9 px-3 active:scale-95 transition-all disabled:opacity-40"
+              : "h-8 w-8 shrink-0 rounded-none border-border/30 hover:bg-foreground hover:text-background hover:border-foreground transition-all disabled:opacity-20"
+          }
         >
-          <span className="font-mono text-xs font-bold">{"<"}</span>
+          <span
+            className={
+              isFuwari ? "text-sm font-bold" : "font-mono text-xs font-bold"
+            }
+          >
+            {"<"}
+          </span>
         </Button>
 
         {/* Page Numbers */}
-        <div className="flex items-center gap-1 px-2 shrink-0">
+        <div className="flex items-center gap-1.5 px-2 shrink-0">
           {pageNumbers.map((pageNumber, index) => (
             <React.Fragment key={index}>
               {pageNumber === "..." ? (
-                <div className="w-8 text-center text-[10px] text-muted-foreground font-mono">
+                <div
+                  className={
+                    isFuwari
+                      ? "w-8 text-center text-sm fuwari-text-30"
+                      : "w-8 text-center text-[10px] text-muted-foreground font-mono"
+                  }
+                >
                   ...
                 </div>
               ) : (
                 <Button
-                  variant="ghost"
-                  size="sm"
+                  variant={isFuwari ? "ghost" : "ghost"}
+                  size={isFuwari ? "sm" : "sm"}
                   onClick={() => onPageChange(pageNumber)}
-                  className={`h-8 w-8 p-0 rounded-none font-mono text-xs transition-colors ${
-                    currentPage === pageNumber
-                      ? "bg-foreground text-background font-bold hover:bg-foreground hover:text-background"
-                      : "text-muted-foreground hover:text-foreground hover:bg-transparent underline decoration-border/30 hover:decoration-foreground underline-offset-4"
-                  }`}
+                  className={
+                    isFuwari
+                      ? `h-9 min-w-10 px-1.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                          currentPage === pageNumber
+                            ? "fuwari-text-90 bg-(--fuwari-btn-regular-bg) font-bold"
+                            : "fuwari-text-50 hover:text-(--fuwari-primary) hover:bg-(--fuwari-btn-plain-bg-hover)"
+                        }`
+                      : `h-8 w-8 p-0 rounded-none font-mono text-xs transition-colors ${
+                          currentPage === pageNumber
+                            ? "bg-foreground text-background font-bold hover:bg-foreground hover:text-background"
+                            : "text-muted-foreground hover:text-foreground hover:bg-transparent underline decoration-border/30 hover:decoration-foreground underline-offset-4"
+                        }`
+                  }
                 >
                   {pageNumber}
                 </Button>
@@ -111,13 +146,23 @@ export function AdminPagination({
 
         {/* Next Button */}
         <Button
-          variant="outline"
-          size="icon"
+          variant={isFuwari ? "secondary" : "outline"}
+          size={isFuwari ? "sm" : "icon"}
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="h-8 w-8 shrink-0 rounded-none border-border/30 hover:bg-foreground hover:text-background hover:border-foreground transition-all disabled:opacity-20"
+          className={
+            isFuwari
+              ? "h-9 px-3 active:scale-95 transition-all disabled:opacity-40"
+              : "h-8 w-8 shrink-0 rounded-none border-border/30 hover:bg-foreground hover:text-background hover:border-foreground transition-all disabled:opacity-20"
+          }
         >
-          <span className="font-mono text-xs font-bold">{">"}</span>
+          <span
+            className={
+              isFuwari ? "text-sm font-bold" : "font-mono text-xs font-bold"
+            }
+          >
+            {">"}
+          </span>
         </Button>
       </div>
     </div>

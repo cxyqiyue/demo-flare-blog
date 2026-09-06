@@ -9,10 +9,11 @@ import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { markdownToJsonContent } from "@/features/import-export/utils/markdown-parser";
 import { jsonContentToMarkdown } from "@/features/import-export/utils/markdown-serializer";
 import { extensions } from "@/features/posts/editor/config";
-import { generateStrongPassword } from "@/features/posts/utils/post-secret";
 import type { PostRevisionSnapshot } from "@/features/posts/schema/post-revisions.schema";
+import { generateStrongPassword } from "@/features/posts/utils/post-secret";
 import { tagsAdminQueryOptions } from "@/features/tags/queries";
 import { ContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { AiArticlePanel } from "./ai-article-panel";
@@ -344,6 +345,190 @@ export function PostEditor({
     ],
   );
 
+  if (isFuwari) {
+    return (
+      <div className="flex flex-col gap-4 pb-8">
+        <ConfirmationModal
+          isOpen={status === "blocked"}
+          onClose={() => reset?.()}
+          onConfirm={() => proceed?.()}
+          title={m.editor_leave_title()}
+          message={m.editor_leave_message()}
+          confirmLabel={m.editor_leave_confirm()}
+        />
+
+        <PostEditorHeader
+          post={post}
+          saveStatus={saveStatus}
+          processState={processState}
+          isPostDirty={isPostDirty}
+          onPreview={() => {
+            if (post.slug)
+              window.open(`/post/${encodeURIComponent(post.slug)}`, "_blank");
+          }}
+          onProcess={handleProcessData}
+          onOpenAi={() => setIsAiOpen(true)}
+        />
+
+        <AiArticlePanel
+          editor={editorMode === "wysiwyg" ? editorInstance : null}
+          open={isAiOpen}
+          onClose={() => setIsAiOpen(false)}
+          onApplyTitle={(title) => handlePostChange({ title })}
+          onInsertFallback={handleAiInsertFallback}
+        />
+
+        <PostEditorHistoryPanel
+          postId={initialData.id}
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          currentSnapshot={currentSnapshot}
+          allTags={allTags}
+          onRestoreApplied={handleRestoreApplied}
+        />
+
+        {/* Main Content Area */}
+        <div
+          className="grid grid-cols-1 xl:grid-cols-[1fr_260px] gap-4 items-start fuwari-onload-animation"
+          style={{ animationDelay: "120ms" }}
+        >
+          <div className="min-w-0 flex flex-col gap-4">
+            {/* Mobile history trigger */}
+            <div className="flex justify-end xl:hidden -my-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsHistoryOpen(true)}
+                className="gap-2"
+              >
+                <History size={14} strokeWidth={1.5} />
+                {m.editor_history_open()}
+              </Button>
+            </div>
+
+            <PostEditorMetadata
+              post={post}
+              isGeneratingSlug={isGeneratingSlug}
+              isCalculatingReadTime={isCalculatingReadTime}
+              isGeneratingSummary={isGeneratingSummary}
+              isGeneratingTags={isGeneratingTags}
+              isGeneratingPassword={isGeneratingPassword}
+              canEditAuthor={canEditAuthor}
+              authorCandidates={authorCandidates}
+              onPostChange={handlePostChange}
+              onGenerateSlug={handleGenerateSlug}
+              onCalculateReadTime={handleCalculateReadTime}
+              onGenerateSummary={handleGenerateSummary}
+              onGenerateTags={handleGenerateTags}
+              onGeneratePassword={handleGeneratePassword}
+            />
+
+            {/* Editor card */}
+            <div className="fuwari-card-base p-4 sm:p-5 md:p-6">
+              {/* Mode switcher */}
+              <div className="mb-4 flex items-center gap-1.5 flex-wrap">
+                {(
+                  [
+                    { key: "wysiwyg", label: m.editor_mode_wysiwyg() },
+                    { key: "markdown", label: m.editor_mode_markdown() },
+                    { key: "preview", label: m.editor_mode_preview() },
+                  ] as const
+                ).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => void handleModeChange(key)}
+                    className={cn(
+                      "h-9 px-3 rounded-xl text-sm font-medium transition-colors active:scale-95",
+                      editorMode === key
+                        ? "bg-(--fuwari-primary)/10 text-(--fuwari-primary)"
+                        : "fuwari-btn-regular fuwari-text-75 hover:text-(--fuwari-primary)",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+                {isConverting && (
+                  <span className="ml-auto flex items-center gap-2 text-xs sm:text-sm fuwari-text-50">
+                    <Loader2 size={14} className="animate-spin" />
+                    {m.editor_markdown_converting()}
+                  </span>
+                )}
+              </div>
+
+              {/* Editor Area */}
+              <div className="min-h-[60vh]">
+                {editorMode === "wysiwyg" && (
+                  <Editor
+                    key={editorRenderKey}
+                    extensions={extensions}
+                    content={post.contentJson ?? ""}
+                    onChange={handleContentChange}
+                    onCreated={setEditorInstance}
+                  />
+                )}
+
+                {editorMode === "markdown" && (
+                  <textarea
+                    value={markdownSource}
+                    onChange={(e) => handleMarkdownChange(e.target.value)}
+                    placeholder={m.editor_markdown_placeholder()}
+                    spellCheck={false}
+                    className="w-full min-h-[60vh] resize-y whitespace-pre-wrap rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-input-bg) px-4 py-4 font-mono text-sm leading-6 fuwari-text-90 focus-visible:border-(--fuwari-primary)/50 focus-visible:outline-none"
+                  />
+                )}
+
+                {editorMode === "preview" && (
+                  <div className="min-h-[60vh] rounded-xl border border-(--fuwari-input-border) px-6 py-6 bg-transparent">
+                    <ContentRenderer content={post.contentJson} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <aside className="hidden xl:flex flex-col gap-4 sticky top-4">
+            <button
+              type="button"
+              onClick={() => setIsHistoryOpen(true)}
+              className="fuwari-card-base p-4 sm:p-5 w-full flex items-center justify-between text-left transition-colors hover:bg-(--fuwari-btn-plain-bg-hover)"
+            >
+              <div>
+                <p className="text-sm fuwari-text-50">
+                  {m.editor_history_eyebrow()}
+                </p>
+                <p className="mt-1 text-base font-bold fuwari-text-90">
+                  {m.editor_history_title()}
+                </p>
+              </div>
+              {saveStatus === "SAVING" ? (
+                <Loader2 size={16} className="animate-spin fuwari-text-50" />
+              ) : (
+                <History
+                  size={16}
+                  strokeWidth={1.5}
+                  className="fuwari-text-50"
+                />
+              )}
+            </button>
+
+            {editorMode === "wysiwyg" && editorInstance && (
+              <EditorTableOfContents editor={editorInstance} />
+            )}
+          </aside>
+        </div>
+
+        <PostEditorStatusBar
+          chars={contentStats.chars}
+          words={contentStats.words}
+          saveStatus={saveStatus}
+          lastSaved={lastSaved}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-80 flex flex-col bg-background overflow-hidden">
       <ConfirmationModal
@@ -361,7 +546,8 @@ export function PostEditor({
         processState={processState}
         isPostDirty={isPostDirty}
         onPreview={() => {
-          if (post.slug) window.open(`/post/${encodeURIComponent(post.slug)}`, "_blank");
+          if (post.slug)
+            window.open(`/post/${encodeURIComponent(post.slug)}`, "_blank");
         }}
         onProcess={handleProcessData}
         onOpenAi={() => setIsAiOpen(true)}

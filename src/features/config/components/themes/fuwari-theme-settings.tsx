@@ -7,6 +7,7 @@ import {
   FUWARI_THEME_HUE_MAX,
   FUWARI_THEME_HUE_MIN,
 } from "@/features/config/site-config.schema";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 function FuwariHuePreview() {
@@ -83,6 +84,46 @@ export function FuwariThemeSettings() {
   const {
     formState: { errors },
   } = useFormContext<SystemConfig>();
+
+  if (isFuwari) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <AssetUploadField
+            name="site.theme.fuwari.homeBg"
+            assetPath="themes/fuwari/home-bg.webp"
+            accept=".png,.webp,.jpg,.jpeg"
+            label={m.settings_site_field_home_image()}
+            hint={m.settings_site_field_home_image_hint()}
+            placeholder="/images/asset/themes/fuwari/home-bg.webp or https://picsum.photos/1600/900"
+            error={errors.site?.theme?.fuwari?.homeBg?.message}
+          />
+        </div>
+        <AssetUploadField
+          name="site.theme.fuwari.avatar"
+          assetPath="themes/fuwari/avatar.png"
+          accept=".png,.webp,.jpg,.jpeg"
+          readOnly
+          label={m.settings_site_field_avatar()}
+          error={errors.site?.theme?.fuwari?.avatar?.message}
+        />
+        <RangeField
+          name="site.theme.fuwari.primaryHue"
+          label={m.settings_site_field_primary_hue()}
+          hint={m.settings_site_field_primary_hue_hint()}
+          min={FUWARI_THEME_HUE_MIN}
+          max={FUWARI_THEME_HUE_MAX}
+          step={1}
+          unit="deg"
+          defaultValue={250}
+          error={errors.site?.theme?.fuwari?.primaryHue?.message}
+        />
+        <div className="sm:col-span-2">
+          <FuwariHuePreview />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute, useBlocker } from "@tanstack/react-router";
+import type { LucideIcon } from "lucide-react";
 import {
   BellRing,
   Check,
@@ -16,18 +17,22 @@ import {
   ShieldCheck,
   Webhook,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
-import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AiSettingsSection } from "@/features/ai/components/ai-settings-section";
 import { useAiConnection } from "@/features/ai/hooks/use-ai-connection";
 import { ChallengeSettingsSection } from "@/features/challenge/components/challenge-settings-section";
 import { CloudflareAnalyticsSettingsSection } from "@/features/cloudflare-usage/components/cloudflare-usage-settings-section";
 import { MaintenanceSection } from "@/features/config/components/maintenance-section";
-import { SectionSkeleton } from "@/features/config/components/settings-skeleton";
+import {
+  FuwariSectionSkeleton,
+  SectionSkeleton,
+} from "@/features/config/components/settings-skeleton";
 import { SiteSettingsSection } from "@/features/config/components/site-settings-section";
 import { StorageSettingsSection } from "@/features/config/components/storage-settings-section";
 import type {
@@ -45,10 +50,11 @@ import { useEmailConnection } from "@/features/email/hooks/use-email-connection"
 import { ImageHostingSettingsSection } from "@/features/image-hosting/components/image-hosting-settings-section";
 import { useImageHostingConnection } from "@/features/image-hosting/hooks/use-image-hosting-connection";
 import { OAuthClientsSection } from "@/features/oauth-clients/components/oauth-clients-section";
-import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
 import { SubscriptionSettingsSection } from "@/features/subscription/components/subscription-settings-section";
 import { WebhookSettingsSection } from "@/features/webhook/components/webhook-settings-section";
 import { WechatVerifySettingsSection } from "@/features/wechat-verify/components/wechat-verify-settings-section";
+import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -258,6 +264,237 @@ function RouteComponent() {
       proceed?.();
     }
   };
+
+  if (isFuwari) {
+    if (isLoading) {
+      return (
+        <div className="flex flex-col gap-4 pb-28">
+          <FuwariSectionSkeleton />
+        </div>
+      );
+    }
+
+    const tabPanes: Array<{
+      value: (typeof tabItems)[number]["value"];
+      icon: LucideIcon;
+      title: string;
+      desc: string;
+      children: ReactNode;
+    }> = [
+      {
+        value: "site",
+        icon: LayoutTemplate,
+        title: m.settings_site_title(),
+        desc: m.settings_site_desc(),
+        children: <SiteSettingsSection />,
+      },
+      {
+        value: "email",
+        icon: Mail,
+        title: m.settings_email_title(),
+        desc: m.settings_email_desc(),
+        children: (
+          <EmailServiceSection testEmailConnection={testEmailConnection} />
+        ),
+      },
+      {
+        value: "ai",
+        icon: Cpu,
+        title: m.settings_ai_title(),
+        desc: m.settings_ai_desc(),
+        children: <AiSettingsSection testAiConnection={testAiConnection} />,
+      },
+      {
+        value: "image-hosting",
+        icon: ImageIcon,
+        title: m.settings_image_hosting_title(),
+        desc: m.settings_image_hosting_desc(),
+        children: (
+          <ImageHostingSettingsSection
+            testImageHostingConnection={testImageHostingConnection}
+          />
+        ),
+      },
+      {
+        value: "challenge",
+        icon: ShieldCheck,
+        title: m.settings_challenge_title(),
+        desc: m.settings_challenge_desc(),
+        children: <ChallengeSettingsSection />,
+      },
+      {
+        value: "wechat-verify",
+        icon: MessageCircle,
+        title: m.settings_wechat_verify_title(),
+        desc: m.settings_wechat_verify_desc(),
+        children: <WechatVerifySettingsSection />,
+      },
+      {
+        value: "webhook",
+        icon: Webhook,
+        title: m.settings_webhook_title(),
+        desc: m.settings_webhook_desc(),
+        children: <WebhookSettingsSection />,
+      },
+      {
+        value: "subscription",
+        icon: BellRing,
+        title: m.settings_subscription_title(),
+        desc: m.settings_subscription_desc(),
+        children: <SubscriptionSettingsSection />,
+      },
+      {
+        value: "cloudflare",
+        icon: Cloud,
+        title: "Cloudflare 用量监控",
+        desc: "监控 Cloudflare 免费额度使用情况，支持告警通知",
+        children: <CloudflareAnalyticsSettingsSection />,
+      },
+      {
+        value: "storage",
+        icon: Database,
+        title: "存储管理",
+        desc: "管理 KV 与 D1 存储后端，KV 达到限额时自动降级到 D1",
+        children: <StorageSettingsSection />,
+      },
+      {
+        value: "maintenance",
+        icon: Hammer,
+        title: m.settings_maintenance_title(),
+        desc: m.settings_maintenance_desc(),
+        children: <MaintenanceSection />,
+      },
+      {
+        value: "integrations",
+        icon: KeyRound,
+        title: m.settings_mcp_title(),
+        desc: m.settings_mcp_desc(),
+        children: <OAuthClientsSection />,
+      },
+    ];
+
+    return (
+      <FormProvider {...methods}>
+        <form
+          ref={formRef}
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col gap-5 pb-28"
+        >
+          <ConfirmationModal
+            isOpen={blockerStatus === "blocked"}
+            onClose={() => resetBlocker?.()}
+            onConfirm={handleSaveAndLeave}
+            onSecondaryConfirm={() => proceed?.()}
+            title={m.settings_unsaved_title()}
+            message={m.settings_unsaved_message()}
+            confirmLabel={m.settings_unsaved_save_and_leave()}
+            secondaryConfirmLabel={m.settings_unsaved_leave()}
+          />
+
+          {/* Header Area */}
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight fuwari-text-90 sm:text-3xl">
+                {m.settings_header_title()}
+              </h1>
+              <p className="text-xs sm:text-sm fuwari-text-50">
+                {m.settings_header_desc()}
+              </p>
+            </div>
+
+            {TAB_SECTION[activeTab] && (
+              <Button
+                type="submit"
+                disabled={isSubmitting || !isDirty}
+                className="hidden h-11 gap-2 rounded-xl px-6 font-medium sm:flex fuwari-btn-primary active:scale-95 disabled:opacity-60"
+              >
+                {isSubmitting ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Check size={16} />
+                )}
+                {isSubmitting ? m.settings_btn_saving() : m.settings_btn_save()}
+              </Button>
+            )}
+          </div>
+
+          {/* Segmented Tabs */}
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) =>
+              setActiveTab(value as (typeof tabItems)[number]["value"])
+            }
+            className="flex flex-col gap-4"
+          >
+            <div
+              ref={tabsScrollRef}
+              className="sticky top-0 z-40 -mx-4 overflow-x-auto no-scrollbar px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:mx-0 lg:px-0"
+            >
+              <TabsList className="min-w-max grow sm:min-w-0 sm:flex-wrap sm:max-w-full sm:justify-start">
+                {tabItems.map(({ value, icon: Icon, label }) => (
+                  <TabsTrigger
+                    key={value}
+                    value={value}
+                    className="mx-0 flex w-auto items-center justify-center gap-1.5 whitespace-nowrap px-3 py-2 last:mr-0"
+                  >
+                    <Icon size={15} className="shrink-0" />
+                    <span>{label}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+
+            <div className="min-w-0">
+              {tabPanes.map((pane, index) => {
+                const Icon = pane.icon;
+
+                return (
+                  <TabsContent
+                    key={pane.value}
+                    value={pane.value}
+                    className="fuwari-card-base mt-0 p-4 fuwari-onload-animation sm:p-5 md:p-6"
+                    style={{ animationDelay: `${index * 40}ms` }}
+                  >
+                    <div className="mb-5 flex items-start gap-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-(--fuwari-btn-regular-bg)">
+                        <Icon size={18} className="fuwari-text-50" />
+                      </div>
+                      <div className="min-w-0 space-y-0.5">
+                        <h2 className="text-lg font-bold leading-tight fuwari-text-90 sm:text-xl">
+                          {pane.title}
+                        </h2>
+                        <p className="text-xs sm:text-sm fuwari-text-50">
+                          {pane.desc}
+                        </p>
+                      </div>
+                    </div>
+                    {pane.children}
+                  </TabsContent>
+                );
+              })}
+            </div>
+          </Tabs>
+
+          {/* Floating Action Button for Mobile */}
+          {isDirty && TAB_SECTION[activeTab] && (
+            <div className="fixed bottom-8 right-6 z-50 sm:hidden animate-in fade-in zoom-in slide-in-from-bottom-10 duration-500">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex h-14 w-14 items-center justify-center rounded-full p-0 shadow-2xl fuwari-btn-primary active:scale-95"
+              >
+                {isSubmitting ? (
+                  <Loader2 size={24} className="animate-spin" />
+                ) : (
+                  <Check size={24} />
+                )}
+              </Button>
+            </div>
+          )}
+        </form>
+      </FormProvider>
+    );
+  }
 
   if (isLoading) {
     return (

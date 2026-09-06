@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import type { CreateFriendLinkInput } from "@/features/friend-links/friend-links.schema";
 import { createCreateFriendLinkSchema } from "@/features/friend-links/friend-links.schema";
 import { useAdminFriendLinks } from "@/features/friend-links/hooks/use-friend-links";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 interface AddFriendLinkModalProps {
@@ -67,6 +68,96 @@ const AddFriendLinkModalInternal = ({
   };
 
   if (!isOpen) return null;
+
+  if (isFuwari) {
+    return createPortal(
+      <div className="fixed inset-0 z-100 flex items-center justify-center p-4 md:p-6 transition-all duration-300">
+        <div
+          className="absolute inset-0 bg-black/30 backdrop-blur-sm dark:bg-black/50"
+          onClick={handleClose}
+        />
+        <div className="relative w-full max-w-md fuwari-card-base p-5 sm:p-6 flex flex-col max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="flex items-start justify-between gap-4 pb-4 border-b border-(--fuwari-input-border)">
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] fuwari-text-30">
+                [ {m.friend_links_admin_tag()} ]
+              </p>
+              <h3 className="text-xl font-bold fuwari-text-90">
+                {m.friend_links_add_modal_title()}
+              </h3>
+            </div>
+            <button
+              onClick={handleClose}
+              className="shrink-0 p-1 -mr-1 -mt-1 fuwari-text-50 hover:text-(--fuwari-primary) transition-colors"
+              aria-label={m.common_close()}
+            >
+              <X size={20} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          <p className="text-sm fuwari-text-50 py-4 border-b border-(--fuwari-input-border)">
+            {m.friend_links_add_modal_desc()}
+          </p>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="py-5 space-y-5">
+            <FuwariModalFormField
+              label={m.friend_links_form_site_name()}
+              placeholder={m.friend_links_form_site_name_ph()}
+              error={errors.siteName?.message}
+              inputProps={register("siteName")}
+            />
+            <FuwariModalFormField
+              label={m.friend_links_form_site_url()}
+              placeholder={m.friend_links_form_site_url_ph()}
+              error={errors.siteUrl?.message}
+              inputProps={register("siteUrl")}
+            />
+            <FuwariModalFormField
+              label={m.friend_links_form_desc()}
+              placeholder={m.friend_links_form_desc_ph()}
+              error={errors.description?.message}
+              inputProps={register("description")}
+            />
+            <FuwariModalFormField
+              label={m.friend_links_form_logo()}
+              placeholder={m.friend_links_form_logo_ph()}
+              error={errors.logoUrl?.message}
+              inputProps={register("logoUrl")}
+            />
+            <FuwariModalFormField
+              label={m.friend_links_form_email()}
+              placeholder={m.friend_links_form_email_ph()}
+              error={errors.contactEmail?.message}
+              inputProps={register("contactEmail")}
+            />
+          </form>
+
+          <div className="flex justify-end gap-2.5 pt-5 border-t border-(--fuwari-input-border)">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="fuwari-btn-regular rounded-xl h-10 px-4 text-sm font-medium fuwari-text-75 hover:text-(--fuwari-primary) active:scale-95 transition-all"
+            >
+              {m.friend_links_batch_cancel()}
+            </button>
+            <Button
+              type="submit"
+              onClick={handleSubmit(onSubmit)}
+              disabled={isCreating || !siteName.trim() || !siteUrl.trim()}
+              className="h-10 px-5 text-sm font-bold active:scale-95 transition-all"
+            >
+              {isCreating ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                m.friend_links_add_modal_submit()
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -153,6 +244,26 @@ export function AddFriendLinkModal(props: AddFriendLinkModalProps) {
     </ClientOnly>
   );
 }
+
+const FuwariModalFormField = ({
+  label,
+  placeholder,
+  error,
+  inputProps,
+}: {
+  label: string;
+  placeholder?: string;
+  error?: string;
+  inputProps: ComponentProps<typeof Input>;
+}) => {
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-bold fuwari-text-75">{label}</label>
+      <Input {...inputProps} placeholder={placeholder} />
+      {error && <p className="text-xs text-red-500 font-medium">! {error}</p>}
+    </div>
+  );
+};
 
 function ModalFormField({
   label,

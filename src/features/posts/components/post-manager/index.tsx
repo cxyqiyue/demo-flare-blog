@@ -11,6 +11,7 @@ import { createEmptyPostFn } from "@/features/posts/api/posts.admin.api";
 import { POSTS_KEYS } from "@/features/posts/queries";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ADMIN_ITEMS_PER_PAGE } from "@/lib/constants";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import { BatchActionBar, PostRow, PostsToolbar } from "./components";
 import { useBatchUpdatePostsStatus, useDeletePost, usePosts } from "./hooks";
@@ -170,6 +171,188 @@ export function PostManager({
     });
     setBatchTarget(null);
   };
+
+  if (isFuwari) {
+    return (
+      <div className="flex flex-col gap-4">
+        {/* Header */}
+        <div
+          className="fuwari-card-base p-4 sm:p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 fuwari-onload-animation"
+          style={{ animationDelay: "100ms" }}
+        >
+          <div className="space-y-1">
+            <h1 className="text-lg sm:text-xl font-bold fuwari-text-90">
+              {m.admin_posts_title()}
+            </h1>
+            <p className="text-sm fuwari-text-50 mt-0.5">
+              {m.admin_posts_sys_name()}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              onClick={() => createMutation.mutate()}
+              disabled={createMutation.isPending}
+              className="h-10 px-5 gap-2"
+            >
+              <Plus size={16} strokeWidth={1.5} />
+              {createMutation.isPending
+                ? m.admin_posts_creating()
+                : m.admin_posts_create()}
+            </Button>
+          </div>
+        </div>
+
+        {/* Toolbar */}
+        <div
+          className="fuwari-onload-animation"
+          style={{ animationDelay: "150ms" }}
+        >
+          <PostsToolbar
+            searchTerm={searchInput}
+            onSearchChange={setSearchInput}
+            status={status}
+            onStatusChange={onStatusChange}
+            sortDir={sortDir}
+            sortBy={sortBy}
+            onSortUpdate={onSortUpdate}
+            onResetFilters={() => {
+              setSearchInput("");
+              onResetFilters();
+            }}
+          />
+        </div>
+
+        {/* List Content */}
+        <div
+          className="flex flex-col gap-4 fuwari-onload-animation"
+          style={{ animationDelay: "200ms" }}
+        >
+          {error ? (
+            <ErrorPage />
+          ) : isPending ? (
+            <PostManagerSkeleton />
+          ) : (
+            <>
+              {posts.length === 0 ? (
+                <div className="fuwari-card-base p-16 flex flex-col items-center justify-center gap-3 fuwari-text-50">
+                  <ListFilter
+                    size={32}
+                    strokeWidth={1.5}
+                    className="opacity-30"
+                  />
+                  <p className="text-sm sm:text-base font-medium">
+                    {m.admin_posts_no_match()}
+                  </p>
+                  <Button variant="ghost" onClick={onResetFilters}>
+                    {m.admin_posts_clear_filters()}
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <BatchActionBar
+                    selectedCount={selectedIds.size}
+                    isPending={batchMutation.isPending}
+                    onPublish={() => setBatchTarget("published")}
+                    onDraft={() => setBatchTarget("draft")}
+                    onClear={() => setSelectedIds(new Set())}
+                  />
+
+                  <div className="fuwari-card-base">
+                    {/* Desktop Header */}
+                    <div className="hidden md:grid grid-cols-12 gap-4 px-5 py-3 text-xs sm:text-sm fuwari-text-50 border-b border-(--fuwari-input-border)">
+                      <div className="col-span-1">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={toggleSelectAll}
+                          aria-label={m.admin_posts_select_all()}
+                        />
+                      </div>
+                      <div className="col-span-5">
+                        {m.admin_posts_col_info()}
+                      </div>
+                      <div className="col-span-3">
+                        {m.admin_posts_col_status()}
+                      </div>
+                      <div className="col-span-2">
+                        {m.admin_posts_col_time()}
+                      </div>
+                      <div className="col-span-1"></div>
+                    </div>
+
+                    <div>
+                      {posts.map((post) => (
+                        <PostRow
+                          key={post.id}
+                          post={post}
+                          selected={selectedIds.has(post.id)}
+                          onSelectChange={(checked) =>
+                            toggleSelected(post.id, checked)
+                          }
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Pagination */}
+        <div
+          className="fuwari-onload-animation"
+          style={{ animationDelay: "250ms" }}
+        >
+          <AdminPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalCount}
+            itemsPerPage={ADMIN_ITEMS_PER_PAGE}
+            currentPageItemCount={posts.length}
+            onPageChange={onPageChange}
+          />
+        </div>
+
+        {/* --- Confirmation Modal --- */}
+        <ConfirmationModal
+          isOpen={!!postToDelete}
+          onClose={() => !deleteMutation.isPending && setPostToDelete(null)}
+          onConfirm={confirmDelete}
+          title={m.admin_posts_delete_confirm_title()}
+          message={m.admin_posts_delete_confirm_desc({
+            title: postToDelete?.title ?? "",
+          })}
+          confirmLabel={m.admin_posts_delete_confirm_btn()}
+          isDanger={true}
+          isLoading={deleteMutation.isPending}
+        />
+
+        {/* --- Batch Status Confirmation Modal --- */}
+        <ConfirmationModal
+          isOpen={batchTarget !== null}
+          onClose={() => !batchMutation.isPending && setBatchTarget(null)}
+          onConfirm={confirmBatch}
+          title={
+            batchTarget === "published"
+              ? m.admin_posts_batch_publish_confirm_title()
+              : m.admin_posts_batch_draft_confirm_title()
+          }
+          message={
+            batchTarget === "published"
+              ? m.admin_posts_batch_publish_confirm_desc({
+                  count: String(selectedIds.size),
+                })
+              : m.admin_posts_batch_draft_confirm_desc({
+                  count: String(selectedIds.size),
+                })
+          }
+          confirmLabel={m.admin_posts_batch_confirm_btn()}
+          isLoading={batchMutation.isPending}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-20">

@@ -14,15 +14,17 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  testCloudflareConnectionFn,
   testCloudflareAlertEmailFn,
   testCloudflareAlertWebhookFn,
+  testCloudflareConnectionFn,
 } from "@/features/cloudflare-usage/api/cloudflare-usage.api";
 import {
   CF_SERVICE_DESCRIPTIONS,
   type CfService,
 } from "@/features/cloudflare-usage/cloudflare-usage.schema";
 import type { SystemConfig } from "@/features/config/config.schema";
+import { isFuwari } from "@/lib/theme-mode";
+import { cn } from "@/lib/utils";
 
 type ConnectionStatus = "idle" | "testing" | "success" | "error";
 
@@ -44,7 +46,11 @@ const THRESHOLD_FIELDS: Array<{
   label: string;
   serviceId: CfService;
 }> = [
-  { name: "workersRequestsPct", label: "Workers Requests", serviceId: "workers" },
+  {
+    name: "workersRequestsPct",
+    label: "Workers Requests",
+    serviceId: "workers",
+  },
   { name: "d1RowsReadPct", label: "D1 Rows Read", serviceId: "d1" },
   { name: "r2StoragePct", label: "R2 Storage", serviceId: "r2" },
   { name: "kvReadPct", label: "KV Reads", serviceId: "kv" },
@@ -146,12 +152,9 @@ export function CloudflareAnalyticsSettingsSection() {
       } else if (result.results) {
         const failed = result.results.filter((r) => !r.success);
         if (failed.length > 0) {
-          toast.error(
-            `${failed.length} 个 Webhook 发送失败`,
-            {
-              description: failed.map((r) => `${r.name}: ${r.error}`).join("\n"),
-            },
-          );
+          toast.error(`${failed.length} 个 Webhook 发送失败`, {
+            description: failed.map((r) => `${r.name}: ${r.error}`).join("\n"),
+          });
         } else {
           toast.success("Webhook 测试消息已发送");
         }
@@ -173,6 +176,26 @@ export function CloudflareAnalyticsSettingsSection() {
 
   const inputClassName =
     "w-full rounded-none border border-border/30 bg-muted/10 px-4 py-6 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10";
+
+  if (isFuwari) {
+    return (
+      <FuwariCloudflareAnalyticsSettingsSection
+        register={register}
+        apiToken={apiToken}
+        isConfigured={isConfigured}
+        connectionStatus={connectionStatus}
+        connectionError={connectionError}
+        onTest={handleTest}
+        isTesting={testMutation.isPending}
+        isEmailConfigured={isEmailConfigured}
+        testEmailPending={testEmailMutation.isPending}
+        onTestEmail={() => testEmailMutation.mutate()}
+        hasEnabledWebhook={hasEnabledWebhook}
+        testWebhookPending={testWebhookMutation.isPending}
+        onTestWebhook={() => testWebhookMutation.mutate()}
+      />
+    );
+  }
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
@@ -372,10 +395,12 @@ export function CloudflareAnalyticsSettingsSection() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
             {THRESHOLD_FIELDS.map(({ name, label, serviceId }) => {
-              const fieldPath: `cloudflareAnalytics.alert.thresholds.${ThresholdFieldName}` =
-                `cloudflareAnalytics.alert.thresholds.${name}`;
+              const fieldPath: `cloudflareAnalytics.alert.thresholds.${ThresholdFieldName}` = `cloudflareAnalytics.alert.thresholds.${name}`;
               return (
-                <div key={name} className="flex items-center justify-between gap-2">
+                <div
+                  key={name}
+                  className="flex items-center justify-between gap-2"
+                >
                   <label
                     className="text-xs text-muted-foreground cursor-help"
                     title={CF_SERVICE_DESCRIPTIONS[serviceId]}
@@ -432,16 +457,323 @@ export function CloudflareAnalyticsSettingsSection() {
             创建 Token
           </p>
           <p>
-            2. 选择{" "}
-            <strong className="text-foreground/80">Custom token</strong>
-            ，权限设置为 Account → Account Analytics → Read（注意是
-            "Account Analytics" 不是 "Analytics"）
+            2. 选择 <strong className="text-foreground/80">Custom token</strong>
+            ，权限设置为 Account → Account Analytics → Read（注意是 "Account
+            Analytics" 不是 "Analytics"）
           </p>
           <p>
             3. Account ID 已由{" "}
             <code className="font-mono text-foreground/80">
               CLOUDFLARE_ACCOUNT_ID
             </code>{" "}
+            环境变量提供，无需额外配置
+          </p>
+          <p>4. 数据有 10-30 分钟延迟，每小时缓存一次</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FuwariCloudflareAnalyticsSettingsSection({
+  register,
+  apiToken: _apiToken,
+  isConfigured,
+  connectionStatus,
+  connectionError,
+  onTest,
+  isTesting,
+  isEmailConfigured,
+  testEmailPending,
+  onTestEmail,
+  hasEnabledWebhook,
+  testWebhookPending,
+  onTestWebhook,
+}: {
+  register: ReturnType<typeof useFormContext<SystemConfig>>["register"];
+  apiToken: string;
+  isConfigured: boolean;
+  connectionStatus: ConnectionStatus;
+  connectionError: string | null;
+  onTest: () => void;
+  isTesting: boolean;
+  isEmailConfigured: boolean;
+  testEmailPending: boolean;
+  onTestEmail: () => void;
+  hasEnabledWebhook: boolean;
+  testWebhookPending: boolean;
+  onTestWebhook: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      {/* General Settings */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+        <div className="flex items-center gap-4 mb-5">
+          <div className="h-10 w-10 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center shrink-0">
+            <ExternalLink size={18} className="fuwari-text-50" />
+          </div>
+          <div className="space-y-0.5">
+            <h5 className="text-base font-bold fuwari-text-90">
+              Cloudflare Analytics API 配置
+            </h5>
+            <p className="text-xs sm:text-sm fuwari-text-50">
+              用于查询 Cloudflare 账户用量数据，需要 Account Analytics 读取权限
+            </p>
+          </div>
+        </div>
+
+        <div className="mb-5 rounded-xl bg-(--fuwari-btn-regular-bg) p-4">
+          <p className="text-xs sm:text-sm fuwari-text-50">
+            Account ID 已从 GitHub Secrets 的{" "}
+            <code className="fuwari-text-30">CLOUDFLARE_ACCOUNT_ID</code>{" "}
+            自动读取，无需在此重复填写
+          </p>
+        </div>
+
+        <label className="block space-y-2">
+          <span className="block text-sm font-bold fuwari-text-75">
+            API Token
+          </span>
+          <div className="relative">
+            <Input
+              id="cf-analytics-api-token"
+              type="password"
+              placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              {...register("cloudflareAnalytics.apiToken")}
+              className="pr-10"
+            />
+            <KeyRound
+              size={14}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
+            />
+          </div>
+          <span className="block text-xs sm:text-sm fuwari-text-50">
+            需要 Account → Account Analytics → Read 权限
+          </span>
+        </label>
+
+        {/* Test Connection */}
+        <div className="mt-4 flex items-center gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!isConfigured || isTesting}
+            onClick={onTest}
+            className="h-9 rounded-xl px-4 text-xs font-medium fuwari-text-75 hover:text-(--fuwari-primary)"
+          >
+            {isTesting ? (
+              <>
+                <Loader2 size={12} className="animate-spin mr-2" />
+                测试中...
+              </>
+            ) : (
+              "测试连接"
+            )}
+          </Button>
+
+          {connectionStatus === "success" && (
+            <div className="flex items-center gap-2 text-xs font-medium text-green-600">
+              <CheckCircle2 size={12} />
+              连接成功
+            </div>
+          )}
+          {connectionStatus === "error" && (
+            <div className="flex items-center gap-2 text-xs font-medium text-red-500">
+              <XCircle size={12} />
+              {connectionError ?? "连接失败"}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Alert Settings */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+        <div className="flex items-center gap-4 mb-5">
+          <div className="h-10 w-10 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center shrink-0">
+            <CheckCircle2 size={18} className="fuwari-text-50" />
+          </div>
+          <div className="space-y-0.5">
+            <h5 className="text-base font-bold fuwari-text-90">告警通知</h5>
+            <p className="text-xs sm:text-sm fuwari-text-50">
+              当用量超过阈值时发送邮件和 Webhook 通知
+            </p>
+          </div>
+        </div>
+
+        <label className="flex cursor-pointer items-center gap-3">
+          <input
+            type="checkbox"
+            {...register("cloudflareAnalytics.alert.enabled")}
+            className="h-4 w-4 rounded accent-(--fuwari-primary)"
+          />
+          <span className="text-sm font-bold fuwari-text-90">启用用量告警</span>
+        </label>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {/* Email Notification */}
+          <div className="rounded-xl bg-(--fuwari-btn-regular-bg) p-4">
+            <label
+              className={cn(
+                "flex items-center gap-3",
+                isEmailConfigured
+                  ? "cursor-pointer"
+                  : "cursor-not-allowed opacity-50",
+              )}
+            >
+              <input
+                type="checkbox"
+                {...register("cloudflareAnalytics.alert.emailEnabled")}
+                disabled={!isEmailConfigured}
+                className="h-4 w-4 rounded accent-(--fuwari-primary)"
+              />
+              <span className="text-sm font-bold fuwari-text-75">邮件通知</span>
+            </label>
+            {!isEmailConfigured && (
+              <p className="mt-1 text-xs fuwari-text-50">
+                需先在「邮件服务」中配置 SMTP
+              </p>
+            )}
+            <div className="mt-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!isEmailConfigured || testEmailPending}
+                onClick={onTestEmail}
+                className="h-8 rounded-lg px-3 text-xs font-medium fuwari-text-75 hover:text-(--fuwari-primary)"
+              >
+                {testEmailPending ? (
+                  <Loader2 size={10} className="animate-spin mr-1" />
+                ) : (
+                  <Mail size={10} className="mr-1" />
+                )}
+                发送测试邮件
+              </Button>
+            </div>
+          </div>
+
+          {/* Webhook Notification */}
+          <div className="rounded-xl bg-(--fuwari-btn-regular-bg) p-4">
+            <label
+              className={cn(
+                "flex items-center gap-3",
+                hasEnabledWebhook
+                  ? "cursor-pointer"
+                  : "cursor-not-allowed opacity-50",
+              )}
+            >
+              <input
+                type="checkbox"
+                {...register("cloudflareAnalytics.alert.webhookEnabled")}
+                disabled={!hasEnabledWebhook}
+                className="h-4 w-4 rounded accent-(--fuwari-primary)"
+              />
+              <span className="text-sm font-bold fuwari-text-75">
+                Webhook 通知
+              </span>
+            </label>
+            {!hasEnabledWebhook && (
+              <p className="mt-1 text-xs fuwari-text-50">
+                需先在「通知」中配置 Webhook 端点
+              </p>
+            )}
+            <div className="mt-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!hasEnabledWebhook || testWebhookPending}
+                onClick={onTestWebhook}
+                className="h-8 rounded-lg px-3 text-xs font-medium fuwari-text-75 hover:text-(--fuwari-primary)"
+              >
+                {testWebhookPending ? (
+                  <Loader2 size={10} className="animate-spin mr-1" />
+                ) : (
+                  <Send size={10} className="mr-1" />
+                )}
+                测试 Webhook
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Threshold Settings */}
+        <div className="mt-5 pt-5 border-t border-(--fuwari-input-border)">
+          <p className="text-xs sm:text-sm fuwari-text-50 mb-4">
+            各服务告警阈值（默认 80%，用量达到该比例时触发通知）
+          </p>
+          <div className="grid grid-cols-1 gap-y-3 sm:grid-cols-2 sm:gap-x-6">
+            {THRESHOLD_FIELDS.map(({ name, label, serviceId }) => {
+              const fieldPath: `cloudflareAnalytics.alert.thresholds.${ThresholdFieldName}` = `cloudflareAnalytics.alert.thresholds.${name}`;
+              return (
+                <div
+                  key={name}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <label
+                    className="text-xs sm:text-sm fuwari-text-50 cursor-help"
+                    title={CF_SERVICE_DESCRIPTIONS[serviceId]}
+                  >
+                    {label}
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={5}
+                      {...register(fieldPath, { valueAsNumber: true })}
+                      className="h-8 w-16 rounded-lg border border-(--fuwari-input-border) bg-(--fuwari-input-bg) px-2 text-center text-xs font-semibold fuwari-text-90 focus:outline-none focus:border-(--fuwari-primary)/50"
+                    />
+                    <span className="text-xs fuwari-text-50">%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-4 space-y-1 pt-1">
+            {THRESHOLD_FIELDS.map(({ label, serviceId }) => (
+              <p
+                key={serviceId}
+                className="text-xs leading-relaxed fuwari-text-30"
+              >
+                <span className="fuwari-text-50">{label}</span>
+                {" · "}
+                {CF_SERVICE_DESCRIPTIONS[serviceId]}
+              </p>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 配置说明 */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+        <div className="flex items-center gap-3">
+          <h5 className="text-sm font-bold fuwari-text-75">配置说明</h5>
+          <ExternalLink size={12} className="fuwari-text-30" />
+        </div>
+        <div className="mt-3 space-y-2 text-xs sm:text-sm fuwari-text-50 leading-relaxed">
+          <p>
+            1. 前往{" "}
+            <a
+              href="https://dash.cloudflare.com/profile/api-tokens"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-(--fuwari-primary)"
+            >
+              Cloudflare API Tokens
+            </a>{" "}
+            创建 Token
+          </p>
+          <p>
+            2. 选择 <strong className="fuwari-text-75">Custom token</strong>
+            ，权限设置为 Account → Account Analytics → Read（注意是 "Account
+            Analytics" 不是 "Analytics"）
+          </p>
+          <p>
+            3. Account ID 已由{" "}
+            <code className="fuwari-text-30">CLOUDFLARE_ACCOUNT_ID</code>{" "}
             环境变量提供，无需额外配置
           </p>
           <p>4. 数据有 10-30 分钟延迟，每小时缓存一次</p>

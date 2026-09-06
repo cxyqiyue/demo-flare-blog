@@ -27,6 +27,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { OAUTH_MANAGED_SCOPES } from "@/features/oauth-provider/oauth-provider.shared";
+import { isFuwari } from "@/lib/theme-mode";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { useOAuthClients } from "../hooks/use-oauth-clients";
@@ -56,6 +57,53 @@ function MCPEndpointCard({ endpoint }: { endpoint: string }) {
       toast.error("Failed to copy");
     }
   };
+
+  if (isFuwari) {
+    return (
+      <Card className="bg-(--fuwari-card-bg)">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-bold">
+            {m.settings_mcp_endpoint_label()}
+          </CardTitle>
+          <CardDescription>
+            {m.settings_mcp_endpoint_desc?.() ||
+              "Use this endpoint to connect MCP clients to your blog."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-input-bg) p-3">
+            <code className="flex-1 break-all text-xs fuwari-text-75">
+              {endpoint}
+            </code>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 rounded-lg fuwari-btn-regular"
+                    onClick={copyToClipboard}
+                  >
+                    {copied ? (
+                      <Check className="h-3.5 w-3.5 text-green-500" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">
+                    {copied ? "Copied" : "Copy Endpoint"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border-border/30 bg-muted/5">
@@ -128,6 +176,175 @@ function OAuthConnectionCard({
     });
     setIsEditing(false);
   };
+
+  if (isFuwari) {
+    return (
+      <Card className="bg-(--fuwari-card-bg)">
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 p-6">
+          <div className="space-y-1.5 flex-1 min-w-0 mr-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 shrink-0 rounded-lg bg-(--fuwari-btn-regular-bg) flex items-center justify-center overflow-hidden">
+                {connection.clientIcon ? (
+                  <img
+                    src={connection.clientIcon}
+                    alt={connection.clientName ?? "Client"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <ShieldCheck className="h-4 w-4 fuwari-text-30" />
+                )}
+              </div>
+              {isEditing ? (
+                <div className="flex items-center gap-2 w-full max-w-sm">
+                  <Input
+                    autoFocus
+                    value={clientName}
+                    className="h-8"
+                    onChange={(e) => setClientName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleRename();
+                      if (e.key === "Escape") {
+                        setClientName(connection.clientName ?? "");
+                        setIsEditing(false);
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={handleRename}
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => {
+                      setClientName(connection.clientName ?? "");
+                      setIsEditing(false);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <CardTitle className="truncate font-bold">
+                    {connection.clientName ||
+                      m.settings_mcp_connection_unnamed()}
+                  </CardTitle>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
+                </>
+              )}
+            </div>
+            <CardDescription className="text-xs break-all pb-1 fuwari-text-50">
+              ID: {connection.clientId}
+            </CardDescription>
+          </div>
+
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            className="h-8 w-8 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity rounded-lg"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </CardHeader>
+
+        <CardContent className="space-y-6 pt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <h5 className="text-xs font-bold fuwari-text-50">
+                {m.settings_mcp_connection_timeline?.() || "Timeline"}
+              </h5>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-xs sm:text-sm fuwari-text-50">
+                    {m.settings_mcp_connection_connected_label()}
+                  </span>
+                  <span className="text-xs fuwari-text-50">
+                    {formatDate(connection.createdAt, { includeTime: true })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h5 className="text-xs font-bold fuwari-text-50">
+                {m.settings_mcp_connection_granted_scopes()}
+              </h5>
+              <div className="flex flex-wrap gap-1.5">
+                {managedScopes.length > 0 ? (
+                  managedScopes.map((scope) => (
+                    <Badge
+                      key={scope}
+                      variant="outline"
+                      className="h-5 px-2 text-[10px] font-medium fuwari-text-50"
+                    >
+                      {scope}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-xs sm:text-sm fuwari-text-50 italic">
+                    {m.settings_mcp_connection_no_business_scopes()}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {connection.redirectUris.length > 0 && (
+            <div className="space-y-2">
+              <h5 className="text-xs font-bold fuwari-text-50">
+                {m.settings_mcp_connection_redirect_uris()}
+              </h5>
+              <div className="space-y-1.5 overflow-hidden">
+                {connection.redirectUris.map((uri) => (
+                  <div
+                    key={uri}
+                    className="flex items-center gap-2 text-xs fuwari-text-50 group/uri"
+                  >
+                    <ExternalLink className="h-3 w-3 shrink-0 opacity-40" />
+                    <span className="break-all opacity-80 group-hover/uri:opacity-100 transition-opacity">
+                      {uri}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+
+        <ConfirmationModal
+          isOpen={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          onConfirm={async () => {
+            await onDelete(connection.consentId);
+            setDeleteOpen(false);
+          }}
+          title={m.settings_mcp_connection_disconnect_title()}
+          message={m.settings_mcp_connection_disconnect_desc({
+            client: connection.clientName || connection.clientId,
+          })}
+          confirmLabel={m.settings_mcp_connection_disconnect_btn()}
+          isDanger
+        />
+      </Card>
+    );
+  }
 
   return (
     <Card className="group border-border/20 bg-card/40 hover:border-border/40 transition-colors">
@@ -333,6 +550,61 @@ export function OAuthClientsSection() {
       },
     );
   };
+
+  if (isFuwari) {
+    return (
+      <div className="flex flex-col gap-4">
+        <MCPEndpointCard endpoint={mcpEndpoint} />
+
+        <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+          <div className="space-y-1.5">
+            <h2 className="text-lg sm:text-xl font-bold fuwari-text-90">
+              {m.settings_mcp_connections_title()}
+            </h2>
+            <p className="text-xs sm:text-sm fuwari-text-50 max-w-2xl leading-relaxed">
+              {m.settings_mcp_connections_desc()}
+            </p>
+            <div className="pt-1">
+              <Badge className="rounded-lg bg-(--fuwari-btn-regular-bg) text-xs font-bold fuwari-text-75">
+                {connectionCountLabel}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          {isLoading ? (
+            <div className="flex flex-col gap-4 animate-pulse">
+              {[1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="h-48 w-full rounded-xl bg-(--fuwari-btn-regular-bg)"
+                />
+              ))}
+            </div>
+          ) : connections.length > 0 ? (
+            connections.map((connection) => (
+              <OAuthConnectionCard
+                key={connection.consentId}
+                connection={connection}
+                onDelete={handleDelete}
+                onRename={handleRename}
+              />
+            ))
+          ) : (
+            <div className="fuwari-card-base p-10 sm:p-14 flex flex-col items-center justify-center bg-(--fuwari-card-bg)">
+              <div className="h-12 w-12 rounded-full bg-(--fuwari-btn-regular-bg) flex items-center justify-center mb-4 fuwari-text-30">
+                <ExternalLink className="h-6 w-6" />
+              </div>
+              <p className="text-sm fuwari-text-50 text-center">
+                {m.settings_mcp_empty_connections()}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-700">

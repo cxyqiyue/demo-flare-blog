@@ -18,6 +18,7 @@ import {
 } from "@/features/tags/queries";
 import type { CreateTagInput } from "@/features/tags/tags.schema";
 import { CreateTagInputSchema } from "@/features/tags/tags.schema";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -119,6 +120,278 @@ export function TagManager() {
       setSortDir("desc");
     }
   };
+
+  if (isFuwari) {
+    return (
+      <div className="flex flex-col gap-4">
+        {/* Header */}
+        <div
+          className="fuwari-card-base p-4 sm:p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 fuwari-onload-animation"
+          style={{ animationDelay: "100ms" }}
+        >
+          <div className="space-y-1">
+            <h1 className="text-lg sm:text-xl font-bold fuwari-text-90">
+              {m.tag_manager_title()}
+            </h1>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative w-full md:w-64">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 fuwari-text-30 pointer-events-none"
+                size={16}
+                strokeWidth={1.5}
+              />
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={m.tag_manager_search_placeholder()}
+                className="pl-9 w-full"
+              />
+            </div>
+            <Button onClick={() => setIsCreating(true)} className="gap-2">
+              <Hash size={14} strokeWidth={1.5} />
+              {m.tag_manager_new_tag()}
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 fuwari-onload-animation"
+          style={{ animationDelay: "150ms" }}
+        >
+          {[
+            {
+              label: m.tag_manager_stat_total(),
+              value: tags.length,
+              suffix: m.tag_manager_stat_unit(),
+            },
+            {
+              label: m.tag_manager_stat_active(),
+              value: tags.filter((t) => t.postCount > 0).length,
+              suffix: m.tag_manager_stat_unit(),
+            },
+            {
+              label: m.tag_manager_stat_empty(),
+              value: tags.filter((t) => t.postCount === 0).length,
+              suffix: m.tag_manager_stat_unit(),
+            },
+          ].map((stat, i) => (
+            <div key={i} className="fuwari-card-base p-4 sm:p-5">
+              <div className="text-sm fuwari-text-50 mb-1.5">{stat.label}</div>
+              <div className="text-2xl sm:text-3xl font-bold fuwari-text-90">
+                {stat.value}
+                <span className="text-sm fuwari-text-50 ml-1.5">
+                  {stat.suffix}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Creation Row (Inline) */}
+        {isCreating && (
+          <div
+            className="fuwari-onload-animation"
+            style={{ animationDelay: "200ms" }}
+          >
+            <InlineTagCreateForm
+              isSubmitting={createTagMutation.isPending}
+              onCancel={() => setIsCreating(false)}
+              onSubmit={(name) => createTagMutation.mutate(name)}
+            />
+          </div>
+        )}
+
+        {/* Table View */}
+        <div
+          className="fuwari-card-base overflow-hidden fuwari-onload-animation"
+          style={{ animationDelay: "250ms" }}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="border-b border-(--fuwari-input-border)">
+                  <th className="px-5 py-4 text-sm font-bold fuwari-text-50">
+                    <button
+                      onClick={() => toggleSort("name")}
+                      className="flex items-center gap-2 hover:text-(--fuwari-primary) transition-colors"
+                    >
+                      {m.tag_manager_col_name()}
+                      <ArrowUpDown
+                        size={12}
+                        strokeWidth={1.5}
+                        className={cn(
+                          sortBy === "name" && "text-(--fuwari-primary)",
+                        )}
+                      />
+                    </button>
+                  </th>
+                  <th className="px-5 py-4 text-sm font-bold fuwari-text-50">
+                    <button
+                      onClick={() => toggleSort("postCount")}
+                      className="flex items-center gap-2 hover:text-(--fuwari-primary) transition-colors"
+                    >
+                      {m.tag_manager_col_posts()}
+                      <ArrowUpDown
+                        size={12}
+                        strokeWidth={1.5}
+                        className={cn(
+                          sortBy === "postCount" && "text-(--fuwari-primary)",
+                        )}
+                      />
+                    </button>
+                  </th>
+                  <th className="px-5 py-4 text-sm font-bold fuwari-text-50 hidden lg:table-cell">
+                    <button
+                      onClick={() => toggleSort("createdAt")}
+                      className="flex items-center gap-2 hover:text-(--fuwari-primary) transition-colors"
+                    >
+                      {m.tag_manager_col_created()}
+                      <ArrowUpDown
+                        size={12}
+                        strokeWidth={1.5}
+                        className={cn(
+                          sortBy === "createdAt" && "text-(--fuwari-primary)",
+                        )}
+                      />
+                    </button>
+                  </th>
+                  <th className="px-5 py-4 text-sm font-bold fuwari-text-50 text-right">
+                    {m.tag_manager_col_actions()}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-(--fuwari-input-border)">
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="px-5 py-5">
+                        <div className="h-4 w-32 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                      </td>
+                      <td className="px-5 py-5">
+                        <div className="h-4 w-10 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                      </td>
+                      <td className="px-5 py-5 hidden lg:table-cell">
+                        <div className="h-4 w-24 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                      </td>
+                      <td className="px-5 py-5">
+                        <div className="h-6 w-16 rounded-lg bg-(--fuwari-btn-regular-bg) ml-auto" />
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredTags.length > 0 ? (
+                  filteredTags.map((tag) => (
+                    <tr
+                      key={tag.id}
+                      className="group hover:bg-(--fuwari-btn-plain-bg-hover) transition-colors duration-200"
+                    >
+                      <td className="px-5 py-4">
+                        {tagToEdit?.id === tag.id ? (
+                          <InlineTagEditForm
+                            key={`fuwari-${tag.id}`}
+                            initialName={tag.name}
+                            isSubmitting={updateTagMutation.isPending}
+                            inputClassName="h-8"
+                            onCancel={() => setTagToEdit(null)}
+                            onSubmit={(name) =>
+                              updateTagMutation.mutate({ id: tag.id, name })
+                            }
+                          />
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Hash
+                              size={14}
+                              strokeWidth={1.5}
+                              className="fuwari-text-30"
+                            />
+                            <span className="font-medium fuwari-text-90">
+                              {tag.name}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="text-sm sm:text-base fuwari-text-50">
+                          {tag.postCount}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 fuwari-text-30 text-xs sm:text-sm hidden lg:table-cell">
+                        {new Date(tag.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2"
+                            onClick={() =>
+                              setTagToEdit({ id: tag.id, name: tag.name })
+                            }
+                          >
+                            {m.tag_manager_edit()}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 hover:text-red-500"
+                            onClick={() =>
+                              setTagToDelete({ id: tag.id, name: tag.name })
+                            }
+                          >
+                            {m.tag_manager_delete()}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="px-6 py-16 text-center flex flex-col items-center gap-3 fuwari-text-50"
+                    >
+                      <Search
+                        size={24}
+                        strokeWidth={1.5}
+                        className="opacity-30"
+                      />
+                      <p className="text-sm sm:text-base font-medium">
+                        {m.tag_manager_no_match()}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSearchTerm("")}
+                      >
+                        {m.tag_manager_clear_search()}
+                      </Button>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <ConfirmationModal
+          isOpen={!!tagToDelete}
+          onClose={() => setTagToDelete(null)}
+          onConfirm={() =>
+            tagToDelete && deleteTagMutation.mutate(tagToDelete.id)
+          }
+          title={m.tag_manager_delete_title()}
+          message={
+            tagToDelete
+              ? m.tag_manager_delete_desc({ tagName: tagToDelete.name })
+              : ""
+          }
+          confirmLabel={m.tag_manager_delete_confirm()}
+          isLoading={deleteTagMutation.isPending}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -489,6 +762,46 @@ function InlineTagCreateForm({
     formState: { errors },
   } = form;
   const name = watch("name");
+
+  if (isFuwari) {
+    return (
+      <form
+        onSubmit={handleSubmit((data) => onSubmit(data.name.trim()))}
+        className="space-y-3 fuwari-card-base p-4 sm:p-5 animate-in slide-in-from-top-2 duration-300"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <span className="text-sm font-bold fuwari-text-75">
+            {m.tag_manager_inline_new()}
+          </span>
+          <div className="flex-1">
+            <Input
+              autoFocus
+              {...register("name")}
+              placeholder={m.tag_manager_inline_placeholder()}
+              className="w-full"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSubmitting || !name.trim()}
+            >
+              {isSubmitting
+                ? m.tag_manager_inline_creating()
+                : m.tag_manager_inline_confirm()}
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+              {m.tag_manager_inline_cancel()}
+            </Button>
+          </div>
+        </div>
+        {errors.name?.message && (
+          <p className="pl-2 text-xs text-red-500">{errors.name.message}</p>
+        )}
+      </form>
+    );
+  }
 
   return (
     <form

@@ -13,6 +13,7 @@ import {
   tagsByPostIdQueryOptions,
 } from "@/features/tags/queries";
 import { getPostAuthorManagerFn } from "@/features/users/api/users.admin.api";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/admin/posts/edit/$id")({
@@ -53,6 +54,20 @@ function EditPost() {
   });
 
   if (!post || !tags) {
+    if (isFuwari) {
+      return (
+        <div className="flex flex-col gap-4">
+          <div className="fuwari-card-base p-4 sm:p-5 md:p-6 text-center">
+            <h2 className="text-xl font-bold fuwari-text-90">
+              {m.admin_post_edit_not_found_title()}
+            </h2>
+            <p className="text-sm fuwari-text-50 mt-2">
+              {m.admin_post_edit_not_found_desc({ id: String(postId) })}
+            </p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <div className="text-center space-y-4">

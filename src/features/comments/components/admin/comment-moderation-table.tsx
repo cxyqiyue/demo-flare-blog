@@ -1,7 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import type { JSONContent } from "@tiptap/react";
-import { AlertTriangle, Loader2, MessageSquareOff } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  Loader2,
+  MessageSquareOff,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AdminPagination } from "@/components/admin/admin-pagination";
@@ -9,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ExpandableContent } from "@/features/theme/themes/default/components/comments/view/expandable-content";
 import type { CommentStatus } from "@/lib/db/schema";
+import { isFuwari } from "@/lib/theme-mode";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { useAdminComments } from "../../hooks/use-comments";
@@ -112,6 +119,23 @@ export const CommentModerationTable = ({
       });
     }
   };
+
+  if (isFuwari) {
+    return (
+      <FuwariCommentModerationTable
+        isLoading={isLoading}
+        isError={isError}
+        response={response}
+        selectedIds={selectedIds}
+        setSelectedIds={setSelectedIds}
+        handleSelectAll={handleSelectAll}
+        handleSelectOne={handleSelectOne}
+        handleBatchApprove={handleBatchApprove}
+        handleBatchTrash={handleBatchTrash}
+        page={page}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -529,3 +553,470 @@ const StatusBadge = ({ status }: { status: string }) => {
     </div>
   );
 };
+
+interface FuwariCommentModerationTableProps {
+  isLoading: boolean;
+  isError: boolean;
+  response: FuwariCommentsResponse | undefined;
+  selectedIds: Set<number>;
+  setSelectedIds: (s: Set<number>) => void;
+  handleSelectAll: (checked: boolean | "indeterminate") => void;
+  handleSelectOne: (id: number) => void;
+  handleBatchApprove: () => Promise<void>;
+  handleBatchTrash: () => Promise<void>;
+  page: number;
+}
+
+type FuwariCommentItem = {
+  id: number;
+  content: JSONContent | null;
+  createdAt: string | Date;
+  status: CommentStatus;
+  rootId: number | null | undefined;
+  userId: string | null;
+  user?: { name: string; image?: string | null } | null;
+  post?: { slug?: string | null; title?: string } | null;
+  moment?: { id: number } | null;
+  about?: { id: number } | null;
+  replyToUser?: { name?: string } | null;
+  aiReason?: string | null;
+};
+
+type FuwariCommentsResponse = { items: FuwariCommentItem[]; total: number };
+
+function FuwariStatusBadge({ status }: { status: CommentStatus }) {
+  const labels: Record<CommentStatus, string> = {
+    published: m.comments_status_published(),
+    pending: m.comments_status_pending(),
+    verifying: m.comments_status_verifying(),
+    blocked: m.comments_status_blocked(),
+    deleted: m.comments_status_deleted(),
+  };
+
+  const styles: Record<CommentStatus, string> = {
+    published: "bg-(--fuwari-primary)/10 text-(--fuwari-primary)",
+    pending: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    verifying: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    blocked: "bg-red-500/10 text-red-600 dark:text-red-400",
+    deleted: "bg-(--fuwari-btn-regular-bg) fuwari-text-50",
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-bold ${styles[status]}`}
+    >
+      {labels[status]}
+    </span>
+  );
+}
+
+function FuwariCommentModerationTable({
+  isLoading,
+  isError,
+  response,
+  selectedIds,
+  setSelectedIds,
+  handleSelectAll,
+  handleSelectOne,
+  handleBatchApprove,
+  handleBatchTrash,
+  page,
+}: FuwariCommentModerationTableProps) {
+  const navigate = routeApi.useNavigate();
+
+  if (isLoading) {
+    return (
+      <div className="fuwari-card-base p-16 flex items-center justify-center">
+        <Loader2 size={22} className="animate-spin fuwari-text-50" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="fuwari-card-base p-16 flex flex-col items-center justify-center gap-4">
+        <AlertTriangle size={36} strokeWidth={1} className="fuwari-text-30" />
+        <p className="text-sm fuwari-text-50">{m.comments_admin_load_fail()}</p>
+      </div>
+    );
+  }
+
+  if (!response || response.items.length === 0) {
+    return (
+      <div className="fuwari-card-base p-16 flex flex-col items-center justify-center gap-4">
+        <MessageSquareOff
+          size={36}
+          strokeWidth={1}
+          className="fuwari-text-30"
+        />
+        <p className="text-sm fuwari-text-50">{m.comments_empty()}</p>
+      </div>
+    );
+  }
+
+  const allSelected =
+    response.items.length > 0 && selectedIds.size === response.items.length;
+  const totalPages = Math.ceil(response.total / PAGE_SIZE);
+
+  return (
+    <div className="space-y-6 fuwari-onload-animation">
+      {/* Batch Actions Toolbar */}
+      {selectedIds.size > 0 && (
+        <div className="fuwari-card-base p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-6">
+            <span className="text-sm font-bold fuwari-text-75">
+              {m.comments_batch_selected({ count: selectedIds.size })}
+            </span>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="text-xs fuwari-text-50 hover:text-(--fuwari-primary) transition-colors"
+            >
+              {m.comments_batch_cancel()}
+            </button>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <Button
+              size="sm"
+              onClick={handleBatchApprove}
+              className="h-9 px-4 rounded-xl text-sm font-bold active:scale-95 transition-all flex items-center gap-1.5"
+            >
+              <Check size={14} strokeWidth={2} />
+              {m.comments_batch_approve()}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleBatchTrash}
+              className="h-9 px-4 rounded-xl text-sm font-medium text-red-500 bg-red-500/5 border-red-500/20 hover:bg-red-500/10 hover:text-red-500 active:scale-95 transition-all flex items-center gap-1.5"
+            >
+              <Trash2 size={14} strokeWidth={1.5} />
+              {m.comments_batch_trash()}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Table Card */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6">
+        {/* List Header (Desktop) */}
+        <div className="hidden md:grid grid-cols-12 gap-4 px-1 py-3 items-center border-b border-(--fuwari-input-border)">
+          <div className="col-span-1 flex justify-center">
+            <Checkbox checked={allSelected} onCheckedChange={handleSelectAll} />
+          </div>
+          <div className="col-span-2 text-xs fuwari-text-50 font-bold">
+            {m.comments_th_author()}
+          </div>
+          <div className="col-span-1"></div>
+          <div className="col-span-5 text-xs fuwari-text-50 font-bold">
+            {m.comments_th_content()}
+          </div>
+          <div className="col-span-1 text-xs fuwari-text-50 font-bold">
+            {m.comments_th_status()}
+          </div>
+          <div className="col-span-2 text-right text-xs fuwari-text-50 font-bold">
+            {m.comments_th_actions()}
+          </div>
+        </div>
+
+        {/* Comments List */}
+        <div className="divide-y divide-(--fuwari-input-border)">
+          {response.items.map((comment) => (
+            <div
+              key={comment.id}
+              className={`transition-colors ${
+                selectedIds.has(comment.id)
+                  ? "bg-(--fuwari-primary)/5"
+                  : "hover:bg-(--fuwari-btn-regular-bg)"
+              }`}
+            >
+              {/* Desktop Item */}
+              <div className="hidden md:grid grid-cols-12 gap-4 px-1 py-5 items-start">
+                <div className="col-span-1 flex justify-center pt-1">
+                  <Checkbox
+                    checked={selectedIds.has(comment.id)}
+                    onCheckedChange={() => handleSelectOne(comment.id)}
+                  />
+                </div>
+
+                {/* Author Info */}
+                <div className="col-span-2 space-y-3">
+                  {comment.userId && comment.user ? (
+                    <UserHoverCard
+                      user={{
+                        id: comment.userId,
+                        name: comment.user.name,
+                        image: comment.user.image || null,
+                      }}
+                    >
+                      <div className="flex items-center gap-3 cursor-pointer group/user overflow-hidden">
+                        <div className="w-9 h-9 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center overflow-hidden shrink-0">
+                          {comment.user.image ? (
+                            <img
+                              src={comment.user.image}
+                              className="w-full h-full object-cover"
+                              alt={comment.user.name}
+                            />
+                          ) : (
+                            <span className="text-xs font-bold fuwari-text-50">
+                              {comment.user.name.slice(0, 1)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="text-sm font-bold fuwari-text-90 truncate group-hover/user:text-(--fuwari-primary) transition-colors">
+                            {comment.user.name}
+                          </div>
+                          <div className="text-xs fuwari-text-30">
+                            {formatDate(comment.createdAt).split(" ")[0]}
+                          </div>
+                        </div>
+                      </div>
+                    </UserHoverCard>
+                  ) : (
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="w-9 h-9 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold fuwari-text-50">
+                          ?
+                        </span>
+                      </div>
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="text-sm font-bold fuwari-text-50 truncate">
+                          {m.comments_item_unknown_user()}
+                        </div>
+                        <div className="text-xs fuwari-text-30">
+                          {formatDate(comment.createdAt).split(" ")[0]}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="col-span-1"></div>
+
+                {/* Content & Context */}
+                <div className="col-span-5 space-y-4">
+                  <ExpandableContent
+                    content={comment.content}
+                    maxLines={3}
+                    className="text-sm fuwari-text-75 leading-relaxed"
+                  />
+
+                  <div className="flex flex-col gap-2 border-l-2 border-(--fuwari-input-border) pl-4 py-1">
+                    {comment.post && (
+                      <Link
+                        to="/post/$slug"
+                        params={{ slug: comment.post.slug || "" }}
+                        hash={`comment-${comment.id}`}
+                        search={{
+                          highlightCommentId: comment.id,
+                          rootId: comment.rootId || undefined,
+                        }}
+                        className="text-xs fuwari-text-50 hover:text-(--fuwari-primary) transition-colors flex items-center gap-2 group/post"
+                      >
+                        <span className="opacity-40 group-hover/post:opacity-100 transition-opacity">
+                          {m.comments_jump_to()}
+                        </span>
+                        <span className="truncate max-w-50">
+                          {comment.post.title}
+                        </span>
+                      </Link>
+                    )}
+                    {comment.moment && (
+                      <Link
+                        to="/moments"
+                        hash={`comment-${comment.id}`}
+                        search={{
+                          highlightCommentId: comment.id,
+                          rootId: comment.rootId || undefined,
+                        }}
+                        className="text-xs fuwari-text-50 hover:text-(--fuwari-primary) transition-colors flex items-center gap-2 group/moment"
+                      >
+                        <span className="opacity-40 group-hover/moment:opacity-100 transition-opacity">
+                          {m.comments_jump_to()}
+                        </span>
+                        <span>{m.comments_moment_notification_title()}</span>
+                      </Link>
+                    )}
+                    {comment.about && (
+                      <Link
+                        to="/about"
+                        hash={`comment-${comment.id}`}
+                        search={{
+                          highlightCommentId: comment.id,
+                          rootId: comment.rootId || undefined,
+                        }}
+                        className="text-xs fuwari-text-50 hover:text-(--fuwari-primary) transition-colors flex items-center gap-2 group/about"
+                      >
+                        <span className="opacity-40 group-hover/about:opacity-100 transition-opacity">
+                          {m.comments_jump_to()}
+                        </span>
+                        <span>{m.comments_about_target()}</span>
+                      </Link>
+                    )}
+                    {comment.replyToUser && (
+                      <div className="text-xs fuwari-text-50 flex items-center gap-2">
+                        <span className="opacity-40">
+                          {m.comments_reply_to()}
+                        </span>
+                        <span>@{comment.replyToUser.name}</span>
+                      </div>
+                    )}
+                    {comment.aiReason && (
+                      <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-500/5 flex items-center gap-2 px-2.5 py-1.5 rounded-lg w-fit">
+                        <AlertTriangle size={12} strokeWidth={1.5} />
+                        <span>
+                          {m.comments_ai_flag({ reason: comment.aiReason })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className="col-span-1 pt-1">
+                  <FuwariStatusBadge status={comment.status} />
+                </div>
+
+                {/* Actions */}
+                <div className="col-span-2 flex justify-end">
+                  <CommentModerationActions
+                    commentId={comment.id}
+                    status={comment.status}
+                  />
+                </div>
+              </div>
+
+              {/* Mobile Item */}
+              <div className="md:hidden p-4 space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-4">
+                    <Checkbox
+                      checked={selectedIds.has(comment.id)}
+                      onCheckedChange={() => handleSelectOne(comment.id)}
+                    />
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center overflow-hidden shrink-0">
+                        {comment.user?.image ? (
+                          <img
+                            src={comment.user.image}
+                            className="w-full h-full object-cover"
+                            alt={comment.user?.name}
+                          />
+                        ) : (
+                          <span className="text-xs font-bold fuwari-text-50">
+                            {comment.user?.name.slice(0, 1)}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold fuwari-text-90">
+                          {comment.user?.name}
+                        </div>
+                        <div className="text-xs fuwari-text-30">
+                          {formatDate(comment.createdAt).split(" ")[0]}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <FuwariStatusBadge status={comment.status} />
+                </div>
+
+                <ExpandableContent
+                  content={comment.content}
+                  maxLines={3}
+                  className="text-sm fuwari-text-75 leading-relaxed"
+                />
+
+                <div className="flex flex-col gap-2 text-xs fuwari-text-50 bg-(--fuwari-btn-regular-bg)/40 p-3 rounded-lg">
+                  {comment.post && (
+                    <Link
+                      to="/post/$slug"
+                      params={{ slug: comment.post.slug || "" }}
+                      hash={`comment-${comment.id}`}
+                      search={{
+                        highlightCommentId: comment.id,
+                        rootId: comment.rootId || undefined,
+                      }}
+                      className="truncate hover:text-(--fuwari-primary) transition-colors"
+                    >
+                      <span className="opacity-40">{m.comments_jump_to()}</span>
+                      {comment.post.title}
+                    </Link>
+                  )}
+                  {comment.moment && (
+                    <Link
+                      to="/moments"
+                      hash={`comment-${comment.id}`}
+                      search={{
+                        highlightCommentId: comment.id,
+                        rootId: comment.rootId || undefined,
+                      }}
+                      className="truncate hover:text-(--fuwari-primary) transition-colors"
+                    >
+                      <span className="opacity-40">{m.comments_jump_to()}</span>
+                      {m.comments_moment_notification_title()}
+                    </Link>
+                  )}
+                  {comment.about && (
+                    <Link
+                      to="/about"
+                      hash={`comment-${comment.id}`}
+                      search={{
+                        highlightCommentId: comment.id,
+                        rootId: comment.rootId || undefined,
+                      }}
+                      className="truncate hover:text-(--fuwari-primary) transition-colors"
+                    >
+                      <span className="opacity-40">{m.comments_jump_to()}</span>
+                      {m.comments_about_target()}
+                    </Link>
+                  )}
+                  {comment.replyToUser && (
+                    <div>
+                      <span className="opacity-40">
+                        {m.comments_reply_to()}
+                      </span>
+                      @{comment.replyToUser.name}
+                    </div>
+                  )}
+                  {comment.aiReason && (
+                    <div className="text-orange-600 dark:text-orange-400 flex items-center gap-2 pt-1">
+                      <AlertTriangle size={12} strokeWidth={1.5} />
+                      <span>{comment.aiReason}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end pt-3 border-t border-(--fuwari-input-border)">
+                  <CommentModerationActions
+                    commentId={comment.id}
+                    status={comment.status}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Pagination */}
+      <div className="px-1">
+        <AdminPagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={response.total}
+          itemsPerPage={PAGE_SIZE}
+          currentPageItemCount={response.items.length}
+          onPageChange={(newPage) =>
+            navigate({
+              search: ((prev: Record<string, unknown>) => ({
+                ...prev,
+                page: newPage,
+              })) as never,
+            })
+          }
+        />
+      </div>
+    </div>
+  );
+}

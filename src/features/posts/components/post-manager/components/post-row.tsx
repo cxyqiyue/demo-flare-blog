@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import Dropdown from "@/components/ui/dropdown";
+import { isFuwari } from "@/lib/theme-mode";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { PostListItem } from "../types";
@@ -29,6 +30,131 @@ export function PostRow({
       params: { id: String(post.id) },
     });
   };
+
+  if (isFuwari) {
+    return (
+      <div className="group px-4 py-4 flex flex-col md:grid md:grid-cols-12 gap-4 items-center hover:bg-(--fuwari-btn-plain-bg-hover) transition-colors relative border-b border-(--fuwari-input-border) last:border-0">
+        {/* Select Column (desktop) */}
+        <div className="hidden md:flex md:col-span-1 items-center justify-start">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={onSelectChange}
+            aria-label={m.admin_posts_select_post()}
+          />
+        </div>
+
+        {/* Main Content: Info Block */}
+        <div
+          className="md:col-span-5 min-w-0 cursor-pointer group/title w-full flex flex-col gap-1"
+          onClick={handleEdit}
+        >
+          {/* Metadata Header: ID */}
+          <div className="flex items-center gap-3">
+            <Checkbox
+              className="md:hidden"
+              checked={selected}
+              onCheckedChange={onSelectChange}
+              aria-label={m.admin_posts_select_post()}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <span className="text-xs sm:text-sm fuwari-text-30 font-medium">
+              #{post.id.toString().padStart(3, "0")}
+            </span>
+          </div>
+
+          {/* Title */}
+          <h3 className="text-base sm:text-lg font-bold fuwari-text-90 tracking-tight group-hover/title:text-(--fuwari-primary) transition-colors truncate">
+            {post.title}
+          </h3>
+
+          {/* Summary */}
+          <p className="text-xs sm:text-sm fuwari-text-50 truncate max-w-3xl">
+            {post.summary || m.admin_posts_no_summary()}
+          </p>
+        </div>
+
+        {/* Middle side: Status */}
+        <div className="md:col-span-3 flex items-center gap-2 flex-wrap">
+          <StatusBadge status={post.status} />
+          <VisibilityBadge
+            visibility={post.visibility}
+            passwordChannel={post.passwordChannel}
+          />
+        </div>
+
+        {/* Right Side: Date & Actions (Desktop Split) */}
+        <div className="w-full flex items-center gap-4 mt-2 md:mt-0 md:contents">
+          {/* Smart Date Display */}
+          <div className="md:col-span-2 flex flex-col items-start gap-1 md:justify-self-start">
+            <div className="flex items-center gap-2 text-xs sm:text-sm fuwari-text-50">
+              <span>
+                {post.status === "published"
+                  ? m.admin_posts_time_published()
+                  : m.admin_posts_time_modified()}
+              </span>
+              <ClientOnly fallback={<span>-</span>}>
+                {post.status === "published"
+                  ? formatDate(post.publishedAt || post.createdAt)
+                  : formatDate(post.updatedAt)}
+              </ClientOnly>
+            </div>
+          </div>
+
+          {/* Actions (Desktop Only) */}
+          <div className="hidden md:flex md:col-span-1 items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 justify-end">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit();
+              }}
+              className="h-8 w-8"
+              title={m.admin_posts_action_edit()}
+            >
+              <Edit3 size={14} strokeWidth={1.5} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:text-destructive"
+              title={m.admin_posts_action_delete()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(post);
+              }}
+            >
+              <Trash2 size={14} strokeWidth={1.5} />
+            </Button>
+          </div>
+
+          {/* Mobile Dropdown (Hidden on Desktop) */}
+          <div className="md:hidden ml-auto">
+            <Dropdown
+              trigger={
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical size={16} strokeWidth={1.5} />
+                </Button>
+              }
+              items={[
+                {
+                  label: m.admin_posts_action_edit_post(),
+                  icon: <Edit3 size={14} strokeWidth={1.5} />,
+                  onClick: handleEdit,
+                },
+                {
+                  label: m.admin_posts_action_delete_post(),
+                  icon: <Trash2 size={14} strokeWidth={1.5} />,
+                  onClick: () => onDelete(post),
+                  danger: true,
+                },
+              ]}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="group px-4 py-4 flex flex-col md:grid md:grid-cols-12 gap-4 items-center hover:bg-muted/30 transition-all duration-200 relative border-b border-border/30 last:border-0">
@@ -163,21 +289,34 @@ function StatusBadge({ status }: { status: string }) {
     <Badge
       variant="outline"
       className={
-        "text-[9px] px-2 py-0.5 uppercase tracking-widest font-mono font-normal rounded-none border border-border/50 shadow-none bg-transparent " +
-        (status === "published"
-          ? "text-emerald-600 border-emerald-500/30"
-          : status === "draft"
-            ? "text-muted-foreground border-border"
-            : "text-amber-600 border-amber-500/30")
+        isFuwari
+          ? "text-xs px-2.5 py-1 font-medium rounded-lg border-transparent " +
+            (status === "published"
+              ? "bg-(--fuwari-primary)/10 text-(--fuwari-primary)"
+              : status === "draft"
+                ? "bg-(--fuwari-btn-regular-bg) fuwari-text-75"
+                : "bg-amber-500/10 text-amber-600 dark:text-amber-400")
+          : "text-[9px] px-2 py-0.5 uppercase tracking-widest font-mono font-normal rounded-none border border-border/50 shadow-none bg-transparent " +
+            (status === "published"
+              ? "text-emerald-600 border-emerald-500/30"
+              : status === "draft"
+                ? "text-muted-foreground border-border"
+                : "text-amber-600 border-amber-500/30")
       }
     >
-      [{" "}
-      {status === "published"
-        ? m.admin_posts_status_published()
-        : status === "draft"
-          ? m.admin_posts_status_draft()
-          : m.admin_posts_status_pending()}{" "}
-      ]
+      {isFuwari
+        ? status === "published"
+          ? m.admin_posts_status_published()
+          : status === "draft"
+            ? m.admin_posts_status_draft()
+            : m.admin_posts_status_pending()
+        : "[ " +
+          (status === "published"
+            ? m.admin_posts_status_published()
+            : status === "draft"
+              ? m.admin_posts_status_draft()
+              : m.admin_posts_status_pending()) +
+          " ]"}
     </Badge>
   );
 }
@@ -199,10 +338,14 @@ function VisibilityBadge({
   return (
     <Badge
       variant="outline"
-      className="text-[9px] px-2 py-0.5 uppercase tracking-widest font-mono font-normal rounded-none border border-border/50 shadow-none bg-transparent text-violet-600 border-violet-500/30"
+      className={
+        isFuwari
+          ? "text-xs px-2.5 py-1 font-medium rounded-lg border-transparent bg-violet-500/10 text-violet-600 dark:text-violet-400"
+          : "text-[9px] px-2 py-0.5 uppercase tracking-widest font-mono font-normal rounded-none border border-border/50 shadow-none bg-transparent text-violet-600 border-violet-500/30"
+      }
       title={passwordChannel ?? undefined}
     >
-      [{label}]
+      {isFuwari ? label : `[${label}]`}
     </Badge>
   );
 }

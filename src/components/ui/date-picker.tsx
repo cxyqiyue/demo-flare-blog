@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 
@@ -113,18 +114,26 @@ const DatePicker: React.FC<DatePickerProps> = ({
           key={i}
           onClick={() => handleDayClick(i)}
           className={`
-            w-8 h-8 text-[11px] font-mono flex items-center justify-center transition-all relative
+            w-8 h-8 text-xs font-medium flex items-center justify-center transition-all rounded-full relative
             ${
               selected
-                ? "bg-foreground text-background"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                ? isFuwari
+                  ? "bg-(--fuwari-primary) text-white font-bold shadow-sm active:scale-90"
+                  : "bg-foreground text-background"
+                : isFuwari
+                  ? "fuwari-text-50 hover:bg-(--fuwari-btn-plain-bg-hover) hover:fuwari-text-90"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
             }
-            ${today && !selected ? "text-foreground font-medium" : ""}
+            ${today && !selected ? "font-bold fuwari-text-90" : ""}
           `}
         >
           {i}
           {today && !selected && (
-            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-px bg-foreground"></div>
+            <div
+              className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-px ${
+                isFuwari ? "bg-(--fuwari-primary)" : "bg-foreground"
+              }`}
+            ></div>
           )}
         </button>,
       );
@@ -138,13 +147,22 @@ const DatePicker: React.FC<DatePickerProps> = ({
       <div
         onClick={() => setIsOpen(!isOpen)}
         className={`
-            relative w-full bg-transparent border-b border-border/40 text-sm font-light pl-8 pr-4 py-3 cursor-pointer select-none transition-all
-            ${isOpen ? "border-foreground" : "hover:border-foreground/50"}
+            relative w-full text-sm font-light pl-9 pr-4 py-3 cursor-pointer select-none transition-all
+            ${
+              isFuwari
+                ? "rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-input-bg) fuwari-text-75 focus-within:border-(--fuwari-primary)/50"
+                : "bg-transparent border-b border-border/40"
+            }
+            ${isOpen ? "border-(--fuwari-primary)" : "hover:border-(--fuwari-primary)/50"}
         `}
       >
         <CalendarIcon
-          className={`absolute left-0 top-1/2 -translate-y-1/2 transition-colors ${
-            isOpen ? "text-foreground" : "text-muted-foreground/50"
+          className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors w-4 h-4 ${
+            isFuwari
+              ? "fuwari-text-30"
+              : isOpen
+                ? "text-foreground"
+                : "text-muted-foreground/50"
           }`}
           size={14}
           strokeWidth={1.5}
@@ -155,10 +173,22 @@ const DatePicker: React.FC<DatePickerProps> = ({
       </div>
 
       {isOpen && (
-        <div className="absolute top-full left-0 z-50 mt-2 bg-popover border border-border/30 p-4 w-70 animate-in fade-in duration-200">
+        <div
+          className={
+            isFuwari
+              ? "fuwari-card-base absolute top-full left-0 z-50 mt-2 p-4 w-70 shadow-lg animate-in fade-in zoom-in-95 duration-200"
+              : "absolute top-full left-0 z-50 mt-2 bg-popover border border-border/30 p-4 w-70 animate-in fade-in duration-200"
+          }
+        >
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-serif font-medium text-foreground">
+            <h4
+              className={
+                isFuwari
+                  ? "text-sm font-bold fuwari-text-90"
+                  : "text-sm font-serif font-medium text-foreground"
+              }
+            >
               {viewDate.toLocaleString(localeTag, {
                 month: "long",
                 year: "numeric",
@@ -167,13 +197,21 @@ const DatePicker: React.FC<DatePickerProps> = ({
             <div className="flex items-center gap-1">
               <button
                 onClick={() => changeMonth(-1)}
-                className="text-muted-foreground/50 hover:text-foreground transition-colors p-1"
+                className={`transition-colors p-1 rounded-lg active:scale-90 ${
+                  isFuwari
+                    ? "fuwari-text-50 hover:text-(--fuwari-primary) hover:bg-(--fuwari-btn-regular-bg)"
+                    : "text-muted-foreground/50 hover:text-foreground"
+                }`}
               >
                 <ChevronLeft size={14} strokeWidth={1.5} />
               </button>
               <button
                 onClick={() => changeMonth(1)}
-                className="text-muted-foreground/50 hover:text-foreground transition-colors p-1"
+                className={`transition-colors p-1 rounded-lg active:scale-90 ${
+                  isFuwari
+                    ? "fuwari-text-50 hover:text-(--fuwari-primary) hover:bg-(--fuwari-btn-regular-bg)"
+                    : "text-muted-foreground/50 hover:text-foreground"
+                }`}
               >
                 <ChevronRight size={14} strokeWidth={1.5} />
               </button>
@@ -185,7 +223,11 @@ const DatePicker: React.FC<DatePickerProps> = ({
             {daysOfWeek.map((d) => (
               <div
                 key={d}
-                className="w-8 text-center text-[9px] font-mono text-muted-foreground/40 uppercase"
+                className={
+                  isFuwari
+                    ? "w-8 text-center text-xs fuwari-text-30"
+                    : "w-8 text-center text-[9px] font-mono text-muted-foreground/40 uppercase"
+                }
               >
                 {d}
               </div>

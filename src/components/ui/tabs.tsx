@@ -1,4 +1,5 @@
 import * as React from "react";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 
 const TabsContext = React.createContext<{
@@ -55,7 +56,9 @@ const TabsList = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "inline-flex max-w-full items-center gap-4 border-b border-border/30 overflow-x-auto overscroll-x-contain",
+      isFuwari
+        ? "inline-flex max-w-full items-center gap-1 rounded-xl bg-(--fuwari-btn-regular-bg) p-1 overscroll-x-contain"
+        : "inline-flex max-w-full items-center gap-4 border-b border-border/30 overflow-x-auto overscroll-x-contain",
       className,
     )}
     {...props}
@@ -80,8 +83,10 @@ const TabsTrigger = React.forwardRef<
       aria-selected={isActive}
       data-state={isActive ? "active" : "inactive"}
       className={cn(
-        "pb-3 shrink-0 whitespace-nowrap text-[10px] font-mono uppercase tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 border-b-2 -mb-px",
-        isActive
+        isFuwari
+          ? "shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 active:scale-[0.97] data-[state=active]:bg-(--fuwari-card-bg) data-[state=active]:text-(--fuwari-primary) data-[state=active]:shadow-sm fuwari-text-50 hover:text-(--fuwari-primary)"
+          : "pb-3 shrink-0 whitespace-nowrap text-[10px] font-mono uppercase tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 border-b-2 -mb-px",
+        isActive && !isFuwari
           ? "text-foreground border-foreground"
           : "text-muted-foreground/50 border-transparent hover:text-foreground",
         className,

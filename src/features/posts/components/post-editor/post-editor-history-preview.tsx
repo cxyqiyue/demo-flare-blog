@@ -2,6 +2,7 @@ import { ArrowLeft, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { PostRevisionSnapshot } from "@/features/posts/schema/post-revisions.schema";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn, formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import {
@@ -37,6 +38,143 @@ export function PostEditorHistoryPreview({
   onDelete,
   onBack,
 }: PostEditorHistoryPreviewProps) {
+  if (isFuwari) {
+    return (
+      <div className="custom-scrollbar min-h-0 overflow-y-auto">
+        {isLoading ? (
+          <div className="flex h-full items-center justify-center gap-2 p-8 text-sm fuwari-text-50">
+            <Loader2 size={16} className="animate-spin" />
+            {m.editor_history_loading()}
+          </div>
+        ) : revision ? (
+          <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col p-6 md:p-8">
+            {onBack && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mb-6 w-fit fuwari-text-50 lg:hidden"
+                onClick={onBack}
+              >
+                <ArrowLeft size={16} strokeWidth={1.5} className="mr-2" />
+                {m.common_back()}
+              </Button>
+            )}
+
+            <div className="mb-8 flex flex-wrap items-start justify-between gap-4 border-b border-(--fuwari-input-border) pb-6">
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  {(() => {
+                    const ReasonIcon = getRevisionReasonIcon(revision.reason);
+                    return (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "gap-1.5 px-2.5 py-1 text-xs rounded-lg",
+                          getRevisionReasonColorClass(revision.reason),
+                        )}
+                      >
+                        <ReasonIcon size={14} strokeWidth={1.5} />
+                        {getRevisionReasonLabel(revision.reason)}
+                      </Badge>
+                    );
+                  })()}
+                  <span className="text-xs sm:text-sm fuwari-text-30">
+                    {formatDate(revision.createdAt, {
+                      includeTime: true,
+                    })}
+                  </span>
+                </div>
+
+                <h3 className="text-2xl sm:text-3xl font-bold leading-tight fuwari-text-90">
+                  {revision.snapshotJson.title.trim() || m.common_untitled()}
+                </h3>
+
+                <p className="max-w-2xl text-sm sm:text-base leading-6 fuwari-text-50">
+                  {revision.snapshotJson.summary?.trim() ||
+                    m.editor_history_no_summary()}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={onDelete}
+                  disabled={isDeleting || isRestoring}
+                  className="text-destructive hover:text-destructive"
+                >
+                  {isDeleting ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={14} strokeWidth={1.5} />
+                  )}
+                  <span className="ml-2">
+                    {m.editor_history_delete_action()}
+                  </span>
+                </Button>
+
+                <Button
+                  onClick={onRestore}
+                  disabled={isRestoring || isDeleting}
+                >
+                  {isRestoring ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <RotateCcw size={14} strokeWidth={1.5} />
+                  )}
+                  <span className="ml-2">
+                    {m.editor_history_restore_action()}
+                  </span>
+                </Button>
+              </div>
+            </div>
+
+            <div className="mb-8 grid gap-6 border-b border-(--fuwari-input-border) pb-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="space-y-2">
+                <p className="text-sm font-bold fuwari-text-75">
+                  {m.editor_history_slug_label()}
+                </p>
+                <p className="text-sm fuwari-text-75">
+                  /post/{revision.snapshotJson.slug}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-bold fuwari-text-75">
+                  {m.editor_history_tags_label()}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {tagNames.length > 0 ? (
+                    tagNames.map((tagName) => (
+                      <Badge key={tagName} variant="secondary">
+                        {tagName}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-sm fuwari-text-50">
+                      {m.editor_history_no_tags()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1">
+              <PostEditorHistoryDiff
+                previousSnapshot={revision.snapshotJson}
+                currentSnapshot={currentSnapshot}
+                allTags={allTags}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center p-8 text-sm fuwari-text-50">
+            {m.editor_history_preview_empty()}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="custom-scrollbar min-h-0 overflow-y-auto">
       {isLoading ? (

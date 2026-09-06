@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import type { SaveStatus } from "./types";
 
@@ -7,6 +8,47 @@ interface PostEditorStatusBarProps {
   words: number;
   saveStatus: SaveStatus;
   lastSaved: Date | null;
+}
+
+function renderFuwariStatus(saveStatus: SaveStatus, lastSaved: Date | null) {
+  switch (saveStatus) {
+    case "ERROR":
+      return (
+        <span className="flex items-center gap-2 font-medium text-red-500">
+          <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+          {m.editor_status_save_error()}
+        </span>
+      );
+    case "SAVING":
+      return (
+        <span className="flex items-center gap-2 fuwari-text-75">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {m.editor_status_saving()}
+        </span>
+      );
+    case "PENDING":
+      return (
+        <span className="flex items-center gap-2 text-amber-500/80">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+          {m.editor_status_unsaved()}
+        </span>
+      );
+    case "SYNCED":
+    default:
+      return (
+        <span className="flex items-center gap-2 fuwari-text-50">
+          {lastSaved
+            ? m.editor_status_saved({
+                time: lastSaved.toLocaleTimeString([], {
+                  hour12: false,
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              })
+            : m.editor_status_synced()}
+        </span>
+      );
+  }
 }
 
 export function PostEditorStatusBar({
@@ -55,6 +97,27 @@ export function PostEditorStatusBar({
         );
     }
   };
+
+  if (isFuwari) {
+    return (
+      <div className="flex select-none items-center justify-between gap-3 text-xs sm:text-sm fuwari-text-50 px-1">
+        <div className="flex items-center gap-3 sm:gap-6">
+          <div className="flex items-center gap-2">
+            <span>{m.editor_status_chars()}</span>
+            <span className="fuwari-text-90 font-medium">{chars}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>{m.editor_status_words()}</span>
+            <span className="fuwari-text-90 font-medium">{words}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {renderFuwariStatus(saveStatus, lastSaved)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 flex h-8 select-none items-center justify-between border-t border-border/40 bg-background/80 px-3 sm:px-6 text-[10px] font-mono backdrop-blur-md">

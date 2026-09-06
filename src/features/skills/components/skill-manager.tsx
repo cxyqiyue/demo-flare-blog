@@ -16,6 +16,7 @@ import {
   SKILLS_KEYS,
   skillsAdminQueryOptions,
 } from "@/features/skills/queries";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 export function SkillManager() {
@@ -129,6 +130,333 @@ export function SkillManager() {
 
   const activeCount = skills.filter((skill) => skill.postCount > 0).length;
   const emptyCount = skills.filter((skill) => skill.postCount === 0).length;
+
+  if (isFuwari) {
+    return (
+      <div className="flex flex-col gap-4">
+        {/* Header */}
+        <div
+          className="fuwari-card-base p-4 sm:p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 fuwari-onload-animation"
+          style={{ animationDelay: "100ms" }}
+        >
+          <div className="space-y-1">
+            <h1 className="text-lg sm:text-xl font-bold fuwari-text-90">
+              {m.skills_manager_title()}
+            </h1>
+            <p className="text-sm fuwari-text-50">
+              {m.skills_manager_subtitle()}
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative w-full md:w-64">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 fuwari-text-30 pointer-events-none"
+                size={16}
+                strokeWidth={1.5}
+              />
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={m.skills_manager_search_placeholder()}
+                className="pl-9 w-full"
+              />
+            </div>
+            <Button onClick={() => setIsCreating(true)} className="gap-2">
+              <Wand2 size={14} strokeWidth={1.5} />
+              {m.skills_manager_new_skill()}
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 fuwari-onload-animation"
+          style={{ animationDelay: "150ms" }}
+        >
+          {[
+            { label: m.skills_manager_stat_total(), value: skills.length },
+            { label: m.skills_manager_stat_active(), value: activeCount },
+            { label: m.skills_manager_stat_empty(), value: emptyCount },
+          ].map((stat, i) => (
+            <div key={i} className="fuwari-card-base p-4 sm:p-5">
+              <div className="text-sm fuwari-text-50 mb-1.5">{stat.label}</div>
+              <div className="text-2xl sm:text-3xl font-bold fuwari-text-90">
+                {stat.value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Create Row */}
+        {isCreating && (
+          <div
+            className="fuwari-card-base p-4 sm:p-5 space-y-3 animate-in slide-in-from-top-2 duration-300 fuwari-onload-animation"
+            style={{ animationDelay: "200ms" }}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <span className="text-sm font-bold fuwari-text-75">
+                {m.skills_manager_inline_new()}
+              </span>
+              <div className="flex-1">
+                <Input
+                  autoFocus
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder={m.skills_manager_inline_placeholder()}
+                  className="w-full"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={createSkillMutation.isPending || !newName.trim()}
+                  onClick={() =>
+                    createSkillMutation.mutate({
+                      name: newName.trim(),
+                      description: newDescription.trim() || undefined,
+                    })
+                  }
+                >
+                  {createSkillMutation.isPending
+                    ? m.skills_manager_inline_creating()
+                    : m.skills_manager_inline_confirm()}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setIsCreating(false);
+                    setNewName("");
+                    setNewDescription("");
+                  }}
+                >
+                  {m.skills_manager_inline_cancel()}
+                </Button>
+              </div>
+            </div>
+            <Input
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder={m.skills_manager_inline_desc_placeholder()}
+              className="w-full"
+            />
+          </div>
+        )}
+
+        {/* Markdown Import */}
+        <div
+          className="fuwari-card-base overflow-hidden fuwari-onload-animation"
+          style={{ animationDelay: "250ms" }}
+        >
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="space-y-1">
+              <h5 className="text-base font-bold fuwari-text-90">
+                {m.skills_manager_import_title()}
+              </h5>
+              <p className="text-xs sm:text-sm fuwari-text-50">
+                {m.skills_manager_import_desc()}
+              </p>
+            </div>
+            <FileText size={16} strokeWidth={1.5} className="fuwari-text-30" />
+          </div>
+          <Textarea
+            value={markdown}
+            onChange={(e) => setMarkdown(e.target.value)}
+            rows={6}
+            placeholder={m.skills_manager_import_placeholder()}
+            className="w-full font-mono text-[13px]"
+          />
+          <Button
+            type="button"
+            onClick={() => importSkillMutation.mutate(markdown)}
+            disabled={importSkillMutation.isPending || !markdown.trim()}
+            className="mt-4"
+          >
+            {importSkillMutation.isPending
+              ? m.skills_manager_import_loading()
+              : m.skills_manager_import_btn()}
+          </Button>
+        </div>
+
+        {/* Table */}
+        <div
+          className="fuwari-card-base overflow-hidden fuwari-onload-animation"
+          style={{ animationDelay: "300ms" }}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="border-b border-(--fuwari-input-border)">
+                  <th className="px-5 py-4 text-sm font-bold fuwari-text-50">
+                    {m.skills_manager_col_name()}
+                  </th>
+                  <th className="px-5 py-4 text-sm font-bold fuwari-text-50 hidden lg:table-cell">
+                    {m.skills_manager_col_desc()}
+                  </th>
+                  <th className="px-5 py-4 text-sm font-bold fuwari-text-50">
+                    {m.skills_manager_col_posts()}
+                  </th>
+                  <th className="px-5 py-4 text-sm font-bold fuwari-text-50 hidden lg:table-cell">
+                    {m.skills_manager_col_created()}
+                  </th>
+                  <th className="px-5 py-4 text-sm font-bold fuwari-text-50 text-right">
+                    {m.skills_manager_col_actions()}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-(--fuwari-input-border)">
+                {isLoading ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="px-5 py-5">
+                        <div className="h-4 w-32 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                      </td>
+                      <td className="px-5 py-5 hidden lg:table-cell">
+                        <div className="h-4 w-56 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                      </td>
+                      <td className="px-5 py-5">
+                        <div className="h-4 w-10 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                      </td>
+                      <td className="px-5 py-5 hidden lg:table-cell">
+                        <div className="h-4 w-24 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                      </td>
+                      <td className="px-5 py-5">
+                        <div className="h-6 w-16 rounded-lg bg-(--fuwari-btn-regular-bg) ml-auto" />
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredSkills.length > 0 ? (
+                  filteredSkills.map((skill) => (
+                    <tr
+                      key={skill.id}
+                      className="group hover:bg-(--fuwari-btn-plain-bg-hover) transition-colors duration-200"
+                    >
+                      <td className="px-5 py-4">
+                        {skillToEdit?.id === skill.id ? (
+                          <InlineSkillEditForm
+                            key={`fuwari-${skill.id}`}
+                            initialName={skill.name}
+                            initialDescription={skill.description ?? ""}
+                            isSubmitting={updateSkillMutation.isPending}
+                            onCancel={() => setSkillToEdit(null)}
+                            onSubmit={(data) =>
+                              updateSkillMutation.mutate({
+                                id: skill.id,
+                                name: data.name,
+                                description: data.description,
+                              })
+                            }
+                          />
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Wand2
+                              size={14}
+                              strokeWidth={1.5}
+                              className="fuwari-text-30"
+                            />
+                            <span className="font-medium fuwari-text-90">
+                              {skill.name}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-5 py-4 hidden lg:table-cell">
+                        <span className="text-xs sm:text-sm fuwari-text-50 line-clamp-2">
+                          {skill.description || "—"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="text-sm sm:text-base fuwari-text-50">
+                          {skill.postCount}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 fuwari-text-30 text-xs sm:text-sm hidden lg:table-cell">
+                        {new Date(skill.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2"
+                            onClick={() =>
+                              setSkillToEdit({
+                                id: skill.id,
+                                name: skill.name,
+                                description: skill.description ?? "",
+                              })
+                            }
+                          >
+                            {m.skills_manager_edit()}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 hover:text-red-500"
+                            onClick={() =>
+                              setSkillToDelete({
+                                id: skill.id,
+                                name: skill.name,
+                              })
+                            }
+                          >
+                            {m.skills_manager_delete()}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-6 py-16 text-center flex flex-col items-center gap-3 fuwari-text-50"
+                    >
+                      <Search
+                        size={24}
+                        strokeWidth={1.5}
+                        className="opacity-30"
+                      />
+                      <p className="text-sm sm:text-base font-medium">
+                        {m.skills_manager_no_match()}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSearchTerm("")}
+                      >
+                        {m.skills_manager_clear_search()}
+                      </Button>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <ConfirmationModal
+          isOpen={!!skillToDelete}
+          onClose={() => setSkillToDelete(null)}
+          onConfirm={() =>
+            skillToDelete && deleteSkillMutation.mutate(skillToDelete.id)
+          }
+          title={m.skills_manager_delete_title()}
+          message={
+            skillToDelete
+              ? m.skills_manager_delete_desc({
+                  skillName: skillToDelete.name,
+                })
+              : ""
+          }
+          confirmLabel={m.skills_manager_delete_confirm()}
+          isLoading={deleteSkillMutation.isPending}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -539,6 +867,51 @@ function InlineSkillEditForm({
 }) {
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
+
+  if (isFuwari) {
+    return (
+      <div className="space-y-2 animate-in fade-in duration-200">
+        <div className="flex items-center gap-2">
+          <Input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-8 flex-1"
+          />
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            disabled={isSubmitting || !name.trim()}
+            onClick={() =>
+              onSubmit({
+                name: name.trim(),
+                description: description.trim(),
+              })
+            }
+            className="h-8 w-8 text-emerald-500 hover:text-emerald-600"
+          >
+            <FileText size={14} />
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={onCancel}
+            className="h-8 w-8 text-muted-foreground hover:text-red-500"
+          >
+            <X size={14} />
+          </Button>
+        </div>
+        <Input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder={m.skills_manager_inline_desc_placeholder()}
+          className="w-full"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2 animate-in fade-in duration-200">

@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useSystemSetting } from "@/features/config/hooks/use-system-setting";
 import type {
   FriendLinksConfig,
   UpdateSystemConfigSectionInput,
 } from "@/features/config/config.schema";
 import { FRIEND_LINK_APPLY_RULES_MAX } from "@/features/config/config.schema";
+import { useSystemSetting } from "@/features/config/hooks/use-system-setting";
+import { isFuwari } from "@/lib/theme-mode";
 import { FRIEND_LINKS_KEYS } from "../../queries";
 
 const EMPTY_SITE_INFO = {
@@ -29,31 +30,40 @@ export function FriendLinksConfigEditor() {
   const { settings, isLoading, saveSettingsSection } = useSystemSetting();
 
   const [siteInfo, setSiteInfo] = useState({ ...EMPTY_SITE_INFO });
-  const [applyRules, setApplyRules] = useState<Array<{ id: string; content: string }>>([]);
+  const [applyRules, setApplyRules] = useState<
+    Array<{ id: string; content: string }>
+  >([]);
   const [saving, setSaving] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const config: FriendLinksConfig | undefined = settings?.friendLinks;
 
-  const applyRulesRemaining =
-    FRIEND_LINK_APPLY_RULES_MAX - applyRules.length;
+  const applyRulesRemaining = FRIEND_LINK_APPLY_RULES_MAX - applyRules.length;
 
   // Hydrate the local form once from the fetched config.
   useEffect(() => {
     if (isLoading || isLoaded || !config) return;
     setSiteInfo({ ...EMPTY_SITE_INFO, ...config.siteInfo });
     setApplyRules(
-      (config.applyRules ?? []).map((rule) => ({ id: rule.id, content: rule.content ?? "" })),
+      (config.applyRules ?? []).map((rule) => ({
+        id: rule.id,
+        content: rule.content ?? "",
+      })),
     );
     setIsLoaded(true);
   }, [isLoading, isLoaded, config]);
 
-  const handleSiteInfoChange = (field: keyof typeof EMPTY_SITE_INFO, value: string) => {
+  const handleSiteInfoChange = (
+    field: keyof typeof EMPTY_SITE_INFO,
+    value: string,
+  ) => {
     setSiteInfo((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleRuleChange = (id: string, content: string) => {
-    setApplyRules((prev) => prev.map((rule) => (rule.id === id ? { ...rule, content } : rule)));
+    setApplyRules((prev) =>
+      prev.map((rule) => (rule.id === id ? { ...rule, content } : rule)),
+    );
   };
 
   const addRule = () => {
@@ -87,7 +97,9 @@ export function FriendLinksConfigEditor() {
         } as UpdateSystemConfigSectionInput,
       });
       toast.success("Saved", { id: toastId });
-      void queryClient.invalidateQueries({ queryKey: FRIEND_LINKS_KEYS.config });
+      void queryClient.invalidateQueries({
+        queryKey: FRIEND_LINKS_KEYS.config,
+      });
     } catch {
       toast.error("Save failed", { id: toastId });
     } finally {
@@ -103,12 +115,134 @@ export function FriendLinksConfigEditor() {
     );
   }
 
+  if (isFuwari) {
+    return (
+      <div className="grid gap-6 lg:grid-cols-2 fuwari-onload-animation">
+        {/* 本站信息 */}
+        <section className="fuwari-card-base p-5 sm:p-6 space-y-6">
+          <div className="space-y-1.5">
+            <h2 className="text-xl font-bold fuwari-text-90">[ 本站信息 ]</h2>
+            <p className="text-sm fuwari-text-50">
+              Your blog's meta info shown to applicants.
+            </p>
+          </div>
+
+          <div className="space-y-5">
+            <FuwariSiteInfoField
+              label="名称 / Name"
+              value={siteInfo.name}
+              onChange={(v) => handleSiteInfoChange("name", v)}
+              placeholder="站点或博主名称"
+            />
+            <FuwariSiteInfoField
+              label="地址 / URL"
+              value={siteInfo.url}
+              onChange={(v) => handleSiteInfoChange("url", v)}
+              placeholder="https://example.com"
+            />
+            <FuwariSiteInfoField
+              label="描述 / Description"
+              value={siteInfo.description}
+              onChange={(v) => handleSiteInfoChange("description", v)}
+              placeholder="一句话介绍你的站点"
+            />
+            <FuwariSiteInfoField
+              label="头像 / Avatar"
+              value={siteInfo.avatar}
+              onChange={(v) => handleSiteInfoChange("avatar", v)}
+              placeholder="头像图片链接"
+            />
+            <FuwariSiteInfoField
+              label="邮箱 / Email"
+              value={siteInfo.email}
+              onChange={(v) => handleSiteInfoChange("email", v)}
+              placeholder="联系邮箱"
+            />
+          </div>
+        </section>
+
+        {/* 申请须知 */}
+        <section className="fuwari-card-base p-5 sm:p-6 space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1.5">
+              <h2 className="text-xl font-bold fuwari-text-90">[ 申请须知 ]</h2>
+              <p className="text-sm fuwari-text-50">
+                Markdown supported. Up to {FRIEND_LINK_APPLY_RULES_MAX} rows.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addRule}
+              disabled={applyRulesRemaining <= 0}
+              className="fuwari-btn-regular rounded-xl h-9 px-3.5 text-sm font-medium fuwari-text-75 hover:text-(--fuwari-primary) active:scale-95 transition-all gap-2"
+            >
+              <Plus size={14} strokeWidth={1.5} />
+              <span>Add Row ({applyRulesRemaining} left)</span>
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {applyRules.length === 0 ? (
+              <p className="text-sm fuwari-text-50">
+                No rules yet. Add up to {FRIEND_LINK_APPLY_RULES_MAX} rows.
+              </p>
+            ) : (
+              applyRules.map((rule, index) => (
+                <div key={rule.id} className="group flex items-start gap-2.5">
+                  <span className="mt-3 w-6 shrink-0 text-right text-xs fuwari-text-30 font-mono">
+                    {index + 1}.
+                  </span>
+                  <textarea
+                    value={rule.content}
+                    onChange={(e) => handleRuleChange(rule.id, e.target.value)}
+                    rows={2}
+                    maxLength={1000}
+                    placeholder="Markdown 内容，如：需先添加本站链接后再申请"
+                    className="flex-1 resize-none bg-(--fuwari-input-bg) border border-(--fuwari-input-border) rounded-xl px-3 py-2 text-sm fuwari-text-75 placeholder:fuwari-text-30 focus:outline-none focus:ring-2 focus:ring-(--fuwari-primary)/30 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeRule(rule.id)}
+                    className="mt-2 fuwari-btn-regular rounded-lg h-9 w-9 active:scale-90 hover:text-red-500 transition-colors flex items-center justify-center"
+                    aria-label="Remove rule"
+                  >
+                    <Trash2 size={14} strokeWidth={1.5} />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        {/* Save */}
+        <div className="lg:col-span-2 flex justify-end pt-2">
+          <Button
+            onClick={handleSave}
+            disabled={isLoading || saving}
+            className="h-10 px-6 rounded-xl text-sm font-bold active:scale-95 transition-all gap-2"
+          >
+            {saving ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Save size={14} strokeWidth={1.5} />
+            )}
+            <span>Save</span>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-10 lg:grid-cols-2">
       {/* 本站信息 */}
       <section className="space-y-6 border border-border/30 p-6">
         <div>
-          <h2 className="font-serif text-lg font-medium tracking-tight">[ 本站信息 ]</h2>
+          <h2 className="font-serif text-lg font-medium tracking-tight">
+            [ 本站信息 ]
+          </h2>
           <p className="mt-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
             Your blog's meta info shown to applicants.
           </p>
@@ -152,7 +286,9 @@ export function FriendLinksConfigEditor() {
       <section className="space-y-6 border border-border/30 p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="font-serif text-lg font-medium tracking-tight">[ 申请须知 ]</h2>
+            <h2 className="font-serif text-lg font-medium tracking-tight">
+              [ 申请须知 ]
+            </h2>
             <p className="mt-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
               Markdown supported. Up to {FRIEND_LINK_APPLY_RULES_MAX} rows.
             </p>
@@ -218,6 +354,29 @@ export function FriendLinksConfigEditor() {
           <span>Save</span>
         </Button>
       </div>
+    </div>
+  );
+}
+
+function FuwariSiteInfoField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-bold fuwari-text-75">{label}</label>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
     </div>
   );
 }

@@ -21,9 +21,13 @@ import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getLinkedPostsFn } from "@/features/media/api/media.api";
-import type { MediaDirectoryFile, MediaFolder } from "@/features/media/components/media-library/types";
+import type {
+  MediaDirectoryFile,
+  MediaFolder,
+} from "@/features/media/components/media-library/types";
 import { MEDIA_KEYS } from "@/features/media/queries";
 import { useDelayUnmount } from "@/hooks/use-delay-unmount";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn, formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -154,6 +158,274 @@ export function MediaPreviewModal({
 
   if (!shouldRender || !activeAsset) return null;
 
+  if (isFuwari) {
+    return (
+      <div
+        className={`fixed inset-0 z-100 flex items-center justify-center p-4 md:p-8 ${
+          isMounted ? "pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/30 backdrop-blur-sm dark:bg-black/40 transition-all duration-500 ${
+            isMounted ? "opacity-100" : "opacity-0"
+          }`}
+          onClick={onClose}
+        />
+
+        {/* Close Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className={`absolute top-3 right-3 md:top-4 md:right-4 z-110 h-10 w-10 md:h-11 md:w-11 transition-all duration-500 ${
+            isMounted ? "opacity-100 scale-100" : "opacity-0 scale-90"
+          }`}
+        >
+          <X size={20} strokeWidth={1.5} />
+        </Button>
+
+        <div
+          className={`
+            w-full max-w-5xl h-full md:h-[85vh] flex flex-col md:flex-row
+            fuwari-card-base shadow-2xl relative overflow-hidden z-10
+            ${
+              isMounted
+                ? "animate-in fade-in zoom-in-95"
+                : "animate-out fade-out zoom-out-95"
+            } duration-500
+          `}
+        >
+          {/* --- Image Viewport (Left/Top) --- */}
+          <div className="h-[40vh] md:h-auto md:w-3/5 bg-(--fuwari-btn-regular-bg) relative flex items-center justify-center overflow-hidden p-8 md:p-12 border-b md:border-b-0 md:border-r border-(--fuwari-input-border)">
+            <img
+              src={activeAsset.url}
+              alt={activeAsset.fileName}
+              className="max-w-full max-h-full object-contain relative z-10 rounded-xl"
+            />
+          </div>
+
+          {/* --- Metadata Sidebar (Right/Bottom) --- */}
+          <div className="flex-1 md:w-2/5 flex flex-col min-h-0">
+            {/* Header */}
+            <div className="p-4 md:p-6 border-b border-(--fuwari-input-border)">
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="flex-1 h-9"
+                    autoFocus
+                  />
+                  <Button
+                    onClick={handleSaveName}
+                    disabled={isSaving}
+                    variant="default"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                  >
+                    {isSaving ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Check size={14} />
+                    )}
+                  </Button>
+                  <Button
+                    onClick={() => setIsEditing(false)}
+                    disabled={isSaving}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-red-500"
+                  >
+                    <X size={14} />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex justify-between items-start gap-4 group/edit">
+                  <h2 className="text-lg sm:text-xl font-bold fuwari-text-90 break-all leading-snug">
+                    {activeAsset.fileName}
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsEditing(true)}
+                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-(--fuwari-primary)"
+                  >
+                    <Pencil size={14} />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Details List */}
+            <div className="flex-1 p-4 md:p-6 space-y-5 md:space-y-6 overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-2 gap-y-5 gap-x-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm fuwari-text-50">
+                    <HardDrive size={12} /> {m.media_preview_size()}
+                  </div>
+                  <div className="text-sm sm:text-base fuwari-text-90 font-medium">
+                    {formatBytes(activeAsset.sizeInBytes)}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm fuwari-text-50">
+                    <FileText size={12} /> {m.media_preview_format()}
+                  </div>
+                  <div className="text-sm sm:text-base fuwari-text-90 font-medium">
+                    {activeAsset.mimeType.split("/")[1]}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm fuwari-text-50">
+                    <Layout size={12} /> {m.media_preview_dimensions()}
+                  </div>
+                  <div className="text-sm sm:text-base fuwari-text-90 font-medium">
+                    {activeAsset.width && activeAsset.height
+                      ? `${activeAsset.width} × ${activeAsset.height}`
+                      : m.media_grid_unknown_size()}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm fuwari-text-50">
+                    <Calendar size={12} /> {m.media_preview_created()}
+                  </div>
+                  <div className="text-sm sm:text-base fuwari-text-90 font-medium">
+                    {activeAsset.createdAt
+                      ? new Date(activeAsset.createdAt).toLocaleDateString()
+                      : m.media_grid_unknown_size()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Linked Posts Section */}
+              <div className="pt-5 border-t border-(--fuwari-input-border)">
+                <div className="flex items-center gap-2 text-xs sm:text-sm fuwari-text-50 mb-3">
+                  <Link2 size={12} />{" "}
+                  {m.media_preview_linked({ count: linkedPosts.length })}
+                </div>
+                {linkedPosts.length === 0 ? (
+                  <div className="text-sm fuwari-text-50 pl-4 border-l border-(--fuwari-input-border)">
+                    {m.media_preview_no_links()}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {linkedPosts.map((post) => (
+                      <Link
+                        key={post.id}
+                        to="/admin/posts/edit/$id"
+                        params={{ id: String(post.id) }}
+                        className="block p-3 rounded-xl bg-(--fuwari-input-bg) hover:bg-(--fuwari-btn-plain-bg-hover) border border-(--fuwari-input-border) hover:border-(--fuwari-primary)/50 transition-all group"
+                      >
+                        <div className="text-sm font-medium truncate mb-1 flex items-center justify-between fuwari-text-90">
+                          {post.title}
+                          <ExternalLink
+                            size={12}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity fuwari-text-30"
+                          />
+                        </div>
+                        <div className="text-xs fuwari-text-50">
+                          /{post.slug}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2 pt-5 border-t border-(--fuwari-input-border)">
+                <div className="text-xs sm:text-sm fuwari-text-50">
+                  {m.media_preview_asset_key()}
+                </div>
+                <div className="p-3 rounded-xl bg-(--fuwari-input-bg) text-xs sm:text-sm font-mono fuwari-text-50 break-all leading-relaxed select-all border border-(--fuwari-input-border)">
+                  {activeAsset.key}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-4 md:p-6 border-t border-(--fuwari-input-border) flex flex-col gap-3">
+              <div className="flex flex-col xl:flex-row gap-2">
+                <a
+                  href={`${activeAsset.url}?original=true`}
+                  download={activeAsset.fileName}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(
+                    buttonVariants({ variant: "outline" }),
+                    "flex-1 h-10 gap-2 flex items-center justify-center whitespace-nowrap",
+                  )}
+                >
+                  <Download size={14} className="shrink-0" />
+                  {m.media_preview_btn_download()}
+                </a>
+
+                <Button
+                  variant="outline"
+                  onClick={handleCopyLink}
+                  className="flex-1 h-10 gap-2"
+                >
+                  <Copy size={14} className="shrink-0" />
+                  {m.media_preview_btn_copy()}
+                </Button>
+              </div>
+
+              {onMove && folders.length > 0 && (
+                <div className="flex gap-2">
+                  <select
+                    value={targetFolder}
+                    onChange={(e) => setTargetFolder(e.target.value)}
+                    className="flex-1 h-10 text-sm fuwari-text-75 bg-(--fuwari-input-bg) border border-(--fuwari-input-border) rounded-xl px-3"
+                  >
+                    <option value="">{m.media_move_root()}</option>
+                    {folders.map((f) => (
+                      <option key={f.key} value={f.key}>
+                        /{f.key}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    variant="outline"
+                    onClick={handleMove}
+                    disabled={isMoving || targetFolder === currentFolder}
+                    className="h-10 gap-2"
+                  >
+                    {isMoving ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <FolderInput size={14} />
+                    )}
+                    {m.media_move_btn()}
+                  </Button>
+                </div>
+              )}
+
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  onClick={handleDelete}
+                  disabled={isDeleting || linkedPosts.length > 0}
+                  className="w-full h-10 gap-2 text-red-500 hover:text-red-600"
+                >
+                  {isDeleting ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={14} />
+                  )}
+                  {m.media_preview_btn_delete()}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`fixed inset-0 z-100 flex items-center justify-center p-4 md:p-8 ${
@@ -168,15 +440,15 @@ export function MediaPreviewModal({
         onClick={onClose}
       />
 
-        {/* Close Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          className={`absolute top-3 right-3 md:top-4 md:right-4 z-110 text-muted-foreground hover:text-foreground transition-all duration-500 rounded-none h-10 w-10 md:h-12 md:w-12 ${
-            isMounted ? "opacity-100 scale-100" : "opacity-0 scale-90"
-          }`}
-        >
+      {/* Close Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onClose}
+        className={`absolute top-3 right-3 md:top-4 md:right-4 z-110 text-muted-foreground hover:text-foreground transition-all duration-500 rounded-none h-10 w-10 md:h-12 md:w-12 ${
+          isMounted ? "opacity-100 scale-100" : "opacity-0 scale-90"
+        }`}
+      >
         <X size={24} strokeWidth={1} />
       </Button>
 
@@ -348,7 +620,7 @@ export function MediaPreviewModal({
             </div>
           </div>
 
-            {/* Actions */}
+          {/* Actions */}
           <div className="p-4 md:p-8 border-t border-border/30 bg-background flex flex-col gap-3">
             <div className="flex flex-col xl:flex-row gap-3">
               <a

@@ -13,9 +13,10 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { MediaFileItem } from "../hooks/use-media-library";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import type { MediaFileItem } from "../hooks/use-media-library";
 
 interface MediaToolbarProps {
   searchQuery: string;
@@ -67,12 +68,163 @@ export function MediaToolbar({
     try {
       await navigator.clipboard.writeText(urls.join("\n"));
       toast.success(m.media_batch_copy_urls_success(), {
-        description: m.media_batch_copy_urls_success_desc({ count: urls.length }),
+        description: m.media_batch_copy_urls_success_desc({
+          count: urls.length,
+        }),
       });
     } catch {
       toast.error(m.media_batch_copy_urls_fail());
     }
   };
+
+  if (isFuwari) {
+    return (
+      <div className="fuwari-card-base p-3 sm:p-4 flex flex-col gap-4">
+        {/* Search & Filter */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full flex-1">
+          <div className="relative w-full sm:w-80">
+            <Search
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 fuwari-text-30 pointer-events-none"
+              size={16}
+              strokeWidth={1.5}
+            />
+            <Input
+              type="text"
+              placeholder={m.media_search_placeholder()}
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full pl-10 pr-9"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onSearchChange("")}
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+              >
+                <X size={14} />
+              </Button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button
+              variant={unusedOnly ? "default" : "outline"}
+              size="sm"
+              onClick={() => onUnusedOnlyChange(!unusedOnly)}
+              className="gap-2"
+            >
+              <Filter size={14} strokeWidth={1.5} />
+              <span className="hidden sm:inline">
+                {m.media_filter_unused()}
+              </span>
+            </Button>
+
+            {/* View toggle */}
+            <div className="flex items-center gap-1 rounded-xl bg-(--fuwari-btn-regular-bg) p-1">
+              <button
+                type="button"
+                onClick={() => onViewChange("grid")}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-3 py-2 transition-colors",
+                  view === "grid"
+                    ? "bg-(--fuwari-primary)/10 text-(--fuwari-primary)"
+                    : "fuwari-text-75 hover:text-(--fuwari-primary)",
+                )}
+              >
+                <LayoutGrid size={14} strokeWidth={1.5} />
+                <span className="hidden sm:inline">{m.media_view_grid()}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewChange("table")}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-3 py-2 transition-colors",
+                  view === "table"
+                    ? "bg-(--fuwari-primary)/10 text-(--fuwari-primary)"
+                    : "fuwari-text-75 hover:text-(--fuwari-primary)",
+                )}
+              >
+                <List size={14} strokeWidth={1.5} />
+                <span className="hidden sm:inline">{m.media_view_list()}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Selection & Actions Bar */}
+        {(selectedCount > 0 || searching) && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 border-t border-(--fuwari-input-border) pt-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onSelectAll}
+                className="gap-2 h-8"
+              >
+                {selectedCount === totalCount && totalCount > 0 ? (
+                  <CheckSquare size={14} />
+                ) : (
+                  <Square size={14} />
+                )}
+                {selectedCount > 0
+                  ? m.media_toolbar_selected({ count: selectedCount })
+                  : m.media_toolbar_select_all()}
+              </Button>
+
+              {selectedCount > 0 && (
+                <>
+                  <div className="h-4 w-px bg-(--fuwari-input-border)" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopyUrls}
+                    className="gap-2 h-8"
+                  >
+                    <Copy size={14} />
+                    <span className="hidden sm:inline">
+                      {m.media_toolbar_copy_urls({ count: selectedCount })}
+                    </span>
+                    <span className="sm:hidden">Copy</span>
+                  </Button>
+
+                  {canDelete && (
+                    <>
+                      <div className="h-4 w-px bg-(--fuwari-input-border)" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onDelete}
+                        className="gap-2 h-8 text-red-500 hover:text-red-600"
+                      >
+                        <Trash2 size={14} />
+                        <span className="hidden sm:inline">
+                          {m.media_toolbar_delete({ count: selectedCount })}
+                        </span>
+                        <span className="sm:hidden">Delete</span>
+                      </Button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+
+            {onNewFolder && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onNewFolder}
+                className="gap-2 h-8"
+              >
+                <FolderPlus size={14} />
+                {m.media_toolbar_new_folder()}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 mb-8 items-stretch w-full border-b border-border/30 pb-8">
@@ -187,7 +339,9 @@ export function MediaToolbar({
                   className="gap-2 h-8 text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground rounded-none"
                 >
                   <Copy size={14} />
-                  <span className="hidden sm:inline">{m.media_toolbar_copy_urls({ count: selectedCount })}</span>
+                  <span className="hidden sm:inline">
+                    {m.media_toolbar_copy_urls({ count: selectedCount })}
+                  </span>
                   <span className="sm:hidden">Copy</span>
                 </Button>
 
@@ -201,7 +355,9 @@ export function MediaToolbar({
                       className="gap-2 h-8 text-xs font-mono uppercase tracking-widest text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-none"
                     >
                       <Trash2 size={14} />
-                      <span className="hidden sm:inline">{m.media_toolbar_delete({ count: selectedCount })}</span>
+                      <span className="hidden sm:inline">
+                        {m.media_toolbar_delete({ count: selectedCount })}
+                      </span>
                       <span className="sm:hidden">Delete</span>
                     </Button>
                   </>

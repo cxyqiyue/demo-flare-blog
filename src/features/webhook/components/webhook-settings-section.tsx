@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { SystemConfig } from "@/features/config/config.schema";
 import { useWebhookConnection } from "@/features/webhook/hooks/use-webhook-connection";
 import type { NotificationWebhookEventType } from "@/features/webhook/webhook.schema";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import { WebhookDocPanel } from "./webhook-doc-panel";
 import { WebhookEndpointCard } from "./webhook-endpoint-card";
@@ -107,6 +108,117 @@ export function WebhookSettingsSection() {
       }
     }
   };
+
+  if (isFuwari) {
+    return (
+      <div className="flex flex-col gap-4">
+        <WebhookDocPanel />
+
+        <div className="fuwari-card-base flex flex-col gap-5 p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-(--fuwari-btn-regular-bg)">
+                <Globe size={18} className="fuwari-text-50" />
+              </div>
+              <div className="space-y-0.5">
+                <h5 className="text-base font-bold fuwari-text-90">
+                  {m.settings_webhook_endpoints_title()}
+                </h5>
+                <p className="text-xs sm:text-sm fuwari-text-50">
+                  {m.settings_webhook_endpoints_summary({
+                    enabledCount,
+                    totalCount: fields.length,
+                  })}
+                </p>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => append(createWebhookEndpoint())}
+              className="h-10 gap-2 rounded-xl px-5 text-sm font-medium fuwari-text-75 hover:text-(--fuwari-primary)"
+            >
+              <Plus size={16} />
+              {m.settings_webhook_btn_add()}
+            </Button>
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-4 rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-btn-regular-bg)/40 p-4 transition-colors hover:border-(--fuwari-primary)/40">
+            <Checkbox
+              checked={adminWebhookEnabled}
+              onCheckedChange={(checked) =>
+                setValue("notification.admin.channels.webhook", checked, {
+                  shouldDirty: true,
+                  shouldTouch: true,
+                  shouldValidate: true,
+                })
+              }
+            />
+            <div className="min-w-0 space-y-0.5">
+              <p className="text-sm font-bold fuwari-text-90">
+                {m.settings_webhook_global_enable_label()}
+              </p>
+              <p className="text-xs break-all sm:text-sm fuwari-text-50">
+                {m.settings_webhook_global_enable_desc()}
+              </p>
+            </div>
+          </label>
+
+          {fields.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-(--fuwari-input-border) bg-(--fuwari-btn-regular-bg) p-10 text-center">
+              <p className="text-base font-bold fuwari-text-90">
+                {m.settings_webhook_empty_title()}
+              </p>
+              <p className="mt-2 text-xs sm:text-sm fuwari-text-50">
+                {m.settings_webhook_empty_desc()}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {fields.map((field, index) => {
+                const endpoint = webhookFields[index] ?? field;
+                const fieldError = errors.notification?.webhooks?.[index];
+
+                return (
+                  <WebhookEndpointCard<SystemConfig>
+                    key={field.id}
+                    index={index}
+                    endpoint={endpoint}
+                    register={register}
+                    visibleSecret={!!visibleSecrets[index]}
+                    fieldError={fieldError}
+                    isTesting={isTesting}
+                    testingEndpointId={testingEndpointId}
+                    onTest={() => handleTestWebhook(index)}
+                    onRemove={() => remove(index)}
+                    onToggleEnabled={(checked) =>
+                      setValue(
+                        `notification.webhooks.${index}.enabled`,
+                        checked,
+                        {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true,
+                        },
+                      )
+                    }
+                    onToggleSecretVisibility={() =>
+                      toggleSecretVisibility(index)
+                    }
+                    onTypeChange={(type) => handleTypeChange(index, type)}
+                    onToggleEvent={(eventType, checked) =>
+                      toggleEvent(index, eventType, checked)
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700">

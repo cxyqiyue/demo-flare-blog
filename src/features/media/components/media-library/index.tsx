@@ -2,7 +2,8 @@ import { ChevronRight, Folder, Home, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
-import { formatBytes } from "@/lib/utils";
+import { isFuwari } from "@/lib/theme-mode";
+import { cn, formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import {
   FolderModal,
@@ -73,9 +74,12 @@ export function MediaLibrary() {
   const uploadDisabled = !canUpload;
 
   // View State
-  const [previewAsset, setPreviewAsset] = useState<MediaDirectoryFile | null>(null);
+  const [previewAsset, setPreviewAsset] = useState<MediaDirectoryFile | null>(
+    null,
+  );
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
-  const [renameFolderTarget, setRenameFolderTarget] = useState<MediaFolder | null>(null);
+  const [renameFolderTarget, setRenameFolderTarget] =
+    useState<MediaFolder | null>(null);
   const [uploadFolder, setUploadFolder] = useState<string>("");
 
   // Reset upload folder when modal opens
@@ -107,11 +111,322 @@ export function MediaLibrary() {
 
   const confirmMessage = deletePreview
     ? deletePreview.folders > 0 && deletePreview.files > 0
-      ? m.media_delete_confirm_mixed({ folders: deletePreview.folders, files: deletePreview.files })
+      ? m.media_delete_confirm_mixed({
+          folders: deletePreview.folders,
+          files: deletePreview.files,
+        })
       : deletePreview.folders > 0
         ? m.media_delete_confirm_folders({ count: deletePreview.folders })
         : m.media_delete_confirm_desc({ count: deletePreview.files })
     : m.media_delete_confirm_desc({ count: deleteTarget?.length ?? 0 });
+
+  if (isFuwari) {
+    return (
+      <div className="flex flex-col gap-4">
+        {/* Header Section */}
+        <div
+          className="fuwari-card-base p-4 sm:p-5 md:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 fuwari-onload-animation"
+          style={{ animationDelay: "100ms" }}
+        >
+          <div className="space-y-1 min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold fuwari-text-90">
+              {m.media_title()}
+            </h1>
+            <p className="text-xs sm:text-sm fuwari-text-50">
+              {m.media_stats_assets({
+                count: mediaItems.length,
+                size: formatBytes(totalMediaSize ?? 0),
+              })}
+            </p>
+          </div>
+          <Button
+            onClick={() => setIsUploadOpen(true)}
+            disabled={uploadDisabled}
+            title={
+              uploadDisabled
+                ? m.media_upload_disabled_by_image_hosting_desc()
+                : undefined
+            }
+            className="gap-2 shrink-0"
+          >
+            <Plus size={14} strokeWidth={1.5} />
+            <span className="hidden sm:inline">{m.media_upload_btn()}</span>
+          </Button>
+        </div>
+
+        {/* Provider Selector + Breadcrumb */}
+        <div
+          className="fuwari-card-base p-3 sm:p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 fuwari-onload-animation"
+          style={{ animationDelay: "150ms" }}
+        >
+          <ProviderSelector
+            providers={providers}
+            currentId={currentProviderId}
+            onSelect={setProvider}
+          />
+
+          {/* Breadcrumb */}
+          <nav
+            aria-label="breadcrumb"
+            className="flex items-center gap-1 flex-wrap text-xs sm:text-sm"
+          >
+            <button
+              type="button"
+              onClick={() => setFolder("")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 transition-colors",
+                currentFolder
+                  ? "fuwari-text-50 hover:bg-(--fuwari-btn-plain-bg-hover) hover:text-(--fuwari-primary)"
+                  : "bg-(--fuwari-primary)/10 text-(--fuwari-primary) font-semibold",
+              )}
+            >
+              <Home size={14} strokeWidth={1.5} />
+              {m.media_breadcrumb_root()}
+            </button>
+            {breadcrumbs.map((crumb) => (
+              <span key={crumb.path} className="flex items-center gap-1">
+                <ChevronRight size={14} className="fuwari-text-30" />
+                <button
+                  type="button"
+                  onClick={() => setFolder(crumb.path)}
+                  className={cn(
+                    "rounded-lg px-2.5 py-1.5 transition-colors",
+                    crumb.path === currentFolder
+                      ? "bg-(--fuwari-primary)/10 text-(--fuwari-primary) font-semibold"
+                      : "fuwari-text-50 hover:bg-(--fuwari-btn-plain-bg-hover) hover:text-(--fuwari-primary)",
+                  )}
+                >
+                  {crumb.label}
+                </button>
+              </span>
+            ))}
+          </nav>
+        </div>
+
+        <div
+          className="flex flex-col gap-4 fuwari-onload-animation"
+          style={{ animationDelay: "200ms" }}
+        >
+          {/* Toolbar */}
+          <MediaToolbar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            unusedOnly={unusedOnly}
+            onUnusedOnlyChange={setUnusedOnly}
+            view={view}
+            onViewChange={setView}
+            selectedCount={selectedIds.size}
+            totalCount={mediaItems.length + folders.length}
+            searching={isSearching}
+            onSelectAll={selectAll}
+            onDelete={handleDeleteRequest}
+            onNewFolder={
+              currentProvider?.canCreateFolder
+                ? () => setIsNewFolderOpen(true)
+                : undefined
+            }
+            selectedKeys={selectedIds}
+            mediaItems={mediaItems}
+            canDelete={currentProvider?.canDelete ?? false}
+          />
+
+          {/* Content */}
+          {isPending ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-6">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="flex flex-col space-y-3 animate-pulse">
+                  <div className="aspect-square rounded-2xl bg-(--fuwari-btn-regular-bg)" />
+                  <div className="space-y-2 px-1">
+                    <div className="h-3 w-3/4 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                    <div className="flex justify-between">
+                      <div className="h-2 w-1/4 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                      <div className="h-2 w-1/4 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : mediaItems.length === 0 && folders.length === 0 && isExternal ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
+              {externalError ? (
+                <>
+                  <p className="text-sm fuwari-text-75 break-all leading-relaxed">
+                    {externalError}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm fuwari-text-50">
+                  {m.media_empty_provider()}
+                </p>
+              )}
+              <Button variant="ghost" onClick={refetch} className="mt-4">
+                {m.media_grid_refresh()}
+              </Button>
+            </div>
+          ) : view === "table" ? (
+            <MediaTable
+              media={mediaItems}
+              folders={folders}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelection}
+              onPreview={setPreviewAsset}
+              onOpenFolder={setFolder}
+              onRenameFolder={
+                currentProvider?.canCreateFolder
+                  ? setRenameFolderTarget
+                  : undefined
+              }
+              onDeleteFolder={
+                currentProvider?.canDelete ? handleFolderDelete : undefined
+              }
+              onRenameFile={
+                currentProvider?.canRename !== false
+                  ? setPreviewAsset
+                  : undefined
+              }
+              onDeleteFile={
+                currentProvider?.canDelete ? handleFileDelete : undefined
+              }
+              onLoadMore={loadMore}
+              hasMore={hasMore}
+              isLoadingMore={isLoadingMore}
+              onRefetch={refetch}
+            />
+          ) : (
+            <MediaGrid
+              media={mediaItems}
+              folders={folders}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelection}
+              onPreview={setPreviewAsset}
+              onOpenFolder={setFolder}
+              onRenameFolder={
+                currentProvider?.canCreateFolder
+                  ? setRenameFolderTarget
+                  : undefined
+              }
+              onDeleteFolder={
+                currentProvider?.canDelete ? handleFolderDelete : undefined
+              }
+              onLoadMore={loadMore}
+              hasMore={hasMore}
+              isLoadingMore={isLoadingMore}
+              linkedMediaIds={!isExternal ? linkedMediaIds : undefined}
+              onRefetch={refetch}
+            />
+          )}
+        </div>
+
+        {/* --- Upload Modal --- */}
+        <UploadModal
+          isOpen={isUploadOpen}
+          queue={uploadQueue}
+          isDragging={isDragging}
+          selectedFolder={uploadFolder}
+          folders={folders}
+          maxFileSizeBytes={currentProvider?.maxFileSizeBytes ?? null}
+          onFolderChange={setUploadFolder}
+          onClose={resetUpload}
+          onFileSelect={
+            uploadDisabled
+              ? () => {}
+              : (files) => processFiles(files, uploadFolder)
+          }
+          onDragOver={uploadDisabled ? () => {} : handleDragOver}
+          onDragLeave={uploadDisabled ? () => {} : handleDragLeave}
+          onDrop={
+            uploadDisabled
+              ? () => {}
+              : (e) => {
+                  e.preventDefault();
+                  if (e.dataTransfer.files.length > 0) {
+                    processFiles(
+                      Array.from(e.dataTransfer.files),
+                      uploadFolder,
+                    );
+                  }
+                }
+          }
+        />
+
+        {/* --- New Folder Modal --- */}
+        <FolderModal
+          isOpen={isNewFolderOpen}
+          mode="create"
+          parentLabel={
+            currentFolder
+              ? `${m.media_folder_parent()}: /${currentFolder}`
+              : `${m.media_folder_parent()}: /`
+          }
+          onClose={() => setIsNewFolderOpen(false)}
+          onSubmit={(name) => {
+            createFolder.mutate(name, {
+              onSettled: () => setIsNewFolderOpen(false),
+            });
+          }}
+          isSubmitting={createFolder.isPending}
+        />
+
+        {/* --- Rename Folder Modal --- */}
+        <FolderModal
+          isOpen={!!renameFolderTarget}
+          mode="rename"
+          initialName={renameFolderTarget?.name ?? ""}
+          onClose={() => setRenameFolderTarget(null)}
+          onSubmit={(name) => {
+            if (!renameFolderTarget) return;
+            renameFolder.mutate(
+              { key: renameFolderTarget.key, name },
+              { onSettled: () => setRenameFolderTarget(null) },
+            );
+          }}
+          isSubmitting={renameFolder.isPending}
+        />
+
+        {/* --- Delete Confirmation Modal --- */}
+        <ConfirmationModal
+          isOpen={!!deleteTarget}
+          onClose={cancelDelete}
+          onConfirm={() => confirmDelete()}
+          title={m.media_delete_confirm_title()}
+          message={confirmMessage}
+          confirmLabel={m.media_delete_confirm_btn()}
+          isDanger={true}
+          isLoading={isDeleting}
+        />
+
+        {/* --- Preview Modal --- */}
+        <MediaPreviewModal
+          asset={previewAsset}
+          onClose={() => setPreviewAsset(null)}
+          onUpdateName={
+            currentProvider?.canRename !== false
+              ? async (key, name) => {
+                  await updateAsset.mutateAsync({ data: { key, name } });
+                }
+              : undefined
+          }
+          onMove={
+            currentProvider?.canMove !== false
+              ? async (key, targetFolder) => {
+                  await moveFile.mutateAsync({ key, targetFolder });
+                }
+              : undefined
+          }
+          onDelete={
+            currentProvider?.canDelete
+              ? async (key) => {
+                  const allowed = requestDelete([key]);
+                  if (allowed.length > 0) confirmDelete(allowed);
+                }
+              : undefined
+          }
+          folders={folders}
+          currentFolder={currentFolder}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-20">
@@ -133,7 +448,11 @@ export function MediaLibrary() {
         <Button
           onClick={() => setIsUploadOpen(true)}
           disabled={uploadDisabled}
-          title={uploadDisabled ? m.media_upload_disabled_by_image_hosting_desc() : undefined}
+          title={
+            uploadDisabled
+              ? m.media_upload_disabled_by_image_hosting_desc()
+              : undefined
+          }
           className="h-9 md:h-10 px-4 md:px-6 text-[10px] md:text-[11px] uppercase tracking-[0.2em] font-medium rounded-none gap-2 bg-foreground text-background hover:bg-foreground/90 transition-all border border-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-foreground shrink-0"
         >
           <Plus size={14} />
@@ -157,7 +476,9 @@ export function MediaLibrary() {
           type="button"
           onClick={() => setFolder("")}
           className={`flex items-center gap-1.5 py-1 px-2 transition-colors ${
-            currentFolder ? "text-muted-foreground hover:text-foreground" : "text-foreground font-bold"
+            currentFolder
+              ? "text-muted-foreground hover:text-foreground"
+              : "text-foreground font-bold"
           }`}
         >
           <Home size={12} strokeWidth={1.5} />
@@ -170,7 +491,9 @@ export function MediaLibrary() {
               type="button"
               onClick={() => setFolder(crumb.path)}
               className={`py-1 px-2 transition-colors ${
-                crumb.path === currentFolder ? "text-foreground font-bold" : "text-muted-foreground hover:text-foreground"
+                crumb.path === currentFolder
+                  ? "text-foreground font-bold"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {crumb.label}
@@ -198,7 +521,11 @@ export function MediaLibrary() {
           searching={isSearching}
           onSelectAll={selectAll}
           onDelete={handleDeleteRequest}
-          onNewFolder={currentProvider?.canCreateFolder ? () => setIsNewFolderOpen(true) : undefined}
+          onNewFolder={
+            currentProvider?.canCreateFolder
+              ? () => setIsNewFolderOpen(true)
+              : undefined
+          }
           selectedKeys={selectedIds}
           mediaItems={mediaItems}
           canDelete={currentProvider?.canDelete ?? false}
@@ -245,10 +572,20 @@ export function MediaLibrary() {
             onToggleSelect={toggleSelection}
             onPreview={setPreviewAsset}
             onOpenFolder={setFolder}
-            onRenameFolder={currentProvider?.canCreateFolder ? setRenameFolderTarget : undefined}
-            onDeleteFolder={currentProvider?.canDelete ? handleFolderDelete : undefined}
-            onRenameFile={currentProvider?.canRename !== false ? setPreviewAsset : undefined}
-            onDeleteFile={currentProvider?.canDelete ? handleFileDelete : undefined}
+            onRenameFolder={
+              currentProvider?.canCreateFolder
+                ? setRenameFolderTarget
+                : undefined
+            }
+            onDeleteFolder={
+              currentProvider?.canDelete ? handleFolderDelete : undefined
+            }
+            onRenameFile={
+              currentProvider?.canRename !== false ? setPreviewAsset : undefined
+            }
+            onDeleteFile={
+              currentProvider?.canDelete ? handleFileDelete : undefined
+            }
             onLoadMore={loadMore}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
@@ -262,8 +599,14 @@ export function MediaLibrary() {
             onToggleSelect={toggleSelection}
             onPreview={setPreviewAsset}
             onOpenFolder={setFolder}
-            onRenameFolder={currentProvider?.canCreateFolder ? setRenameFolderTarget : undefined}
-            onDeleteFolder={currentProvider?.canDelete ? handleFolderDelete : undefined}
+            onRenameFolder={
+              currentProvider?.canCreateFolder
+                ? setRenameFolderTarget
+                : undefined
+            }
+            onDeleteFolder={
+              currentProvider?.canDelete ? handleFolderDelete : undefined
+            }
             onLoadMore={loadMore}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
@@ -283,25 +626,39 @@ export function MediaLibrary() {
         maxFileSizeBytes={currentProvider?.maxFileSizeBytes ?? null}
         onFolderChange={setUploadFolder}
         onClose={resetUpload}
-        onFileSelect={uploadDisabled ? () => {} : (files) => processFiles(files, uploadFolder)}
+        onFileSelect={
+          uploadDisabled
+            ? () => {}
+            : (files) => processFiles(files, uploadFolder)
+        }
         onDragOver={uploadDisabled ? () => {} : handleDragOver}
         onDragLeave={uploadDisabled ? () => {} : handleDragLeave}
-        onDrop={uploadDisabled ? () => {} : (e) => {
-          e.preventDefault();
-          if (e.dataTransfer.files.length > 0) {
-            processFiles(Array.from(e.dataTransfer.files), uploadFolder);
-          }
-        }}
+        onDrop={
+          uploadDisabled
+            ? () => {}
+            : (e) => {
+                e.preventDefault();
+                if (e.dataTransfer.files.length > 0) {
+                  processFiles(Array.from(e.dataTransfer.files), uploadFolder);
+                }
+              }
+        }
       />
 
       {/* --- New Folder Modal --- */}
       <FolderModal
         isOpen={isNewFolderOpen}
         mode="create"
-        parentLabel={currentFolder ? `${m.media_folder_parent()}: /${currentFolder}` : `${m.media_folder_parent()}: /`}
+        parentLabel={
+          currentFolder
+            ? `${m.media_folder_parent()}: /${currentFolder}`
+            : `${m.media_folder_parent()}: /`
+        }
         onClose={() => setIsNewFolderOpen(false)}
         onSubmit={(name) => {
-          createFolder.mutate(name, { onSettled: () => setIsNewFolderOpen(false) });
+          createFolder.mutate(name, {
+            onSettled: () => setIsNewFolderOpen(false),
+          });
         }}
         isSubmitting={createFolder.isPending}
       />
@@ -314,7 +671,10 @@ export function MediaLibrary() {
         onClose={() => setRenameFolderTarget(null)}
         onSubmit={(name) => {
           if (!renameFolderTarget) return;
-          renameFolder.mutate({ key: renameFolderTarget.key, name }, { onSettled: () => setRenameFolderTarget(null) });
+          renameFolder.mutate(
+            { key: renameFolderTarget.key, name },
+            { onSettled: () => setRenameFolderTarget(null) },
+          );
         }}
         isSubmitting={renameFolder.isPending}
       />
@@ -335,14 +695,28 @@ export function MediaLibrary() {
       <MediaPreviewModal
         asset={previewAsset}
         onClose={() => setPreviewAsset(null)}
-        onUpdateName={currentProvider?.canRename !== false ? async (key, name) => { await updateAsset.mutateAsync({ data: { key, name } }); } : undefined}
-        onMove={currentProvider?.canMove !== false ? async (key, targetFolder) => {
-          await moveFile.mutateAsync({ key, targetFolder });
-        } : undefined}
-        onDelete={currentProvider?.canDelete ? async (key) => {
-          const allowed = requestDelete([key]);
-          if (allowed.length > 0) confirmDelete(allowed);
-        } : undefined}
+        onUpdateName={
+          currentProvider?.canRename !== false
+            ? async (key, name) => {
+                await updateAsset.mutateAsync({ data: { key, name } });
+              }
+            : undefined
+        }
+        onMove={
+          currentProvider?.canMove !== false
+            ? async (key, targetFolder) => {
+                await moveFile.mutateAsync({ key, targetFolder });
+              }
+            : undefined
+        }
+        onDelete={
+          currentProvider?.canDelete
+            ? async (key) => {
+                const allowed = requestDelete([key]);
+                if (allowed.length > 0) confirmDelete(allowed);
+              }
+            : undefined
+        }
         folders={folders}
         currentFolder={currentFolder}
       />

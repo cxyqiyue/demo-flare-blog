@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { PostRevisionSnapshot } from "@/features/posts/schema/post-revisions.schema";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import {
@@ -159,6 +160,102 @@ export function PostEditorHistoryDiff({
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (isFuwari) {
+    let fuwariContentChangesSection = (
+      <div className="rounded-xl bg-(--fuwari-btn-regular-bg) px-4 py-3 text-sm fuwari-text-50">
+        {m.editor_history_diff_no_content_changes()}
+      </div>
+    );
+
+    if (hasContentChanges) {
+      fuwariContentChangesSection = (
+        <div className="overflow-hidden rounded-xl border border-(--fuwari-input-border)">
+          <div className="font-mono text-[13px] leading-6">
+            {visibleLines.map((line, index) => (
+              <div
+                key={`${line.type}:${line.oldLineNumber}:${line.newLineNumber}:${index}`}
+                className={getLineRowClass(line.type)}
+              >
+                <DiffMarker type={line.type} />
+                <DiffLineNumber value={line.oldLineNumber} type={line.type} />
+                <DiffLineNumber value={line.newLineNumber} type={line.type} />
+                <div className="overflow-x-auto px-3 py-1 whitespace-pre-wrap wrap-break-word">
+                  {renderDiffTokens(line)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col gap-6">
+        <section className="space-y-3">
+          <div>
+            <h4 className="text-base font-bold fuwari-text-90">
+              {m.editor_history_diff_title()}
+            </h4>
+            <p className="mt-1 text-sm fuwari-text-50">
+              {m.editor_history_diff_subtitle()}
+            </p>
+          </div>
+
+          {fieldDiffs.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {fieldDiffs.map((field) => (
+                <div
+                  key={field.field}
+                  className="rounded-xl bg-(--fuwari-btn-regular-bg) p-4"
+                >
+                  <p className="mb-3 text-sm font-bold fuwari-text-75">
+                    {getFieldLabel(field.field)}
+                  </p>
+                  <div className="space-y-2 text-sm leading-6">
+                    <div className="rounded-lg border border-rose-500/25 bg-rose-500/8 px-3 py-2 text-rose-900 dark:text-rose-100">
+                      {field.previousValue}
+                    </div>
+                    <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/8 px-3 py-2 text-emerald-900 dark:text-emerald-100">
+                      {field.currentValue}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl bg-(--fuwari-btn-regular-bg) px-4 py-3 text-sm fuwari-text-50">
+              {m.editor_history_diff_no_metadata_changes()}
+            </div>
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h4 className="text-base font-bold fuwari-text-90">
+                {m.editor_history_diff_content_title()}
+              </h4>
+              <p className="mt-1 text-sm fuwari-text-50">
+                {m.editor_history_diff_content_subtitle()}
+              </p>
+            </div>
+
+            <label className="inline-flex items-center gap-2 rounded-xl bg-(--fuwari-btn-regular-bg) px-3 py-2 text-sm fuwari-text-50">
+              <Checkbox
+                checked={showOnlyChanges}
+                onCheckedChange={setShowOnlyChanges}
+                aria-label={m.editor_history_diff_toggle_changes()}
+              />
+              {m.editor_history_diff_toggle_changes()}
+            </label>
+          </div>
+
+          {fuwariContentChangesSection}
+        </section>
       </div>
     );
   }

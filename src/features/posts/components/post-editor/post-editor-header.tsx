@@ -1,6 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Button } from "@/components/ui/button";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import type { PostEditorData } from "./types";
 
@@ -37,6 +38,65 @@ export function PostEditorHeader({
       return m.editor_header_unpublish();
     return m.editor_header_publish();
   };
+
+  if (isFuwari) {
+    const processColor =
+      processState === "SUCCESS"
+        ? "text-emerald-500"
+        : post.status === "draft" && post.hasPublicCache
+          ? "text-orange-500"
+          : "text-(--fuwari-primary)";
+
+    return (
+      <header className="flex h-16 items-center justify-between gap-4 fuwari-card-base px-4 sm:px-5 fuwari-onload-animation">
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <Breadcrumbs />
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <Button
+            variant="ghost"
+            onClick={onPreview}
+            disabled={!post.hasPublicCache}
+            title={
+              !post.hasPublicCache
+                ? m.editor_header_preview_unavailable()
+                : m.editor_header_preview()
+            }
+            className="h-8 px-3"
+          >
+            {m.editor_header_preview_btn()}
+          </Button>
+
+          <Button
+            variant="ghost"
+            onClick={onOpenAi}
+            className="h-8 px-3 gap-1.5"
+            title={m.editor_ai_panel_title()}
+          >
+            <Sparkles size={14} strokeWidth={1.5} />
+            {m.editor_header_ai_btn()}
+          </Button>
+
+          <div className="h-4 w-px bg-(--fuwari-input-border)" />
+
+          <Button
+            onClick={onProcess}
+            disabled={
+              processState !== "IDLE" ||
+              saveStatus === "SAVING" ||
+              !isPostDirty ||
+              (post.status === "published" && !post.publishedAt)
+            }
+            variant="ghost"
+            className={`h-8 px-3 ${processColor}`}
+          >
+            {getProcessButtonText()}
+          </Button>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-border/30 bg-background px-4 sm:px-6 overflow-x-auto overscroll-x-contain">

@@ -41,3 +41,26 @@ export function SectionSkeleton() {
     </div>
   );
 }
+
+export function FuwariSectionSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 animate-pulse">
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6">
+        <div className="h-6 w-40 rounded-lg bg-(--fuwari-btn-regular-bg) mb-6"></div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="space-y-2">
+              <div className="h-3.5 w-24 rounded-md bg-(--fuwari-btn-regular-bg)"></div>
+              <div className="h-9 w-full rounded-xl bg-(--fuwari-btn-regular-bg)"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6">
+        <div className="h-6 w-48 rounded-lg bg-(--fuwari-btn-regular-bg) mb-6"></div>
+        <div className="h-24 w-full rounded-xl bg-(--fuwari-btn-regular-bg)"></div>
+      </div>
+      <div className="h-10 w-32 self-end rounded-xl bg-(--fuwari-btn-regular-bg)"></div>
+    </div>
+  );
+}

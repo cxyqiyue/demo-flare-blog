@@ -3,11 +3,13 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddFriendLinkModal } from "@/features/friend-links/components/admin/add-friend-link-modal";
 import { FriendLinkModerationTable } from "@/features/friend-links/components/admin/friend-link-moderation-table";
 import { FriendLinksConfigEditor } from "@/features/friend-links/components/admin/friend-links-config-editor";
 import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
 import type { FriendLinkStatus } from "@/lib/db/schema";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 const searchSchema = z.object({
@@ -38,6 +40,97 @@ export const Route = createFileRoute("/admin/friend-links/")({
   }),
 });
 
+function FuwariFriendLinksAdminPage({
+  tabs,
+  status,
+  currentStatus,
+  page,
+  handleStatusChange,
+  onAdd,
+  showAddModal,
+  onCloseAddModal,
+}: {
+  tabs: Array<{ key: string; label: string }>;
+  status: string;
+  currentStatus: FriendLinkStatus | undefined;
+  page: number;
+  handleStatusChange: (value: string) => void;
+  onAdd: () => void;
+  showAddModal: boolean;
+  onCloseAddModal: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Header card: title + add button + status tabs */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 space-y-5 fuwari-onload-animation">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          <div className="ml-6 min-w-0">
+            <h1 className="relative text-xl sm:text-2xl font-bold fuwari-text-90">
+              <span
+                className="absolute -left-4 top-[6px] w-1 h-5 rounded-md"
+                style={{ backgroundColor: "var(--fuwari-primary)" }}
+              />
+              {m.friend_links_admin_title()}
+            </h1>
+            <p className="text-sm fuwari-text-50 mt-1.5">
+              {m.friend_links_admin_tag()}
+            </p>
+          </div>
+
+          <Button
+            onClick={onAdd}
+            className="h-10 px-4 text-sm font-bold active:scale-95 transition-all"
+          >
+            <Plus size={16} strokeWidth={1.5} className="mr-1.5" />
+            {m.friend_links_add_btn()}
+          </Button>
+        </div>
+
+        <Tabs value={status} onValueChange={handleStatusChange}>
+          <TabsList className="no-scrollbar">
+            {tabs.map((tab) => (
+              <TabsTrigger key={tab.key} value={tab.key}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
+
+      <div
+        className="fuwari-onload-animation"
+        style={{ animationDelay: "100ms" }}
+      >
+        <FriendLinkModerationTable status={currentStatus} page={page} />
+      </div>
+
+      {/* 本站信息 & 申请须知 */}
+      <section
+        className="flex flex-col gap-4 fuwari-onload-animation"
+        style={{ animationDelay: "180ms" }}
+      >
+        <div className="fuwari-card-base p-4 sm:p-5 md:p-6">
+          <h2 className="relative text-lg font-bold fuwari-text-90 ml-6">
+            <span
+              className="absolute -left-4 top-[5.5px] w-1 h-4 rounded-md"
+              style={{ backgroundColor: "var(--fuwari-primary)" }}
+            />
+            {m.friend_links_site_info_section_title()}
+          </h2>
+          <p className="text-sm fuwari-text-50 mt-1.5 ml-6">
+            {m.friend_links_site_info_section_tag()}
+          </p>
+        </div>
+
+        <FriendLinksConfigEditor />
+      </section>
+
+      {/* Add Friend Link Modal */}
+      <AddFriendLinkModal isOpen={showAddModal} onClose={onCloseAddModal} />
+    </div>
+  );
+}
+
 function FriendLinksAdminPage() {
   const { status, page } = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -62,6 +155,21 @@ function FriendLinksAdminPage() {
     { key: "rejected", label: m.friend_links_tab_rejected() },
     { key: "ALL", label: m.friend_links_tab_all() },
   ];
+
+  if (isFuwari) {
+    return (
+      <FuwariFriendLinksAdminPage
+        tabs={tabs}
+        status={status}
+        currentStatus={currentStatus}
+        page={page}
+        handleStatusChange={handleStatusChange}
+        onAdd={() => setShowAddModal(true)}
+        showAddModal={showAddModal}
+        onCloseAddModal={() => setShowAddModal(false)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-1000">

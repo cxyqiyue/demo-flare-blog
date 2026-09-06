@@ -7,6 +7,7 @@ import {
   SOCIAL_PLATFORM_KEYS,
   SOCIAL_PLATFORMS,
 } from "@/features/config/utils/social-platforms";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 export function SocialLinksEditor() {
@@ -15,6 +16,80 @@ export function SocialLinksEditor() {
     control,
     name: "site.social",
   });
+
+  if (isFuwari) {
+    return (
+      <div className="flex flex-col gap-3">
+        {fields.map((field, index) => {
+          const platform = watch(`site.social.${index}.platform`);
+          return (
+            <div
+              key={field.id}
+              className="fuwari-card-base p-4 space-y-3 bg-(--fuwari-btn-regular-bg)"
+            >
+              <div className="flex items-start gap-2 sm:gap-3">
+                <select
+                  {...register(`site.social.${index}.platform`)}
+                  className="shrink-0 h-9 min-w-25 sm:min-w-30 rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-card-bg) px-3 text-sm fuwari-text-90 focus:outline-none focus:border-(--fuwari-primary)/50"
+                >
+                  {SOCIAL_PLATFORM_KEYS.map((key) => (
+                    <option key={key} value={key}>
+                      {key === "custom"
+                        ? m.settings_social_custom()
+                        : SOCIAL_PLATFORMS[key].label}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="flex-1 min-w-0">
+                  <Input
+                    {...register(`site.social.${index}.url`)}
+                    placeholder={m.settings_social_url_ph()}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => remove(index)}
+                  className="shrink-0 h-9 w-9 flex items-center justify-center rounded-lg fuwari-btn-regular text-muted-foreground hover:text-destructive active:scale-90 transition-all"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              {platform === "custom" && (
+                <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 pt-3">
+                  <div className="w-full sm:w-56 shrink-0 space-y-2">
+                    <Input
+                      {...register(`site.social.${index}.label`)}
+                      placeholder={m.settings_social_label_ph()}
+                    />
+                  </div>
+                  <div className="w-full sm:flex-1 shrink-0 min-w-0">
+                    <AssetUploadField
+                      name={`site.social.${index}.icon`}
+                      assetPath={`social/custom-${index}`}
+                      accept=".svg,.png,.webp"
+                      label={m.settings_social_icon()}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={() => append({ platform: "github", url: "" })}
+          className="flex items-center justify-center gap-2 self-start h-10 px-4 rounded-xl fuwari-btn-regular text-sm font-medium fuwari-text-75 hover:text-(--fuwari-primary) active:scale-95 transition-all"
+        >
+          <Plus size={16} />
+          {m.settings_social_add()}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">

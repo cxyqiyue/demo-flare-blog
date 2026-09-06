@@ -1,5 +1,6 @@
 import { type FieldPath, useController, useFormContext } from "react-hook-form";
 import type { SystemConfig } from "@/features/config/config.schema";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 
 export function Field({
@@ -15,6 +16,23 @@ export function Field({
   readOnly?: boolean;
   children: React.ReactNode;
 }) {
+  if (isFuwari) {
+    return (
+      <label className="block space-y-2">
+        <div className="space-y-0.5">
+          <p className="text-sm font-bold fuwari-text-75">{label}</p>
+          {hint ? (
+            <p className="text-xs sm:text-sm fuwari-text-50">{hint}</p>
+          ) : null}
+        </div>
+        <div className={cn(readOnly && "opacity-70 cursor-default")}>
+          {children}
+        </div>
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      </label>
+    );
+  }
+
   return (
     <label className="space-y-3">
       <div className="space-y-1 min-h-10 flex flex-col justify-end">
@@ -68,6 +86,58 @@ export function RangeField({
     typeof field.value === "number" && !Number.isNaN(field.value)
       ? field.value
       : defaultValue;
+
+  if (isFuwari) {
+    return (
+      <label
+        className={cn(
+          "block space-y-2",
+          readOnly && "opacity-70 cursor-default",
+        )}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-bold fuwari-text-75">{label}</p>
+          <div className="rounded-lg bg-(--fuwari-btn-regular-bg) px-2.5 py-1 text-sm font-bold fuwari-text-90">
+            {formatValue
+              ? formatValue(currentValue)
+              : `${currentValue}${unit ?? ""}`}
+          </div>
+        </div>
+        {hint ? (
+          <p className="text-xs sm:text-sm fuwari-text-50">{hint}</p>
+        ) : null}
+
+        <div className="flex items-center gap-3">
+          <span className="shrink-0 text-xs fuwari-text-30">
+            {min}
+            {unit}
+          </span>
+          <input
+            ref={field.ref}
+            type="range"
+            name={field.name}
+            min={min}
+            max={max}
+            step={step}
+            value={currentValue}
+            onBlur={field.onBlur}
+            onChange={(event) => field.onChange(Number(event.target.value))}
+            disabled={readOnly}
+            className={cn(
+              "h-2 w-full cursor-pointer appearance-none rounded-full bg-(--fuwari-input-bg) accent-(--fuwari-primary)",
+              error && "accent-destructive",
+              readOnly && "cursor-default opacity-50",
+            )}
+          />
+          <span className="shrink-0 text-xs fuwari-text-30">
+            {max}
+            {unit}
+          </span>
+        </div>
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      </label>
+    );
+  }
 
   return (
     <label className={cn("space-y-3", readOnly && "opacity-70 cursor-default")}>

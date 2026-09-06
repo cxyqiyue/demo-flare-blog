@@ -5,15 +5,16 @@ import {
   Database,
   Globe,
   KeyRound,
+  Loader2,
   MessageSquare,
   PlugZap,
   Plus,
-  Server,
   Send,
+  Server,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,16 +22,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import type { SystemConfig } from "@/features/config/config.schema";
 import {
-  S3_DEFAULT_REGIONS,
-  S3_PRESET_ENDPOINT_BUILDER,
-  S3_PROVIDERS,
   type ActiveImageHostingProvider,
   type ApiKeyProvider,
   type ApiKeyProviderType,
+  S3_DEFAULT_REGIONS,
+  S3_PRESET_ENDPOINT_BUILDER,
+  S3_PROVIDERS,
   type S3Provider,
   type TestImageHostingConnectionInput,
 } from "@/features/image-hosting/image-hosting.schema";
 import type { Result } from "@/lib/errors";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -129,6 +131,14 @@ const INPUT_CLASS =
   "w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10";
 
 function SizeLimitWarning({ text }: { text: string }) {
+  if (isFuwari) {
+    return (
+      <p className="flex items-start gap-2 text-xs font-medium text-red-500">
+        <TriangleAlert size={13} className="mt-0.5 shrink-0" />
+        <span>{text}</span>
+      </p>
+    );
+  }
   return (
     <p className="flex items-start gap-2 text-xs text-red-500">
       <TriangleAlert size={13} className="mt-0.5 shrink-0" />
@@ -138,6 +148,13 @@ function SizeLimitWarning({ text }: { text: string }) {
 }
 
 function NoLimitHint() {
+  if (isFuwari) {
+    return (
+      <p className="text-xs sm:text-sm fuwari-text-50">
+        {m.settings_image_hosting_no_limit_hint()}
+      </p>
+    );
+  }
   return (
     <p className="text-xs text-muted-foreground">
       {m.settings_image_hosting_no_limit_hint()}
@@ -154,6 +171,29 @@ function MaxFileSizeField({
   placeholder: string;
   onChange: (value: number | undefined) => void;
 }) {
+  if (isFuwari) {
+    return (
+      <label className="block space-y-2">
+        <span className="block text-sm font-bold fuwari-text-75">
+          {m.settings_image_hosting_field_max_file_size_label()}
+        </span>
+        <Input
+          type="number"
+          min={1}
+          placeholder={placeholder}
+          value={value ?? ""}
+          onChange={(e) => {
+            onChange(
+              e.target.value === "" ? undefined : Number(e.target.value),
+            );
+          }}
+        />
+        <span className="block text-xs sm:text-sm fuwari-text-50">
+          {m.settings_image_hosting_field_max_file_size_desc()}
+        </span>
+      </label>
+    );
+  }
   return (
     <div className="space-y-4">
       <label className="text-sm text-muted-foreground">
@@ -189,6 +229,26 @@ function MbNumberField({
   value: number | null;
   onChange: (value: number | undefined) => void;
 }) {
+  if (isFuwari) {
+    return (
+      <label className="block space-y-2">
+        <span className="block text-sm font-bold fuwari-text-75">{label}</span>
+        <Input
+          type="number"
+          min={1}
+          step="any"
+          placeholder={placeholder}
+          value={value ?? ""}
+          onChange={(e) => {
+            onChange(
+              e.target.value === "" ? undefined : Number(e.target.value),
+            );
+          }}
+        />
+        <span className="block text-xs sm:text-sm fuwari-text-50">{desc}</span>
+      </label>
+    );
+  }
   return (
     <div className="space-y-3">
       <label className="text-sm text-muted-foreground">{label}</label>
@@ -218,6 +278,27 @@ function OptionButtons<T extends string>({
   value: T;
   onChange: (id: T) => void;
 }) {
+  if (isFuwari) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {options.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => onChange(option.id)}
+            className={cn(
+              "rounded-xl border px-3 py-2 text-xs sm:text-sm font-medium transition-all active:scale-95",
+              value === option.id
+                ? "border-(--fuwari-primary)/60 bg-(--fuwari-primary)/10 fuwari-text-90"
+                : "border-(--fuwari-input-border) fuwari-text-50 hover:border-(--fuwari-primary)/40",
+            )}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="flex flex-wrap items-center gap-2">
       {options.map((option) => (
@@ -240,7 +321,25 @@ function OptionButtons<T extends string>({
 }
 
 /** 折叠式渠道配置教程 */
-function ChannelGuide({ title, children }: { title: string; children: ReactNode }) {
+function ChannelGuide({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  if (isFuwari) {
+    return (
+      <details className="group overflow-hidden rounded-xl border border-(--fuwari-input-border)">
+        <summary className="cursor-pointer list-none bg-(--fuwari-btn-regular-bg) px-4 py-3 text-sm font-bold fuwari-text-75 transition-colors hover:text-(--fuwari-primary) [&::-webkit-details-marker]:hidden">
+          <span>{title}</span>
+        </summary>
+        <div className="space-y-2 border-t border-(--fuwari-input-border) px-4 py-4 text-xs sm:text-sm leading-relaxed fuwari-text-50">
+          {children}
+        </div>
+      </details>
+    );
+  }
   return (
     <details className="group border border-border/20 bg-muted/5">
       <summary className="cursor-pointer list-none px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted/10 [&::-webkit-details-marker]:hidden">
@@ -301,6 +400,13 @@ function StatusLabel({ status }: { status: ConnectionStatus }) {
         : status === "TESTING"
           ? m.settings_image_hosting_test_testing()
           : m.settings_image_hosting_test_idle();
+  if (isFuwari) {
+    return (
+      <span className="text-xs sm:text-sm font-bold fuwari-text-75">
+        {text}
+      </span>
+    );
+  }
   return (
     <span className="text-xs md:text-sm font-serif font-medium text-foreground">
       {text}
@@ -319,6 +425,43 @@ function TestToolbar({
   canTest: boolean;
   hintOverride?: string;
 }) {
+  if (isFuwari) {
+    return (
+      <div className="flex flex-col items-center justify-between gap-3 rounded-xl bg-(--fuwari-btn-regular-bg) p-3 sm:p-4 sm:flex-row">
+        <div className="flex items-center gap-2 md:gap-3">
+          <StatusDot status={status} />
+          <StatusLabel status={status} />
+          <span className="hidden h-4 w-px bg-(--fuwari-input-border) md:block" />
+          <p className="hidden text-xs sm:text-sm fuwari-text-50 md:block">
+            {hintOverride ??
+              (status === "IDLE"
+                ? m.settings_image_hosting_test_hint_idle()
+                : m.settings_image_hosting_test_hint_current())}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onTest}
+          disabled={status === "TESTING" || !canTest}
+          className={cn(
+            "h-9 rounded-xl px-5 text-xs font-medium fuwari-text-75 hover:text-(--fuwari-primary)",
+            !canTest && "cursor-not-allowed opacity-30",
+          )}
+        >
+          {status === "TESTING" ? (
+            <Loader2 size={12} className="mr-2 animate-spin" />
+          ) : (
+            <PlugZap size={11} className="mr-2" />
+          )}
+          {status === "TESTING"
+            ? m.settings_image_hosting_test_btn_testing()
+            : m.settings_image_hosting_test_btn_send()}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-between gap-3 bg-muted/10 p-3 sm:p-4 sm:flex-row">
       <div className="flex items-center gap-2 md:gap-3">
@@ -356,12 +499,24 @@ function TestToolbar({
 }
 
 function EchoBlock({ url }: { url: string }) {
+  if (isFuwari) {
+    return (
+      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 md:p-6">
+        <p className="text-xs font-bold text-emerald-600">
+          {m.settings_image_hosting_test_echo()}
+        </p>
+        <p className="mt-2 break-all text-sm fuwari-text-75">{url}</p>
+      </div>
+    );
+  }
   return (
     <div className="border border-emerald-500/20 bg-emerald-500/5 p-4 md:p-6">
       <p className="text-xs font-mono uppercase tracking-widest text-emerald-600">
         {m.settings_image_hosting_test_echo()}
       </p>
-      <p className="mt-2 break-all font-serif text-sm text-foreground/80">{url}</p>
+      <p className="mt-2 break-all font-serif text-sm text-foreground/80">
+        {url}
+      </p>
     </div>
   );
 }
@@ -377,7 +532,8 @@ export function ImageHostingSettingsSection({
   const r2PathPrefix = watch("imageHosting.r2Native.pathPrefix") ?? "";
 
   // ── S3 fields ──
-  const s3Provider = watch("imageHosting.s3.provider") ?? "cloudflare-r2";
+  const s3Provider = (watch("imageHosting.s3.provider") ??
+    "cloudflare-r2") as S3Provider;
   const s3Endpoint = watch("imageHosting.s3.endpoint") ?? "";
   const s3Bucket = watch("imageHosting.s3.bucket") ?? "";
   const s3Region = watch("imageHosting.s3.region") ?? "";
@@ -388,7 +544,8 @@ export function ImageHostingSettingsSection({
   const s3PathStyle = watch("imageHosting.s3.pathStyle") ?? true;
 
   // ── API Key Providers ──
-  const apiProviders: ApiKeyProvider[] = watch("imageHosting.apiProviders") ?? [];
+  const apiProviders: ApiKeyProvider[] =
+    watch("imageHosting.apiProviders") ?? [];
 
   // ── Telegram ──
   const tgBotToken = watch("imageHosting.telegram.botToken") ?? "";
@@ -444,9 +601,12 @@ export function ImageHostingSettingsSection({
   // ── Connection Status ──
   const [s3Status, setS3Status] = useState<ConnectionStatus>("IDLE");
   const [s3Echo, setS3Echo] = useState("");
-  const [apiStatusMap, setApiStatusMap] = useState<Record<string, ConnectionStatus>>({});
+  const [apiStatusMap, setApiStatusMap] = useState<
+    Record<string, ConnectionStatus>
+  >({});
   const [apiEchoMap, setApiEchoMap] = useState<Record<string, string>>({});
-  const [telegramStatus, setTelegramStatus] = useState<ConnectionStatus>("IDLE");
+  const [telegramStatus, setTelegramStatus] =
+    useState<ConnectionStatus>("IDLE");
   const [telegramEcho, setTelegramEcho] = useState("");
   const [discordStatus, setDiscordStatus] = useState<ConnectionStatus>("IDLE");
   const [discordEcho, setDiscordEcho] = useState("");
@@ -462,8 +622,12 @@ export function ImageHostingSettingsSection({
   const selectProvider = (id: ProviderId | null) => {
     setValue("imageHosting.activeProvider", id, { shouldDirty: true });
     // Clear old enabled flags for backward compatibility
-    setValue("imageHosting.r2Native.articleEnabled", false, { shouldDirty: true });
-    setValue("imageHosting.r2Native.commentEnabled", false, { shouldDirty: true });
+    setValue("imageHosting.r2Native.articleEnabled", false, {
+      shouldDirty: true,
+    });
+    setValue("imageHosting.r2Native.commentEnabled", false, {
+      shouldDirty: true,
+    });
     setValue("imageHosting.s3.articleEnabled", false, { shouldDirty: true });
     setValue("imageHosting.s3.commentEnabled", false, { shouldDirty: true });
     if (apiProviders.length > 0) {
@@ -492,17 +656,24 @@ export function ImageHostingSettingsSection({
 
   // ── S3 Preset ──
   const applyS3Preset = (provider: S3Provider) => {
-    setValue("imageHosting.s3.provider", provider, { shouldDirty: true, shouldTouch: true });
+    setValue("imageHosting.s3.provider", provider, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
     setValue("imageHosting.s3.region", S3_DEFAULT_REGIONS[provider], {
       shouldDirty: true,
       shouldTouch: true,
     });
     const builder = S3_PRESET_ENDPOINT_BUILDER[provider];
     if (builder) {
-      setValue("imageHosting.s3.endpoint", builder(S3_DEFAULT_REGIONS[provider]), {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
+      setValue(
+        "imageHosting.s3.endpoint",
+        builder(S3_DEFAULT_REGIONS[provider]),
+        {
+          shouldDirty: true,
+          shouldTouch: true,
+        },
+      );
     }
     setS3Status("IDLE");
   };
@@ -541,7 +712,9 @@ export function ImageHostingSettingsSection({
       setS3Status("ERROR");
       toast.error(m.settings_image_hosting_test_error(), {
         description:
-          error instanceof Error ? error.message : m.settings_image_hosting_unknown_error(),
+          error instanceof Error
+            ? error.message
+            : m.settings_image_hosting_unknown_error(),
       });
     }
   };
@@ -578,16 +751,24 @@ export function ImageHostingSettingsSection({
       setApiStatus((p) => ({ ...p, [provider.id]: "ERROR" }));
       toast.error(m.settings_image_hosting_test_error(), {
         description:
-          error instanceof Error ? error.message : m.settings_image_hosting_unknown_error(),
+          error instanceof Error
+            ? error.message
+            : m.settings_image_hosting_unknown_error(),
       });
     }
   };
 
-  const setApiStatus = (updater: (prev: Record<string, ConnectionStatus>) => Record<string, ConnectionStatus>) => {
+  const setApiStatus = (
+    updater: (
+      prev: Record<string, ConnectionStatus>,
+    ) => Record<string, ConnectionStatus>,
+  ) => {
     setApiStatusMap(updater);
   };
 
-  const setApiEcho = (updater: (prev: Record<string, string>) => Record<string, string>) => {
+  const setApiEcho = (
+    updater: (prev: Record<string, string>) => Record<string, string>,
+  ) => {
     setApiEchoMap(updater);
   };
 
@@ -599,7 +780,11 @@ export function ImageHostingSettingsSection({
       const result = await testImageHostingConnection({
         data: {
           category: "telegram",
-          telegram: { botToken: tgBotToken, chatId: tgChatId, proxyUrl: tgProxyUrl },
+          telegram: {
+            botToken: tgBotToken,
+            chatId: tgChatId,
+            proxyUrl: tgProxyUrl,
+          },
         },
       });
       if (!result.error) {
@@ -615,7 +800,9 @@ export function ImageHostingSettingsSection({
       setTelegramStatus("ERROR");
       toast.error(m.settings_image_hosting_test_error(), {
         description:
-          error instanceof Error ? error.message : m.settings_image_hosting_unknown_error(),
+          error instanceof Error
+            ? error.message
+            : m.settings_image_hosting_unknown_error(),
       });
     }
   };
@@ -651,7 +838,9 @@ export function ImageHostingSettingsSection({
       setDiscordStatus("ERROR");
       toast.error(m.settings_image_hosting_test_error(), {
         description:
-          error instanceof Error ? error.message : m.settings_image_hosting_unknown_error(),
+          error instanceof Error
+            ? error.message
+            : m.settings_image_hosting_unknown_error(),
       });
     }
   };
@@ -682,7 +871,9 @@ export function ImageHostingSettingsSection({
       setHfStatus("ERROR");
       toast.error(m.settings_image_hosting_test_error(), {
         description:
-          error instanceof Error ? error.message : m.settings_image_hosting_unknown_error(),
+          error instanceof Error
+            ? error.message
+            : m.settings_image_hosting_unknown_error(),
       });
     }
   };
@@ -719,7 +910,9 @@ export function ImageHostingSettingsSection({
       setWdStatus("ERROR");
       toast.error(m.settings_image_hosting_test_error(), {
         description:
-          error instanceof Error ? error.message : m.settings_image_hosting_unknown_error(),
+          error instanceof Error
+            ? error.message
+            : m.settings_image_hosting_unknown_error(),
       });
     }
   };
@@ -748,10 +941,95 @@ export function ImageHostingSettingsSection({
     if (editingApiId === id) setEditingApiId(null);
   };
 
-  const updateApiProvider = (id: string, field: keyof ApiKeyProvider, value: string | boolean) => {
-    const updated = apiProviders.map((p) => (p.id === id ? { ...p, [field]: value } : p));
+  const updateApiProvider = (
+    id: string,
+    field: keyof ApiKeyProvider,
+    value: string | boolean,
+  ) => {
+    const updated = apiProviders.map((p) =>
+      p.id === id ? { ...p, [field]: value } : p,
+    );
     setValue("imageHosting.apiProviders", updated, { shouldDirty: true });
   };
+
+  if (isFuwari) {
+    return (
+      <FuwariImageHostingSection
+        activeProvider={activeProvider}
+        selectProvider={selectProvider}
+        r2PathPrefix={r2PathPrefix}
+        s3Provider={s3Provider}
+        s3Endpoint={s3Endpoint}
+        s3Bucket={s3Bucket}
+        s3Region={s3Region}
+        s3AccessKeyId={s3AccessKeyId}
+        s3SecretAccessKey={s3SecretAccessKey}
+        s3PathPrefix={s3PathPrefix}
+        s3PublicUrl={s3PublicUrl}
+        s3PathStyle={s3PathStyle}
+        apiProviders={apiProviders}
+        editingApiId={editingApiId}
+        setEditingApiId={setEditingApiId}
+        addApiProvider={addApiProvider}
+        deleteApiProvider={deleteApiProvider}
+        updateApiProvider={updateApiProvider}
+        testApi={handleTestApi}
+        tgBotToken={tgBotToken}
+        tgChatId={tgChatId}
+        tgProxyUrl={tgProxyUrl}
+        tgMaxFileSizeMb={tgMaxFileSizeMb}
+        dcBotToken={dcBotToken}
+        dcChannelId={dcChannelId}
+        dcProxyUrl={dcProxyUrl}
+        dcIsNitro={dcIsNitro}
+        dcMaxFileSizeMb={dcMaxFileSizeMb}
+        hfToken={hfToken}
+        hfRepo={hfRepo}
+        hfIsPrivate={hfIsPrivate}
+        hfMaxFileSizeMb={hfMaxFileSizeMb}
+        wdBaseUrl={wdBaseUrl}
+        wdUsername={wdUsername}
+        wdPassword={wdPassword}
+        wdPublicUrl={wdPublicUrl}
+        wdCreateDir={wdCreateDir}
+        wdMaxFileSizeMb={wdMaxFileSizeMb}
+        compressEnabled={compressEnabled}
+        convertToFormat={convertToFormat}
+        compressThresholdMb={compressThresholdMb}
+        compressTargetMb={compressTargetMb}
+        moderationChannel={moderationChannel}
+        moderateContentApiKey={moderateContentApiKey}
+        nsfwApiUrl={nsfwApiUrl}
+        linkAccessMode={linkAccessMode}
+        allowEmptyReferer={allowEmptyReferer}
+        refererAllowlistRaw={refererAllowlistRaw}
+        s3Status={s3Status}
+        s3Echo={s3Echo}
+        apiStatusMap={apiStatusMap}
+        apiEchoMap={apiEchoMap}
+        telegramStatus={telegramStatus}
+        telegramEcho={telegramEcho}
+        discordStatus={discordStatus}
+        discordEcho={discordEcho}
+        hfStatus={hfStatus}
+        hfEcho={hfEcho}
+        wdStatus={wdStatus}
+        wdEcho={wdEcho}
+        s3MaxFileSizeMb={s3MaxFileSizeMb}
+        applyS3Preset={applyS3Preset}
+        handleTestS3={handleTestS3}
+        canTestS3={canTestS3}
+        handleTestTelegram={handleTestTelegram}
+        canTestTelegram={canTestTelegram}
+        handleTestDiscord={handleTestDiscord}
+        canTestDiscord={canTestDiscord}
+        handleTestHuggingFace={handleTestHuggingFace}
+        canTestHf={canTestHf}
+        handleTestWebDAV={handleTestWebDAV}
+        canTestWebDAV={canTestWebDAV}
+      />
+    );
+  }
 
   // ════════════════════════════════════════════════════════════
   // RENDER
@@ -778,9 +1056,13 @@ export function ImageHostingSettingsSection({
               <Checkbox
                 checked={compressEnabled}
                 onCheckedChange={(checked) => {
-                  setValue("imageHosting.imageProcessing.compressEnabled", checked, {
-                    shouldDirty: true,
-                  });
+                  setValue(
+                    "imageHosting.imageProcessing.compressEnabled",
+                    checked,
+                    {
+                      shouldDirty: true,
+                    },
+                  );
                 }}
               />
               <span className="text-xs text-muted-foreground">
@@ -794,9 +1076,13 @@ export function ImageHostingSettingsSection({
                 placeholder={m.settings_image_hosting_compress_threshold_placeholder()}
                 value={compressThresholdMb}
                 onChange={(v) =>
-                  setValue("imageHosting.imageProcessing.compressThresholdMb", v ?? undefined, {
-                    shouldDirty: true,
-                  })
+                  setValue(
+                    "imageHosting.imageProcessing.compressThresholdMb",
+                    v ?? undefined,
+                    {
+                      shouldDirty: true,
+                    },
+                  )
                 }
               />
               <MbNumberField
@@ -805,9 +1091,13 @@ export function ImageHostingSettingsSection({
                 placeholder={m.settings_image_hosting_compress_target_placeholder()}
                 value={compressTargetMb}
                 onChange={(v) =>
-                  setValue("imageHosting.imageProcessing.compressTargetMb", v ?? undefined, {
-                    shouldDirty: true,
-                  })
+                  setValue(
+                    "imageHosting.imageProcessing.compressTargetMb",
+                    v ?? undefined,
+                    {
+                      shouldDirty: true,
+                    },
+                  )
                 }
               />
             </div>
@@ -822,9 +1112,13 @@ export function ImageHostingSettingsSection({
                   key={format}
                   type="button"
                   onClick={() =>
-                    setValue("imageHosting.imageProcessing.convertToFormat", format, {
-                      shouldDirty: true,
-                    })
+                    setValue(
+                      "imageHosting.imageProcessing.convertToFormat",
+                      format,
+                      {
+                        shouldDirty: true,
+                      },
+                    )
                   }
                   className={cn(
                     "rounded-none border px-3 py-1.5 text-xs transition-colors",
@@ -861,15 +1155,24 @@ export function ImageHostingSettingsSection({
                     : "hover:bg-muted/10 border-l-[3px] border-l-transparent",
                 )}
               >
-                <div className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")}>
+                <div
+                  className={cn(
+                    "shrink-0",
+                    isActive ? "text-primary" : "text-muted-foreground",
+                  )}
+                >
                   {isActive ? <CircleDot size={20} /> : <Circle size={20} />}
                 </div>
                 <div className="rounded-sm bg-muted/40 p-2 shrink-0">
                   <Icon size={16} className="text-muted-foreground" />
                 </div>
                 <div className="space-y-1 min-w-0 flex-1">
-                  <h5 className="text-sm font-medium text-foreground truncate">{def.label}</h5>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{def.desc}</p>
+                  <h5 className="text-sm font-medium text-foreground truncate">
+                    {def.label}
+                  </h5>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {def.desc}
+                  </p>
                 </div>
               </button>
 
@@ -877,17 +1180,26 @@ export function ImageHostingSettingsSection({
               {isActive && (
                 <button
                   type="button"
-                  onClick={() => setExpandedId(expandedId === def.id ? null : def.id)}
+                  onClick={() =>
+                    setExpandedId(expandedId === def.id ? null : def.id)
+                  }
                   className="w-full flex items-center justify-center py-1 text-muted-foreground hover:text-foreground transition-colors text-xs"
                 >
                   <svg
-                    className={cn("w-4 h-4 transition-transform", expandedId === def.id && "rotate-180")}
+                    className={cn(
+                      "w-4 h-4 transition-transform",
+                      expandedId === def.id && "rotate-180",
+                    )}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                     strokeWidth={2}
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
               )}
@@ -895,7 +1207,6 @@ export function ImageHostingSettingsSection({
               {/* ── Expanded Config ── */}
               {expandedId === def.id && (
                 <div className="border-t border-border/20 p-4 md:p-8 md:pl-20 space-y-6 bg-muted/5 animate-in fade-in slide-in-from-top-1 duration-300">
-
                   {/* ── R2 Native Config ── */}
                   {def.id === "r2-native" && (
                     <div className="space-y-4">
@@ -910,7 +1221,11 @@ export function ImageHostingSettingsSection({
                           placeholder="images/blog"
                           value={r2PathPrefix}
                           onChange={(e) => {
-                            setValue("imageHosting.r2Native.pathPrefix", e.target.value, { shouldDirty: true });
+                            setValue(
+                              "imageHosting.r2Native.pathPrefix",
+                              e.target.value,
+                              { shouldDirty: true },
+                            );
                           }}
                           className={INPUT_CLASS}
                         />
@@ -926,32 +1241,42 @@ export function ImageHostingSettingsSection({
                   {def.id === "s3" && (
                     <div className="space-y-6">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Provider:</span>
-                        {(S3_PROVIDERS as readonly S3Provider[]).map((provider) => (
-                          <button
-                            key={provider}
-                            type="button"
-                            onClick={() => applyS3Preset(provider)}
-                            className={cn(
-                              "rounded-none border px-3 py-1.5 text-xs transition-colors",
-                              s3Provider === provider
-                                ? "border-foreground/40 bg-foreground text-background"
-                                : "border-border/30 bg-muted/10 text-muted-foreground hover:bg-muted/20",
-                            )}
-                          >
-                            {S3_PROVIDER_LABELS[provider]}
-                          </button>
-                        ))}
+                        <span className="text-xs text-muted-foreground">
+                          Provider:
+                        </span>
+                        {(S3_PROVIDERS as readonly S3Provider[]).map(
+                          (provider) => (
+                            <button
+                              key={provider}
+                              type="button"
+                              onClick={() => applyS3Preset(provider)}
+                              className={cn(
+                                "rounded-none border px-3 py-1.5 text-xs transition-colors",
+                                s3Provider === provider
+                                  ? "border-foreground/40 bg-foreground text-background"
+                                  : "border-border/30 bg-muted/10 text-muted-foreground hover:bg-muted/20",
+                              )}
+                            >
+                              {S3_PROVIDER_LABELS[provider]}
+                            </button>
+                          ),
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:gap-x-16 md:gap-y-10 lg:grid-cols-2">
                         <div className="space-y-4">
-                          <label className="text-sm text-muted-foreground">Endpoint</label>
+                          <label className="text-sm text-muted-foreground">
+                            Endpoint
+                          </label>
                           <Input
                             placeholder="https://..."
                             value={s3Endpoint}
                             onChange={(e) => {
-                              setValue("imageHosting.s3.endpoint", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.s3.endpoint",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setS3Status("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -959,12 +1284,18 @@ export function ImageHostingSettingsSection({
                         </div>
 
                         <div className="space-y-4">
-                          <label className="text-sm text-muted-foreground">Bucket</label>
+                          <label className="text-sm text-muted-foreground">
+                            Bucket
+                          </label>
                           <Input
                             placeholder="my-bucket"
                             value={s3Bucket}
                             onChange={(e) => {
-                              setValue("imageHosting.s3.bucket", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.s3.bucket",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setS3Status("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -972,12 +1303,18 @@ export function ImageHostingSettingsSection({
                         </div>
 
                         <div className="space-y-4">
-                          <label className="text-sm text-muted-foreground">Region</label>
+                          <label className="text-sm text-muted-foreground">
+                            Region
+                          </label>
                           <Input
                             placeholder="auto"
                             value={s3Region}
                             onChange={(e) => {
-                              setValue("imageHosting.s3.region", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.s3.region",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setS3Status("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -985,12 +1322,18 @@ export function ImageHostingSettingsSection({
                         </div>
 
                         <div className="space-y-4">
-                          <label className="text-sm text-muted-foreground">Path Prefix</label>
+                          <label className="text-sm text-muted-foreground">
+                            Path Prefix
+                          </label>
                           <Input
                             placeholder="images/"
                             value={s3PathPrefix}
                             onChange={(e) => {
-                              setValue("imageHosting.s3.pathPrefix", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.s3.pathPrefix",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setS3Status("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -998,14 +1341,20 @@ export function ImageHostingSettingsSection({
                         </div>
 
                         <div className="space-y-4">
-                          <label className="text-sm text-muted-foreground">Access Key ID</label>
+                          <label className="text-sm text-muted-foreground">
+                            Access Key ID
+                          </label>
                           <div className="relative">
                             <Input
                               type="password"
                               placeholder="AKIA..."
                               value={s3AccessKeyId}
                               onChange={(e) => {
-                                setValue("imageHosting.s3.accessKeyId", e.target.value, { shouldDirty: true });
+                                setValue(
+                                  "imageHosting.s3.accessKeyId",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
                                 setS3Status("IDLE");
                               }}
                               className={cn(INPUT_CLASS, "pr-10")}
@@ -1018,13 +1367,19 @@ export function ImageHostingSettingsSection({
                         </div>
 
                         <div className="space-y-4">
-                          <label className="text-sm text-muted-foreground">Secret Access Key</label>
+                          <label className="text-sm text-muted-foreground">
+                            Secret Access Key
+                          </label>
                           <div className="relative">
                             <Input
                               type="password"
                               value={s3SecretAccessKey}
                               onChange={(e) => {
-                                setValue("imageHosting.s3.secretAccessKey", e.target.value, { shouldDirty: true });
+                                setValue(
+                                  "imageHosting.s3.secretAccessKey",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
                                 setS3Status("IDLE");
                               }}
                               className={cn(INPUT_CLASS, "pr-10")}
@@ -1037,12 +1392,18 @@ export function ImageHostingSettingsSection({
                         </div>
 
                         <div className="space-y-4">
-                          <label className="text-sm text-muted-foreground">Public URL</label>
+                          <label className="text-sm text-muted-foreground">
+                            Public URL
+                          </label>
                           <Input
                             placeholder="https://cdn.example.com"
                             value={s3PublicUrl}
                             onChange={(e) => {
-                              setValue("imageHosting.s3.publicUrl", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.s3.publicUrl",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setS3Status("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -1058,12 +1419,16 @@ export function ImageHostingSettingsSection({
                             <Checkbox
                               checked={s3PathStyle}
                               onCheckedChange={(checked) => {
-                                setValue("imageHosting.s3.pathStyle", checked, { shouldDirty: true });
+                                setValue("imageHosting.s3.pathStyle", checked, {
+                                  shouldDirty: true,
+                                });
                                 setS3Status("IDLE");
                               }}
                             />
                             <span className="text-xs text-muted-foreground">
-                              {s3PathStyle ? "endpoint/bucket/key" : "bucket.endpoint/key"}
+                              {s3PathStyle
+                                ? "endpoint/bucket/key"
+                                : "bucket.endpoint/key"}
                             </span>
                           </div>
                           <p className="text-[11px] text-muted-foreground/70">
@@ -1095,7 +1460,9 @@ export function ImageHostingSettingsSection({
                             : m.settings_image_hosting_test_missing_s3_config()
                         }
                       />
-                      {s3Status === "SUCCESS" && s3Echo && <EchoBlock url={s3Echo} />}
+                      {s3Status === "SUCCESS" && s3Echo && (
+                        <EchoBlock url={s3Echo} />
+                      )}
                     </div>
                   )}
 
@@ -1109,17 +1476,24 @@ export function ImageHostingSettingsSection({
                             const status = apiStatusMap[p.id] ?? "IDLE";
                             const echo = apiEchoMap[p.id] ?? "";
                             return (
-                              <div key={p.id} className="border border-border/30">
+                              <div
+                                key={p.id}
+                                className="border border-border/30"
+                              >
                                 <div className="flex items-center gap-2 md:gap-3 p-3 md:p-4">
                                   <button
                                     type="button"
-                                    onClick={() => setEditingApiId(isExpanded ? null : p.id)}
+                                    onClick={() =>
+                                      setEditingApiId(isExpanded ? null : p.id)
+                                    }
                                     className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 text-left"
                                   >
                                     <div
                                       className={cn(
                                         "h-3 w-3 shrink-0 rounded-full border",
-                                        p.articleEnabled ? "border-foreground bg-foreground" : "border-border/60",
+                                        p.articleEnabled
+                                          ? "border-foreground bg-foreground"
+                                          : "border-border/60",
                                       )}
                                     />
                                     <div className="min-w-0 flex-1">
@@ -1136,17 +1510,26 @@ export function ImageHostingSettingsSection({
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={() => setEditingApiId(isExpanded ? null : p.id)}
+                                    onClick={() =>
+                                      setEditingApiId(isExpanded ? null : p.id)
+                                    }
                                     className="shrink-0 p-1.5 text-muted-foreground hover:text-foreground transition-colors"
                                   >
                                     <svg
-                                      className={cn("w-4 h-4 transition-transform", isExpanded && "rotate-180")}
+                                      className={cn(
+                                        "w-4 h-4 transition-transform",
+                                        isExpanded && "rotate-180",
+                                      )}
                                       fill="none"
                                       viewBox="0 0 24 24"
                                       stroke="currentColor"
                                       strokeWidth={2}
                                     >
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M19 9l-7 7-7-7"
+                                      />
                                     </svg>
                                   </button>
                                   <button
@@ -1162,9 +1545,11 @@ export function ImageHostingSettingsSection({
                                   <div className="border-t border-border/20 p-3 md:p-4 space-y-4 bg-muted/5">
                                     {p.type === "imgbb" && (
                                       <SizeLimitWarning
-                                        text={m.settings_image_hosting_limit_imgbb_warning({
-                                          limit: "32",
-                                        })}
+                                        text={m.settings_image_hosting_limit_imgbb_warning(
+                                          {
+                                            limit: "32",
+                                          },
+                                        )}
                                       />
                                     )}
                                     <div className="space-y-4">
@@ -1173,17 +1558,31 @@ export function ImageHostingSettingsSection({
                                       </label>
                                       <Input
                                         value={p.name}
-                                        onChange={(e) => updateApiProvider(p.id, "name", e.target.value)}
+                                        onChange={(e) =>
+                                          updateApiProvider(
+                                            p.id,
+                                            "name",
+                                            e.target.value,
+                                          )
+                                        }
                                         className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground"
                                       />
                                     </div>
 
                                     {p.type === "ffsky" && (
                                       <div className="space-y-4">
-                                        <label className="text-xs text-muted-foreground">API Endpoint</label>
+                                        <label className="text-xs text-muted-foreground">
+                                          API Endpoint
+                                        </label>
                                         <Input
                                           value={p.apiEndpoint ?? ""}
-                                          onChange={(e) => updateApiProvider(p.id, "apiEndpoint", e.target.value)}
+                                          onChange={(e) =>
+                                            updateApiProvider(
+                                              p.id,
+                                              "apiEndpoint",
+                                              e.target.value,
+                                            )
+                                          }
                                           placeholder="https://api.ffsky.top/api/upload"
                                           className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground"
                                         />
@@ -1191,12 +1590,20 @@ export function ImageHostingSettingsSection({
                                     )}
 
                                     <div className="space-y-4">
-                                      <label className="text-xs text-muted-foreground">API Key</label>
+                                      <label className="text-xs text-muted-foreground">
+                                        API Key
+                                      </label>
                                       <div className="relative">
                                         <Input
                                           type="password"
                                           value={p.apiKey ?? ""}
-                                          onChange={(e) => updateApiProvider(p.id, "apiKey", e.target.value)}
+                                          onChange={(e) =>
+                                            updateApiProvider(
+                                              p.id,
+                                              "apiKey",
+                                              e.target.value,
+                                            )
+                                          }
                                           className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-5 text-sm text-foreground pr-10"
                                         />
                                         <KeyRound
@@ -1211,7 +1618,9 @@ export function ImageHostingSettingsSection({
                                       onTest={() => handleTestApi(p)}
                                       canTest={!!p.apiKey?.trim()}
                                     />
-                                    {status === "SUCCESS" && echo && <EchoBlock url={echo} />}
+                                    {status === "SUCCESS" && echo && (
+                                      <EchoBlock url={echo} />
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -1221,7 +1630,9 @@ export function ImageHostingSettingsSection({
                       )}
 
                       <div className="flex flex-wrap gap-2">
-                        {(["imgbb", "ffsky"] as readonly ApiKeyProviderType[]).map((type) => (
+                        {(
+                          ["imgbb", "ffsky"] as readonly ApiKeyProviderType[]
+                        ).map((type) => (
                           <Button
                             key={type}
                             type="button"
@@ -1252,7 +1663,11 @@ export function ImageHostingSettingsSection({
                               placeholder="123456:ABC-..."
                               value={tgBotToken}
                               onChange={(e) => {
-                                setValue("imageHosting.telegram.botToken", e.target.value, { shouldDirty: true });
+                                setValue(
+                                  "imageHosting.telegram.botToken",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
                                 setTelegramStatus("IDLE");
                               }}
                               className={cn(INPUT_CLASS, "pr-10")}
@@ -1272,7 +1687,11 @@ export function ImageHostingSettingsSection({
                             placeholder="-100..."
                             value={tgChatId}
                             onChange={(e) => {
-                              setValue("imageHosting.telegram.chatId", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.telegram.chatId",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setTelegramStatus("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -1287,7 +1706,11 @@ export function ImageHostingSettingsSection({
                             placeholder="https://..."
                             value={tgProxyUrl}
                             onChange={(e) => {
-                              setValue("imageHosting.telegram.proxyUrl", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.telegram.proxyUrl",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setTelegramStatus("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -1302,9 +1725,11 @@ export function ImageHostingSettingsSection({
                       />
                       <MaxFileSizeField
                         value={tgMaxFileSizeMb}
-                        placeholder={m.settings_image_hosting_field_max_file_size_default({
-                          limit: "50",
-                        })}
+                        placeholder={m.settings_image_hosting_field_max_file_size_default(
+                          {
+                            limit: "50",
+                          },
+                        )}
                         onChange={(v) =>
                           setValue("imageHosting.telegram.maxFileSizeMb", v, {
                             shouldDirty: true,
@@ -1312,8 +1737,14 @@ export function ImageHostingSettingsSection({
                         }
                       />
 
-                      <TestToolbar status={telegramStatus} onTest={handleTestTelegram} canTest={canTestTelegram} />
-                      {telegramStatus === "SUCCESS" && telegramEcho && <EchoBlock url={telegramEcho} />}
+                      <TestToolbar
+                        status={telegramStatus}
+                        onTest={handleTestTelegram}
+                        canTest={canTestTelegram}
+                      />
+                      {telegramStatus === "SUCCESS" && telegramEcho && (
+                        <EchoBlock url={telegramEcho} />
+                      )}
                     </div>
                   )}
 
@@ -1331,7 +1762,11 @@ export function ImageHostingSettingsSection({
                               placeholder="MT..."
                               value={dcBotToken}
                               onChange={(e) => {
-                                setValue("imageHosting.discord.botToken", e.target.value, { shouldDirty: true });
+                                setValue(
+                                  "imageHosting.discord.botToken",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
                                 setDiscordStatus("IDLE");
                               }}
                               className={cn(INPUT_CLASS, "pr-10")}
@@ -1351,7 +1786,11 @@ export function ImageHostingSettingsSection({
                             placeholder="123456789"
                             value={dcChannelId}
                             onChange={(e) => {
-                              setValue("imageHosting.discord.channelId", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.discord.channelId",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setDiscordStatus("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -1366,7 +1805,11 @@ export function ImageHostingSettingsSection({
                             placeholder="https://..."
                             value={dcProxyUrl}
                             onChange={(e) => {
-                              setValue("imageHosting.discord.proxyUrl", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.discord.proxyUrl",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setDiscordStatus("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -1381,7 +1824,11 @@ export function ImageHostingSettingsSection({
                             <Checkbox
                               checked={dcIsNitro}
                               onCheckedChange={(checked) => {
-                                setValue("imageHosting.discord.isNitro", checked, { shouldDirty: true });
+                                setValue(
+                                  "imageHosting.discord.isNitro",
+                                  checked,
+                                  { shouldDirty: true },
+                                );
                                 setDiscordStatus("IDLE");
                               }}
                             />
@@ -1395,15 +1842,21 @@ export function ImageHostingSettingsSection({
                       <SizeLimitWarning
                         text={
                           dcIsNitro
-                            ? m.settings_image_hosting_limit_discord_warning({ limit: "25" })
-                            : m.settings_image_hosting_limit_discord_warning({ limit: "10" })
+                            ? m.settings_image_hosting_limit_discord_warning({
+                                limit: "25",
+                              })
+                            : m.settings_image_hosting_limit_discord_warning({
+                                limit: "10",
+                              })
                         }
                       />
                       <MaxFileSizeField
                         value={dcMaxFileSizeMb}
-                        placeholder={m.settings_image_hosting_field_max_file_size_default({
-                          limit: dcIsNitro ? "25" : "10",
-                        })}
+                        placeholder={m.settings_image_hosting_field_max_file_size_default(
+                          {
+                            limit: dcIsNitro ? "25" : "10",
+                          },
+                        )}
                         onChange={(v) =>
                           setValue("imageHosting.discord.maxFileSizeMb", v, {
                             shouldDirty: true,
@@ -1416,7 +1869,9 @@ export function ImageHostingSettingsSection({
                         onTest={handleTestDiscord}
                         canTest={canTestDiscord}
                       />
-                      {discordStatus === "SUCCESS" && discordEcho && <EchoBlock url={discordEcho} />}
+                      {discordStatus === "SUCCESS" && discordEcho && (
+                        <EchoBlock url={discordEcho} />
+                      )}
                     </div>
                   )}
 
@@ -1434,7 +1889,11 @@ export function ImageHostingSettingsSection({
                               placeholder="hf_..."
                               value={hfToken}
                               onChange={(e) => {
-                                setValue("imageHosting.huggingface.token", e.target.value, { shouldDirty: true });
+                                setValue(
+                                  "imageHosting.huggingface.token",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
                                 setHfStatus("IDLE");
                               }}
                               className={cn(INPUT_CLASS, "pr-10")}
@@ -1454,7 +1913,11 @@ export function ImageHostingSettingsSection({
                             placeholder="username/repo-name"
                             value={hfRepo}
                             onChange={(e) => {
-                              setValue("imageHosting.huggingface.repo", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.huggingface.repo",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setHfStatus("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -1469,7 +1932,11 @@ export function ImageHostingSettingsSection({
                             <Checkbox
                               checked={hfIsPrivate}
                               onCheckedChange={(checked) => {
-                                setValue("imageHosting.huggingface.isPrivate", checked, { shouldDirty: true });
+                                setValue(
+                                  "imageHosting.huggingface.isPrivate",
+                                  checked,
+                                  { shouldDirty: true },
+                                );
                                 setHfStatus("IDLE");
                               }}
                             />
@@ -1485,9 +1952,13 @@ export function ImageHostingSettingsSection({
                         value={hfMaxFileSizeMb}
                         placeholder={m.settings_image_hosting_field_max_file_size_unlimited()}
                         onChange={(v) =>
-                          setValue("imageHosting.huggingface.maxFileSizeMb", v, {
-                            shouldDirty: true,
-                          })
+                          setValue(
+                            "imageHosting.huggingface.maxFileSizeMb",
+                            v,
+                            {
+                              shouldDirty: true,
+                            },
+                          )
                         }
                       />
 
@@ -1496,7 +1967,9 @@ export function ImageHostingSettingsSection({
                         onTest={handleTestHuggingFace}
                         canTest={canTestHf}
                       />
-                      {hfStatus === "SUCCESS" && hfEcho && <EchoBlock url={hfEcho} />}
+                      {hfStatus === "SUCCESS" && hfEcho && (
+                        <EchoBlock url={hfEcho} />
+                      )}
                     </div>
                   )}
 
@@ -1512,7 +1985,11 @@ export function ImageHostingSettingsSection({
                             placeholder="https://dav.example.com"
                             value={wdBaseUrl}
                             onChange={(e) => {
-                              setValue("imageHosting.webdav.baseUrl", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.webdav.baseUrl",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setWdStatus("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -1526,7 +2003,11 @@ export function ImageHostingSettingsSection({
                           <Input
                             value={wdUsername}
                             onChange={(e) => {
-                              setValue("imageHosting.webdav.username", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.webdav.username",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setWdStatus("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -1542,7 +2023,11 @@ export function ImageHostingSettingsSection({
                               type="password"
                               value={wdPassword}
                               onChange={(e) => {
-                                setValue("imageHosting.webdav.password", e.target.value, { shouldDirty: true });
+                                setValue(
+                                  "imageHosting.webdav.password",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
                                 setWdStatus("IDLE");
                               }}
                               className={cn(INPUT_CLASS, "pr-10")}
@@ -1562,7 +2047,11 @@ export function ImageHostingSettingsSection({
                             placeholder="https://cdn.example.com/images"
                             value={wdPublicUrl}
                             onChange={(e) => {
-                              setValue("imageHosting.webdav.publicUrl", e.target.value, { shouldDirty: true });
+                              setValue(
+                                "imageHosting.webdav.publicUrl",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
                               setWdStatus("IDLE");
                             }}
                             className={INPUT_CLASS}
@@ -1577,7 +2066,11 @@ export function ImageHostingSettingsSection({
                             <Checkbox
                               checked={wdCreateDir}
                               onCheckedChange={(checked) => {
-                                setValue("imageHosting.webdav.createDirectory", checked, { shouldDirty: true });
+                                setValue(
+                                  "imageHosting.webdav.createDirectory",
+                                  checked,
+                                  { shouldDirty: true },
+                                );
                                 setWdStatus("IDLE");
                               }}
                             />
@@ -1604,7 +2097,9 @@ export function ImageHostingSettingsSection({
                         onTest={handleTestWebDAV}
                         canTest={canTestWebDAV}
                       />
-                      {wdStatus === "SUCCESS" && wdEcho && <EchoBlock url={wdEcho} />}
+                      {wdStatus === "SUCCESS" && wdEcho && (
+                        <EchoBlock url={wdEcho} />
+                      )}
                     </div>
                   )}
                 </div>
@@ -1627,12 +2122,20 @@ export function ImageHostingSettingsSection({
         <OptionButtons
           value={moderationChannel}
           onChange={(id) =>
-            setValue("imageHosting.moderation.channel", id, { shouldDirty: true })
+            setValue("imageHosting.moderation.channel", id, {
+              shouldDirty: true,
+            })
           }
           options={[
             { id: "off", label: m.settings_moderation_channel_off() },
-            { id: "workers-ai", label: m.settings_moderation_channel_workers_ai() },
-            { id: "moderatecontent", label: m.settings_moderation_channel_moderatecontent() },
+            {
+              id: "workers-ai",
+              label: m.settings_moderation_channel_workers_ai(),
+            },
+            {
+              id: "moderatecontent",
+              label: m.settings_moderation_channel_moderatecontent(),
+            },
             { id: "nsfwjs", label: m.settings_moderation_channel_nsfwjs() },
           ]}
         />
@@ -1650,9 +2153,13 @@ export function ImageHostingSettingsSection({
               value={moderateContentApiKey}
               placeholder="xxxxxxxxxxxx"
               onChange={(e) =>
-                setValue("imageHosting.moderation.moderateContentApiKey", e.target.value, {
-                  shouldDirty: true,
-                })
+                setValue(
+                  "imageHosting.moderation.moderateContentApiKey",
+                  e.target.value,
+                  {
+                    shouldDirty: true,
+                  },
+                )
               }
               className={INPUT_CLASS}
             />
@@ -1714,9 +2221,13 @@ export function ImageHostingSettingsSection({
               <Checkbox
                 checked={allowEmptyReferer}
                 onCheckedChange={(checked) => {
-                  setValue("imageHosting.linkAccess.allowEmptyReferer", checked, {
-                    shouldDirty: true,
-                  });
+                  setValue(
+                    "imageHosting.linkAccess.allowEmptyReferer",
+                    checked,
+                    {
+                      shouldDirty: true,
+                    },
+                  );
                 }}
               />
               <span className="text-xs text-muted-foreground">
@@ -1736,9 +2247,13 @@ export function ImageHostingSettingsSection({
                     .split(/[\n,]+/)
                     .map((s) => s.trim())
                     .filter(Boolean);
-                  setValue("imageHosting.linkAccess.refererAllowlist", domains, {
-                    shouldDirty: true,
-                  });
+                  setValue(
+                    "imageHosting.linkAccess.refererAllowlist",
+                    domains,
+                    {
+                      shouldDirty: true,
+                    },
+                  );
                 }}
                 className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-3 text-sm text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
               />
@@ -1763,7 +2278,9 @@ export function ImageHostingSettingsSection({
           <h4 className="text-sm font-medium text-foreground">
             {m.settings_guides_title()}
           </h4>
-          <p className="text-xs text-muted-foreground">{m.settings_guides_desc()}</p>
+          <p className="text-xs text-muted-foreground">
+            {m.settings_guides_desc()}
+          </p>
         </div>
         <ChannelGuide title={m.settings_guide_r2_title()}>
           <p>{m.settings_guide_r2_body()}</p>
@@ -1788,6 +2305,1342 @@ export function ImageHostingSettingsSection({
         <ChannelGuide title={m.settings_guide_apikey_title()}>
           <p>{m.settings_guide_apikey_body()}</p>
         </ChannelGuide>
+      </div>
+    </div>
+  );
+}
+
+function IHField({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block space-y-2">
+      <span className="block text-sm font-bold fuwari-text-75">{label}</span>
+      {children}
+      {hint && (
+        <span className="block text-xs sm:text-sm fuwari-text-50">{hint}</span>
+      )}
+    </label>
+  );
+}
+
+function FuwariImageHostingSection({
+  activeProvider,
+  selectProvider,
+  r2PathPrefix,
+  s3Provider,
+  s3Endpoint,
+  s3Bucket,
+  s3Region,
+  s3AccessKeyId,
+  s3SecretAccessKey,
+  s3PathPrefix,
+  s3PublicUrl,
+  s3PathStyle,
+  apiProviders,
+  editingApiId,
+  setEditingApiId,
+  addApiProvider,
+  deleteApiProvider,
+  updateApiProvider,
+  testApi,
+  tgBotToken,
+  tgChatId,
+  tgProxyUrl,
+  tgMaxFileSizeMb,
+  dcBotToken,
+  dcChannelId,
+  dcProxyUrl,
+  dcIsNitro,
+  dcMaxFileSizeMb,
+  hfToken,
+  hfRepo,
+  hfIsPrivate,
+  hfMaxFileSizeMb,
+  wdBaseUrl,
+  wdUsername,
+  wdPassword,
+  wdPublicUrl,
+  wdCreateDir,
+  wdMaxFileSizeMb,
+  compressEnabled,
+  convertToFormat,
+  compressThresholdMb,
+  compressTargetMb,
+  moderationChannel,
+  moderateContentApiKey,
+  nsfwApiUrl,
+  linkAccessMode,
+  allowEmptyReferer,
+  refererAllowlistRaw,
+  s3Status,
+  s3Echo,
+  apiStatusMap,
+  apiEchoMap,
+  telegramStatus,
+  telegramEcho,
+  discordStatus,
+  discordEcho,
+  hfStatus,
+  hfEcho,
+  wdStatus,
+  wdEcho,
+  s3MaxFileSizeMb,
+  applyS3Preset,
+  handleTestS3,
+  canTestS3,
+  handleTestTelegram,
+  canTestTelegram,
+  handleTestDiscord,
+  canTestDiscord,
+  handleTestHuggingFace,
+  canTestHf,
+  handleTestWebDAV,
+  canTestWebDAV,
+}: {
+  activeProvider: ProviderId | null;
+  selectProvider: (id: ProviderId | null) => void;
+  r2PathPrefix: string;
+  s3Provider: S3Provider;
+  s3Endpoint: string;
+  s3Bucket: string;
+  s3Region: string;
+  s3AccessKeyId: string;
+  s3SecretAccessKey: string;
+  s3PathPrefix: string;
+  s3PublicUrl: string;
+  s3PathStyle: boolean;
+  apiProviders: ApiKeyProvider[];
+  editingApiId: string | null;
+  setEditingApiId: (id: string | null) => void;
+  addApiProvider: (type: ApiKeyProviderType) => void;
+  deleteApiProvider: (id: string) => void;
+  updateApiProvider: (
+    id: string,
+    field: keyof ApiKeyProvider,
+    value: string | boolean,
+  ) => void;
+  testApi: (p: ApiKeyProvider) => void;
+  tgBotToken: string;
+  tgChatId: string;
+  tgProxyUrl: string;
+  tgMaxFileSizeMb?: number;
+  dcBotToken: string;
+  dcChannelId: string;
+  dcProxyUrl: string;
+  dcIsNitro: boolean;
+  dcMaxFileSizeMb?: number;
+  hfToken: string;
+  hfRepo: string;
+  hfIsPrivate: boolean;
+  hfMaxFileSizeMb?: number;
+  wdBaseUrl: string;
+  wdUsername: string;
+  wdPassword: string;
+  wdPublicUrl: string;
+  wdCreateDir: boolean;
+  wdMaxFileSizeMb?: number;
+  compressEnabled: boolean;
+  convertToFormat: string;
+  compressThresholdMb: number | null;
+  compressTargetMb: number | null;
+  moderationChannel: string;
+  moderateContentApiKey: string;
+  nsfwApiUrl: string;
+  linkAccessMode: string;
+  allowEmptyReferer: boolean;
+  refererAllowlistRaw: string;
+  s3Status: ConnectionStatus;
+  s3Echo: string;
+  apiStatusMap: Record<string, ConnectionStatus>;
+  apiEchoMap: Record<string, string>;
+  telegramStatus: ConnectionStatus;
+  telegramEcho: string;
+  discordStatus: ConnectionStatus;
+  discordEcho: string;
+  hfStatus: ConnectionStatus;
+  hfEcho: string;
+  wdStatus: ConnectionStatus;
+  wdEcho: string;
+  s3MaxFileSizeMb?: number;
+  applyS3Preset: (provider: S3Provider) => void;
+  handleTestS3: () => void;
+  canTestS3: boolean;
+  handleTestTelegram: () => void;
+  canTestTelegram: boolean;
+  handleTestDiscord: () => void;
+  canTestDiscord: boolean;
+  handleTestHuggingFace: () => void;
+  canTestHf: boolean;
+  handleTestWebDAV: () => void;
+  canTestWebDAV: boolean;
+}) {
+  const { setValue } = useFormContext<SystemConfig>();
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* ── 图片处理 ── */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+        <div className="mb-5 space-y-0.5">
+          <h4 className="text-base font-bold fuwari-text-90">
+            {m.settings_image_hosting_processing_title()}
+          </h4>
+          <p className="text-xs sm:text-sm fuwari-text-50">
+            {m.settings_image_hosting_processing_desc()}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-4">
+            <span className="block text-sm font-bold fuwari-text-75">
+              {m.settings_image_hosting_compress_label()}
+            </span>
+            <label className="flex items-center gap-3 pb-1 cursor-pointer">
+              <Checkbox
+                checked={compressEnabled}
+                onCheckedChange={(checked) => {
+                  setValue(
+                    "imageHosting.imageProcessing.compressEnabled",
+                    checked,
+                    {
+                      shouldDirty: true,
+                    },
+                  );
+                }}
+              />
+              <span className="text-xs sm:text-sm fuwari-text-50">
+                {m.settings_image_hosting_compress_desc()}
+              </span>
+            </label>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <MbNumberField
+                label={m.settings_image_hosting_compress_threshold_label()}
+                desc={m.settings_image_hosting_compress_threshold_desc()}
+                placeholder={m.settings_image_hosting_compress_threshold_placeholder()}
+                value={compressThresholdMb}
+                onChange={(v) =>
+                  setValue(
+                    "imageHosting.imageProcessing.compressThresholdMb",
+                    v ?? undefined,
+                    {
+                      shouldDirty: true,
+                    },
+                  )
+                }
+              />
+              <MbNumberField
+                label={m.settings_image_hosting_compress_target_label()}
+                desc={m.settings_image_hosting_compress_target_desc()}
+                placeholder={m.settings_image_hosting_compress_target_placeholder()}
+                value={compressTargetMb}
+                onChange={(v) =>
+                  setValue(
+                    "imageHosting.imageProcessing.compressTargetMb",
+                    v ?? undefined,
+                    {
+                      shouldDirty: true,
+                    },
+                  )
+                }
+              />
+            </div>
+          </div>
+          <div className="space-y-4">
+            <span className="block text-sm font-bold fuwari-text-75">
+              {m.settings_image_hosting_convert_label()}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {(["none", "webp", "jpeg"] as const).map((format) => (
+                <button
+                  key={format}
+                  type="button"
+                  onClick={() =>
+                    setValue(
+                      "imageHosting.imageProcessing.convertToFormat",
+                      format,
+                      {
+                        shouldDirty: true,
+                      },
+                    )
+                  }
+                  className={cn(
+                    "rounded-xl border px-3 py-2 text-xs sm:text-sm font-medium transition-all active:scale-95",
+                    convertToFormat === format
+                      ? "border-(--fuwari-primary)/60 bg-(--fuwari-primary)/10 fuwari-text-90"
+                      : "border-(--fuwari-input-border) fuwari-text-50 hover:border-(--fuwari-primary)/40",
+                  )}
+                >
+                  {m[`settings_image_hosting_convert_${format}`]()}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs sm:text-sm fuwari-text-50">
+              {m.settings_image_hosting_convert_desc()}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 存储供应商 ── */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+        <div className="flex flex-col gap-3">
+          {PROVIDER_DEFS.map((def) => {
+            const isActive = activeProvider === def.id;
+            const Icon = def.icon;
+            return (
+              <div
+                key={def.id}
+                className={cn(
+                  "rounded-xl border transition-all overflow-hidden",
+                  isActive
+                    ? "border-(--fuwari-primary)/60"
+                    : "border-(--fuwari-input-border)",
+                )}
+              >
+                <button
+                  type="button"
+                  onClick={() => selectProvider(isActive ? null : def.id)}
+                  className="flex w-full items-center gap-3 md:gap-4 p-3 md:p-4 text-left transition-colors"
+                >
+                  <div
+                    className={cn(
+                      "shrink-0",
+                      isActive ? "text-(--fuwari-primary)" : "fuwari-text-30",
+                    )}
+                  >
+                    {isActive ? <CircleDot size={20} /> : <Circle size={20} />}
+                  </div>
+                  <div className="h-9 w-9 rounded-xl bg-(--fuwari-btn-regular-bg) p-2 shrink-0 flex items-center justify-center">
+                    <Icon size={16} className="fuwari-text-50" />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <h5 className="text-sm font-bold fuwari-text-90 truncate">
+                      {def.label}
+                    </h5>
+                    <p className="text-xs sm:text-sm fuwari-text-50 line-clamp-2">
+                      {def.desc}
+                    </p>
+                  </div>
+                </button>
+
+                {isActive && (
+                  <div className="border-t border-(--fuwari-input-border) bg-(--fuwari-btn-regular-bg)/40 p-4 space-y-5">
+                    {/* R2 Native */}
+                    {def.id === "r2-native" && (
+                      <div className="space-y-4">
+                        <p className="text-xs sm:text-sm fuwari-text-50 leading-relaxed">
+                          {m.settings_image_hosting_r2_native_desc_full()}
+                        </p>
+                        <IHField
+                          label={m.settings_image_hosting_r2_native_storage_path_label()}
+                          hint={m.settings_image_hosting_r2_native_storage_path_desc()}
+                        >
+                          <Input
+                            placeholder="images/blog"
+                            value={r2PathPrefix}
+                            onChange={(e) => {
+                              setValue(
+                                "imageHosting.r2Native.pathPrefix",
+                                e.target.value,
+                                { shouldDirty: true },
+                              );
+                            }}
+                          />
+                        </IHField>
+                        <NoLimitHint />
+                      </div>
+                    )}
+
+                    {/* S3 */}
+                    {def.id === "s3" && (
+                      <div className="space-y-5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs sm:text-sm fuwari-text-50">
+                            Provider:
+                          </span>
+                          {(S3_PROVIDERS as readonly S3Provider[]).map(
+                            (provider) => (
+                              <button
+                                key={provider}
+                                type="button"
+                                onClick={() => applyS3Preset(provider)}
+                                className={cn(
+                                  "rounded-xl border px-3 py-1.5 text-xs sm:text-sm font-medium transition-all active:scale-95",
+                                  s3Provider === provider
+                                    ? "border-(--fuwari-primary)/60 bg-(--fuwari-primary)/10 fuwari-text-90"
+                                    : "border-(--fuwari-input-border) fuwari-text-50 hover:border-(--fuwari-primary)/40",
+                                )}
+                              >
+                                {S3_PROVIDER_LABELS[provider]}
+                              </button>
+                            ),
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <IHField label="Endpoint">
+                            <Input
+                              placeholder="https://..."
+                              value={s3Endpoint}
+                              onChange={(e) => {
+                                setValue(
+                                  "imageHosting.s3.endpoint",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                            />
+                          </IHField>
+                          <IHField label="Bucket">
+                            <Input
+                              placeholder="my-bucket"
+                              value={s3Bucket}
+                              onChange={(e) => {
+                                setValue(
+                                  "imageHosting.s3.bucket",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                            />
+                          </IHField>
+                          <IHField label="Region">
+                            <Input
+                              placeholder="auto"
+                              value={s3Region}
+                              onChange={(e) => {
+                                setValue(
+                                  "imageHosting.s3.region",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                            />
+                          </IHField>
+                          <IHField label="Path Prefix">
+                            <Input
+                              placeholder="images/"
+                              value={s3PathPrefix}
+                              onChange={(e) => {
+                                setValue(
+                                  "imageHosting.s3.pathPrefix",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                            />
+                          </IHField>
+                          <IHField label="Access Key ID">
+                            <div className="relative">
+                              <Input
+                                type="password"
+                                placeholder="AKIA..."
+                                value={s3AccessKeyId}
+                                onChange={(e) => {
+                                  setValue(
+                                    "imageHosting.s3.accessKeyId",
+                                    e.target.value,
+                                    { shouldDirty: true },
+                                  );
+                                }}
+                                className="pr-10"
+                              />
+                              <KeyRound
+                                size={14}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
+                              />
+                            </div>
+                          </IHField>
+                          <IHField label="Secret Access Key">
+                            <div className="relative">
+                              <Input
+                                type="password"
+                                value={s3SecretAccessKey}
+                                onChange={(e) => {
+                                  setValue(
+                                    "imageHosting.s3.secretAccessKey",
+                                    e.target.value,
+                                    { shouldDirty: true },
+                                  );
+                                }}
+                                className="pr-10"
+                              />
+                              <KeyRound
+                                size={14}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
+                              />
+                            </div>
+                          </IHField>
+                          <IHField label="Public URL">
+                            <Input
+                              placeholder="https://cdn.example.com"
+                              value={s3PublicUrl}
+                              onChange={(e) => {
+                                setValue(
+                                  "imageHosting.s3.publicUrl",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                            />
+                          </IHField>
+                          <div className="space-y-2">
+                            <span className="block text-sm font-bold fuwari-text-75">
+                              {m.settings_image_hosting_field_path_style_label()}
+                            </span>
+                            <label className="flex items-center gap-3 pb-1 cursor-pointer">
+                              <Checkbox
+                                checked={s3PathStyle}
+                                onCheckedChange={(checked) => {
+                                  setValue(
+                                    "imageHosting.s3.pathStyle",
+                                    checked,
+                                    { shouldDirty: true },
+                                  );
+                                }}
+                              />
+                              <span className="text-xs sm:text-sm fuwari-text-50">
+                                {s3PathStyle
+                                  ? "endpoint/bucket/key"
+                                  : "bucket.endpoint/key"}
+                              </span>
+                            </label>
+                            <p className="text-xs sm:text-sm fuwari-text-30">
+                              {s3PathStyle
+                                ? m.settings_image_hosting_field_path_style_desc_path()
+                                : m.settings_image_hosting_field_path_style_desc_virtual()}
+                            </p>
+                          </div>
+                        </div>
+
+                        <NoLimitHint />
+                        <MaxFileSizeField
+                          value={s3MaxFileSizeMb}
+                          placeholder={m.settings_image_hosting_field_max_file_size_unlimited()}
+                          onChange={(v) =>
+                            setValue("imageHosting.s3.maxFileSizeMb", v, {
+                              shouldDirty: true,
+                            })
+                          }
+                        />
+
+                        <TestToolbar
+                          status={s3Status}
+                          onTest={handleTestS3}
+                          canTest={canTestS3}
+                          hintOverride={
+                            canTestS3
+                              ? undefined
+                              : m.settings_image_hosting_test_missing_s3_config()
+                          }
+                        />
+                        {s3Status === "SUCCESS" && s3Echo && (
+                          <EchoBlock url={s3Echo} />
+                        )}
+                      </div>
+                    )}
+
+                    {/* API Key */}
+                    {def.id === "api-key" && (
+                      <div className="space-y-4">
+                        {apiProviders.length > 0 && (
+                          <div className="flex flex-col gap-3">
+                            {apiProviders.map((p) => {
+                              const isExpanded = editingApiId === p.id;
+                              const status = apiStatusMap[p.id] ?? "IDLE";
+                              const echo = apiEchoMap[p.id] ?? "";
+                              return (
+                                <div
+                                  key={p.id}
+                                  className={cn(
+                                    "rounded-xl border overflow-hidden",
+                                    isExpanded
+                                      ? "border-(--fuwari-primary)/60"
+                                      : "border-(--fuwari-input-border)",
+                                  )}
+                                >
+                                  <div className="flex items-center gap-2 md:gap-3 p-3 md:p-4">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setEditingApiId(
+                                          isExpanded ? null : p.id,
+                                        )
+                                      }
+                                      className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 text-left"
+                                    >
+                                      <span
+                                        className={cn(
+                                          "h-3 w-3 shrink-0 rounded-full",
+                                          p.articleEnabled
+                                            ? "bg-(--fuwari-primary)"
+                                            : "border border-(--fuwari-input-border)",
+                                        )}
+                                      />
+                                      <span className="min-w-0 flex-1">
+                                        <span className="block text-sm font-bold fuwari-text-90 truncate">
+                                          {p.name ||
+                                            API_PROVIDER_LABELS[p.type]}
+                                        </span>
+                                        <span className="block text-xs sm:text-sm fuwari-text-50 truncate">
+                                          {API_PROVIDER_DESCS[p.type]()}
+                                        </span>
+                                      </span>
+                                    </button>
+                                    <span className="hidden sm:inline rounded-lg bg-(--fuwari-btn-regular-bg) px-2.5 py-1 text-xs font-medium fuwari-text-50 shrink-0">
+                                      {API_PROVIDER_LABELS[p.type]}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setEditingApiId(
+                                          isExpanded ? null : p.id,
+                                        )
+                                      }
+                                      className="shrink-0 p-1.5 fuwari-text-50 hover:text-(--fuwari-primary) transition-colors"
+                                      aria-label="toggle"
+                                    >
+                                      <svg
+                                        className={cn(
+                                          "w-4 h-4 transition-transform",
+                                          isExpanded && "rotate-180",
+                                        )}
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        strokeWidth={2}
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          d="M19 9l-7 7-7-7"
+                                        />
+                                      </svg>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteApiProvider(p.id)}
+                                      className="shrink-0 p-1.5 fuwari-text-50 hover:text-red-500 transition-colors"
+                                      aria-label="delete"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+
+                                  {isExpanded && (
+                                    <div className="border-t border-(--fuwari-input-border) p-3 md:p-4 space-y-4">
+                                      {p.type === "imgbb" && (
+                                        <SizeLimitWarning
+                                          text={m.settings_image_hosting_limit_imgbb_warning(
+                                            {
+                                              limit: "32",
+                                            },
+                                          )}
+                                        />
+                                      )}
+                                      <IHField
+                                        label={m.settings_image_hosting_provider_name_label()}
+                                      >
+                                        <Input
+                                          value={p.name}
+                                          onChange={(e) =>
+                                            updateApiProvider(
+                                              p.id,
+                                              "name",
+                                              e.target.value,
+                                            )
+                                          }
+                                        />
+                                      </IHField>
+                                      {p.type === "ffsky" && (
+                                        <IHField label="API Endpoint">
+                                          <Input
+                                            value={p.apiEndpoint ?? ""}
+                                            onChange={(e) =>
+                                              updateApiProvider(
+                                                p.id,
+                                                "apiEndpoint",
+                                                e.target.value,
+                                              )
+                                            }
+                                            placeholder="https://api.ffsky.top/api/upload"
+                                          />
+                                        </IHField>
+                                      )}
+                                      <IHField label="API Key">
+                                        <div className="relative">
+                                          <Input
+                                            type="password"
+                                            value={p.apiKey ?? ""}
+                                            onChange={(e) =>
+                                              updateApiProvider(
+                                                p.id,
+                                                "apiKey",
+                                                e.target.value,
+                                              )
+                                            }
+                                            className="pr-10"
+                                          />
+                                          <KeyRound
+                                            size={14}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
+                                          />
+                                        </div>
+                                      </IHField>
+                                      <TestToolbar
+                                        status={status}
+                                        onTest={() => testApi(p)}
+                                        canTest={!!p.apiKey?.trim()}
+                                      />
+                                      {status === "SUCCESS" && echo && (
+                                        <EchoBlock url={echo} />
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-2">
+                          {(
+                            ["imgbb", "ffsky"] as readonly ApiKeyProviderType[]
+                          ).map((type) => (
+                            <Button
+                              key={type}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addApiProvider(type)}
+                              className="h-9 rounded-xl px-4 text-xs font-medium fuwari-text-75 hover:text-(--fuwari-primary)"
+                            >
+                              <Plus size={12} className="mr-2" />
+                              {API_PROVIDER_LABELS[type]}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Telegram */}
+                    {def.id === "telegram" && (
+                      <div className="space-y-5">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <IHField
+                            label={m.settings_image_hosting_field_bot_token_label()}
+                          >
+                            <div className="relative">
+                              <Input
+                                type="password"
+                                placeholder="123456:ABC-..."
+                                value={tgBotToken}
+                                onChange={(e) => {
+                                  setValue(
+                                    "imageHosting.telegram.botToken",
+                                    e.target.value,
+                                    { shouldDirty: true },
+                                  );
+                                }}
+                                className="pr-10"
+                              />
+                              <KeyRound
+                                size={14}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
+                              />
+                            </div>
+                          </IHField>
+                          <IHField
+                            label={m.settings_image_hosting_field_chat_id_label()}
+                          >
+                            <Input
+                              placeholder="-100..."
+                              value={tgChatId}
+                              onChange={(e) => {
+                                setValue(
+                                  "imageHosting.telegram.chatId",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                            />
+                          </IHField>
+                          <div className="md:col-span-2">
+                            <IHField
+                              label={m.settings_image_hosting_field_proxy_url_label()}
+                            >
+                              <Input
+                                placeholder="https://..."
+                                value={tgProxyUrl}
+                                onChange={(e) => {
+                                  setValue(
+                                    "imageHosting.telegram.proxyUrl",
+                                    e.target.value,
+                                    { shouldDirty: true },
+                                  );
+                                }}
+                              />
+                            </IHField>
+                          </div>
+                        </div>
+                        <SizeLimitWarning
+                          text={m.settings_image_hosting_limit_telegram_warning(
+                            { limit: "50" },
+                          )}
+                        />
+                        <MaxFileSizeField
+                          value={tgMaxFileSizeMb}
+                          placeholder={m.settings_image_hosting_field_max_file_size_default(
+                            { limit: "50" },
+                          )}
+                          onChange={(v) =>
+                            setValue("imageHosting.telegram.maxFileSizeMb", v, {
+                              shouldDirty: true,
+                            })
+                          }
+                        />
+                        <TestToolbar
+                          status={telegramStatus}
+                          onTest={handleTestTelegram}
+                          canTest={canTestTelegram}
+                        />
+                        {telegramStatus === "SUCCESS" && telegramEcho && (
+                          <EchoBlock url={telegramEcho} />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Discord */}
+                    {def.id === "discord" && (
+                      <div className="space-y-5">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <IHField
+                            label={m.settings_image_hosting_field_bot_token_label()}
+                          >
+                            <div className="relative">
+                              <Input
+                                type="password"
+                                placeholder="MT..."
+                                value={dcBotToken}
+                                onChange={(e) => {
+                                  setValue(
+                                    "imageHosting.discord.botToken",
+                                    e.target.value,
+                                    { shouldDirty: true },
+                                  );
+                                }}
+                                className="pr-10"
+                              />
+                              <KeyRound
+                                size={14}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
+                              />
+                            </div>
+                          </IHField>
+                          <IHField
+                            label={m.settings_image_hosting_field_channel_id_label()}
+                          >
+                            <Input
+                              placeholder="123456789"
+                              value={dcChannelId}
+                              onChange={(e) => {
+                                setValue(
+                                  "imageHosting.discord.channelId",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                            />
+                          </IHField>
+                          <div className="md:col-span-2">
+                            <IHField
+                              label={m.settings_image_hosting_field_proxy_url_label()}
+                            >
+                              <Input
+                                placeholder="https://..."
+                                value={dcProxyUrl}
+                                onChange={(e) => {
+                                  setValue(
+                                    "imageHosting.discord.proxyUrl",
+                                    e.target.value,
+                                    { shouldDirty: true },
+                                  );
+                                }}
+                              />
+                            </IHField>
+                          </div>
+                          <div className="md:col-span-2 space-y-2">
+                            <span className="block text-sm font-bold fuwari-text-75">
+                              {m.settings_image_hosting_field_nitro_boost_label()}
+                            </span>
+                            <label className="flex items-center gap-3 pb-1 cursor-pointer">
+                              <Checkbox
+                                checked={dcIsNitro}
+                                onCheckedChange={(checked) => {
+                                  setValue(
+                                    "imageHosting.discord.isNitro",
+                                    checked,
+                                    { shouldDirty: true },
+                                  );
+                                }}
+                              />
+                              <span className="text-xs sm:text-sm fuwari-text-50">
+                                {m.settings_image_hosting_field_nitro_boost_desc()}
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                        <SizeLimitWarning
+                          text={
+                            dcIsNitro
+                              ? m.settings_image_hosting_limit_discord_warning({
+                                  limit: "25",
+                                })
+                              : m.settings_image_hosting_limit_discord_warning({
+                                  limit: "10",
+                                })
+                          }
+                        />
+                        <MaxFileSizeField
+                          value={dcMaxFileSizeMb}
+                          placeholder={m.settings_image_hosting_field_max_file_size_default(
+                            {
+                              limit: dcIsNitro ? "25" : "10",
+                            },
+                          )}
+                          onChange={(v) =>
+                            setValue("imageHosting.discord.maxFileSizeMb", v, {
+                              shouldDirty: true,
+                            })
+                          }
+                        />
+                        <TestToolbar
+                          status={discordStatus}
+                          onTest={handleTestDiscord}
+                          canTest={canTestDiscord}
+                        />
+                        {discordStatus === "SUCCESS" && discordEcho && (
+                          <EchoBlock url={discordEcho} />
+                        )}
+                      </div>
+                    )}
+
+                    {/* HuggingFace */}
+                    {def.id === "huggingface" && (
+                      <div className="space-y-5">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <IHField
+                            label={m.settings_image_hosting_field_hf_token_label()}
+                          >
+                            <div className="relative">
+                              <Input
+                                type="password"
+                                placeholder="hf_..."
+                                value={hfToken}
+                                onChange={(e) => {
+                                  setValue(
+                                    "imageHosting.huggingface.token",
+                                    e.target.value,
+                                    { shouldDirty: true },
+                                  );
+                                }}
+                                className="pr-10"
+                              />
+                              <KeyRound
+                                size={14}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
+                              />
+                            </div>
+                          </IHField>
+                          <IHField
+                            label={m.settings_image_hosting_field_hf_repo_label()}
+                          >
+                            <Input
+                              placeholder="username/repo-name"
+                              value={hfRepo}
+                              onChange={(e) => {
+                                setValue(
+                                  "imageHosting.huggingface.repo",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                            />
+                          </IHField>
+                          <div className="md:col-span-2 space-y-2">
+                            <span className="block text-sm font-bold fuwari-text-75">
+                              {m.settings_image_hosting_field_hf_private_label()}
+                            </span>
+                            <label className="flex items-center gap-3 pb-1 cursor-pointer">
+                              <Checkbox
+                                checked={hfIsPrivate}
+                                onCheckedChange={(checked) => {
+                                  setValue(
+                                    "imageHosting.huggingface.isPrivate",
+                                    checked,
+                                    { shouldDirty: true },
+                                  );
+                                }}
+                              />
+                              <span className="text-xs sm:text-sm fuwari-text-50">
+                                {m.settings_image_hosting_field_hf_private_desc()}
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                        <NoLimitHint />
+                        <MaxFileSizeField
+                          value={hfMaxFileSizeMb}
+                          placeholder={m.settings_image_hosting_field_max_file_size_unlimited()}
+                          onChange={(v) =>
+                            setValue(
+                              "imageHosting.huggingface.maxFileSizeMb",
+                              v,
+                              {
+                                shouldDirty: true,
+                              },
+                            )
+                          }
+                        />
+                        <TestToolbar
+                          status={hfStatus}
+                          onTest={handleTestHuggingFace}
+                          canTest={canTestHf}
+                        />
+                        {hfStatus === "SUCCESS" && hfEcho && (
+                          <EchoBlock url={hfEcho} />
+                        )}
+                      </div>
+                    )}
+
+                    {/* WebDAV */}
+                    {def.id === "webdav" && (
+                      <div className="space-y-5">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <IHField
+                            label={m.settings_image_hosting_field_webdav_base_url_label()}
+                          >
+                            <Input
+                              placeholder="https://dav.example.com"
+                              value={wdBaseUrl}
+                              onChange={(e) => {
+                                setValue(
+                                  "imageHosting.webdav.baseUrl",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                            />
+                          </IHField>
+                          <IHField
+                            label={m.settings_image_hosting_field_webdav_username_label()}
+                          >
+                            <Input
+                              value={wdUsername}
+                              onChange={(e) => {
+                                setValue(
+                                  "imageHosting.webdav.username",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                            />
+                          </IHField>
+                          <IHField
+                            label={m.settings_image_hosting_field_webdav_password_label()}
+                          >
+                            <div className="relative">
+                              <Input
+                                type="password"
+                                value={wdPassword}
+                                onChange={(e) => {
+                                  setValue(
+                                    "imageHosting.webdav.password",
+                                    e.target.value,
+                                    { shouldDirty: true },
+                                  );
+                                }}
+                                className="pr-10"
+                              />
+                              <KeyRound
+                                size={14}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/30"
+                              />
+                            </div>
+                          </IHField>
+                          <IHField
+                            label={m.settings_image_hosting_field_webdav_public_url_label()}
+                          >
+                            <Input
+                              placeholder="https://cdn.example.com/images"
+                              value={wdPublicUrl}
+                              onChange={(e) => {
+                                setValue(
+                                  "imageHosting.webdav.publicUrl",
+                                  e.target.value,
+                                  { shouldDirty: true },
+                                );
+                              }}
+                            />
+                          </IHField>
+                          <div className="md:col-span-2 space-y-2">
+                            <span className="block text-sm font-bold fuwari-text-75">
+                              {m.settings_image_hosting_field_webdav_create_dir_label()}
+                            </span>
+                            <label className="flex items-center gap-3 pb-1 cursor-pointer">
+                              <Checkbox
+                                checked={wdCreateDir}
+                                onCheckedChange={(checked) => {
+                                  setValue(
+                                    "imageHosting.webdav.createDirectory",
+                                    checked,
+                                    { shouldDirty: true },
+                                  );
+                                }}
+                              />
+                              <span className="text-xs sm:text-sm fuwari-text-50">
+                                {m.settings_image_hosting_field_webdav_create_dir_desc()}
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                        <NoLimitHint />
+                        <MaxFileSizeField
+                          value={wdMaxFileSizeMb}
+                          placeholder={m.settings_image_hosting_field_max_file_size_unlimited()}
+                          onChange={(v) =>
+                            setValue("imageHosting.webdav.maxFileSizeMb", v, {
+                              shouldDirty: true,
+                            })
+                          }
+                        />
+                        <TestToolbar
+                          status={wdStatus}
+                          onTest={handleTestWebDAV}
+                          canTest={canTestWebDAV}
+                        />
+                        {wdStatus === "SUCCESS" && wdEcho && (
+                          <EchoBlock url={wdEcho} />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── 上传审查 ── */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+        <div className="mb-5 space-y-0.5">
+          <h4 className="text-base font-bold fuwari-text-90">
+            {m.settings_moderation_title()}
+          </h4>
+          <p className="text-xs sm:text-sm fuwari-text-50">
+            {m.settings_moderation_desc()}
+          </p>
+        </div>
+        <div className="space-y-4">
+          <OptionButtons
+            value={moderationChannel}
+            onChange={(id) =>
+              setValue(
+                "imageHosting.moderation.channel",
+                id as "off" | "workers-ai" | "moderatecontent" | "nsfwjs",
+                { shouldDirty: true },
+              )
+            }
+            options={[
+              { id: "off", label: m.settings_moderation_channel_off() },
+              {
+                id: "workers-ai",
+                label: m.settings_moderation_channel_workers_ai(),
+              },
+              {
+                id: "moderatecontent",
+                label: m.settings_moderation_channel_moderatecontent(),
+              },
+              { id: "nsfwjs", label: m.settings_moderation_channel_nsfwjs() },
+            ]}
+          />
+          {moderationChannel === "workers-ai" && (
+            <p className="text-xs sm:text-sm fuwari-text-50">
+              {m.settings_moderation_workers_ai_desc()}
+            </p>
+          )}
+          {moderationChannel === "moderatecontent" && (
+            <IHField
+              label={m.settings_moderation_api_key_label()}
+              hint={m.settings_moderation_moderatecontent_key_desc()}
+            >
+              <Input
+                value={moderateContentApiKey}
+                placeholder="xxxxxxxxxxxx"
+                onChange={(e) =>
+                  setValue(
+                    "imageHosting.moderation.moderateContentApiKey",
+                    e.target.value,
+                    {
+                      shouldDirty: true,
+                    },
+                  )
+                }
+              />
+            </IHField>
+          )}
+          {moderationChannel === "nsfwjs" && (
+            <IHField
+              label={m.settings_moderation_nsfw_url_label()}
+              hint={m.settings_moderation_nsfw_url_desc()}
+            >
+              <Input
+                value={nsfwApiUrl}
+                placeholder="https://your-worker.workers.dev"
+                onChange={(e) =>
+                  setValue(
+                    "imageHosting.moderation.nsfwApiUrl",
+                    e.target.value,
+                    {
+                      shouldDirty: true,
+                    },
+                  )
+                }
+              />
+            </IHField>
+          )}
+          {moderationChannel !== "off" && (
+            <p className="text-xs sm:text-sm fuwari-text-50">
+              {m.settings_moderation_behavior_hint()}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── 图链访问模式 ── */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+        <div className="mb-5 space-y-0.5">
+          <h4 className="text-base font-bold fuwari-text-90">
+            {m.settings_link_access_title()}
+          </h4>
+          <p className="text-xs sm:text-sm fuwari-text-50">
+            {m.settings_link_access_desc()}
+          </p>
+        </div>
+        <div className="space-y-4">
+          <OptionButtons
+            value={linkAccessMode}
+            onChange={(id) =>
+              setValue(
+                "imageHosting.linkAccess.mode",
+                id as "direct" | "protected",
+                { shouldDirty: true },
+              )
+            }
+            options={[
+              { id: "direct", label: m.settings_link_access_mode_direct() },
+              {
+                id: "protected",
+                label: m.settings_link_access_mode_protected(),
+              },
+            ]}
+          />
+          {linkAccessMode === "protected" ? (
+            <>
+              <label className="flex items-center gap-3 pb-1 cursor-pointer">
+                <Checkbox
+                  checked={allowEmptyReferer}
+                  onCheckedChange={(checked) => {
+                    setValue(
+                      "imageHosting.linkAccess.allowEmptyReferer",
+                      checked,
+                      {
+                        shouldDirty: true,
+                      },
+                    );
+                  }}
+                />
+                <span className="text-xs sm:text-sm fuwari-text-50">
+                  {m.settings_link_access_allow_empty_referer()}
+                </span>
+              </label>
+              <IHField
+                label={m.settings_link_access_referer_list_label()}
+                hint={m.settings_link_access_referer_list_desc()}
+              >
+                <textarea
+                  value={refererAllowlistRaw}
+                  rows={5}
+                  spellCheck={false}
+                  onChange={(e) => {
+                    const domains = e.target.value
+                      .split(/[\n,]+/)
+                      .map((s) => s.trim())
+                      .filter(Boolean);
+                    setValue(
+                      "imageHosting.linkAccess.refererAllowlist",
+                      domains,
+                      {
+                        shouldDirty: true,
+                      },
+                    );
+                  }}
+                  className="w-full rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-input-bg) px-4 py-3 text-sm fuwari-text-90 placeholder:(--fuwari-text-30) focus:border-(--fuwari-primary)/50 focus:outline-none"
+                />
+              </IHField>
+              <p className="text-xs sm:text-sm fuwari-text-50">
+                {m.settings_link_access_protected_hint()}
+              </p>
+            </>
+          ) : (
+            <p className="text-xs sm:text-sm fuwari-text-50">
+              {m.settings_link_access_direct_hint()}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── 渠道配置教程 ── */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation">
+        <div className="mb-4 space-y-0.5">
+          <h4 className="text-base font-bold fuwari-text-90">
+            {m.settings_guides_title()}
+          </h4>
+          <p className="text-xs sm:text-sm fuwari-text-50">
+            {m.settings_guides_desc()}
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <ChannelGuide title={m.settings_guide_r2_title()}>
+            <p>{m.settings_guide_r2_body()}</p>
+          </ChannelGuide>
+          <ChannelGuide title={m.settings_guide_s3_title()}>
+            <p>{m.settings_guide_s3_body()}</p>
+          </ChannelGuide>
+          <ChannelGuide title={m.settings_guide_telegram_title()}>
+            <p>
+              <TelegramHandleText text={m.settings_guide_telegram_body()} />
+            </p>
+          </ChannelGuide>
+          <ChannelGuide title={m.settings_guide_discord_title()}>
+            <p>{m.settings_guide_discord_body()}</p>
+          </ChannelGuide>
+          <ChannelGuide title={m.settings_guide_huggingface_title()}>
+            <p>{m.settings_guide_huggingface_body()}</p>
+          </ChannelGuide>
+          <ChannelGuide title={m.settings_guide_webdav_title()}>
+            <p>{m.settings_guide_webdav_body()}</p>
+          </ChannelGuide>
+          <ChannelGuide title={m.settings_guide_apikey_title()}>
+            <p>{m.settings_guide_apikey_body()}</p>
+          </ChannelGuide>
+        </div>
       </div>
     </div>
   );

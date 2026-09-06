@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import * as React from "react";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 
 const Checkbox = React.forwardRef<
@@ -22,10 +23,14 @@ const Checkbox = React.forwardRef<
     />
     <div
       className={cn(
-        "flex h-4 w-4 shrink-0 items-center justify-center border border-border/50 transition-colors",
+        isFuwari
+          ? "flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-md border transition-colors"
+          : "flex h-4 w-4 shrink-0 items-center justify-center border border-border/50 transition-colors",
         checked
-          ? "bg-foreground border-foreground text-background"
-          : "bg-transparent",
+          ? isFuwari
+            ? "bg-(--fuwari-primary) border-(--fuwari-primary) text-white"
+            : "bg-foreground border-foreground text-background"
+          : "bg-transparent border-(--fuwari-input-border)",
         className,
       )}
     >

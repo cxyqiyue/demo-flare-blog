@@ -3,6 +3,7 @@ import { AlignLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { TableOfContentsItem } from "@/features/posts/utils/toc";
 import { useActiveTOC } from "@/hooks/use-active-toc";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -44,6 +45,43 @@ export function EditorTableOfContents({ editor }: { editor: Editor }) {
       element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
+
+  if (isFuwari) {
+    return (
+      <nav className="fuwari-card-base p-4 sm:p-5 self-start w-full animate-in fade-in duration-700 delay-500 fill-mode-both max-h-[calc(100vh-10rem)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-4 text-sm font-bold fuwari-text-90">
+          <AlignLeft size={14} strokeWidth={1.5} />
+          <span>{m.editor_toc_title()}</span>
+        </div>
+
+        {/* Root List Container */}
+        <div className="relative toc-root">
+          <ul className="space-y-1 list-none m-0 p-0">
+            {items.map((node) => (
+              <li key={node.id}>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleItemClick(node.id);
+                  }}
+                  className={cn(
+                    "block text-left w-full rounded-lg px-3 py-1.5 text-sm leading-relaxed transition-colors",
+                    activeId === node.id
+                      ? "font-semibold text-(--fuwari-primary) bg-(--fuwari-primary)/10"
+                      : "fuwari-text-50 hover:text-(--fuwari-primary) hover:bg-(--fuwari-btn-plain-bg-hover)",
+                  )}
+                  style={{ marginLeft: `${(node.level - 1) * 0.5}rem` }}
+                >
+                  {node.text}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="sticky top-32 self-start hidden xl:block w-60 animate-in fade-in duration-700 delay-500 fill-mode-both max-h-[calc(100vh-10rem)] overflow-y-auto overflow-x-hidden custom-scrollbar">

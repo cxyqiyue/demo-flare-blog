@@ -19,6 +19,8 @@ import {
   createFolderInputSchema,
   createSearchEngineInputSchema,
 } from "@/features/navigation/navigation.schema";
+import { isFuwari } from "@/lib/theme-mode";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
 // ==================== Modal Shell ====================
@@ -43,19 +45,48 @@ const ModalShellInternal = ({
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="fixed inset-0 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200"
+        className={cn(
+          "fixed inset-0 backdrop-blur-sm animate-in fade-in duration-200",
+          isFuwari ? "bg-black/30 dark:bg-black/40" : "bg-background/80",
+        )}
         onClick={onClose}
       />
-      <div className="relative bg-background border border-border/30 p-6 md:p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200 shadow-lg">
+      <div
+        className={cn(
+          "relative max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200",
+          isFuwari
+            ? "fuwari-card-base p-5 sm:p-6 shadow-2xl"
+            : "bg-background border border-border/30 p-6 md:p-8 shadow-lg",
+        )}
+      >
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-muted-foreground/50 hover:text-foreground transition-colors"
+          className={cn(
+            "absolute right-4 top-4 transition-colors",
+            isFuwari
+              ? "fuwari-text-50 hover:text-(--fuwari-primary)"
+              : "text-muted-foreground/50 hover:text-foreground",
+          )}
         >
           <X size={16} strokeWidth={1.5} />
         </button>
-        <h3 className="text-xl font-serif font-medium mb-2">{title}</h3>
+        <h3
+          className={cn(
+            "text-xl mb-2 pr-6",
+            isFuwari ? "font-bold fuwari-text-90" : "font-serif font-medium",
+          )}
+        >
+          {title}
+        </h3>
         {description && (
-          <p className="text-sm text-muted-foreground mb-6">{description}</p>
+          <p
+            className={cn(
+              "text-sm mb-5",
+              isFuwari ? "fuwari-text-50" : "text-muted-foreground mb-6",
+            )}
+          >
+            {description}
+          </p>
         )}
         {children}
       </div>
@@ -85,15 +116,29 @@ function ModalField({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+      <label
+        className={cn(
+          isFuwari
+            ? "text-sm font-bold fuwari-text-75"
+            : "text-xs font-mono text-muted-foreground uppercase tracking-wider",
+        )}
+      >
         {label}
       </label>
       <Input
         {...inputProps}
         placeholder={placeholder}
-        className="bg-transparent border-0 border-b border-border/50 text-base px-0 rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all shadow-none h-auto py-1.5 placeholder:text-muted-foreground/30"
+        className={
+          isFuwari
+            ? "w-full"
+            : "bg-transparent border-0 border-b border-border/50 text-base px-0 rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all shadow-none h-auto py-1.5 placeholder:text-muted-foreground/30"
+        }
       />
-      {error && <p className="text-xs text-red-500">! {error}</p>}
+      {error && (
+        <p className="text-xs text-red-500">
+          {isFuwari ? error : `! ${error}`}
+        </p>
+      )}
     </div>
   );
 }
@@ -108,20 +153,11 @@ function ModalActions({
   submitLabel: string;
 }) {
   return (
-    <div className="flex justify-end gap-3 pt-4">
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={onCancel}
-        className="font-mono text-xs uppercase tracking-widest rounded-none"
-      >
+    <div className="flex justify-end gap-2 pt-4">
+      <Button type="button" variant="ghost" onClick={onCancel}>
         {m.friend_links_batch_cancel()}
       </Button>
-      <Button
-        type="submit"
-        disabled={isSubmitting}
-        className="rounded-none bg-foreground text-background hover:bg-foreground/90 font-mono text-xs uppercase tracking-widest"
-      >
+      <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? (
           <Loader2 size={12} className="animate-spin" />
         ) : (
@@ -230,7 +266,13 @@ const EngineFormModalInternal = ({
         <div className="flex items-center gap-8 pt-1">
           <label className="flex items-center gap-2 cursor-pointer">
             <Checkbox {...register("enabled")} />
-            <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+            <span
+              className={cn(
+                isFuwari
+                  ? "text-sm fuwari-text-75"
+                  : "text-xs font-mono text-muted-foreground uppercase tracking-wider",
+              )}
+            >
               {m.navigation_field_enabled()}
             </span>
           </label>
@@ -239,7 +281,13 @@ const EngineFormModalInternal = ({
               {...register("isDefault")}
               disabled={!hasExisting && !initialData?.isDefault}
             />
-            <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+            <span
+              className={cn(
+                isFuwari
+                  ? "text-sm fuwari-text-75"
+                  : "text-xs font-mono text-muted-foreground uppercase tracking-wider",
+              )}
+            >
               {m.navigation_admin_engine_default()}
             </span>
           </label>
@@ -457,13 +505,24 @@ const BookmarkFormModalInternal = ({
           inputProps={register("url")}
         />
         <div className="space-y-1.5">
-          <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+          <label
+            className={cn(
+              isFuwari
+                ? "text-sm font-bold fuwari-text-75"
+                : "text-xs font-mono text-muted-foreground uppercase tracking-wider",
+            )}
+          >
             {m.navigation_field_folder()}
           </label>
           <select
             value={folderSelection}
             onChange={(e) => handleFolderChange(e.target.value)}
-            className="w-full bg-background border border-border/50 px-3 py-2 text-sm focus:border-foreground/60 focus:outline-none transition-colors"
+            className={cn(
+              "w-full px-3 py-2 text-sm focus:outline-none transition-colors",
+              isFuwari
+                ? "bg-(--fuwari-input-bg) border border-(--fuwari-input-border) rounded-xl fuwari-text-90 focus:border-(--fuwari-primary)/50"
+                : "bg-background border border-border/50 focus:border-foreground/60",
+            )}
           >
             <option value="">{m.navigation_all()}</option>
             <option value={NEW_FOLDER_VALUE}>
@@ -476,7 +535,11 @@ const BookmarkFormModalInternal = ({
             ))}
           </select>
           {errors.folderId?.message && (
-            <p className="text-xs text-red-500">! {errors.folderId.message}</p>
+            <p className="text-xs text-red-500">
+              {isFuwari
+                ? errors.folderId.message
+                : `! ${errors.folderId.message}`}
+            </p>
           )}
         </div>
         {folderSelection === NEW_FOLDER_VALUE && (

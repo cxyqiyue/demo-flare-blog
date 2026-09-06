@@ -5,6 +5,7 @@ import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { uploadSiteAssetFn } from "@/features/config/api/config.api";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -72,6 +73,75 @@ export function AssetUploadField({
   };
 
   const isUploading = uploadMutation.isPending;
+
+  if (isFuwari) {
+    return (
+      <label className="block space-y-2">
+        <div className="space-y-0.5">
+          <p className="text-sm font-bold fuwari-text-75">{label}</p>
+          {hint ? (
+            <p className="text-xs sm:text-sm fuwari-text-50">{hint}</p>
+          ) : null}
+        </div>
+
+        <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex gap-2">
+              <Input
+                {...register(name)}
+                readOnly={readOnly}
+                className={cn(
+                  error &&
+                    "border-destructive focus-visible:border-destructive",
+                  readOnly && "opacity-60",
+                )}
+                placeholder={placeholder ?? `/images/asset/${assetPath}`}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={accept}
+                onChange={handleFileChange}
+                className="hidden"
+                disabled={isUploading}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="shrink-0 flex items-center gap-2 rounded-xl fuwari-btn-regular h-9 px-3 text-xs font-medium fuwari-text-75 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUploading ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Upload size={14} />
+                )}
+                <span>
+                  {isUploading
+                    ? m.settings_asset_uploading()
+                    : m.settings_asset_upload_btn()}
+                </span>
+              </button>
+            </div>
+            {previewUrl ? (
+              <div className="w-12 h-12 rounded-xl overflow-hidden border border-(--fuwari-input-border) bg-(--fuwari-input-bg)">
+                <img
+                  src={previewUrl}
+                  alt=""
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      </label>
+    );
+  }
 
   return (
     <label className="space-y-3">

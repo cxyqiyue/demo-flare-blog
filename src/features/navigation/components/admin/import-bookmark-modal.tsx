@@ -10,6 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAdminNavigation } from "@/features/navigation/hooks/use-navigation";
 import type { ImportBookmarksFormValues } from "@/features/navigation/navigation.schema";
 import { importBookmarksInputSchema } from "@/features/navigation/navigation.schema";
+import { isFuwari } from "@/lib/theme-mode";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
 interface ParsedBookmark {
@@ -119,6 +121,89 @@ const ImportBookmarkModalInternal = ({
   };
 
   if (!isOpen) return null;
+
+  if (isFuwari) {
+    return createPortal(
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm dark:bg-black/40 animate-in fade-in duration-200"
+          onClick={() => !isImporting && onClose()}
+        />
+        <div className="fuwari-card-base relative p-5 sm:p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200 shadow-2xl">
+          <button
+            onClick={() => !isImporting && onClose()}
+            className="absolute right-4 top-4 fuwari-text-50 hover:text-(--fuwari-primary) transition-colors"
+          >
+            <X size={16} strokeWidth={1.5} />
+          </button>
+          <h3 className="text-lg font-bold fuwari-text-90 mb-1 pr-6">
+            {m.navigation_admin_import_title()}
+          </h3>
+          <p className="text-sm fuwari-text-50 mb-5">
+            {m.navigation_admin_import_desc()}
+          </p>
+
+          <form onSubmit={handleSubmit(handleConfirm)} className="space-y-5">
+            {/* File select */}
+            <label
+              className={cn(
+                "flex items-center gap-3 border border-dashed rounded-2xl px-4 py-4 cursor-pointer transition-colors",
+                isFuwari
+                  ? "border-(--fuwari-input-border) hover:border-(--fuwari-primary)/50"
+                  : "border-border/50 hover:border-foreground/40",
+              )}
+            >
+              <FileUp size={18} className="fuwari-text-50 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <span className="block text-sm truncate fuwari-text-75">
+                  {fileName ?? m.navigation_admin_import_select_file()}
+                </span>
+              </div>
+              <input
+                type="file"
+                accept="text/html,.html"
+                className="hidden"
+                onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+
+            {parseError && <p className="text-xs text-red-500">{parseError}</p>}
+
+            {parsed.length > 0 && (
+              <p className="text-sm fuwari-text-50">
+                {m.navigation_admin_import_preview({ count: parsed.length })}
+              </p>
+            )}
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox {...register("replace")} />
+              <span className="text-sm fuwari-text-75">
+                {m.navigation_admin_import_replace()}
+              </span>
+            </label>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => !isImporting && onClose()}
+              >
+                {m.friend_links_batch_cancel()}
+              </Button>
+              <Button type="submit" disabled={isImporting}>
+                {isImporting ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  m.navigation_admin_import_btn()
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">

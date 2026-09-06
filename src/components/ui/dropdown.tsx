@@ -1,5 +1,6 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 
 interface DropdownItem {
@@ -49,7 +50,9 @@ const Dropdown: React.FC<DropdownProps> = ({
       {isOpen && (
         <div
           className={cn(
-            "absolute top-full mt-2 w-40 bg-popover border border-border/30 z-50 py-1 animate-in fade-in duration-200",
+            isFuwari
+              ? "fuwari-card-base absolute top-full mt-2 w-48 p-1.5 z-50 max-h-80 overflow-y-auto custom-scrollbar shadow-lg animate-in fade-in zoom-in-95 duration-200"
+              : "absolute top-full mt-2 w-40 bg-popover border border-border/30 z-50 py-1 animate-in fade-in duration-200",
             align === "right" ? "right-0" : "left-0",
           )}
         >
@@ -61,16 +64,26 @@ const Dropdown: React.FC<DropdownProps> = ({
                 setIsOpen(false);
               }}
               className={cn(
-                "w-full text-left px-3 py-2 text-[9px] font-mono uppercase tracking-widest transition-colors flex items-center gap-2",
+                isFuwari
+                  ? "w-full text-left px-3 py-2 text-sm transition-colors rounded-lg flex items-center gap-2"
+                  : "w-full text-left px-3 py-2 text-[9px] font-mono uppercase tracking-widest transition-colors flex items-center gap-2",
                 item.danger
                   ? "text-destructive hover:bg-destructive/10"
                   : item.isActive
-                    ? "bg-foreground text-background hover:bg-foreground/90"
-                    : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/30",
+                    ? isFuwari
+                      ? "text-(--fuwari-primary) bg-(--fuwari-btn-regular-bg) font-semibold"
+                      : "bg-foreground text-background hover:bg-foreground/90"
+                    : isFuwari
+                      ? "fuwari-text-50 hover:text-(--fuwari-primary) hover:bg-(--fuwari-btn-plain-bg-hover)"
+                      : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/30",
                 item.className,
               )}
             >
-              {item.icon && <span className="opacity-60">{item.icon}</span>}
+              {item.icon && (
+                <span className={isFuwari ? "opacity-70" : "opacity-60"}>
+                  {item.icon}
+                </span>
+              )}
               <span>{item.label}</span>
             </button>
           ))}

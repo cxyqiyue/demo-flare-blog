@@ -1,4 +1,5 @@
 import * as React from "react";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 
 const TooltipProvider = ({ children }: { children: React.ReactNode }) => {
@@ -113,7 +114,9 @@ const TooltipContent = React.forwardRef<
         internalRef.current = node;
       }}
       className={cn(
-        "absolute z-50 overflow-hidden border border-border/30 bg-popover px-2 py-1 text-[9px] font-mono uppercase tracking-widest text-popover-foreground shadow-xl animate-in fade-in zoom-in-95 duration-200",
+        isFuwari
+          ? "absolute z-50 rounded-lg border border-(--fuwari-input-border)/70 bg-(--fuwari-card-bg) px-2.5 py-1.5 text-xs font-medium fuwari-text-75 shadow-lg animate-in fade-in zoom-in-95 duration-200"
+          : "absolute z-50 overflow-hidden border border-border/30 bg-popover px-2 py-1 text-[9px] font-mono uppercase tracking-widest text-popover-foreground shadow-xl animate-in fade-in zoom-in-95 duration-200",
         computedSide === "bottom" ? "top-full" : "bottom-full",
         "left-1/2 -translate-x-1/2",
         className,

@@ -1,9 +1,14 @@
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import type { TrafficData } from "@/features/dashboard/dashboard.schema";
+import { isFuwari } from "@/lib/theme-mode";
 import { formatMonthDayTime } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
 export function TrafficChart({ data }: { data: Array<TrafficData> }) {
+  if (isFuwari) {
+    return <FuwariTrafficChart data={data} />;
+  }
+
   return (
     <div className="w-full h-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -58,6 +63,73 @@ export function TrafficChart({ data }: { data: Array<TrafficData> }) {
             strokeWidth={1.5}
             fillOpacity={1}
             fill="url(#colorViews)"
+            isAnimationActive={true}
+            animationDuration={1000}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function FuwariTrafficChart({ data }: { data: Array<TrafficData> }) {
+  return (
+    <div
+      className="fuwari-card-base h-72 w-full p-4 sm:p-5 md:p-6 fuwari-onload-animation"
+      style={{ animationDelay: "350ms" }}
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data}>
+          <defs>
+            <linearGradient id="colorViewsFuwari" x1="0" y1="0" x2="0" y2="1">
+              <stop
+                offset="0%"
+                stopColor="var(--fuwari-primary)"
+                stopOpacity={0.15}
+              />
+              <stop
+                offset="100%"
+                stopColor="var(--fuwari-primary)"
+                stopOpacity={0}
+              />
+            </linearGradient>
+          </defs>
+          <XAxis dataKey="date" hide />
+          <Tooltip
+            content={({ active, payload }) => {
+              if (active && payload.length) {
+                const point = payload[0].payload as TrafficData;
+                return (
+                  <div className="fuwari-card-base px-4 py-3 text-sm shadow-sm">
+                    <div className="text-xs fuwari-text-50 mb-1">
+                      {formatMonthDayTime(point.date)}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold fuwari-text-90">
+                        {point.views}
+                      </span>
+                      <span className="text-xs fuwari-text-50">
+                        {m.admin_overview_chart_views()}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            }}
+            cursor={{
+              stroke: "var(--fuwari-input-border)",
+              strokeWidth: 1,
+              strokeDasharray: "4 4",
+            }}
+          />
+          <Area
+            type="monotone"
+            dataKey="views"
+            stroke="var(--fuwari-primary)"
+            strokeWidth={1.5}
+            fillOpacity={1}
+            fill="url(#colorViewsFuwari)"
             isAnimationActive={true}
             animationDuration={1000}
           />

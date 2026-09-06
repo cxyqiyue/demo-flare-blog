@@ -1,5 +1,6 @@
 import { CheckSquare, FileText, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 interface BatchActionBarProps {
@@ -18,6 +19,53 @@ export function BatchActionBar({
   onClear,
 }: BatchActionBarProps) {
   if (selectedCount === 0) return null;
+
+  if (isFuwari) {
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 fuwari-card-base shadow-lg sticky top-0 z-20 animate-in fade-in duration-300">
+        <div className="flex items-center gap-2 min-w-0">
+          <CheckSquare size={16} strokeWidth={1.5} className="fuwari-text-75" />
+          <span className="text-sm font-bold fuwari-text-90 whitespace-nowrap">
+            {m.admin_posts_selected_count({ count: String(selectedCount) })}
+          </span>
+        </div>
+
+        <div className="hidden sm:block h-4 w-px bg-(--fuwari-input-border)" />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            disabled={isPending}
+            onClick={onPublish}
+            className="h-9 px-3 gap-1.5"
+          >
+            <Save size={14} strokeWidth={1.5} />
+            {m.admin_posts_batch_publish()}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isPending}
+            onClick={onDraft}
+            className="h-9 px-3 gap-1.5"
+          >
+            <FileText size={14} strokeWidth={1.5} />
+            {m.admin_posts_batch_draft()}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={isPending}
+            onClick={onClear}
+            className="h-9 px-2 gap-1 hover:text-destructive"
+          >
+            <X size={14} strokeWidth={1.5} />
+            {m.admin_posts_batch_clear()}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 border border-border/40 bg-muted/20 backdrop-blur-sm sticky top-0 z-20 animate-in fade-in slide-in-from-top-2 duration-300 fill-mode-both">

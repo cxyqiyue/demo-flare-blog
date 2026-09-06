@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { UserManagementTable } from "@/features/users/components/admin/user-management-table";
 import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 const searchSchema = z.object({
@@ -53,6 +54,17 @@ function UsersAdminPage() {
     return () => clearTimeout(timer);
   }, [searchInput, navigate, search]);
 
+  if (isFuwari) {
+    return (
+      <FuwariUsersAdminPage
+        searchInput={searchInput}
+        onSearchInputChange={setSearchInput}
+        search={search}
+        page={page}
+      />
+    );
+  }
+
   return (
     <div className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-1000">
       {/* Header */}
@@ -82,6 +94,57 @@ function UsersAdminPage() {
 
       {/* Content Area */}
       <div className="min-h-100">
+        <UserManagementTable search={search} page={page} />
+      </div>
+    </div>
+  );
+}
+
+function FuwariUsersAdminPage({
+  searchInput,
+  onSearchInputChange,
+  search,
+  page,
+}: {
+  searchInput: string;
+  onSearchInputChange: (value: string) => void;
+  search?: string;
+  page: number;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Header card: title + search */}
+      <div className="fuwari-card-base p-4 sm:p-5 md:p-6 space-y-5 fuwari-onload-animation">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          <div className="ml-6 min-w-0">
+            <h1 className="relative text-xl sm:text-2xl font-bold fuwari-text-90">
+              <span
+                className="absolute -left-4 top-[6px] w-1 h-5 rounded-md"
+                style={{ backgroundColor: "var(--fuwari-primary)" }}
+              />
+              {m.users_admin_title()}
+            </h1>
+            <p className="text-sm fuwari-text-50 mt-1.5">
+              {m.users_admin_tag()}
+            </p>
+          </div>
+
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 fuwari-text-30 w-4 h-4 pointer-events-none" />
+            <Input
+              placeholder={m.users_search_placeholder()}
+              value={searchInput}
+              onChange={(e) => onSearchInputChange(e.target.value)}
+              className="pl-9 h-10"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="fuwari-onload-animation"
+        style={{ animationDelay: "100ms" }}
+      >
         <UserManagementTable search={search} page={page} />
       </div>
     </div>

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { createTagFn } from "@/features/tags/api/tags.api";
 import { TAGS_KEYS, tagsAdminQueryOptions } from "@/features/tags/queries";
 import type { Tag } from "@/lib/db/schema";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -207,7 +208,9 @@ export function TagSelector({
           }
         }}
         className={cn(
-          "min-h-9 w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm shadow-sm transition-colors cursor-text",
+          isFuwari
+            ? "min-h-9 w-full rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-input-bg) px-2 py-1.5 text-sm transition-colors cursor-text flex flex-wrap items-center gap-1.5 focus-within:border-(--fuwari-primary)/50"
+            : "min-h-9 w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm shadow-sm transition-colors cursor-text",
           "focus-within:ring-1 focus-within:ring-ring focus-within:border-ring",
           (disabled || isInitialLoading) && "cursor-not-allowed opacity-50",
           "flex flex-wrap items-center gap-1.5",
@@ -264,7 +267,13 @@ export function TagSelector({
 
       {/* Dropdown Menu */}
       {open && !disabled && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2">
+        <div
+          className={
+            isFuwari
+              ? "fuwari-card-base absolute top-full left-0 z-50 mt-1 w-full p-1.5 shadow-lg animate-in fade-in-0 zoom-in-95"
+              : "absolute top-full left-0 z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2"
+          }
+        >
           <div className="max-h-50 w-full overflow-y-auto overflow-x-hidden p-1">
             {/* Create Option */}
             {searchTerm &&
@@ -272,7 +281,11 @@ export function TagSelector({
                 (t) => t.name.toLowerCase() === searchTerm.toLowerCase(),
               ) && (
                 <div
-                  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                  className={
+                    isFuwari
+                      ? "relative flex cursor-pointer select-none items-center rounded-lg px-2 py-1.5 text-sm outline-none transition-colors hover:bg-(--fuwari-btn-plain-bg-hover) hover:text-(--fuwari-primary) fuwari-text-75"
+                      : "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                  }
                   onClick={() => createTagMutation.mutate(searchTerm)}
                 >
                   <Plus className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -286,7 +299,13 @@ export function TagSelector({
                 <p>{m.tag_selector_load_fail()}</p>
               </div>
             ) : availableTags.length === 0 && !searchTerm ? (
-              <p className="p-2 text-xs text-muted-foreground text-center">
+              <p
+                className={
+                  isFuwari
+                    ? "p-2 text-sm fuwari-text-50 text-center"
+                    : "p-2 text-xs text-muted-foreground text-center"
+                }
+              >
                 {searchTerm
                   ? m.tag_selector_no_match()
                   : m.tag_selector_empty()}
@@ -300,10 +319,16 @@ export function TagSelector({
                   <div
                     key={tag.id}
                     className={cn(
-                      "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
+                      isFuwari
+                        ? "relative flex cursor-pointer select-none items-center rounded-lg px-2 py-1.5 text-sm outline-none transition-colors"
+                        : "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
                       isSelected
-                        ? "bg-accent/50 text-accent-foreground"
-                        : "hover:bg-accent hover:text-accent-foreground",
+                        ? isFuwari
+                          ? "bg-(--fuwari-primary)/10 text-(--fuwari-primary) font-semibold"
+                          : "bg-accent/50 text-accent-foreground"
+                        : isFuwari
+                          ? "fuwari-text-75 hover:bg-(--fuwari-btn-plain-bg-hover) hover:text-(--fuwari-primary)"
+                          : "hover:bg-accent hover:text-accent-foreground",
                     )}
                     onClick={() => toggleTag(tag.id)}
                   >

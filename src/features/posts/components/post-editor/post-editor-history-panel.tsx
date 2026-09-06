@@ -18,6 +18,7 @@ import {
 import type { PostRevisionSnapshot } from "@/features/posts/schema/post-revisions.schema";
 import { TAGS_KEYS } from "@/features/tags/queries";
 import { useDelayUnmount } from "@/hooks/use-delay-unmount";
+import { isFuwari } from "@/lib/theme-mode";
 import { cn, formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import {
@@ -284,6 +285,132 @@ function HistoryPanelInternal({
   const shouldRender = useDelayUnmount(isOpen, 500);
 
   if (!shouldRender) return null;
+
+  if (isFuwari) {
+    return (
+      <>
+        <ConfirmationModal
+          isOpen={isRestoreConfirmOpen}
+          onClose={() => setIsRestoreConfirmOpen(false)}
+          onConfirm={() => restoreMutation.mutate()}
+          title={m.editor_history_restore_title()}
+          message={m.editor_history_restore_message({
+            time: selectedRevision
+              ? formatDate(selectedRevision.createdAt, { includeTime: true })
+              : "",
+          })}
+          confirmLabel={m.editor_history_restore_action()}
+          isLoading={restoreMutation.isPending}
+        />
+        <ConfirmationModal
+          isOpen={isDeleteConfirmOpen}
+          onClose={() => {
+            if (deleteMutation.isPending) return;
+            setIsDeleteConfirmOpen(false);
+            setDeleteTargetRevisionIds([]);
+          }}
+          onConfirm={() => deleteMutation.mutate(deleteTargetRevisionIds)}
+          title={m.editor_history_delete_title()}
+          message={m.editor_history_delete_message({
+            count: String(deleteTargetRevisionIds.length),
+          })}
+          confirmLabel={m.editor_history_delete_action()}
+          isLoading={deleteMutation.isPending}
+          isDanger
+        />
+
+        {/* Backdrop */}
+        <div
+          className={cn(
+            "fixed inset-0 z-90 bg-black/30 backdrop-blur-sm dark:bg-black/50 transition-all duration-500",
+            isOpen ? "opacity-100" : "opacity-0",
+          )}
+          onClick={onClose}
+        />
+
+        {/* Panel */}
+        <aside
+          className={cn(
+            "fixed inset-y-0 right-0 z-91 flex w-full max-w-full flex-col fuwari-card-base shadow-2xl lg:max-w-[84vw] 2xl:max-w-[80vw] duration-500",
+            isOpen
+              ? "animate-in fade-in slide-in-from-right"
+              : "animate-out fade-out slide-out-to-right fill-mode-forwards",
+          )}
+        >
+          <div className="flex items-center justify-between border-b border-(--fuwari-input-border) px-6 py-5">
+            <div className="space-y-1">
+              <p className="text-sm fuwari-text-50">
+                {m.editor_history_eyebrow()}
+              </p>
+              <h2 className="text-xl sm:text-2xl font-bold fuwari-text-90">
+                {m.editor_history_title()}
+              </h2>
+              <p className="text-sm fuwari-text-50">
+                {m.editor_history_subtitle()}
+              </p>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="rounded-lg"
+              aria-label={m.common_close()}
+            >
+              <X size={18} strokeWidth={1.5} />
+            </Button>
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-[18rem_minmax(0,1fr)]">
+            <div
+              className={cn(
+                "flex min-h-0 flex-1 flex-col",
+                isMobilePreviewing ? "hidden lg:flex" : "flex",
+              )}
+            >
+              <PostEditorHistoryList
+                revisions={revisionsQuery.data ?? []}
+                isLoading={revisionsQuery.isLoading}
+                selectedRevisionId={selectedRevisionId}
+                selectedRevisionIds={selectedRevisionIds}
+                isDeleting={deleteMutation.isPending}
+                onSelect={handleSelectRevision}
+                onToggleSelection={handleToggleRevisionSelection}
+                onToggleSelectAll={handleToggleSelectAll}
+                onDeleteSelected={() =>
+                  openDeleteConfirmation(selectedRevisionIds)
+                }
+              />
+            </div>
+
+            <div
+              className={cn(
+                "flex min-h-0 flex-1 flex-col",
+                !isMobilePreviewing ? "hidden lg:flex" : "flex",
+              )}
+            >
+              <PostEditorHistoryPreview
+                revision={selectedRevision}
+                tagNames={tagNames}
+                currentSnapshot={currentSnapshot}
+                allTags={allTags}
+                isLoading={selectedRevisionQuery.isLoading}
+                isRestoring={restoreMutation.isPending}
+                isDeleting={deleteMutation.isPending}
+                onRestore={() => setIsRestoreConfirmOpen(true)}
+                onDelete={() =>
+                  selectedRevision
+                    ? openDeleteConfirmation([selectedRevision.id])
+                    : undefined
+                }
+                onBack={() => setIsMobilePreviewing(false)}
+              />
+            </div>
+          </div>
+        </aside>
+      </>
+    );
+  }
 
   return (
     <>

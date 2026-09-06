@@ -2,6 +2,8 @@ import { ArrowUpDown, Filter, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Dropdown from "@/components/ui/dropdown";
 import { Input } from "@/components/ui/input";
+import { isFuwari } from "@/lib/theme-mode";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { SortDirection, SortField, StatusFilter } from "../types";
 import { STATUS_FILTERS } from "../types";
@@ -32,6 +34,130 @@ export function PostsToolbar({
     sortDir !== "DESC" ||
     sortBy !== "updatedAt" ||
     searchTerm !== "";
+
+  if (isFuwari) {
+    return (
+      <div className="w-full fuwari-card-base p-3 sm:p-4">
+        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center w-full">
+          {/* Search Input Group */}
+          <div className="relative flex-1">
+            <Search
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 fuwari-text-30 pointer-events-none"
+              size={16}
+              strokeWidth={1.5}
+            />
+            <Input
+              type="text"
+              placeholder={m.admin_posts_search_placeholder()}
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full pl-9 pr-9"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onSearchChange("")}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-7 w-7"
+                title={m.admin_posts_clear_filters()}
+              >
+                <X size={14} strokeWidth={1.5} />
+              </Button>
+            )}
+          </div>
+
+          {/* Filters Group */}
+          <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap">
+            {/* 1. Status Filter */}
+            <Dropdown
+              align="left"
+              trigger={
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-10 gap-2 px-4",
+                    status !== "ALL" &&
+                      "border-(--fuwari-primary) text-(--fuwari-primary)",
+                  )}
+                >
+                  <Filter size={14} strokeWidth={1.5} />
+                  <span>
+                    {
+                      {
+                        ALL: m.admin_posts_filter_status(),
+                        PUBLISHED: m.admin_posts_filter_published(),
+                        DRAFT: m.admin_posts_filter_draft(),
+                        IN_PROGRESS: m.admin_posts_filter_in_progress(),
+                      }[status]
+                    }
+                  </span>
+                </Button>
+              }
+              items={STATUS_FILTERS.map((s) => ({
+                label: {
+                  ALL: m.admin_posts_filter_all(),
+                  PUBLISHED: m.admin_posts_filter_published(),
+                  DRAFT: m.admin_posts_filter_draft(),
+                  IN_PROGRESS: m.admin_posts_filter_in_progress(),
+                }[s],
+                onClick: () => onStatusChange(s),
+                isActive: status === s,
+              }))}
+            />
+
+            {/* 2. Sort Dropdown */}
+            <Dropdown
+              align="right"
+              trigger={
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-10 gap-2 px-4",
+                    (sortDir !== "DESC" || sortBy !== "updatedAt") &&
+                      "border-(--fuwari-primary) text-(--fuwari-primary)",
+                  )}
+                >
+                  <ArrowUpDown size={14} strokeWidth={1.5} />
+                  <span>
+                    {sortBy === "publishedAt"
+                      ? m.admin_posts_sort_published()
+                      : m.admin_posts_sort_updated()}
+                  </span>
+                </Button>
+              }
+              items={[
+                {
+                  label: m.admin_posts_sort_recent_pub(),
+                  onClick: () =>
+                    onSortUpdate({ sortBy: "publishedAt", dir: "DESC" }),
+                  isActive: sortBy === "publishedAt" && sortDir === "DESC",
+                },
+                {
+                  label: m.admin_posts_sort_recent_upd(),
+                  onClick: () =>
+                    onSortUpdate({ sortBy: "updatedAt", dir: "DESC" }),
+                  isActive: sortBy === "updatedAt" && sortDir === "DESC",
+                },
+              ]}
+            />
+
+            {/* Reset Button */}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onResetFilters}
+                className="h-10 w-10 hover:text-destructive"
+                title={m.admin_posts_clear_filters()}
+              >
+                <X size={16} strokeWidth={1.5} />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col lg:flex-row gap-4 mb-8 items-stretch lg:items-center w-full border-b border-border/30 pb-8">
