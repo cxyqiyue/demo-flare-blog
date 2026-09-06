@@ -73,8 +73,8 @@ const FolderCard = memo(
           "group relative flex flex-col cursor-pointer transition-all duration-300 touch-manipulation select-none overflow-hidden",
           isFuwari
             ? isSelected
-              ? "rounded-2xl border border-(--fuwari-primary) bg-(--fuwari-primary)/5"
-              : "rounded-2xl border border-(--fuwari-input-border) hover:border-(--fuwari-primary)/50"
+              ? "fuwari-card-base border border-(--fuwari-primary) bg-(--fuwari-primary)/5"
+              : "fuwari-card-base border border-(--fuwari-input-border) hover:border-(--fuwari-primary)/50"
             : "rounded-none border",
           isFuwari
             ? undefined
@@ -257,10 +257,10 @@ const MediaCard = memo(
           "group relative flex flex-col cursor-pointer transition-all duration-300 touch-manipulation select-none overflow-hidden",
           isFuwari
             ? isSelected
-              ? "rounded-2xl border border-(--fuwari-primary) bg-(--fuwari-primary)/5"
+              ? "fuwari-card-base border border-(--fuwari-primary) bg-(--fuwari-primary)/5"
               : isLinked
-                ? "rounded-2xl border border-emerald-500/50 bg-emerald-500/5"
-                : "rounded-2xl border border-(--fuwari-input-border) hover:border-(--fuwari-primary)/50"
+                ? "fuwari-card-base border border-emerald-500/50 bg-emerald-500/5"
+                : "fuwari-card-base border border-(--fuwari-input-border) hover:border-(--fuwari-primary)/50"
             : "rounded-none border",
           isFuwari
             ? undefined

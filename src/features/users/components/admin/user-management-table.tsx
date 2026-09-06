@@ -12,6 +12,7 @@ import { AdminPagination } from "@/components/admin/admin-pagination";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { formatDate } from "@/lib/utils";
+import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import { useAdminUsers } from "../../hooks/use-users";
 import { adminUsersQuery } from "../../queries";
@@ -41,6 +42,10 @@ export const UserManagementTable = ({
       search,
     }),
   );
+
+  if (isFuwari) {
+    return <FuwariUserManagementTable search={search} page={page} />;
+  }
 
   if (isLoading) {
     return (
@@ -550,3 +555,499 @@ const BanModal = ({
     </div>
   );
 };
+
+// ============ Fuwari Table ============
+
+function FuwariUserManagementTable({ search, page = 1 }: UserManagementTableProps) {
+  const navigate = routeApi.useNavigate();
+  const {
+    data: response,
+    isLoading,
+    isError,
+  } = useQuery(
+    adminUsersQuery({
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+      search,
+    }),
+  );
+
+  if (isLoading) {
+    return (
+      <div className="fuwari-card-base p-6 sm:p-8 md:p-10 flex items-center justify-center">
+        <Loader2 size={28} className="animate-spin fuwari-text-50" />
+      </div>
+    );
+  }
+
+  if (isError || !response) {
+    return (
+      <div className="fuwari-card-base p-6 sm:p-8 md:p-10 flex flex-col items-center justify-center text-center gap-3 fuwari-text-50">
+        <ShieldAlert size={40} strokeWidth={1} className="opacity-30" />
+        <p className="text-sm">{m.users_admin_load_fail()}</p>
+      </div>
+    );
+  }
+
+  if (response.items.length === 0) {
+    return (
+      <div className="fuwari-card-base p-6 sm:p-8 md:p-10 flex flex-col items-center justify-center text-center gap-3 fuwari-text-50">
+        <UserCog size={40} strokeWidth={1} className="opacity-20" />
+        <p className="text-sm">{m.users_empty()}</p>
+      </div>
+    );
+  }
+
+  const totalPages = Math.ceil(response.total / PAGE_SIZE);
+
+  return (
+    <div className="fuwari-card-base p-3 sm:p-4 md:p-6">
+      {/* List Header (Desktop) */}
+      <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-3 text-xs fuwari-text-50">
+        <div className="col-span-3 font-bold">{m.users_th_user()}</div>
+        <div className="col-span-2 font-bold">{m.users_th_role()}</div>
+        <div className="col-span-2 font-bold">{m.users_th_status()}</div>
+        <div className="col-span-1 font-bold">{m.users_th_comments()}</div>
+        <div className="col-span-2 font-bold">{m.users_th_joined()}</div>
+        <div className="col-span-2 text-right font-bold">{m.users_th_actions()}</div>
+      </div>
+
+      <div>
+        {response.items.map((item) => (
+          <FuwariUserRow key={item.id} item={item} actor={response.currentUser} />
+        ))}
+      </div>
+
+      <div className="pt-4 sm:pt-6">
+        <AdminPagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={response.total}
+          itemsPerPage={PAGE_SIZE}
+          currentPageItemCount={response.items.length}
+          onPageChange={(newPage) =>
+            navigate({
+              search: ((prev: Record<string, unknown>) => ({
+                ...prev,
+                page: newPage,
+              })) as never,
+            })
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function FuwariUserRow({
+  item,
+  actor,
+}: {
+  item: UserAdminItem;
+  actor: { id: string; isSuperAdmin: boolean };
+}) {
+  const isSelf = item.id === actor.id;
+  const actorIsSuper = actor.isSuperAdmin;
+
+  const canManage =
+    !item.isSuperAdmin && (actorIsSuper || item.role !== "admin");
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [showBanModal, setShowBanModal] = useState(false);
+  const [showUnbanModal, setShowUnbanModal] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const { setRole, ban, unban, isSettingRole, isBanning, isUnbanning } =
+    useAdminUsers();
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const isLoading = isSettingRole || isBanning || isUnbanning;
+  const isAdmin = item.role === "admin";
+  const isBanned = item.banned;
+
+  return (
+    <div ref={menuRef}>
+      {/* Desktop Row */}
+      <div className="hidden md:grid grid-cols-12 gap-4 px-2 py-3.5 items-center border-t border-(--fuwari-input-border) hover:bg-(--fuwari-btn-regular-bg) transition-colors">
+        <div className="col-span-3 flex items-center gap-3 overflow-hidden min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center shrink-0">
+            {item.image ? (
+              <img src={item.image} className="w-full h-full object-cover rounded-xl" />
+            ) : (
+              <span className="text-sm font-bold text-(--fuwari-primary)">
+                {item.name.slice(0, 1) || "?"}
+              </span>
+            )}
+          </div>
+          <div className="min-w-0 space-y-0.5">
+            <div className="text-sm font-bold fuwari-text-90 truncate">
+              {item.name}
+              {isSelf && (
+                <span className="ml-2 text-xs fuwari-text-30">
+                  ({m.users_self()})
+                </span>
+              )}
+            </div>
+            <div className="text-xs fuwari-text-50 truncate">{item.email}</div>
+          </div>
+        </div>
+
+        <div className="col-span-2">
+          <FuwariRoleBadge isSuperAdmin={item.isSuperAdmin} isAdmin={isAdmin} />
+        </div>
+
+        <div className="col-span-2">
+          <FuwariStatusBadge isBanned={isBanned} />
+        </div>
+
+        <div className="col-span-1 text-sm fuwari-text-75">
+          {item.totalComments}
+        </div>
+
+        <div className="col-span-2 text-sm fuwari-text-50">
+          {formatDate(item.createdAt).split(" ")[0]}
+        </div>
+
+        <div className="col-span-2 flex justify-end">
+          <FuwariRowActions
+            item={item}
+            canManage={canManage}
+            isOpen={isOpen}
+            setIsOpen={setIsOpen}
+            onRole={() => {
+              setIsOpen(false);
+              setShowRoleModal(true);
+            }}
+            onBan={() => {
+              setIsOpen(false);
+              setShowBanModal(true);
+            }}
+            onUnban={() => {
+              setIsOpen(false);
+              setShowUnbanModal(true);
+            }}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+
+      {/* Mobile Row */}
+      <div className="md:hidden p-3 space-y-3 border-t border-(--fuwari-input-border)">
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center shrink-0">
+              {item.image ? (
+                <img src={item.image} className="w-full h-full object-cover rounded-xl" />
+              ) : (
+                <span className="text-sm font-bold text-(--fuwari-primary)">
+                  {item.name.slice(0, 1) || "?"}
+                </span>
+              )}
+            </div>
+            <div>
+              <div className="text-sm font-bold fuwari-text-90">
+                {item.name}
+              </div>
+              <div className="text-xs fuwari-text-50">{item.email}</div>
+            </div>
+          </div>
+          <FuwariStatusBadge isBanned={isBanned} />
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap text-sm fuwari-text-50">
+          <FuwariRoleBadge isSuperAdmin={item.isSuperAdmin} isAdmin={isAdmin} />
+          <span>·</span>
+          <span>{m.users_mobile_comments({ count: item.totalComments })}</span>
+          <span>·</span>
+          <span>{formatDate(item.createdAt).split(" ")[0]}</span>
+        </div>
+
+        <div className="flex justify-end pt-3 border-t border-(--fuwari-input-border)">
+          <FuwariRowActions
+            item={item}
+            canManage={canManage}
+            isOpen={isOpen}
+            setIsOpen={setIsOpen}
+            onRole={() => {
+              setIsOpen(false);
+              setShowRoleModal(true);
+            }}
+            onBan={() => {
+              setIsOpen(false);
+              setShowBanModal(true);
+            }}
+            onUnban={() => {
+              setIsOpen(false);
+              setShowUnbanModal(true);
+            }}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+
+      {/* Role Modal */}
+      <ConfirmationModal
+        isOpen={showRoleModal}
+        onClose={() => setShowRoleModal(false)}
+        onConfirm={() => {
+          setRole(
+            {
+              data: {
+                userId: item.id,
+                role: isAdmin ? "user" : "admin",
+              },
+            },
+            { onSuccess: () => setShowRoleModal(false) },
+          );
+        }}
+        title={isAdmin ? m.users_set_user_title() : m.users_set_admin_title()}
+        message={
+          isAdmin
+            ? m.users_set_user_message({ name: item.name })
+            : m.users_set_admin_message({ name: item.name })
+        }
+        confirmLabel={m.users_set_role_confirm()}
+        isLoading={isSettingRole}
+      />
+
+      {/* Ban Modal */}
+      <FuwariBanModal
+        isOpen={showBanModal}
+        onClose={() => setShowBanModal(false)}
+        onConfirm={(reason) => {
+          ban(
+            { data: { userId: item.id, reason } },
+            { onSuccess: () => setShowBanModal(false) },
+          );
+        }}
+        isLoading={isBanning}
+        userName={item.name}
+      />
+
+      {/* Unban Modal */}
+      <ConfirmationModal
+        isOpen={showUnbanModal}
+        onClose={() => setShowUnbanModal(false)}
+        onConfirm={() => {
+          unban(
+            { data: { userId: item.id } },
+            { onSuccess: () => setShowUnbanModal(false) },
+          );
+        }}
+        title={m.users_unban_modal_title()}
+        message={m.users_unban_modal_desc({ name: item.name })}
+        confirmLabel={m.users_unban_modal_confirm()}
+        isLoading={isUnbanning}
+      />
+    </div>
+  );
+}
+
+function FuwariRowActions({
+  item,
+  canManage,
+  isOpen,
+  setIsOpen,
+  onRole,
+  onBan,
+  onUnban,
+  isLoading,
+}: {
+  item: UserAdminItem;
+  canManage: boolean;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  onRole: () => void;
+  onBan: () => void;
+  onUnban: () => void;
+  isLoading: boolean;
+}) {
+  if (!canManage) {
+    return (
+      <span className="text-xs fuwari-text-30">
+        [ {m.users_protected()} ]
+      </span>
+    );
+  }
+
+  const isAdmin = item.role === "admin";
+  const isBanned = item.banned;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={isLoading}
+        className="fuwari-btn-regular rounded-lg h-9 px-3 text-sm font-medium active:scale-90 hover:text-(--fuwari-primary) transition-colors disabled:opacity-60"
+      >
+        {isLoading ? (
+          <Loader2 size={14} className="animate-spin" />
+        ) : (
+          <span>{m.users_action_btn()}</span>
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-2 w-52 fuwari-card-base border border-(--fuwari-input-border) shadow-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-200">
+          <button
+            onClick={onRole}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm fuwari-text-75 hover:bg-(--fuwari-btn-plain-bg-hover) hover:text-(--fuwari-primary) transition-colors group"
+          >
+            <span>
+              {isAdmin
+                ? m.users_action_set_user()
+                : m.users_action_set_admin()}
+            </span>
+            <ShieldCheck className="h-4 w-4 opacity-0 group-hover:opacity-100" />
+          </button>
+
+          <div className="h-px bg-(--fuwari-input-border) my-1" />
+
+          {isBanned ? (
+            <button
+              onClick={onUnban}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm fuwari-text-75 hover:bg-(--fuwari-btn-plain-bg-hover) hover:text-(--fuwari-primary) transition-colors group"
+            >
+              <span>{m.users_action_unban()}</span>
+              <ShieldCheck className="h-4 w-4 opacity-0 group-hover:opacity-100" />
+            </button>
+          ) : (
+            <button
+              onClick={onBan}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-500/10 transition-colors group"
+            >
+              <span>{m.users_action_ban()}</span>
+              <UserX className="h-4 w-4 opacity-0 group-hover:opacity-100" />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FuwariRoleBadge({
+  isSuperAdmin,
+  isAdmin,
+}: {
+  isSuperAdmin: boolean;
+  isAdmin: boolean;
+}) {
+  if (isSuperAdmin) {
+    return (
+      <span className="bg-amber-500/15 text-amber-500 rounded-lg px-2.5 py-1 text-xs font-semibold">
+        {m.users_role_super()}
+      </span>
+    );
+  }
+  if (isAdmin) {
+    return (
+      <span className="bg-(--fuwari-primary)/10 text-(--fuwari-primary) rounded-lg px-2.5 py-1 text-xs font-semibold">
+        {m.users_role_admin()}
+      </span>
+    );
+  }
+  return (
+    <span className="bg-(--fuwari-btn-regular-bg) rounded-lg px-2.5 py-1 text-xs font-medium fuwari-text-75">
+      {m.users_role_user()}
+    </span>
+  );
+}
+
+function FuwariStatusBadge({ isBanned }: { isBanned: boolean }) {
+  if (isBanned) {
+    return (
+      <span className="bg-red-500/10 text-red-500 rounded-lg px-2.5 py-1 text-xs font-semibold">
+        {m.users_status_banned()}
+      </span>
+    );
+  }
+  return (
+    <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg px-2.5 py-1 text-xs font-semibold">
+      {m.users_status_active()}
+    </span>
+  );
+}
+
+// ============ Fuwari Ban Modal ============
+
+function FuwariBanModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  isLoading,
+  userName,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (reason?: string) => void;
+  isLoading: boolean;
+  userName: string;
+}) {
+  const [reason, setReason] = useState("");
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative fuwari-card-base border border-(--fuwari-input-border) shadow-2xl p-6 sm:p-8 max-w-md w-full mx-4 animate-in fade-in zoom-in-95 duration-200">
+        <h3 className="text-lg font-bold fuwari-text-90 mb-1.5">
+          {m.users_ban_modal_title()}
+        </h3>
+        <p className="text-sm fuwari-text-50 mb-6">
+          {m.users_ban_modal_desc({ name: userName })}
+        </p>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-bold fuwari-text-75">
+              {m.users_ban_modal_label()}
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-input-bg) px-3 py-2 text-sm fuwari-text-90 focus-visible:border-(--fuwari-primary)/50 focus-visible:outline-none transition-colors resize-none"
+              rows={3}
+              placeholder={m.users_ban_modal_placeholder()}
+              maxLength={500}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="ghost"
+              onClick={onClose}
+              className="h-10 px-4 rounded-xl text-sm font-medium fuwari-text-75"
+            >
+              {m.common_cancel()}
+            </Button>
+            <Button
+              onClick={() => onConfirm(reason || undefined)}
+              disabled={isLoading}
+              className="h-10 px-5 rounded-xl gap-2 bg-red-600 text-white hover:bg-red-700 active:scale-95 disabled:opacity-60"
+            >
+              {isLoading ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                m.users_ban_modal_confirm()
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
