@@ -420,7 +420,7 @@ function FuwariSidebar({
 
       {/* Desktop sticky column: full-height, pinned to the left edge,
           full-width rail like the default theme's fixed sidebar */}
-      <aside className="hidden lg:flex lg:sticky lg:top-0 lg:h-screen lg:w-64 shrink-0 flex-col gap-4 p-4 fuwari-onload-animation">
+      <aside className="hidden lg:flex lg:h-full lg:w-64 lg:z-40 shrink-0 flex-col gap-4 p-4 overflow-y-auto custom-scrollbar fuwari-onload-animation">
         {sidebarContent}
       </aside>
 
