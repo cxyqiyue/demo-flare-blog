@@ -101,8 +101,9 @@ export function AiArticlePanel({
         <aside
           className={cn(
             "fixed right-0 top-0 bottom-0 z-100 w-full max-w-xl fuwari-card-base shadow-2xl transition-transform duration-500 ease-out flex flex-col",
-            open ? "translate-x-0" : "translate-x-full",
+            open ? "translate-x-0" : "invisible translate-x-full",
           )}
+          aria-hidden={!open}
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-(--fuwari-input-border) px-6 py-4">
