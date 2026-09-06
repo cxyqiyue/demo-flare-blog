@@ -378,7 +378,7 @@ function RouteComponent() {
         <form
           ref={formRef}
           onSubmit={handleSubmit(onSubmit)}
-          className="flex flex-col gap-6 pb-28 lg:gap-8"
+          className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-1000 lg:space-y-12"
         >
           <ConfirmationModal
             isOpen={blockerStatus === "blocked"}
@@ -392,7 +392,7 @@ function RouteComponent() {
           />
 
           {/* Header Area */}
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div className="flex flex-col justify-between gap-4 pb-5 sm:flex-row sm:items-end border-b border-(--fuwari-btn-regular-bg) lg:pb-8">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold tracking-tight fuwari-text-90 sm:text-3xl">
                 {m.settings_header_title()}
@@ -424,11 +424,11 @@ function RouteComponent() {
             onValueChange={(value) =>
               setActiveTab(value as (typeof tabItems)[number]["value"])
             }
-            className="flex flex-col gap-6 lg:grid lg:grid-cols-[16rem_1fr] lg:items-start lg:gap-8"
+            className="flex flex-col lg:grid lg:grid-cols-[220px_1fr] items-start gap-8 lg:gap-16"
           >
             <div
               ref={tabsScrollRef}
-              className="sticky top-20 z-40 -mx-4 overflow-x-auto no-scrollbar bg-(--fuwari-page-bg)/85 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:mx-0 lg:self-start lg:overflow-visible lg:bg-transparent lg:px-0 lg:py-0 lg:backdrop-blur-none"
+              className="sticky top-0 z-40 w-full self-start overflow-x-auto no-scrollbar bg-(--fuwari-page-bg)/85 pt-0.5 pb-2 backdrop-blur-md lg:bg-transparent lg:pt-0 lg:pb-0 lg:overflow-visible lg:backdrop-blur-none"
             >
               <TabsList className="min-w-max grow sm:min-w-0 sm:flex-wrap sm:max-w-full sm:justify-start lg:w-full lg:min-w-0 lg:flex-col lg:flex-wrap lg:justify-start lg:gap-1 lg:p-1.5 lg:shrink-0">
                 {tabItems.map(({ value, icon: Icon, label }) => (
@@ -444,7 +444,7 @@ function RouteComponent() {
               </TabsList>
             </div>
 
-            <div className="min-w-0 flex flex-col gap-6 lg:gap-8">
+            <div className="min-w-0 flex-1 space-y-12 pt-2 lg:pt-0">
               {tabPanes.map((pane, index) => {
                 const Icon = pane.icon;
 
@@ -452,10 +452,10 @@ function RouteComponent() {
                   <TabsContent
                     key={pane.value}
                     value={pane.value}
-                    className="mt-0 fuwari-onload-animation"
+                    className="mt-0 space-y-10 fuwari-onload-animation"
                     style={{ animationDelay: `${index * 40}ms` }}
                   >
-                    <div className="mb-5 flex items-start gap-4 border-b border-(--fuwari-btn-regular-bg) pb-4 lg:mb-6 lg:pb-5">
+                    <div className="flex items-start gap-4 border-b border-(--fuwari-btn-regular-bg) pb-6">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-(--fuwari-btn-regular-bg) lg:h-11 lg:w-11">
                         <Icon size={18} className="fuwari-text-50" />
                       </div>

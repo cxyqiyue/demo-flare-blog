@@ -382,17 +382,14 @@ function FuwariDashboardOverview({
   const topPages = currentRangeData?.topPages;
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Header card */}
-      <div
-        className="fuwari-card-base p-4 sm:p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 fuwari-onload-animation"
-        style={{ animationDelay: "100ms" }}
-      >
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold fuwari-text-90">
+    <div className="max-w-300 mx-auto space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <header className="flex flex-col md:flex-row justify-between md:items-end gap-4 border-b border-(--fuwari-btn-regular-bg) pb-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight fuwari-text-90">
             {m.admin_overview_heading()}
           </h1>
-          <p className="text-sm fuwari-text-50 mt-0.5">
+          <p className="text-xs sm:text-sm fuwari-text-50">
             {m.admin_overview_status()}
           </p>
         </div>
@@ -428,13 +425,10 @@ function FuwariDashboardOverview({
             />
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* Stats Grid */}
-      <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 fuwari-onload-animation"
-        style={{ animationDelay: "150ms" }}
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link
           to="/admin/comments"
           search={{ status: "pending" }}
@@ -483,9 +477,9 @@ function FuwariDashboardOverview({
       <CloudflareUsageDashboard />
 
       {/* Main Content Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left: Traffic Analysis */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
+        <div className="lg:col-span-2 space-y-6">
           <div
             className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation"
             style={{ animationDelay: "300ms" }}
@@ -527,7 +521,7 @@ function FuwariDashboardOverview({
         </div>
 
         {/* Right: Top Pages & Activity */}
-        <div className="flex flex-col gap-4">
+        <div className="space-y-8">
           <div
             className="fuwari-card-base p-4 sm:p-5 md:p-6 fuwari-onload-animation"
             style={{ animationDelay: "450ms" }}
