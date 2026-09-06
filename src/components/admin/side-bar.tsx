@@ -418,8 +418,9 @@ function FuwariSidebar({
         </>
       )}
 
-      {/* Desktop sticky column */}
-      <aside className="order-2 lg:order-1 lg:sticky lg:top-24 self-start hidden lg:flex flex-col gap-4 fuwari-onload-animation">
+      {/* Desktop sticky column: full-height, pinned to the left edge like
+          the default theme's fixed sidebar rail */}
+      <aside className="hidden lg:flex lg:sticky lg:top-0 lg:h-screen lg:w-64 shrink-0 flex-col gap-4 py-8 pl-4 pr-3 fuwari-onload-animation">
         {sidebarContent}
       </aside>
 
