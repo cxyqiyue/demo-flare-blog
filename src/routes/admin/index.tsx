@@ -432,7 +432,7 @@ function FuwariDashboardOverview({
 
       {/* Stats Grid */}
       <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 fuwari-onload-animation"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 fuwari-onload-animation"
         style={{ animationDelay: "150ms" }}
       >
         <Link
@@ -483,7 +483,7 @@ function FuwariDashboardOverview({
       <CloudflareUsageDashboard />
 
       {/* Main Content Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
         {/* Left: Traffic Analysis */}
         <div className="lg:col-span-2 flex flex-col gap-4">
           <div
@@ -536,7 +536,7 @@ function FuwariDashboardOverview({
               {m.admin_overview_top_pages_title()}
             </h2>
             {topPages && topPages.length > 0 ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-5 lg:gap-6">
                 {topPages.slice(0, 5).map((page, i) => (
                   <div key={i} className="group">
                     <div className="flex justify-between items-baseline mb-1.5 gap-2">

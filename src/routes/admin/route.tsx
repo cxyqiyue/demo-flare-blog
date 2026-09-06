@@ -53,7 +53,7 @@ function AdminLayout() {
   if (isFuwari) {
     return (
       <div className="admin-layout fuwari-admin relative min-h-screen bg-(--fuwari-page-bg) font-sans">
-        <div className="mx-auto max-w-(--fuwari-page-width) px-0 md:px-4 pb-8">
+        <div className="mx-auto max-w-7xl px-0 sm:px-4 md:px-6 pb-12">
           {/* Top bar: slim floating card, mirrors fuwari navbar rhythm */}
           <div className="sticky top-0 z-50">
             <div className="fuwari-card-base rounded-t-none! md:rounded-t-none! rounded-b-2xl flex items-center justify-between gap-4 h-18 overflow-x-auto overscroll-x-contain">
@@ -89,13 +89,13 @@ function AdminLayout() {
           </div>
 
           {/* Content grid: sidebar column + main column */}
-          <div className="mt-4 grid grid-cols-1 lg:grid-cols-[17.5rem_1fr] gap-4">
+          <div className="mt-5 grid grid-cols-1 lg:grid-cols-[16rem_1fr] gap-5 lg:gap-6">
             <SideBar
               isMobileSidebarOpen={isMobileSidebarOpen}
               closeMobileSidebar={closeMobileSidebar}
             />
 
-            <main className="order-1 lg:order-2 min-w-0 flex flex-col gap-4 fuwari-onload-animation">
+            <main className="order-1 lg:order-2 min-w-0 flex flex-col gap-5 lg:gap-6 fuwari-onload-animation">
               <Outlet />
             </main>
           </div>
