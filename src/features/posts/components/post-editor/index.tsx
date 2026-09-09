@@ -347,7 +347,7 @@ export function PostEditor({
 
   if (isFuwari) {
     return (
-      <div className="flex flex-col gap-4 pb-8">
+      <div className="flex flex-col gap-4 pb-8 min-w-0 max-w-full">
         <ConfirmationModal
           isOpen={status === "blocked"}
           onClose={() => reset?.()}
@@ -389,7 +389,7 @@ export function PostEditor({
 
         {/* Main Content Area */}
         <div
-          className="grid grid-cols-1 xl:grid-cols-[1fr_260px] gap-4 items-start fuwari-onload-animation"
+          className="grid grid-cols-1 xl:grid-cols-[1fr_260px] gap-4 items-start fuwari-onload-animation min-w-0 w-full"
           style={{ animationDelay: "120ms" }}
         >
           <div className="min-w-0 flex flex-col gap-4">

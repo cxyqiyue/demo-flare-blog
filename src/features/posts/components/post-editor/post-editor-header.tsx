@@ -48,7 +48,7 @@ export function PostEditorHeader({
           : "text-(--fuwari-primary)";
 
     return (
-      <header className="flex h-16 items-center justify-between gap-4 fuwari-card-base px-4 sm:px-5 fuwari-onload-animation">
+      <header className="flex h-16 items-center justify-between gap-4 fuwari-card-base px-4 sm:px-5 fuwari-onload-animation overflow-x-auto overscroll-x-contain max-w-full">
         <div className="min-w-0 flex-1 overflow-hidden">
           <Breadcrumbs />
         </div>
