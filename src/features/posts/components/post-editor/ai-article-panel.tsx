@@ -100,8 +100,8 @@ export function AiArticlePanel({
 
         <aside
           className={cn(
-            "fixed right-0 top-0 bottom-0 z-100 w-full max-w-xl fuwari-card-base shadow-2xl transition-transform duration-500 ease-out flex flex-col",
-            open ? "translate-x-0" : "invisible translate-x-full",
+            "fixed right-0 top-0 bottom-0 z-100 w-full max-w-xl fuwari-card-base shadow-2xl transition-[transform,opacity] duration-500 ease-out flex flex-col",
+            open ? "translate-x-0 opacity-100" : "invisible opacity-0",
           )}
           aria-hidden={!open}
         >
