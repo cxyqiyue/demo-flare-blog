@@ -172,6 +172,22 @@ describe("MediaService S3 media library", () => {
       );
     });
 
+    it("should filter out S3 prefixes containing double slashes", async () => {
+      vi.mocked(S3Upload.listS3Objects).mockResolvedValue(
+        ok({
+          objects: [],
+          prefixes: ["clean", "bad//", "nested//deep"],
+          isTruncated: false,
+        }),
+      );
+
+      const root = await MediaService.listExternalDirectory(adminContext, {
+        providerId: "s3",
+        folder: "",
+      });
+      expect(root.folders.map((f) => f.key)).toEqual(["clean/"]);
+    });
+
     it("should show files uploaded directly to S3 without any D1 record (reverse sync)", async () => {
       vi.mocked(S3Upload.listS3Objects).mockResolvedValue(
         ok({

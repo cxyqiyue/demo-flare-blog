@@ -21,10 +21,12 @@ export function generateKey(fileName: string, folder = ""): string {
 }
 
 /**
- * Strip leading/trailing slashes from a folder path. `""` is the root folder.
+ * Normalize a folder path: strip leading/trailing slashes and collapse any
+ * runs of slashes into a single one so folder keys never contain `//`.
+ * `""` is the root folder.
  */
 export function normalizeFolderPath(folder: string): string {
-  return folder.replace(/^\/+|\/+$/g, "");
+  return folder.replace(/^\/+|\/+$/g, "").replace(/\/+/g, "/");
 }
 
 /**

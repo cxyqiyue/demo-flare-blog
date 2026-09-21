@@ -422,6 +422,34 @@ describe("MediaService", () => {
       ]);
     });
 
+    it("should filter out malformed folders that contain double slashes", async () => {
+      vi.mocked(Storage.listR2Directory).mockImplementation(
+        async (_env, options = {}) => {
+          const prefix = options.prefix ?? "";
+          if (prefix === "valid/") {
+            return {
+              objects: [{ key: "valid/a.png" }],
+              delimitedPrefixes: ["valid/sub/"],
+              truncated: false,
+            } as unknown as R2Objects;
+          }
+          return {
+            objects: [],
+            delimitedPrefixes: ["valid/", "bad//"],
+            truncated: false,
+          } as unknown as R2Objects;
+        },
+      );
+
+      const result = await MediaService.getMediaDirectory(adminContext, {
+        folder: "",
+      });
+      // clicking the malformed `bad//` folder previously navigated to
+      // `folder=…//` and made the directory impossible to enter
+      expect(result.folders.map((f) => f.key)).toEqual(["valid/"]);
+      expect(result.folders.map((f) => f.name)).toEqual(["valid"]);
+    });
+
     it("should search globally across all folders", async () => {
       vi.mocked(Storage.listAllKeys).mockResolvedValue([
         "photos/a.png",
@@ -443,12 +471,14 @@ describe("MediaService", () => {
     });
 
     it("should scope search to the current folder when a folder is given", async () => {
-      vi.mocked(Storage.listAllKeys).mockImplementation(async (_env, prefix) => {
-        if (prefix === "photos/") {
-          return ["photos/a.png", "photos/b.png"];
-        }
-        return ["photos/a.png", "photos/b.png", "root.png"];
-      });
+      vi.mocked(Storage.listAllKeys).mockImplementation(
+        async (_env, prefix) => {
+          if (prefix === "photos/") {
+            return ["photos/a.png", "photos/b.png"];
+          }
+          return ["photos/a.png", "photos/b.png", "root.png"];
+        },
+      );
 
       const result = await MediaService.getMediaDirectory(adminContext, {
         folder: "photos/",

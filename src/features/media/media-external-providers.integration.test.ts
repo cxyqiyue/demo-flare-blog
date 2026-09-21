@@ -406,6 +406,26 @@ describe("MediaService external channels", () => {
       expect(nested.files[0].url).toContain("/resolve/main/images/a.png");
     });
 
+    it("should filter out folders whose path contains double slashes", async () => {
+      vi.mocked(
+        HuggingFaceChannelApi.listHuggingFaceDirectory,
+      ).mockResolvedValue(
+        ok({
+          files: [],
+          folders: [
+            { key: "images/", name: "images" },
+            { key: "images//bad/", name: "bad" },
+          ],
+        }),
+      );
+
+      const root = await MediaService.listExternalDirectory(adminContext, {
+        providerId: "huggingface",
+        folder: "",
+      });
+      expect(root.folders.map((f) => f.key)).toEqual(["images/"]);
+    });
+
     it("should rename via re-commit and rewrite the D1 record", async () => {
       await MediaRepo.insertMedia(adminContext.db, {
         provider: "huggingface",
@@ -575,6 +595,24 @@ describe("MediaService external channels", () => {
         url: "https://cdn-dav.example.com/photos/sun.jpg",
       });
       expect(result.folders[0].key).toBe("photos/sub/");
+    });
+
+    it("should filter out folders whose key contains double slashes", async () => {
+      vi.mocked(WebDavChannelApi.listWebDavDirectory).mockResolvedValue(
+        ok({
+          files: [],
+          folders: [
+            { key: "photos/sub/", name: "sub" },
+            { key: "photos//bad/", name: "bad" },
+          ],
+        }),
+      );
+
+      const result = await MediaService.listExternalDirectory(adminContext, {
+        providerId: "webdav",
+        folder: "photos",
+      });
+      expect(result.folders.map((f) => f.key)).toEqual(["photos/sub/"]);
     });
 
     it("should rename via MOVE and rewrite the D1 record", async () => {

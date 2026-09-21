@@ -907,7 +907,7 @@ export async function getMediaDirectory(
     .map((o) => o.key)
     .filter((k) => !k.endsWith("/"));
   const folders = result.delimitedPrefixes
-    .filter((p) => p.endsWith("/"))
+    .filter((p) => p.endsWith("/") && !p.includes("//"))
     .map((key) => ({ key, name: getBasename(key) }));
 
   let files = await enrichDirectoryFiles(context, fileKeys);
@@ -1701,11 +1701,11 @@ async function listExternalDirectoryDirect(
     return {
       files: withAccessUrls(config, provider, files),
       // Trailing-slash keys keep frontend folder detection (isFolderKey)
-      // consistent with the R2 provider.
-      folders: result.data.prefixes.map((p) => ({
-        key: `${p}/`,
-        name: getBasename(p),
-      })),
+      // consistent with the R2 provider. Malformed prefixes with `//` are
+      // filtered out so clicking them can never produce `folder=…//`.
+      folders: result.data.prefixes
+        .filter((p) => !p.includes("//"))
+        .map((p) => ({ key: `${p}/`, name: getBasename(p) })),
       nextContinuationToken: result.data.isTruncated
         ? (result.data.nextContinuationToken ?? null)
         : null,
@@ -1797,7 +1797,9 @@ async function listExternalDirectoryDirect(
 
     return {
       files: withAccessUrls(config, provider, result.data.files),
-      folders: result.data.folders,
+      // Malformed `//` paths are skipped so a click can never produce
+      // `folder=…//` and leave the directory impossible to enter.
+      folders: result.data.folders.filter((f) => !f.key.includes("//")),
       nextContinuationToken: null,
     };
   }
@@ -1836,7 +1838,9 @@ async function listExternalDirectoryDirect(
 
     return {
       files: withAccessUrls(config, provider, result.data.files),
-      folders: result.data.folders,
+      // Malformed `//` paths are skipped so a click can never produce
+      // `folder=…//` and leave the directory impossible to enter.
+      folders: result.data.folders.filter((f) => !f.key.includes("//")),
       nextContinuationToken: null,
     };
   }

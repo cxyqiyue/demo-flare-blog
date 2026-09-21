@@ -239,6 +239,10 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
           targetFolder = targetFolder ? `${targetFolder}/${relDir}` : relDir;
         }
       }
+      // 折叠多余斜杠（如当前文件夹带尾斜杠时拼出 `//`），避免生成错误 key
+      targetFolder = targetFolder
+        .replace(/^\/+|\/+$/g, "")
+        .replace(/\/+/g, "/");
       const displayName = rel || file.name;
       // 上传前判断渠道大小限制：超限文件直接标记失败，不发起上传
       if (limitBytes !== null && file.size > limitBytes) {

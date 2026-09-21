@@ -26,6 +26,7 @@ import {
   MEDIA_KEYS,
   totalMediaSizeQuery,
 } from "@/features/media/queries";
+import { normalizeFolderPath } from "@/features/media/utils/media.utils";
 import { useDebounce } from "@/hooks/use-debounce";
 import { m } from "@/paraglide/messages";
 import { findProvider } from "./use-media-providers";
@@ -89,7 +90,7 @@ export function useMediaLibrary(providers: MediaProvider[]) {
   const isExternal = currentProviderId !== "r2";
   const canList = currentProvider?.canList ?? false;
 
-  const currentFolder = folder ?? "";
+  const currentFolder = normalizeFolderPath(folder ?? "");
   const currentView = view ?? "grid";
 
   // Navigation helpers — all preserve provider
@@ -98,7 +99,7 @@ export function useMediaLibrary(providers: MediaProvider[]) {
       search: {
         search: search ?? "",
         unused: unused ?? false,
-        folder,
+        folder: currentFolder,
         view: currentView,
         provider: currentProviderId,
         ...patch,
@@ -112,9 +113,10 @@ export function useMediaLibrary(providers: MediaProvider[]) {
   const setUnusedOnly = (val: boolean) => navigateSearch({ unused: val });
   // Entering a folder clears the active search so the directory shows the
   // folder's real contents instead of a global name-filtered view that
-  // silently ignores the current folder.
+  // silently ignores the current folder. The path is normalized so a
+  // malformed key can never produce a `folder=…//` URL.
   const setFolder = (nextFolder: string) =>
-    navigateSearch({ folder: nextFolder, search: "" });
+    navigateSearch({ folder: normalizeFolderPath(nextFolder), search: "" });
   const setView = (nextView: "grid" | "table") =>
     navigateSearch({ view: nextView });
 
