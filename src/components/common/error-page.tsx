@@ -1,7 +1,7 @@
 import { useRouter } from "@tanstack/react-router";
 import { m } from "@/paraglide/messages";
 
-export function ErrorPage({ error: _error }: { error?: Error }) {
+export function ErrorPage({ error: _error }: { error?: unknown }) {
   const router = useRouter();
   const onReset = () => {
     router.invalidate();
