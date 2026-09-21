@@ -1,10 +1,12 @@
 import {
+  ArrowUpDown,
   CheckSquare,
   Copy,
   Filter,
   FolderInput,
   FolderPlus,
   LayoutGrid,
+  Link,
   List,
   Search,
   Square,
@@ -12,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import Dropdown from "@/components/ui/dropdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isFuwari } from "@/lib/theme-mode";
@@ -57,18 +60,22 @@ const COPY_FORMATS: Array<{ value: CopyLinkFormat; label: string }> = [
   { value: "bbcode", label: "BBCode" },
 ];
 
-function SortSelect({
+const triggerClass = cn(
+  "flex items-center gap-2 whitespace-nowrap cursor-pointer",
+  isFuwari
+    ? "fuwari-btn-regular rounded-xl px-3 py-2 text-sm hover:border-(--fuwari-primary)/50"
+    : "h-10 px-3 text-[11px] uppercase tracking-widest font-mono bg-transparent border border-border/30 text-muted-foreground hover:text-foreground transition-all rounded-none",
+);
+
+function SortDropdown({
   sortBy,
   sortDir,
   onChange,
-  className,
 }: {
   sortBy: MediaSortBy;
   sortDir: MediaSortDir;
   onChange: (sortBy: MediaSortBy, sortDir: MediaSortDir) => void;
-  className?: string;
 }) {
-  const value = `${sortBy}:${sortDir}`;
   const options: Array<{ value: string; label: string }> = [
     { value: "name:asc", label: m.media_sort_name_asc() },
     { value: "name:desc", label: m.media_sort_name_desc() },
@@ -77,49 +84,73 @@ function SortSelect({
     { value: "time:asc", label: m.media_sort_time_asc() },
     { value: "time:desc", label: m.media_sort_time_desc() },
   ];
+  const currentValue = `${sortBy}:${sortDir}`;
+  const label = options.find((o) => o.value === currentValue)?.label ?? "";
   return (
-    <select
-      aria-label={m.media_sort_label()}
-      title={m.media_sort_label()}
-      value={value}
-      onChange={(e) => {
-        const [by, dir] = e.target.value.split(":");
-        onChange(by as MediaSortBy, dir as MediaSortDir);
-      }}
-      className={className}
-    >
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
+    <Dropdown
+      align="left"
+      trigger={
+        <button
+          type="button"
+          title={m.media_sort_label()}
+          aria-label={m.media_sort_label()}
+          className={triggerClass}
+        >
+          <ArrowUpDown
+            size={isFuwari ? 14 : 12}
+            strokeWidth={1.5}
+            className={isFuwari ? "fuwari-text-30" : "opacity-60"}
+          />
+          {label}
+        </button>
+      }
+      items={options.map((opt) => ({
+        label: opt.label,
+        isActive: opt.value === currentValue,
+        onClick: () => {
+          const [by, dir] = opt.value.split(":") as [
+            MediaSortBy,
+            MediaSortDir,
+          ];
+          onChange(by, dir);
+        },
+      }))}
+    />
   );
 }
 
-function CopyFormatSelect({
+function CopyFormatDropdown({
   value,
   onChange,
-  className,
 }: {
   value: CopyLinkFormat;
   onChange: (format: CopyLinkFormat) => void;
-  className?: string;
 }) {
+  const label = COPY_FORMATS.find((f) => f.value === value)?.label ?? "URL";
   return (
-    <select
-      aria-label={m.media_copy_format_label()}
-      title={m.media_copy_format_label()}
-      value={value}
-      onChange={(e) => onChange(e.target.value as CopyLinkFormat)}
-      className={className}
-    >
-      {COPY_FORMATS.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
+    <Dropdown
+      align="left"
+      trigger={
+        <button
+          type="button"
+          title={m.media_copy_format_label()}
+          aria-label={m.media_copy_format_label()}
+          className={triggerClass}
+        >
+          <Link
+            size={isFuwari ? 14 : 12}
+            strokeWidth={1.5}
+            className={isFuwari ? "fuwari-text-30" : "opacity-60"}
+          />
+          {label}
+        </button>
+      }
+      items={COPY_FORMATS.map((opt) => ({
+        label: opt.label,
+        isActive: opt.value === value,
+        onClick: () => onChange(opt.value),
+      }))}
+    />
   );
 }
 
@@ -202,16 +233,14 @@ export function MediaToolbar({
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <SortSelect
+            <SortDropdown
               sortBy={sortBy}
               sortDir={sortDir}
               onChange={onSortChange}
-              className="h-10 rounded-xl px-3 text-sm bg-(--fuwari-btn-regular-bg) fuwari-text-75 cursor-pointer"
             />
-            <CopyFormatSelect
+            <CopyFormatDropdown
               value={copyFormat}
               onChange={onCopyFormatChange}
-              className="h-10 rounded-xl px-3 text-sm bg-(--fuwari-btn-regular-bg) fuwari-text-75 cursor-pointer"
             />
 
             <Button
@@ -381,17 +410,15 @@ export function MediaToolbar({
 
         <div className="h-4 w-px bg-border/30 mx-2 hidden lg:block" />
 
-        <SortSelect
+        <SortDropdown
           sortBy={sortBy}
           sortDir={sortDir}
           onChange={onSortChange}
-          className="h-10 px-3 text-[11px] uppercase tracking-widest font-mono bg-transparent border border-border/30 text-muted-foreground hover:text-foreground rounded-none shrink-0 cursor-pointer"
         />
 
-        <CopyFormatSelect
+        <CopyFormatDropdown
           value={copyFormat}
           onChange={onCopyFormatChange}
-          className="h-10 px-3 text-[11px] uppercase tracking-widest font-mono bg-transparent border border-border/30 text-muted-foreground hover:text-foreground rounded-none shrink-0 cursor-pointer"
         />
 
         <Button
