@@ -521,6 +521,10 @@ export function MediaLibrary() {
           folders={folders}
           currentFolder={currentFolder}
           copyFormat={copyFormat}
+          onCreateFolder={inlineCreateFolder}
+          isCreatingFolder={createFolder.isPending}
+          startFolder={currentFolder}
+          loadFolders={loadSubFolders}
         />
       </div>
     );
@@ -843,6 +847,10 @@ export function MediaLibrary() {
         folders={folders}
         currentFolder={currentFolder}
         copyFormat={copyFormat}
+        onCreateFolder={inlineCreateFolder}
+        isCreatingFolder={createFolder.isPending}
+        startFolder={currentFolder}
+        loadFolders={loadSubFolders}
       />
     </div>
   );

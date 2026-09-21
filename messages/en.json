@@ -1270,7 +1270,6 @@
   ],
   "media_toast_metadata_updated": "Metadata Updated",
   "media_toast_metadata_updated_desc": "Metadata changes saved.",
-  "media_move_root": "Root",
   "media_move_btn": "Move",
   "media_toast_move_fail": "Move Failed",
   "media_toast_move_fail_desc": "Could not move file to target location",

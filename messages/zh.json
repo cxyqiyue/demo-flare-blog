@@ -1263,7 +1263,6 @@
   ],
   "media_toast_metadata_updated": "资源元数据已更新",
   "media_toast_metadata_updated_desc": "元数据更改已保存。",
-  "media_move_root": "根目录",
   "media_move_btn": "移动",
   "media_toast_move_fail": "移动失败",
   "media_toast_move_fail_desc": "无法将文件移动到目标位置",

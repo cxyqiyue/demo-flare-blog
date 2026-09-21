@@ -31,6 +31,7 @@ import { useDelayUnmount } from "@/hooks/use-delay-unmount";
 import { isFuwari } from "@/lib/theme-mode";
 import { cn, formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import { FolderDropdown } from "./folder-dropdown";
 
 interface MediaPreviewModalProps {
   asset: MediaDirectoryFile | null;
@@ -41,6 +42,13 @@ interface MediaPreviewModalProps {
   folders?: MediaFolder[];
   currentFolder?: string;
   copyFormat?: CopyLinkFormat;
+  onCreateFolder?: (
+    name: string,
+    parent: string,
+  ) => Promise<string | undefined>;
+  isCreatingFolder?: boolean;
+  startFolder?: string;
+  loadFolders?: (folder: string) => Promise<MediaFolder[]>;
 }
 
 export function MediaPreviewModal({
@@ -52,6 +60,10 @@ export function MediaPreviewModal({
   folders = [],
   currentFolder = "",
   copyFormat = "url",
+  onCreateFolder,
+  isCreatingFolder,
+  startFolder,
+  loadFolders,
 }: MediaPreviewModalProps) {
   const isMounted = !!asset;
   const shouldRender = useDelayUnmount(isMounted, 200);
@@ -381,23 +393,23 @@ export function MediaPreviewModal({
 
               {onMove && folders.length > 0 && (
                 <div className="flex gap-2">
-                  <select
-                    value={targetFolder}
-                    onChange={(e) => setTargetFolder(e.target.value)}
-                    className="flex-1 h-10 text-sm fuwari-text-75 bg-(--fuwari-input-bg) border border-(--fuwari-input-border) rounded-xl px-3"
-                  >
-                    <option value="">{m.media_move_root()}</option>
-                    {folders.map((f) => (
-                      <option key={f.key} value={f.key}>
-                        /{f.key}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex-1 min-w-0">
+                    <FolderDropdown
+                      value={targetFolder}
+                      folders={folders}
+                      labelPrefix={m.media_move_modal_target_label()}
+                      onChange={setTargetFolder}
+                      onCreateFolder={onCreateFolder}
+                      isCreatingFolder={isCreatingFolder}
+                      startFolder={startFolder}
+                      loadFolders={loadFolders}
+                    />
+                  </div>
                   <Button
                     variant="outline"
                     onClick={handleMove}
                     disabled={isMoving || targetFolder === currentFolder}
-                    className="h-10 gap-2"
+                    className="h-10 gap-2 shrink-0"
                   >
                     {isMoving ? (
                       <Loader2 size={14} className="animate-spin" />
@@ -653,24 +665,24 @@ export function MediaPreviewModal({
             </div>
 
             {onMove && folders.length > 0 && (
-              <div className="flex gap-2">
-                <select
-                  value={targetFolder}
-                  onChange={(e) => setTargetFolder(e.target.value)}
-                  className="flex-1 h-10 text-xs font-mono bg-muted/10 border border-border/50 rounded-none px-3 uppercase tracking-wider"
-                >
-                  <option value="">{m.media_move_root()}</option>
-                  {folders.map((f) => (
-                    <option key={f.key} value={f.key}>
-                      /{f.key}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex gap-3">
+                <div className="flex-1 min-w-0">
+                  <FolderDropdown
+                    value={targetFolder}
+                    folders={folders}
+                    labelPrefix={m.media_move_modal_target_label()}
+                    onChange={setTargetFolder}
+                    onCreateFolder={onCreateFolder}
+                    isCreatingFolder={isCreatingFolder}
+                    startFolder={startFolder}
+                    loadFolders={loadFolders}
+                  />
+                </div>
                 <Button
                   variant="outline"
                   onClick={handleMove}
                   disabled={isMoving || targetFolder === currentFolder}
-                  className="h-10 text-xs uppercase tracking-widest font-medium hover:bg-foreground hover:text-background transition-all rounded-none gap-2 border-foreground/20"
+                  className="h-10 text-xs uppercase tracking-widest font-medium hover:bg-foreground hover:text-background transition-all rounded-none gap-2 border-foreground/20 shrink-0"
                 >
                   {isMoving ? (
                     <Loader2 size={12} className="animate-spin" />
