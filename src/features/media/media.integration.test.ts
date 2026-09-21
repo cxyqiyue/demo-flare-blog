@@ -442,6 +442,22 @@ describe("MediaService", () => {
       expect(none.files).toEqual([]);
     });
 
+    it("should scope search to the current folder when a folder is given", async () => {
+      vi.mocked(Storage.listAllKeys).mockImplementation(async (_env, prefix) => {
+        if (prefix === "photos/") {
+          return ["photos/a.png", "photos/b.png"];
+        }
+        return ["photos/a.png", "photos/b.png", "root.png"];
+      });
+
+      const result = await MediaService.getMediaDirectory(adminContext, {
+        folder: "photos/",
+        search: "a",
+      });
+      expect(result.folder).toBe("photos");
+      expect(result.files.map((f) => f.name)).toEqual(["a.png"]);
+    });
+
     it("should rename a folder: copy objects + rewrite DB keys", async () => {
       // Seed a DB record inside the folder
       const MediaRepo = await import("./data/media.data");

@@ -110,8 +110,11 @@ export function useMediaLibrary(providers: MediaProvider[]) {
   const setSearchQuery = (term: string) =>
     navigateSearch({ search: term, folder: "" });
   const setUnusedOnly = (val: boolean) => navigateSearch({ unused: val });
+  // Entering a folder clears the active search so the directory shows the
+  // folder's real contents instead of a global name-filtered view that
+  // silently ignores the current folder.
   const setFolder = (nextFolder: string) =>
-    navigateSearch({ folder: nextFolder });
+    navigateSearch({ folder: nextFolder, search: "" });
   const setView = (nextView: "grid" | "table") =>
     navigateSearch({ view: nextView });
 

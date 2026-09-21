@@ -875,9 +875,12 @@ export async function getMediaDirectory(
   const unusedOnly = data.unusedOnly ?? false;
   const prefix = folder ? `${folder}/` : "";
 
-  // Global search: flatten the whole bucket and filter by basename.
+  // Search: unless a folder is being viewed, flatten the whole bucket and
+  // filter by basename. When a folder is given the search stays scoped to
+  // that folder's prefix so opening a folder never silently shows global
+  // results.
   if (search) {
-    const allKeys = await Storage.listAllKeys(context.env, "");
+    const allKeys = await Storage.listAllKeys(context.env, prefix);
     const fileKeys = allKeys.filter((k) => !k.endsWith("/"));
     let files = await enrichDirectoryFiles(context, fileKeys);
 
