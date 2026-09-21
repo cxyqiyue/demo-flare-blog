@@ -158,6 +158,12 @@ export const MoveMediaFileInputSchema = z.object({
   providerId: z.string().optional(),
 });
 
+export const MoveMediaFilesInputSchema = z.object({
+  keys: z.array(z.string().min(1)).min(1).max(200),
+  targetFolder: z.string(),
+  providerId: z.string().optional(),
+});
+
 export type ListExternalDirectoryInput = z.infer<
   typeof ListExternalDirectoryInputSchema
 >;
@@ -166,3 +172,4 @@ export type DeleteExternalFilesInput = z.infer<
   typeof DeleteExternalFilesInputSchema
 >;
 export type MoveMediaFileInput = z.infer<typeof MoveMediaFileInputSchema>;
+export type MoveMediaFilesInput = z.infer<typeof MoveMediaFilesInputSchema>;

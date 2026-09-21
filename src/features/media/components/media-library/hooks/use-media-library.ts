@@ -8,17 +8,19 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  createMediaFolderFn,
   createExternalFolderFn,
+  createMediaFolderFn,
   deleteExternalFilesFn,
   deleteImageFn,
   deleteMediaFoldersFn,
   getMediaDirectoryFn,
   listExternalDirectoryFn,
   moveMediaFileFn,
+  moveMediaFilesFn,
   renameMediaFolderFn,
   updateMediaNameFn,
 } from "@/features/media/api/media.api";
+import type { MediaProvider } from "@/features/media/media.schema";
 import {
   linkedMediaKeysQuery,
   MEDIA_KEYS,
@@ -27,7 +29,6 @@ import {
 import { useDebounce } from "@/hooks/use-debounce";
 import { m } from "@/paraglide/messages";
 import { findProvider } from "./use-media-providers";
-import type { MediaProvider } from "@/features/media/media.schema";
 
 const isFolderKey = (key: string) => key.endsWith("/");
 
@@ -471,6 +472,37 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     },
   });
 
+  // Batch move files (folders skipped on the server)
+  const moveFiles = useMutation({
+    mutationFn: (payload: { keys: string[]; targetFolder: string }) =>
+      moveMediaFilesFn({
+        data: {
+          ...payload,
+          providerId: isExternal ? currentProviderId : undefined,
+        },
+      }),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast.error(m.media_toast_move_fail(), {
+          description: m.media_toast_move_fail_desc(),
+        });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
+      setSelectedKeys(new Set());
+      if (result.skipped > 0) {
+        toast.warning(m.media_toast_move_partial(), {
+          description: m.media_toast_move_partial_desc({
+            count: result.skipped,
+          }),
+        });
+      }
+      toast.success(m.media_toast_move_success(), {
+        description: m.media_toast_move_success_desc(),
+      });
+    },
+  });
+
   // Load more
   const loadMore = useCallback(() => {
     if (isExternal) {
@@ -607,6 +639,7 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     totalMediaSize,
     updateAsset,
     moveFile,
+    moveFiles,
     createFolder,
     renameFolder,
     // External errors

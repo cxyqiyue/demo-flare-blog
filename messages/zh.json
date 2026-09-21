@@ -2353,6 +2353,56 @@
     }
   ],
   "media_toolbar_new_folder": "新建文件夹",
+  "media_toolbar_move": [
+    {
+      "declarations": [
+        "input count"
+      ],
+      "match": {
+        "count=*": "移动 ({count})"
+      }
+    }
+  ],
+  "media_upload_btn_choose_folder": "选择文件夹",
+  "media_upload_folder_preserve_hint": "上传文件夹时自动保留其内部子目录结构",
+  "media_upload_inline_create_folder": "新建文件夹",
+  "media_upload_inline_create_placeholder": "输入新文件夹名称",
+  "media_move_modal_title": "移动文件",
+  "media_move_modal_tag": "MOVE",
+  "media_move_modal_summary": [
+    {
+      "declarations": [
+        "input count"
+      ],
+      "match": {
+        "count=*": "将移动 {count} 个文件"
+      }
+    }
+  ],
+  "media_move_modal_skip_folders": [
+    {
+      "declarations": [
+        "input count"
+      ],
+      "match": {
+        "count=*": "已选择 {count} 个文件夹，批量移动仅针对文件，将跳过"
+      }
+    }
+  ],
+  "media_move_modal_target_label": "移动到",
+  "media_move_modal_confirm_btn": "移至此处",
+  "media_folder_root": "根目录",
+  "media_toast_move_partial": "部分文件未移动",
+  "media_toast_move_partial_desc": [
+    {
+      "declarations": [
+        "input count"
+      ],
+      "match": {
+        "count=*": "已跳过 {count} 个文件夹/项目"
+      }
+    }
+  ],
   "image_hosting_file_too_large": "文件大小超过当前渠道上限 {limit}MB，已拒绝上传",
   "media_upload_file_too_large_channel": "超过渠道上传上限 {limit}MB，已停止上传",
   "media_upload_support_any_file": "支持任意文件类型，可批量上传",

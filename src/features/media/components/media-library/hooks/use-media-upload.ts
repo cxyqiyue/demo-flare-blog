@@ -1,15 +1,99 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { MediaProvider } from "@/features/media/media.schema";
 import { MEDIA_KEYS } from "@/features/media/queries";
 import { formatBytes } from "@/lib/utils";
 import { xhrUpload } from "@/lib/xhr-upload";
 import { m } from "@/paraglide/messages";
-import type { MediaProvider } from "@/features/media/media.schema";
 import type { UploadItem } from "../types";
 
 interface UseMediaUploadOptions {
   provider: MediaProvider | undefined;
+}
+
+export type InputFile = File | { file: File; relativePath: string };
+
+interface WalkedEntry {
+  file: File;
+  relativePath: string;
+}
+
+function readAllEntries(
+  reader: FileSystemDirectoryReader,
+): Promise<FileSystemEntry[]> {
+  return new Promise((resolve, reject) => {
+    const entries: FileSystemEntry[] = [];
+    const readBatch = () => {
+      reader.readEntries((batch) => {
+        if (batch.length === 0) {
+          resolve(entries);
+          return;
+        }
+        entries.push(...batch);
+        readBatch();
+      }, reject);
+    };
+    readBatch();
+  });
+}
+
+function readFileEntry(entry: FileSystemFileEntry): Promise<File> {
+  return new Promise((resolve, reject) => {
+    entry.file(resolve, reject);
+  });
+}
+
+async function walkEntry(
+  entry: FileSystemEntry,
+  path: string,
+  out: WalkedEntry[],
+): Promise<void> {
+  if (entry.isFile) {
+    const file = await readFileEntry(entry as FileSystemFileEntry);
+    out.push({ file, relativePath: path ? `${path}/${file.name}` : file.name });
+    return;
+  }
+  if (entry.isDirectory) {
+    const dirEntry = entry as FileSystemDirectoryEntry;
+    const childPath = path ? `${path}/${dirEntry.name}` : dirEntry.name;
+    const reader = dirEntry.createReader();
+    const entries = await readAllEntries(reader);
+    for (const child of entries) {
+      await walkEntry(child, childPath, out);
+    }
+  }
+}
+
+/**
+ * 从拖拽事件中递归提取文件。支持拖入文件夹（webkitGetAsEntry），
+ * 不支持目录 API 的浏览器回退为拍平文件列表。
+ */
+export async function extractFilesFromDataTransfer(
+  dataTransfer: DataTransfer,
+): Promise<WalkedEntry[]> {
+  const items = Array.from(dataTransfer.items ?? []);
+  const hasDirectoryItem = items.some(
+    (item) =>
+      item.kind === "file" &&
+      typeof item.webkitGetAsEntry === "function" &&
+      item.webkitGetAsEntry()?.isDirectory,
+  );
+
+  if (hasDirectoryItem) {
+    const out: WalkedEntry[] = [];
+    for (const item of items) {
+      if (item.kind !== "file") continue;
+      const entry = item.webkitGetAsEntry?.();
+      if (entry) await walkEntry(entry, "", out);
+    }
+    if (out.length > 0) return out;
+  }
+
+  return Array.from(dataTransfer.files).map((file) => ({
+    file,
+    relativePath: "",
+  }));
 }
 
 export function useMediaUpload({ provider }: UseMediaUploadOptions) {
@@ -35,8 +119,7 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
     setQueue((prev) =>
       prev.map((q, i) => {
         if (i !== waitingIndex) return q;
-        const extra =
-          typeof patch === "function" ? patch(q) : patch;
+        const extra = typeof patch === "function" ? patch(q) : patch;
         return { ...q, ...extra };
       }),
     );
@@ -116,13 +199,18 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
         queryClient.invalidateQueries({ queryKey: MEDIA_KEYS.all });
       } catch (error) {
         if (isMountedRef.current) {
-          const message = error instanceof Error ? error.message : m.request_error_unknown_title();
+          const message =
+            error instanceof Error
+              ? error.message
+              : m.request_error_unknown_title();
           updateItem(waitingIndex, {
             status: "ERROR",
             progress: 0,
             log: m.media_upload_log_error({ message }),
           });
-          toast.error(m.media_upload_fail({ name: item.name }), { description: message });
+          toast.error(m.media_upload_fail({ name: item.name }), {
+            description: message,
+          });
         }
       } finally {
         processingRef.current = false;
@@ -132,14 +220,31 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
     processQueue();
   }, [queue, provider, queryClient]);
 
-  const processFiles = (files: Array<File>, folder = "") => {
+  const processFiles = (files: Array<InputFile>, folder = "") => {
     const limitBytes = provider?.maxFileSizeBytes ?? null;
-    const newItems: Array<UploadItem> = files.map((file) => {
+    const newItems: Array<UploadItem> = files.map((entry) => {
+      const file = entry instanceof File ? entry : entry.file;
+      const rel = (
+        entry instanceof File
+          ? (entry.webkitRelativePath ?? "")
+          : (entry.relativePath ?? "")
+      ).replace(/^\/+/, "");
+      // folder 上传：把相对子目录拼接进目标文件夹，保留目录结构
+      let targetFolder = folder ?? "";
+      if (rel) {
+        const parts = rel.split("/");
+        parts.pop();
+        if (parts.length > 0) {
+          const relDir = parts.join("/");
+          targetFolder = targetFolder ? `${targetFolder}/${relDir}` : relDir;
+        }
+      }
+      const displayName = rel || file.name;
       // 上传前判断渠道大小限制：超限文件直接标记失败，不发起上传
       if (limitBytes !== null && file.size > limitBytes) {
         return {
           id: Math.random().toString(36).substr(2, 9),
-          name: file.name,
+          name: displayName,
           size: formatBytes(file.size),
           progress: 0,
           status: "ERROR" as const,
@@ -147,18 +252,18 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
             limit: String(Math.round(limitBytes / 1024 / 1024)),
           }),
           file,
-          folder,
+          folder: targetFolder,
         };
       }
       return {
         id: Math.random().toString(36).substr(2, 9),
-        name: file.name,
+        name: displayName,
         size: formatBytes(file.size),
         progress: 0,
         status: "WAITING" as const,
         log: m.media_upload_log_init(),
         file,
-        folder,
+        folder: targetFolder,
       };
     });
     setQueue((prev) => [...prev, ...newItems]);
@@ -174,11 +279,12 @@ export function useMediaUpload({ provider }: UseMediaUploadOptions) {
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent, folder = "") => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files.length > 0) {
-      processFiles(Array.from(e.dataTransfer.files));
+    const files = await extractFilesFromDataTransfer(e.dataTransfer);
+    if (files.length > 0) {
+      processFiles(files, folder);
     }
   };
 

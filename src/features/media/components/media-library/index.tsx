@@ -11,6 +11,7 @@ import {
   MediaPreviewModal,
   MediaTable,
   MediaToolbar,
+  MoveModal,
   ProviderSelector,
   UploadModal,
 } from "./components";
@@ -51,6 +52,7 @@ export function MediaLibrary() {
     totalMediaSize,
     updateAsset,
     moveFile,
+    moveFiles,
     refetch,
     linkedMediaIds,
     createFolder,
@@ -65,6 +67,7 @@ export function MediaLibrary() {
     isDragging,
     handleDragOver,
     handleDragLeave,
+    handleDrop,
     processFiles,
     reset: resetUpload,
     canUpload,
@@ -81,6 +84,7 @@ export function MediaLibrary() {
   const [renameFolderTarget, setRenameFolderTarget] =
     useState<MediaFolder | null>(null);
   const [uploadFolder, setUploadFolder] = useState<string>("");
+  const [isMoveOpen, setIsMoveOpen] = useState(false);
 
   // Reset upload folder when modal opens
   useEffect(() => {
@@ -90,6 +94,32 @@ export function MediaLibrary() {
   }, [isUploadOpen, currentFolder]);
 
   const isSearching = searchQuery.trim().length > 0;
+
+  // Inline "create folder" used by the upload/move target pickers.
+  // Creates inside the current browsed directory and returns the new key.
+  const canCreateFolderHere = currentProvider?.canCreateFolder ?? false;
+  const inlineCreateFolder = canCreateFolderHere
+    ? async (name: string) => {
+        const result = await createFolder.mutateAsync(name);
+        return result.error ? undefined : result.data?.key;
+      }
+    : undefined;
+
+  // 批量移动：仅文件可移动，选中的文件夹跳过
+  const selectedKeysArr = Array.from(selectedIds);
+  const moveFileKeys = selectedKeysArr.filter((key) => !key.endsWith("/"));
+  const moveSkippedFolderCount = selectedKeysArr.length - moveFileKeys.length;
+
+  const canMoveBatch =
+    currentProvider?.canMove !== false && moveFileKeys.length > 0;
+
+  const handleBatchMoveSubmit = async (targetFolder: string) => {
+    await moveFiles.mutateAsync({
+      keys: moveFileKeys,
+      targetFolder,
+    });
+    setIsMoveOpen(false);
+  };
 
   const handleDeleteRequest = () => {
     requestDelete(Array.from(selectedIds));
@@ -225,6 +255,12 @@ export function MediaLibrary() {
                 ? () => setIsNewFolderOpen(true)
                 : undefined
             }
+            onMove={
+              currentProvider?.canMove !== false
+                ? () => setIsMoveOpen(true)
+                : undefined
+            }
+            canMoveFiles={canMoveBatch}
             selectedKeys={selectedIds}
             mediaItems={mediaItems}
             canDelete={currentProvider?.canDelete ?? false}
@@ -232,90 +268,95 @@ export function MediaLibrary() {
 
           {/* Content */}
           <div className="fuwari-card-base p-4 sm:p-6">
-          {isPending ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-6">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="flex flex-col space-y-3 animate-pulse">
-                  <div className="aspect-square rounded-2xl bg-(--fuwari-btn-regular-bg)" />
-                  <div className="space-y-2 px-1">
-                    <div className="h-3 w-3/4 rounded-lg bg-(--fuwari-btn-regular-bg)" />
-                    <div className="flex justify-between">
-                      <div className="h-2 w-1/4 rounded-lg bg-(--fuwari-btn-regular-bg)" />
-                      <div className="h-2 w-1/4 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+            {isPending ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-6">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col space-y-3 animate-pulse"
+                  >
+                    <div className="aspect-square rounded-2xl bg-(--fuwari-btn-regular-bg)" />
+                    <div className="space-y-2 px-1">
+                      <div className="h-3 w-3/4 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                      <div className="flex justify-between">
+                        <div className="h-2 w-1/4 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                        <div className="h-2 w-1/4 rounded-lg bg-(--fuwari-btn-regular-bg)" />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : mediaItems.length === 0 && folders.length === 0 && isExternal ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
-              {externalError ? (
-                <>
-                  <p className="text-sm fuwari-text-75 break-all leading-relaxed">
-                    {externalError}
+                ))}
+              </div>
+            ) : mediaItems.length === 0 &&
+              folders.length === 0 &&
+              isExternal ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center max-w-lg mx-auto">
+                {externalError ? (
+                  <>
+                    <p className="text-sm fuwari-text-75 break-all leading-relaxed">
+                      {externalError}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm fuwari-text-50">
+                    {m.media_empty_provider()}
                   </p>
-                </>
-              ) : (
-                <p className="text-sm fuwari-text-50">
-                  {m.media_empty_provider()}
-                </p>
-              )}
-              <Button variant="ghost" onClick={refetch} className="mt-4">
-                {m.media_grid_refresh()}
-              </Button>
-            </div>
-          ) : view === "table" ? (
-            <MediaTable
-              media={mediaItems}
-              folders={folders}
-              selectedIds={selectedIds}
-              onToggleSelect={toggleSelection}
-              onPreview={setPreviewAsset}
-              onOpenFolder={setFolder}
-              onRenameFolder={
-                currentProvider?.canCreateFolder
-                  ? setRenameFolderTarget
-                  : undefined
-              }
-              onDeleteFolder={
-                currentProvider?.canDelete ? handleFolderDelete : undefined
-              }
-              onRenameFile={
-                currentProvider?.canRename !== false
-                  ? setPreviewAsset
-                  : undefined
-              }
-              onDeleteFile={
-                currentProvider?.canDelete ? handleFileDelete : undefined
-              }
-              onLoadMore={loadMore}
-              hasMore={hasMore}
-              isLoadingMore={isLoadingMore}
-              onRefetch={refetch}
-            />
-          ) : (
-            <MediaGrid
-              media={mediaItems}
-              folders={folders}
-              selectedIds={selectedIds}
-              onToggleSelect={toggleSelection}
-              onPreview={setPreviewAsset}
-              onOpenFolder={setFolder}
-              onRenameFolder={
-                currentProvider?.canCreateFolder
-                  ? setRenameFolderTarget
-                  : undefined
-              }
-              onDeleteFolder={
-                currentProvider?.canDelete ? handleFolderDelete : undefined
-              }
-              onLoadMore={loadMore}
-              hasMore={hasMore}
-              isLoadingMore={isLoadingMore}
-              linkedMediaIds={!isExternal ? linkedMediaIds : undefined}
-              onRefetch={refetch}
-            />
-          )}
+                )}
+                <Button variant="ghost" onClick={refetch} className="mt-4">
+                  {m.media_grid_refresh()}
+                </Button>
+              </div>
+            ) : view === "table" ? (
+              <MediaTable
+                media={mediaItems}
+                folders={folders}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelection}
+                onPreview={setPreviewAsset}
+                onOpenFolder={setFolder}
+                onRenameFolder={
+                  currentProvider?.canCreateFolder
+                    ? setRenameFolderTarget
+                    : undefined
+                }
+                onDeleteFolder={
+                  currentProvider?.canDelete ? handleFolderDelete : undefined
+                }
+                onRenameFile={
+                  currentProvider?.canRename !== false
+                    ? setPreviewAsset
+                    : undefined
+                }
+                onDeleteFile={
+                  currentProvider?.canDelete ? handleFileDelete : undefined
+                }
+                onLoadMore={loadMore}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                onRefetch={refetch}
+              />
+            ) : (
+              <MediaGrid
+                media={mediaItems}
+                folders={folders}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelection}
+                onPreview={setPreviewAsset}
+                onOpenFolder={setFolder}
+                onRenameFolder={
+                  currentProvider?.canCreateFolder
+                    ? setRenameFolderTarget
+                    : undefined
+                }
+                onDeleteFolder={
+                  currentProvider?.canDelete ? handleFolderDelete : undefined
+                }
+                onLoadMore={loadMore}
+                hasMore={hasMore}
+                isLoadingMore={isLoadingMore}
+                linkedMediaIds={!isExternal ? linkedMediaIds : undefined}
+                onRefetch={refetch}
+              />
+            )}
           </div>
         </div>
 
@@ -328,6 +369,8 @@ export function MediaLibrary() {
           folders={folders}
           maxFileSizeBytes={currentProvider?.maxFileSizeBytes ?? null}
           onFolderChange={setUploadFolder}
+          onCreateFolder={inlineCreateFolder}
+          isCreatingFolder={createFolder.isPending}
           onClose={resetUpload}
           onFileSelect={
             uploadDisabled
@@ -337,17 +380,7 @@ export function MediaLibrary() {
           onDragOver={uploadDisabled ? () => {} : handleDragOver}
           onDragLeave={uploadDisabled ? () => {} : handleDragLeave}
           onDrop={
-            uploadDisabled
-              ? () => {}
-              : (e) => {
-                  e.preventDefault();
-                  if (e.dataTransfer.files.length > 0) {
-                    processFiles(
-                      Array.from(e.dataTransfer.files),
-                      uploadFolder,
-                    );
-                  }
-                }
+            uploadDisabled ? () => {} : (e) => handleDrop(e, uploadFolder)
           }
         />
 
@@ -395,6 +428,20 @@ export function MediaLibrary() {
           confirmLabel={m.media_delete_confirm_btn()}
           isDanger={true}
           isLoading={isDeleting}
+        />
+
+        {/* --- Move Modal --- */}
+        <MoveModal
+          isOpen={isMoveOpen}
+          fileCount={moveFileKeys.length}
+          skippedFolderCount={moveSkippedFolderCount}
+          folders={folders}
+          currentFolder={currentFolder}
+          onCreateFolder={inlineCreateFolder}
+          isCreatingFolder={createFolder.isPending}
+          onSubmit={handleBatchMoveSubmit}
+          onClose={() => setIsMoveOpen(false)}
+          isSubmitting={moveFiles.isPending}
         />
 
         {/* --- Preview Modal --- */}
@@ -528,6 +575,12 @@ export function MediaLibrary() {
               ? () => setIsNewFolderOpen(true)
               : undefined
           }
+          onMove={
+            currentProvider?.canMove !== false
+              ? () => setIsMoveOpen(true)
+              : undefined
+          }
+          canMoveFiles={canMoveBatch}
           selectedKeys={selectedIds}
           mediaItems={mediaItems}
           canDelete={currentProvider?.canDelete ?? false}
@@ -627,6 +680,8 @@ export function MediaLibrary() {
         folders={folders}
         maxFileSizeBytes={currentProvider?.maxFileSizeBytes ?? null}
         onFolderChange={setUploadFolder}
+        onCreateFolder={inlineCreateFolder}
+        isCreatingFolder={createFolder.isPending}
         onClose={resetUpload}
         onFileSelect={
           uploadDisabled
@@ -635,16 +690,7 @@ export function MediaLibrary() {
         }
         onDragOver={uploadDisabled ? () => {} : handleDragOver}
         onDragLeave={uploadDisabled ? () => {} : handleDragLeave}
-        onDrop={
-          uploadDisabled
-            ? () => {}
-            : (e) => {
-                e.preventDefault();
-                if (e.dataTransfer.files.length > 0) {
-                  processFiles(Array.from(e.dataTransfer.files), uploadFolder);
-                }
-              }
-        }
+        onDrop={uploadDisabled ? () => {} : (e) => handleDrop(e, uploadFolder)}
       />
 
       {/* --- New Folder Modal --- */}
@@ -691,6 +737,20 @@ export function MediaLibrary() {
         confirmLabel={m.media_delete_confirm_btn()}
         isDanger={true}
         isLoading={isDeleting}
+      />
+
+      {/* --- Move Modal --- */}
+      <MoveModal
+        isOpen={isMoveOpen}
+        fileCount={moveFileKeys.length}
+        skippedFolderCount={moveSkippedFolderCount}
+        folders={folders}
+        currentFolder={currentFolder}
+        onCreateFolder={inlineCreateFolder}
+        isCreatingFolder={createFolder.isPending}
+        onSubmit={handleBatchMoveSubmit}
+        onClose={() => setIsMoveOpen(false)}
+        isSubmitting={moveFiles.isPending}
       />
 
       {/* --- Preview Modal --- */}

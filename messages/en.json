@@ -2361,6 +2361,56 @@
     }
   ],
   "media_toolbar_new_folder": "New Folder",
+  "media_toolbar_move": [
+    {
+      "declarations": [
+        "input count"
+      ],
+      "match": {
+        "count=*": "Move ({count})"
+      }
+    }
+  ],
+  "media_upload_btn_choose_folder": "Choose Folder",
+  "media_upload_folder_preserve_hint": "Folder uploads keep their internal subdirectory structure",
+  "media_upload_inline_create_folder": "New Folder",
+  "media_upload_inline_create_placeholder": "Enter a new folder name",
+  "media_move_modal_title": "Move Files",
+  "media_move_modal_tag": "MOVE",
+  "media_move_modal_summary": [
+    {
+      "declarations": [
+        "input count"
+      ],
+      "match": {
+        "count=*": "Will move {count} file(s)"
+      }
+    }
+  ],
+  "media_move_modal_skip_folders": [
+    {
+      "declarations": [
+        "input count"
+      ],
+      "match": {
+        "count=*": "Selected folder(s) ({count}) are skipped — batch move only handles files"
+      }
+    }
+  ],
+  "media_move_modal_target_label": "Move to",
+  "media_move_modal_confirm_btn": "Move Here",
+  "media_folder_root": "Root",
+  "media_toast_move_partial": "Some files were not moved",
+  "media_toast_move_partial_desc": [
+    {
+      "declarations": [
+        "input count"
+      ],
+      "match": {
+        "count=*": "Skipped {count} folder(s)/item(s)"
+      }
+    }
+  ],
   "image_hosting_file_too_large": "File exceeds the current channel limit of {limit}MB and was rejected",
   "media_upload_file_too_large_channel": "File exceeds the channel upload limit of {limit}MB",
   "media_upload_support_any_file": "Any file type supported, batch upload available",

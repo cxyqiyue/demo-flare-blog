@@ -1,3 +1,37 @@
+import * as ConfigService from "@/features/config/service/config.service";
+import * as DiscordChannelApi from "@/features/image-hosting/channels/discord";
+import * as HuggingFaceChannelApi from "@/features/image-hosting/channels/huggingface";
+import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
+import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
+import type {
+  HuggingFaceChannel,
+  TelegramChannel,
+  WebDAVChannel,
+} from "@/features/image-hosting/image-hosting.schema";
+import { enforceImageModeration } from "@/features/image-hosting/moderation/moderation.service";
+import {
+  deleteS3Objects,
+  listAllS3Keys,
+  listS3Objects,
+  moveS3Object,
+  moveS3Objects,
+  renameS3Object,
+  resolveValidatedS3Config,
+  type S3Config,
+  uploadToS3,
+  uploadToS3ForMediaLibrary,
+} from "@/features/image-hosting/s3/s3-upload";
+import {
+  formatLimitMb,
+  resolveDiscordMaxBytes,
+  resolveFfskyMaxBytes,
+  resolveHuggingFaceMaxBytes,
+  resolveImgbbMaxBytes,
+  resolveR2NativeMaxBytes,
+  resolveS3MaxBytes,
+  resolveTelegramMaxBytes,
+  resolveWebDavMaxBytes,
+} from "@/features/image-hosting/size-limits";
 import * as MediaRepo from "@/features/media/data/media.data";
 import * as Storage from "@/features/media/data/media.storage";
 import type {
@@ -13,6 +47,10 @@ import type {
   UpdateMediaNameInput,
   UploadToProviderInput,
 } from "@/features/media/media.schema";
+import {
+  buildMediaAccessUrl,
+  getLinkAccessSettings,
+} from "@/features/media/service/link-access.service";
 import { getImageDimensions } from "@/features/media/utils/image-dimensions";
 import {
   buildTransformOptions,
@@ -22,49 +60,11 @@ import {
   joinFolderKey,
   normalizeFolderPath,
 } from "@/features/media/utils/media.utils";
-import {
-  deleteS3Objects,
-  listAllS3Keys,
-  listS3Objects,
-  moveS3Objects,
-  moveS3Object,
-  renameS3Object,
-  resolveValidatedS3Config,
-  uploadToS3,
-  uploadToS3ForMediaLibrary,
-  type S3Config,
-} from "@/features/image-hosting/s3/s3-upload";
-import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
-import * as DiscordChannelApi from "@/features/image-hosting/channels/discord";
-import * as HuggingFaceChannelApi from "@/features/image-hosting/channels/huggingface";
-import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
-import type {
-  HuggingFaceChannel,
-  TelegramChannel,
-  WebDAVChannel,
-} from "@/features/image-hosting/image-hosting.schema";
-import {
-  resolveDiscordMaxBytes,
-  resolveHuggingFaceMaxBytes,
-  resolveImgbbMaxBytes,
-  resolveFfskyMaxBytes,
-  resolveR2NativeMaxBytes,
-  resolveS3MaxBytes,
-  resolveTelegramMaxBytes,
-  resolveWebDavMaxBytes,
-  formatLimitMb,
-} from "@/features/image-hosting/size-limits";
-import * as ConfigService from "@/features/config/service/config.service";
-import {
-  buildMediaAccessUrl,
-  getLinkAccessSettings,
-} from "@/features/media/service/link-access.service";
-import { enforceImageModeration } from "@/features/image-hosting/moderation/moderation.service";
-import { m } from "@/paraglide/messages";
 import * as PostMediaRepo from "@/features/posts/data/post-media.data";
 import { CACHE_CONTROL } from "@/lib/constants";
-import { err, ok, type Result } from "@/lib/errors";
 import { getDb } from "@/lib/db";
+import { err, ok, type Result } from "@/lib/errors";
+import { m } from "@/paraglide/messages";
 
 const DEFAULT_DIRECTORY_LIMIT = 50;
 
@@ -72,9 +72,10 @@ const DEFAULT_DIRECTORY_LIMIT = 50;
  * 将 Hono 上下文适配为服务层依赖（db + env + executionCtx），
  * 供 /media/file 等直接挂载的 Hono 路由复用服务层函数。
  */
-export function resolveMediaRequestContext(
-  c: { env: Env; executionCtx: ExecutionContext },
-): DbContext & { executionCtx: ExecutionContext } {
+export function resolveMediaRequestContext(c: {
+  env: Env;
+  executionCtx: ExecutionContext;
+}): DbContext & { executionCtx: ExecutionContext } {
   return {
     db: getDb(c.env),
     env: c.env,
@@ -104,7 +105,10 @@ export async function upload(
     key: uploaded.key,
   });
   if (moderation.error) {
-    return err({ reason: "MEDIA_RECORD_CREATE_FAILED", message: moderation.error.message });
+    return err({
+      reason: "MEDIA_RECORD_CREATE_FAILED",
+      message: moderation.error.message,
+    });
   }
 
   try {
@@ -285,7 +289,9 @@ export async function uploadToProvider(
   if (uploadResult.error) return err({ reason: uploadResult.error.reason });
 
   const data_ = uploadResult.data;
-  const key = data_.key ?? `${provider}/${folder ? `${folder}/` : ""}${Date.now()}-${crypto.randomUUID()}`;
+  const key =
+    data_.key ??
+    `${provider}/${folder ? `${folder}/` : ""}${Date.now()}-${crypto.randomUUID()}`;
   const url = data_.url;
 
   // 上传审查：判定为成人内容时拒绝并尽力清理远端对象
@@ -298,7 +304,10 @@ export async function uploadToProvider(
     key,
   });
   if (moderation.error) {
-    return err({ reason: "CONTENT_MODERATION_BLOCKED", message: moderation.error.message });
+    return err({
+      reason: "CONTENT_MODERATION_BLOCKED",
+      message: moderation.error.message,
+    });
   }
 
   try {
@@ -316,22 +325,19 @@ export async function uploadToProvider(
     // D1 记录写入失败：尽力清理远端对象，并向调用方返回失败，
     // 避免「返回成功但媒体库无记录 / 无法受访问控制保护」的不一致状态。
     context.executionCtx.waitUntil(
-      deleteUploadedMediaBestEffortForService(
-        context,
-        provider,
-        key,
-      ).catch((rollbackError) =>
-        console.error(
-          JSON.stringify({
-            message: "provider upload rollback failed",
-            provider,
-            key,
-            error:
-              rollbackError instanceof Error
-                ? rollbackError.message
-                : String(rollbackError),
-          }),
-        ),
+      deleteUploadedMediaBestEffortForService(context, provider, key).catch(
+        (rollbackError) =>
+          console.error(
+            JSON.stringify({
+              message: "provider upload rollback failed",
+              provider,
+              key,
+              error:
+                rollbackError instanceof Error
+                  ? rollbackError.message
+                  : String(rollbackError),
+            }),
+          ),
       ),
     );
     console.error(
@@ -403,10 +409,9 @@ async function deleteUploadedMediaBestEffortForService(
         break;
       case "webdav":
         if (ih?.webdav?.baseUrl) {
-          await WebDavChannelApi.deleteWebDavPaths(
-            ih.webdav as WebDAVChannel,
-            [key],
-          );
+          await WebDavChannelApi.deleteWebDavPaths(ih.webdav as WebDAVChannel, [
+            key,
+          ]);
         }
         break;
       default:
@@ -505,12 +510,23 @@ export async function updateMediaName(
 
     const renameResult = await renameS3Object(s3Config, oldKey, newKey);
     if (renameResult.error) {
-      console.error(JSON.stringify({ message: "s3 rename failed", error: renameResult.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "s3 rename failed",
+          error: renameResult.error.message,
+        }),
+      );
       return err({ reason: "S3_RENAME_FAILED" });
     }
 
     const newUrl = buildS3PublicUrl(s3Config, newKey);
-    await MediaRepo.updateMediaKeyAndName(context.db, oldKey, newKey, data.name, newUrl);
+    await MediaRepo.updateMediaKeyAndName(
+      context.db,
+      oldKey,
+      newKey,
+      data.name,
+      newUrl,
+    );
     return ok({ success: true });
   }
 
@@ -539,7 +555,12 @@ export async function updateMediaName(
       newPath,
     );
     if (moveResult.error) {
-      console.error(JSON.stringify({ message: "huggingface rename failed", error: moveResult.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "huggingface rename failed",
+          error: moveResult.error.message,
+        }),
+      );
       return err({ reason: "HUGGINGFACE_RENAME_FAILED" });
     }
 
@@ -578,7 +599,12 @@ export async function updateMediaName(
       newPath,
     );
     if (moveResult.error) {
-      console.error(JSON.stringify({ message: "webdav rename failed", error: moveResult.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "webdav rename failed",
+          error: moveResult.error.message,
+        }),
+      );
       return err({ reason: "WEBDAV_RENAME_FAILED" });
     }
 
@@ -594,10 +620,7 @@ export async function updateMediaName(
 
   // Telegram/Discord messages and R2 objects: display-name only for R2;
   // message-based channels cannot rename remotely.
-  if (
-    data.providerId === "telegram" ||
-    data.providerId === "discord"
-  ) {
+  if (data.providerId === "telegram" || data.providerId === "discord") {
     return err({ reason: "UNSUPPORTED_PROVIDER" });
   }
 
@@ -631,12 +654,23 @@ export async function moveMediaFile(
 
     const moveResult = await moveS3Object(s3Config, oldKey, newKey);
     if (moveResult.error) {
-      console.error(JSON.stringify({ message: "s3 move failed", error: moveResult.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "s3 move failed",
+          error: moveResult.error.message,
+        }),
+      );
       return err({ reason: "S3_MOVE_FAILED" });
     }
 
     const newUrl = buildS3PublicUrl(s3Config, newKey);
-    await MediaRepo.updateMediaKeyAndName(context.db, oldKey, newKey, media.fileName, newUrl);
+    await MediaRepo.updateMediaKeyAndName(
+      context.db,
+      oldKey,
+      newKey,
+      media.fileName,
+      newUrl,
+    );
     return ok({ success: true });
   }
 
@@ -664,7 +698,12 @@ export async function moveMediaFile(
       newPath,
     );
     if (moveResult.error) {
-      console.error(JSON.stringify({ message: "huggingface move failed", error: moveResult.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "huggingface move failed",
+          error: moveResult.error.message,
+        }),
+      );
       return err({ reason: "HUGGINGFACE_MOVE_FAILED" });
     }
 
@@ -702,7 +741,12 @@ export async function moveMediaFile(
       newPath,
     );
     if (moveResult.error) {
-      console.error(JSON.stringify({ message: "webdav move failed", error: moveResult.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "webdav move failed",
+          error: moveResult.error.message,
+        }),
+      );
       return err({ reason: "WEBDAV_MOVE_FAILED" });
     }
 
@@ -738,16 +782,58 @@ export async function moveMediaFile(
     await Storage.copyObject(context.env, oldKey, newKey);
     context.executionCtx.waitUntil(
       Storage.deleteFromR2(context.env, oldKey).catch((e) =>
-        console.error(JSON.stringify({ message: "r2 move delete failed", key: oldKey, error: e instanceof Error ? e.message : String(e) })),
+        console.error(
+          JSON.stringify({
+            message: "r2 move delete failed",
+            key: oldKey,
+            error: e instanceof Error ? e.message : String(e),
+          }),
+        ),
       ),
     );
 
     const newUrl = `/images/${newKey}`;
-    await MediaRepo.updateMediaKeyAndName(context.db, oldKey, newKey, media.fileName, newUrl);
+    await MediaRepo.updateMediaKeyAndName(
+      context.db,
+      oldKey,
+      newKey,
+      media.fileName,
+      newUrl,
+    );
     return ok({ success: true });
   }
 
   return err({ reason: "UNSUPPORTED_PROVIDER" });
+}
+
+/**
+ * 批量移动文件：仅移动文件 key，文件夹 key（尾斜杠）跳过。
+ * 任意一个文件移动失败即中止并上报已移动数量。
+ */
+export async function moveMediaFiles(
+  context: DbContext & { executionCtx: ExecutionContext },
+  data: { keys: string[]; targetFolder: string; providerId?: string },
+): Promise<{ moved: number; skipped: number; error?: { reason: string } }> {
+  let moved = 0;
+  let skipped = 0;
+
+  for (const key of data.keys) {
+    if (key.endsWith("/")) {
+      skipped += 1;
+      continue;
+    }
+    const result = await moveMediaFile(context, {
+      key,
+      targetFolder: data.targetFolder,
+      providerId: data.providerId,
+    });
+    if (result.error) {
+      return { moved, skipped, error: { reason: result.error.reason } };
+    }
+    moved += 1;
+  }
+
+  return { moved, skipped };
 }
 
 async function enrichDirectoryFiles(
@@ -868,7 +954,10 @@ export async function renameFolder(
     const s3Config = resolveS3ConfigForMedia(config);
     if (!s3Config) return err({ reason: "S3_NOT_CONFIGURED" });
 
-    const mediaRecords = await MediaRepo.getMediaByKeyPrefix(context.db, folderKey);
+    const mediaRecords = await MediaRepo.getMediaByKeyPrefix(
+      context.db,
+      folderKey,
+    );
 
     const keysResult = await listAllS3Keys(s3Config, folderKey);
     if (keysResult.error) return err({ reason: "S3_RENAME_FAILED" });
@@ -902,7 +991,10 @@ export async function renameFolder(
     const hfConfig = resolveHuggingFaceConfig(config);
     if (!hfConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
 
-    const mediaRecords = await MediaRepo.getMediaByKeyPrefix(context.db, folderKey);
+    const mediaRecords = await MediaRepo.getMediaByKeyPrefix(
+      context.db,
+      folderKey,
+    );
 
     const pathsResult = await HuggingFaceChannelApi.listAllHuggingFacePaths(
       hfConfig,
@@ -918,7 +1010,13 @@ export async function renameFolder(
         targetPath,
       );
       if (moveResult.error) {
-        console.error(JSON.stringify({ message: "huggingface folder rename failed", path: sourcePath, error: moveResult.error.message }));
+        console.error(
+          JSON.stringify({
+            message: "huggingface folder rename failed",
+            path: sourcePath,
+            error: moveResult.error.message,
+          }),
+        );
         return err({ reason: "HUGGINGFACE_RENAME_FAILED" });
       }
     }
@@ -933,7 +1031,10 @@ export async function renameFolder(
         context.db,
         record.key,
         recordNewKey,
-        HuggingFaceChannelApi.buildHfResolveUrl(hfConfig.repo!.trim(), recordNewKey),
+        HuggingFaceChannelApi.buildHfResolveUrl(
+          hfConfig.repo!.trim(),
+          recordNewKey,
+        ),
       );
     }
     return ok({ key: newKey });
@@ -945,7 +1046,10 @@ export async function renameFolder(
     const davConfig = resolveWebDAVConfig(config);
     if (!davConfig) return err({ reason: "PROVIDER_NOT_CONFIGURED" });
 
-    const mediaRecords = await MediaRepo.getMediaByKeyPrefix(context.db, folderKey);
+    const mediaRecords = await MediaRepo.getMediaByKeyPrefix(
+      context.db,
+      folderKey,
+    );
 
     const moveResult = await WebDavChannelApi.moveWebDavObject(
       davConfig,
@@ -953,7 +1057,12 @@ export async function renameFolder(
       normalizeFolderPath(newKey),
     );
     if (moveResult.error) {
-      console.error(JSON.stringify({ message: "webdav folder rename failed", error: moveResult.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "webdav folder rename failed",
+          error: moveResult.error.message,
+        }),
+      );
       return err({ reason: "WEBDAV_RENAME_FAILED" });
     }
 
@@ -1054,9 +1163,17 @@ export async function deleteFolders(
 
       const toDeleteFiles = fileKeys.filter((k) => !linkedKeys.has(k));
       if (toDeleteFiles.length > 0) {
-        const result = await HuggingFaceChannelApi.deleteHuggingFaceFiles(hfConfig, toDeleteFiles);
+        const result = await HuggingFaceChannelApi.deleteHuggingFaceFiles(
+          hfConfig,
+          toDeleteFiles,
+        );
         if (result.error) {
-          console.error(JSON.stringify({ message: "huggingface folder delete failed", error: result.error.message }));
+          console.error(
+            JSON.stringify({
+              message: "huggingface folder delete failed",
+              error: result.error.message,
+            }),
+          );
           continue;
         }
       }
@@ -1092,9 +1209,17 @@ export async function deleteFolders(
 
       const toDeleteFiles = fileKeys.filter((k) => !linkedKeys.has(k));
       if (toDeleteFiles.length > 0) {
-        const result = await WebDavChannelApi.deleteWebDavPaths(davConfig, toDeleteFiles);
+        const result = await WebDavChannelApi.deleteWebDavPaths(
+          davConfig,
+          toDeleteFiles,
+        );
         if (result.error) {
-          console.error(JSON.stringify({ message: "webdav folder delete failed", error: result.error.message }));
+          console.error(
+            JSON.stringify({
+              message: "webdav folder delete failed",
+              error: result.error.message,
+            }),
+          );
           continue;
         }
       }
@@ -1356,9 +1481,7 @@ export async function getMediaProviders(
       canCreateFolder: false,
       isDefault: isActive("api-key"),
       maxFileSizeBytes:
-        p.type === "imgbb"
-          ? resolveImgbbMaxBytes()
-          : resolveFfskyMaxBytes(),
+        p.type === "imgbb" ? resolveImgbbMaxBytes() : resolveFfskyMaxBytes(),
     });
   }
 
@@ -1476,11 +1599,17 @@ async function listExternalDirectoryFromD1(
   const provider = data.providerId;
   const search = data.search?.trim();
 
-  const { items, nextCursor } = await MediaRepo.getMediaByProvider(context.db, provider, {
-    limit: DEFAULT_DIRECTORY_LIMIT,
-    search,
-    cursor: data.continuationToken ? Number(data.continuationToken) : undefined,
-  });
+  const { items, nextCursor } = await MediaRepo.getMediaByProvider(
+    context.db,
+    provider,
+    {
+      limit: DEFAULT_DIRECTORY_LIMIT,
+      search,
+      cursor: data.continuationToken
+        ? Number(data.continuationToken)
+        : undefined,
+    },
+  );
 
   // 对外展示/复制的链接按访问模式计算（Telegram/Discord 恒为代理地址）
   const config = await ConfigService.getSystemConfig(context);
@@ -1523,7 +1652,13 @@ async function listExternalDirectoryDirect(
   if (provider === "s3") {
     const config = await ConfigService.getSystemConfig(context);
     const s3Config = resolveS3ConfigForMedia(config);
-    if (!s3Config) return { files: [], folders: [], nextContinuationToken: null, error: "S3 未配置或缺少必要字段" };
+    if (!s3Config)
+      return {
+        files: [],
+        folders: [],
+        nextContinuationToken: null,
+        error: "S3 未配置或缺少必要字段",
+      };
 
     // Browse the REAL bucket root: the configured pathPrefix appears as a
     // regular folder, exactly like the actual S3 storage layout.
@@ -1535,8 +1670,18 @@ async function listExternalDirectoryDirect(
     });
 
     if (result.error) {
-      console.error(JSON.stringify({ message: "s3 list failed", error: result.error.message }));
-      return { files: [], folders: [], nextContinuationToken: null, error: result.error.message };
+      console.error(
+        JSON.stringify({
+          message: "s3 list failed",
+          error: result.error.message,
+        }),
+      );
+      return {
+        files: [],
+        folders: [],
+        nextContinuationToken: null,
+        error: result.error.message,
+      };
     }
 
     // Zero-byte keys ending with "/" are folder markers — hide them from files.
@@ -1554,7 +1699,10 @@ async function listExternalDirectoryDirect(
       files: withAccessUrls(config, provider, files),
       // Trailing-slash keys keep frontend folder detection (isFolderKey)
       // consistent with the R2 provider.
-      folders: result.data.prefixes.map((p) => ({ key: `${p}/`, name: getBasename(p) })),
+      folders: result.data.prefixes.map((p) => ({
+        key: `${p}/`,
+        name: getBasename(p),
+      })),
       nextContinuationToken: result.data.isTruncated
         ? (result.data.nextContinuationToken ?? null)
         : null,
@@ -1564,7 +1712,13 @@ async function listExternalDirectoryDirect(
   if (provider === "discord") {
     const config = await ConfigService.getSystemConfig(context);
     const discordConfig = resolveDiscordConfig(config);
-    if (!discordConfig) return { files: [], folders: [], nextContinuationToken: null, error: "Discord 未配置" };
+    if (!discordConfig)
+      return {
+        files: [],
+        folders: [],
+        nextContinuationToken: null,
+        error: "Discord 未配置",
+      };
 
     // Page through the real channel history; every attachment becomes an
     // entry keyed by `${messageId}:${index}` so deletion maps back to the
@@ -1575,8 +1729,18 @@ async function listExternalDirectoryDirect(
     );
 
     if (page.error) {
-      console.error(JSON.stringify({ message: "discord list failed", error: page.error.message }));
-      return { files: [], folders: [], nextContinuationToken: null, error: page.error.message };
+      console.error(
+        JSON.stringify({
+          message: "discord list failed",
+          error: page.error.message,
+        }),
+      );
+      return {
+        files: [],
+        folders: [],
+        nextContinuationToken: null,
+        error: page.error.message,
+      };
     }
 
     return {
@@ -1599,7 +1763,13 @@ async function listExternalDirectoryDirect(
   if (provider === "huggingface") {
     const config = await ConfigService.getSystemConfig(context);
     const hfConfig = resolveHuggingFaceConfig(config);
-    if (!hfConfig) return { files: [], folders: [], nextContinuationToken: null, error: "HuggingFace 未配置" };
+    if (!hfConfig)
+      return {
+        files: [],
+        folders: [],
+        nextContinuationToken: null,
+        error: "HuggingFace 未配置",
+      };
 
     const folder = normalizeFolderPath(data.folder ?? "");
     const result = await HuggingFaceChannelApi.listHuggingFaceDirectory(
@@ -1608,8 +1778,18 @@ async function listExternalDirectoryDirect(
     );
 
     if (result.error) {
-      console.error(JSON.stringify({ message: "huggingface list failed", error: result.error.message }));
-      return { files: [], folders: [], nextContinuationToken: null, error: result.error.message };
+      console.error(
+        JSON.stringify({
+          message: "huggingface list failed",
+          error: result.error.message,
+        }),
+      );
+      return {
+        files: [],
+        folders: [],
+        nextContinuationToken: null,
+        error: result.error.message,
+      };
     }
 
     return {
@@ -1622,14 +1802,33 @@ async function listExternalDirectoryDirect(
   if (provider === "webdav") {
     const config = await ConfigService.getSystemConfig(context);
     const davConfig = resolveWebDAVConfig(config);
-    if (!davConfig) return { files: [], folders: [], nextContinuationToken: null, error: "WebDAV 未配置" };
+    if (!davConfig)
+      return {
+        files: [],
+        folders: [],
+        nextContinuationToken: null,
+        error: "WebDAV 未配置",
+      };
 
     const folder = normalizeFolderPath(data.folder ?? "");
-    const result = await WebDavChannelApi.listWebDavDirectory(davConfig, folder);
+    const result = await WebDavChannelApi.listWebDavDirectory(
+      davConfig,
+      folder,
+    );
 
     if (result.error) {
-      console.error(JSON.stringify({ message: "webdav list failed", error: result.error.message }));
-      return { files: [], folders: [], nextContinuationToken: null, error: result.error.message };
+      console.error(
+        JSON.stringify({
+          message: "webdav list failed",
+          error: result.error.message,
+        }),
+      );
+      return {
+        files: [],
+        folders: [],
+        nextContinuationToken: null,
+        error: result.error.message,
+      };
     }
 
     return {
@@ -1661,7 +1860,12 @@ export async function deleteExternalFiles(
     if (!s3Config) return { deleted: 0, skipped: keys.length };
     const result = await deleteS3Objects(s3Config, keys);
     if (result.error) {
-      console.error(JSON.stringify({ message: "s3 delete failed", error: result.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "s3 delete failed",
+          error: result.error.message,
+        }),
+      );
       return { deleted: 0, skipped: keys.length };
     }
   }
@@ -1671,9 +1875,17 @@ export async function deleteExternalFiles(
     const hfConfig = resolveHuggingFaceConfig(config);
     if (!hfConfig) return { deleted: 0, skipped: keys.length };
 
-    const result = await HuggingFaceChannelApi.deleteHuggingFaceFiles(hfConfig, keys);
+    const result = await HuggingFaceChannelApi.deleteHuggingFaceFiles(
+      hfConfig,
+      keys,
+    );
     if (result.error) {
-      console.error(JSON.stringify({ message: "huggingface delete failed", error: result.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "huggingface delete failed",
+          error: result.error.message,
+        }),
+      );
       return { deleted: 0, skipped: keys.length };
     }
   }
@@ -1685,7 +1897,12 @@ export async function deleteExternalFiles(
 
     const result = await WebDavChannelApi.deleteWebDavPaths(davConfig, keys);
     if (result.error) {
-      console.error(JSON.stringify({ message: "webdav delete failed", error: result.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "webdav delete failed",
+          error: result.error.message,
+        }),
+      );
       return { deleted: 0, skipped: keys.length };
     }
   }
@@ -1697,9 +1914,18 @@ export async function deleteExternalFiles(
 
     const failedKeys: string[] = [];
     for (const key of keys) {
-      const result = await DiscordChannelApi.deleteDiscordMessage(dcConfig, key);
+      const result = await DiscordChannelApi.deleteDiscordMessage(
+        dcConfig,
+        key,
+      );
       if (result.error) {
-        console.error(JSON.stringify({ message: "discord delete failed", key, error: result.error.message }));
+        console.error(
+          JSON.stringify({
+            message: "discord delete failed",
+            key,
+            error: result.error.message,
+          }),
+        );
         failedKeys.push(key);
       }
     }
@@ -1718,9 +1944,18 @@ export async function deleteExternalFiles(
       const { messageId } = TelegramChannelApi.parseTelegramKey(key);
       if (!tgConfig || !/^\d+$/.test(messageId)) continue;
 
-      const result = await TelegramChannelApi.deleteTelegramMessage(tgConfig, messageId);
+      const result = await TelegramChannelApi.deleteTelegramMessage(
+        tgConfig,
+        messageId,
+      );
       if (result.error) {
-        console.error(JSON.stringify({ message: "telegram delete failed", key, error: result.error.message }));
+        console.error(
+          JSON.stringify({
+            message: "telegram delete failed",
+            key,
+            error: result.error.message,
+          }),
+        );
         failedKeys.push(key);
       }
     }
@@ -1742,7 +1977,8 @@ export async function createExternalFolder(
     if (!s3Config) return err({ reason: "S3 未配置" });
 
     const name = data.name.replace(/^\/+|\/+$/g, "").trim();
-    if (!name || name.includes("/")) return err({ reason: "MEDIA_INVALID_FOLDER_NAME" });
+    if (!name || name.includes("/"))
+      return err({ reason: "MEDIA_INVALID_FOLDER_NAME" });
 
     const parent = normalizeFolderPath(data.parent ?? "");
     const folderKey = joinFolderKey(parent, name);
@@ -1756,7 +1992,12 @@ export async function createExternalFolder(
     });
 
     if (result.error) {
-      console.error(JSON.stringify({ message: "s3 create folder failed", error: result.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "s3 create folder failed",
+          error: result.error.message,
+        }),
+      );
       return err({ reason: "S3_FOLDER_CREATE_FAILED" });
     }
 
@@ -1769,14 +2010,23 @@ export async function createExternalFolder(
     if (!hfConfig) return err({ reason: "HuggingFace 未配置" });
 
     const name = data.name.replace(/^\/+|\/+$/g, "").trim();
-    if (!name || name.includes("/")) return err({ reason: "MEDIA_INVALID_FOLDER_NAME" });
+    if (!name || name.includes("/"))
+      return err({ reason: "MEDIA_INVALID_FOLDER_NAME" });
 
     const parent = normalizeFolderPath(data.parent ?? "");
     const folderPath = normalizeFolderPath(joinFolderKey(parent, name));
 
-    const result = await HuggingFaceChannelApi.createHuggingFaceFolder(hfConfig, folderPath);
+    const result = await HuggingFaceChannelApi.createHuggingFaceFolder(
+      hfConfig,
+      folderPath,
+    );
     if (result.error) {
-      console.error(JSON.stringify({ message: "huggingface create folder failed", error: result.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "huggingface create folder failed",
+          error: result.error.message,
+        }),
+      );
       return err({ reason: "HUGGINGFACE_FOLDER_CREATE_FAILED" });
     }
 
@@ -1789,14 +2039,23 @@ export async function createExternalFolder(
     if (!davConfig) return err({ reason: "WebDAV 未配置" });
 
     const name = data.name.replace(/^\/+|\/+$/g, "").trim();
-    if (!name || name.includes("/")) return err({ reason: "MEDIA_INVALID_FOLDER_NAME" });
+    if (!name || name.includes("/"))
+      return err({ reason: "MEDIA_INVALID_FOLDER_NAME" });
 
     const parent = normalizeFolderPath(data.parent ?? "");
     const folderPath = normalizeFolderPath(joinFolderKey(parent, name));
 
-    const result = await WebDavChannelApi.ensureWebDavFolder(davConfig, folderPath);
+    const result = await WebDavChannelApi.ensureWebDavFolder(
+      davConfig,
+      folderPath,
+    );
     if (result.error) {
-      console.error(JSON.stringify({ message: "webdav create folder failed", error: result.error.message }));
+      console.error(
+        JSON.stringify({
+          message: "webdav create folder failed",
+          error: result.error.message,
+        }),
+      );
       return err({ reason: "WEBDAV_FOLDER_CREATE_FAILED" });
     }
 
@@ -1808,10 +2067,13 @@ export async function createExternalFolder(
 
 function buildS3PublicUrl(cfg: S3Config, key: string): string {
   const base = (
-    cfg.publicUrl?.trim() ||
-    `${cfg.endpoint.replace(/\/+$/, "")}/${cfg.bucket}`
+    cfg.publicUrl?.trim() || `${cfg.endpoint.replace(/\/+$/, "")}/${cfg.bucket}`
   ).replace(/\/+$/, "");
-  const encoded = key.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  const encoded = key
+    .split("/")
+    .filter(Boolean)
+    .map(encodeURIComponent)
+    .join("/");
   return `${base}/${encoded}`;
 }
 

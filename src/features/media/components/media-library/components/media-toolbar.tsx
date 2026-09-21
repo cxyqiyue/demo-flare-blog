@@ -2,6 +2,7 @@ import {
   CheckSquare,
   Copy,
   Filter,
+  FolderInput,
   FolderPlus,
   LayoutGrid,
   List,
@@ -31,6 +32,8 @@ interface MediaToolbarProps {
   onSelectAll: () => void;
   onDelete: () => void;
   onNewFolder?: () => void;
+  onMove?: () => void;
+  canMoveFiles?: boolean;
   selectedKeys: Set<string>;
   mediaItems: MediaFileItem[];
   canDelete: boolean;
@@ -49,6 +52,8 @@ export function MediaToolbar({
   onSelectAll,
   onDelete,
   onNewFolder,
+  onMove,
+  canMoveFiles,
   selectedKeys,
   mediaItems,
   canDelete,
@@ -153,7 +158,7 @@ export function MediaToolbar({
         </div>
 
         {/* Selection & Actions Bar */}
-        {(selectedCount > 0 || searching) && (
+        {(selectedCount > 0 || searching || onNewFolder) && (
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 border-t border-(--fuwari-input-border) pt-3">
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <Button
@@ -187,6 +192,24 @@ export function MediaToolbar({
                     </span>
                     <span className="sm:hidden">Copy</span>
                   </Button>
+
+                  {canMoveFiles && onMove && (
+                    <>
+                      <div className="h-4 w-px bg-(--fuwari-input-border)" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onMove}
+                        className="gap-2 h-8"
+                      >
+                        <FolderInput size={14} />
+                        <span className="hidden sm:inline">
+                          {m.media_toolbar_move({ count: selectedCount })}
+                        </span>
+                        <span className="sm:hidden">Move</span>
+                      </Button>
+                    </>
+                  )}
 
                   {canDelete && (
                     <>
@@ -310,7 +333,7 @@ export function MediaToolbar({
       </div>
 
       {/* Selection & Actions Bar */}
-      {(selectedCount > 0 || searching) && (
+      {(selectedCount > 0 || searching || onNewFolder) && (
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 border-t border-border/30 pt-4">
           <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
             <Button
@@ -344,6 +367,24 @@ export function MediaToolbar({
                   </span>
                   <span className="sm:hidden">Copy</span>
                 </Button>
+
+                {canMoveFiles && onMove && (
+                  <>
+                    <div className="hidden sm:block h-4 w-px bg-border/30" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={onMove}
+                      className="gap-2 h-8 text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground rounded-none"
+                    >
+                      <FolderInput size={14} />
+                      <span className="hidden sm:inline">
+                        {m.media_toolbar_move({ count: selectedCount })}
+                      </span>
+                      <span className="sm:hidden">Move</span>
+                    </Button>
+                  </>
+                )}
 
                 {canDelete && (
                   <>

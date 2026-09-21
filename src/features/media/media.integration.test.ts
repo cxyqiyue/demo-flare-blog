@@ -544,4 +544,113 @@ describe("MediaService", () => {
       expect(remainingKeys).toContain("photos/b.png");
     });
   });
+
+  // ============================================
+  // 批量移动 (Batch Move)
+  // ============================================
+  describe("Batch Move", () => {
+    it("should move files into a target folder and skip folder keys", async () => {
+      const MediaRepo = await import("./data/media.data");
+      await MediaRepo.insertMedia(adminContext.db, {
+        key: "a.png",
+        url: "/images/a.png",
+        fileName: "a.png",
+        mimeType: "image/png",
+        sizeInBytes: 100,
+      });
+      await MediaRepo.insertMedia(adminContext.db, {
+        key: "b.png",
+        url: "/images/b.png",
+        fileName: "b.png",
+        mimeType: "image/png",
+        sizeInBytes: 100,
+      });
+
+      const result = await MediaService.moveMediaFiles(adminContext, {
+        keys: ["a.png", "b.png", "photos/"],
+        targetFolder: "photos",
+      });
+
+      expect(result).toEqual({ moved: 2, skipped: 1 });
+
+      expect(Storage.copyObject).toHaveBeenCalledWith(
+        adminContext.env,
+        "a.png",
+        "photos/a.png",
+      );
+      expect(Storage.copyObject).toHaveBeenCalledWith(
+        adminContext.env,
+        "b.png",
+        "photos/b.png",
+      );
+
+      await waitForBackgroundTasks(adminContext.executionCtx);
+      expect(Storage.deleteFromR2).toHaveBeenCalledWith(
+        adminContext.env,
+        "a.png",
+      );
+      expect(Storage.deleteFromR2).toHaveBeenCalledWith(
+        adminContext.env,
+        "b.png",
+      );
+
+      const list = await MediaService.getMediaList(adminContext, {});
+      const keys = list.items.map((m) => m.key);
+      expect(keys).toContain("photos/a.png");
+      expect(keys).toContain("photos/b.png");
+      expect(keys).not.toContain("a.png");
+      expect(keys).not.toContain("b.png");
+    });
+
+    it("should stop on first failing file and report moved count", async () => {
+      const MediaRepo = await import("./data/media.data");
+      await MediaRepo.insertMedia(adminContext.db, {
+        key: "a.png",
+        url: "/images/a.png",
+        fileName: "a.png",
+        mimeType: "image/png",
+        sizeInBytes: 100,
+      });
+
+      const result = await MediaService.moveMediaFiles(adminContext, {
+        keys: ["a.png", "missing-b.png"],
+        targetFolder: "photos",
+      });
+
+      expect(result.moved).toBe(1);
+      expect(result.skipped).toBe(0);
+      expect(result.error?.reason).toBe("MEDIA_NOT_FOUND");
+
+      const list = await MediaService.getMediaList(adminContext, {});
+      expect(list.items.map((m) => m.key)).toContain("photos/a.png");
+    });
+
+    it("should move a file to root when targetFolder is empty", async () => {
+      const MediaRepo = await import("./data/media.data");
+      await MediaRepo.insertMedia(adminContext.db, {
+        key: "sub/a.png",
+        url: "/images/sub/a.png",
+        fileName: "a.png",
+        mimeType: "image/png",
+        sizeInBytes: 100,
+      });
+
+      const result = await MediaService.moveMediaFiles(adminContext, {
+        keys: ["sub/a.png"],
+        targetFolder: "",
+      });
+
+      expect(result).toEqual({ moved: 1, skipped: 0 });
+      expect(Storage.copyObject).toHaveBeenCalledWith(
+        adminContext.env,
+        "sub/a.png",
+        "a.png",
+      );
+
+      const list = await MediaService.getMediaList(adminContext, {
+        search: "a.png",
+      });
+      expect(list.items[0].key).toBe("a.png");
+    });
+  });
 });
