@@ -20,6 +20,17 @@ declare module "@tanstack/react-start" {
   }
 }
 
+declare module "@tanstack/router-core" {
+  interface Register {
+    server: {
+      requestContext: {
+        env: Env;
+        executionCtx: ExecutionContext<unknown>;
+      };
+    };
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const { handleRootRequest } = await import("@/lib/worker/root-handler");
