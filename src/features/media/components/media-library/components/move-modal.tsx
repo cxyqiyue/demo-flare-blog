@@ -16,8 +16,13 @@ interface MoveModalProps {
   skippedFolderCount: number;
   folders: MediaFolder[];
   currentFolder: string;
-  onCreateFolder?: (name: string) => Promise<string | undefined>;
+  onCreateFolder?: (
+    name: string,
+    parent: string,
+  ) => Promise<string | undefined>;
   isCreatingFolder?: boolean;
+  startFolder?: string;
+  loadFolders?: (folder: string) => Promise<MediaFolder[]>;
   onSubmit: (targetFolder: string) => Promise<void>;
   onClose: () => void;
   isSubmitting?: boolean;
@@ -31,6 +36,8 @@ function MoveModalInternal({
   currentFolder,
   onCreateFolder,
   isCreatingFolder,
+  startFolder,
+  loadFolders,
   onSubmit,
   onClose,
   isSubmitting,
@@ -105,6 +112,8 @@ function MoveModalInternal({
               onChange={setTargetFolder}
               onCreateFolder={onCreateFolder}
               isCreatingFolder={isCreatingFolder}
+              startFolder={startFolder}
+              loadFolders={loadFolders}
             />
           </div>
 
@@ -182,6 +191,8 @@ function MoveModalInternal({
             onChange={setTargetFolder}
             onCreateFolder={onCreateFolder}
             isCreatingFolder={isCreatingFolder}
+            startFolder={startFolder}
+            loadFolders={loadFolders}
           />
         </div>
 

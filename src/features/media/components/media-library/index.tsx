@@ -1,7 +1,11 @@
 import { ChevronRight, Folder, Home, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
+import {
+  getMediaDirectoryFn,
+  listExternalDirectoryFn,
+} from "@/features/media/api/media.api";
 import { isFuwari } from "@/lib/theme-mode";
 import { cn, formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -99,11 +103,38 @@ export function MediaLibrary() {
   // Creates inside the current browsed directory and returns the new key.
   const canCreateFolderHere = currentProvider?.canCreateFolder ?? false;
   const inlineCreateFolder = canCreateFolderHere
-    ? async (name: string) => {
-        const result = await createFolder.mutateAsync(name);
+    ? async (name: string, parent = currentFolder) => {
+        const result = await createFolder.mutateAsync({ name, parent });
         return result.error ? undefined : result.data?.key;
       }
     : undefined;
+
+  // 逐级下钻：读取指定目录的子文件夹（移动/上传目标选择器使用）
+  const loadSubFolders = useCallback(
+    async (path: string): Promise<MediaFolder[]> => {
+      try {
+        if (isExternal && currentProviderId) {
+          const res = await listExternalDirectoryFn({
+            data: {
+              providerId: currentProviderId,
+              folder: path || undefined,
+            },
+          });
+          return res.folders ?? [];
+        }
+        if (!isExternal) {
+          const res = await getMediaDirectoryFn({
+            data: { folder: path || undefined },
+          });
+          return res.folders ?? [];
+        }
+        return [];
+      } catch {
+        return [];
+      }
+    },
+    [isExternal, currentProviderId],
+  );
 
   // 批量移动：仅文件可移动，选中的文件夹跳过
   const selectedKeysArr = Array.from(selectedIds);
@@ -371,6 +402,8 @@ export function MediaLibrary() {
           onFolderChange={setUploadFolder}
           onCreateFolder={inlineCreateFolder}
           isCreatingFolder={createFolder.isPending}
+          startFolder={currentFolder}
+          loadFolders={loadSubFolders}
           onClose={resetUpload}
           onFileSelect={
             uploadDisabled
@@ -395,9 +428,12 @@ export function MediaLibrary() {
           }
           onClose={() => setIsNewFolderOpen(false)}
           onSubmit={(name) => {
-            createFolder.mutate(name, {
-              onSettled: () => setIsNewFolderOpen(false),
-            });
+            createFolder.mutate(
+              { name, parent: currentFolder },
+              {
+                onSettled: () => setIsNewFolderOpen(false),
+              },
+            );
           }}
           isSubmitting={createFolder.isPending}
         />
@@ -439,6 +475,8 @@ export function MediaLibrary() {
           currentFolder={currentFolder}
           onCreateFolder={inlineCreateFolder}
           isCreatingFolder={createFolder.isPending}
+          startFolder={currentFolder}
+          loadFolders={loadSubFolders}
           onSubmit={handleBatchMoveSubmit}
           onClose={() => setIsMoveOpen(false)}
           isSubmitting={moveFiles.isPending}
@@ -682,6 +720,8 @@ export function MediaLibrary() {
         onFolderChange={setUploadFolder}
         onCreateFolder={inlineCreateFolder}
         isCreatingFolder={createFolder.isPending}
+        startFolder={currentFolder}
+        loadFolders={loadSubFolders}
         onClose={resetUpload}
         onFileSelect={
           uploadDisabled
@@ -704,9 +744,12 @@ export function MediaLibrary() {
         }
         onClose={() => setIsNewFolderOpen(false)}
         onSubmit={(name) => {
-          createFolder.mutate(name, {
-            onSettled: () => setIsNewFolderOpen(false),
-          });
+          createFolder.mutate(
+            { name, parent: currentFolder },
+            {
+              onSettled: () => setIsNewFolderOpen(false),
+            },
+          );
         }}
         isSubmitting={createFolder.isPending}
       />
@@ -748,6 +791,8 @@ export function MediaLibrary() {
         currentFolder={currentFolder}
         onCreateFolder={inlineCreateFolder}
         isCreatingFolder={createFolder.isPending}
+        startFolder={currentFolder}
+        loadFolders={loadSubFolders}
         onSubmit={handleBatchMoveSubmit}
         onClose={() => setIsMoveOpen(false)}
         isSubmitting={moveFiles.isPending}

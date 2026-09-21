@@ -20,8 +20,13 @@ interface UploadModalProps {
   maxFileSizeBytes?: number | null;
   onFolderChange?: (folder: string) => void;
   /** 内联新建文件夹：成功返回新文件夹 key，失败返回 falsy */
-  onCreateFolder?: (name: string) => Promise<string | undefined>;
+  onCreateFolder?: (
+    name: string,
+    parent: string,
+  ) => Promise<string | undefined>;
   isCreatingFolder?: boolean;
+  startFolder?: string;
+  loadFolders?: (folder: string) => Promise<MediaFolder[]>;
   onClose: () => void;
   onFileSelect: (files: Array<File>) => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -39,6 +44,8 @@ function UploadModalInternal({
   onFolderChange,
   onCreateFolder,
   isCreatingFolder,
+  startFolder,
+  loadFolders,
   onClose,
   onFileSelect,
   onDragOver,
@@ -81,6 +88,8 @@ function UploadModalInternal({
       onChange={(folder) => onFolderChange(folder)}
       onCreateFolder={onCreateFolder}
       isCreatingFolder={isCreatingFolder}
+      startFolder={startFolder}
+      loadFolders={loadFolders}
     />
   ) : null;
 

@@ -2392,6 +2392,8 @@
   "media_move_modal_target_label": "移动到",
   "media_move_modal_confirm_btn": "移至此处",
   "media_folder_root": "根目录",
+  "media_folder_select_here": "选择当前目录",
+  "media_folder_loading": "加载目录中...",
   "media_toast_move_partial": "部分文件未移动",
   "media_toast_move_partial_desc": [
     {

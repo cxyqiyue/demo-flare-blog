@@ -254,16 +254,18 @@ export function useMediaLibrary(providers: MediaProvider[]) {
 
   // ── Folder operations ──
   const createFolder = useMutation({
-    mutationFn: (name: string) =>
+    mutationFn: (payload: { name: string; parent: string }) =>
       isExternal && currentProviderId
         ? createExternalFolderFn({
             data: {
               providerId: currentProviderId,
-              name,
-              parent: currentFolder,
+              name: payload.name,
+              parent: payload.parent,
             },
           })
-        : createMediaFolderFn({ data: { name, parent: currentFolder } }),
+        : createMediaFolderFn({
+            data: { name: payload.name, parent: payload.parent },
+          }),
     onSuccess: (result) => {
       if (result.error) {
         toast.error(m.media_toast_folder_create_fail(), {

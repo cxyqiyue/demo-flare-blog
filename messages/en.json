@@ -2400,6 +2400,8 @@
   "media_move_modal_target_label": "Move to",
   "media_move_modal_confirm_btn": "Move Here",
   "media_folder_root": "Root",
+  "media_folder_select_here": "Select Current Folder",
+  "media_folder_loading": "Loading folders...",
   "media_toast_move_partial": "Some files were not moved",
   "media_toast_move_partial_desc": [
     {
