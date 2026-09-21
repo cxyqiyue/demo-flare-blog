@@ -26,7 +26,13 @@ import {
   MEDIA_KEYS,
   totalMediaSizeQuery,
 } from "@/features/media/queries";
-import { normalizeFolderPath } from "@/features/media/utils/media.utils";
+import {
+  type CopyLinkFormat,
+  type MediaSortBy,
+  type MediaSortDir,
+  normalizeFolderPath,
+  sortMediaFiles,
+} from "@/features/media/utils/media.utils";
 import { useDebounce } from "@/hooks/use-debounce";
 import { m } from "@/paraglide/messages";
 import { findProvider } from "./use-media-providers";
@@ -55,6 +61,9 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     folder,
     view,
     provider: providerParam,
+    sortBy: sortByParam,
+    sortDir: sortDirParam,
+    copyFormat: copyFormatParam,
   } = useSearch({
     from: "/admin/media/",
   });
@@ -81,6 +90,9 @@ export function useMediaLibrary(providers: MediaProvider[]) {
             folder: "",
             view: currentView,
             provider: fallback.id,
+            sortBy: currentSortBy,
+            sortDir: currentSortDir,
+            copyFormat: currentCopyFormat,
           },
           replace: true,
         });
@@ -92,6 +104,9 @@ export function useMediaLibrary(providers: MediaProvider[]) {
 
   const currentFolder = normalizeFolderPath(folder ?? "");
   const currentView = view ?? "grid";
+  const currentSortBy: MediaSortBy = sortByParam ?? "name";
+  const currentSortDir: MediaSortDir = sortDirParam ?? "asc";
+  const currentCopyFormat: CopyLinkFormat = copyFormatParam ?? "url";
 
   // Navigation helpers — all preserve provider
   const navigateSearch = (patch: Record<string, unknown>) => {
@@ -102,6 +117,9 @@ export function useMediaLibrary(providers: MediaProvider[]) {
         folder: currentFolder,
         view: currentView,
         provider: currentProviderId,
+        sortBy: currentSortBy,
+        sortDir: currentSortDir,
+        copyFormat: currentCopyFormat,
         ...patch,
       },
       replace: true,
@@ -120,6 +138,12 @@ export function useMediaLibrary(providers: MediaProvider[]) {
   const setView = (nextView: "grid" | "table") =>
     navigateSearch({ view: nextView });
 
+  const setSort = (nextSortBy: MediaSortBy, nextSortDir: MediaSortDir) =>
+    navigateSearch({ sortBy: nextSortBy, sortDir: nextSortDir });
+
+  const setCopyFormat = (nextFormat: CopyLinkFormat) =>
+    navigateSearch({ copyFormat: nextFormat });
+
   const setProvider = (id: string) => {
     navigate({
       search: {
@@ -128,6 +152,9 @@ export function useMediaLibrary(providers: MediaProvider[]) {
         folder: "",
         view: currentView,
         provider: id,
+        sortBy: currentSortBy,
+        sortDir: currentSortDir,
+        copyFormat: currentCopyFormat,
       },
     });
   };
@@ -192,23 +219,34 @@ export function useMediaLibrary(providers: MediaProvider[]) {
         sizeInBytes: f.sizeInBytes,
         width: null,
         height: null,
-        createdAt: null,
+        createdAt: f.createdAt ?? null,
         isLinked: false,
       }));
       // Client-side search filtering for external providers
+      let filtered = files;
       if (debouncedSearch) {
         const query = debouncedSearch.toLowerCase();
-        return files.filter((f) => f.fileName.toLowerCase().includes(query));
+        filtered = files.filter((f) =>
+          f.fileName.toLowerCase().includes(query),
+        );
       }
-      return files;
+      return sortMediaFiles(filtered, currentSortBy, currentSortDir);
     }
-    return (r2Query.data?.pages.flatMap((page) => page.files) ?? []).map(
+    const files = (r2Query.data?.pages.flatMap((page) => page.files) ?? []).map(
       (file) => ({
         ...file,
         fileName: file.name,
       }),
     );
-  }, [isExternal, externalQuery.data, r2Query.data, debouncedSearch]);
+    return sortMediaFiles(files, currentSortBy, currentSortDir);
+  }, [
+    isExternal,
+    externalQuery.data,
+    r2Query.data,
+    debouncedSearch,
+    currentSortBy,
+    currentSortDir,
+  ]);
 
   const folders = useMemo(() => {
     if (isExternal) {
@@ -619,6 +657,11 @@ export function useMediaLibrary(providers: MediaProvider[]) {
     breadcrumbs,
     view: currentView,
     setView,
+    sortBy: currentSortBy,
+    sortDir: currentSortDir,
+    setSort,
+    copyFormat: currentCopyFormat,
+    setCopyFormat,
     totalCount: mediaItems.length,
     searchQuery: search ?? "",
     setSearchQuery,

@@ -2363,6 +2363,14 @@
       }
     }
   ],
+  "media_sort_label": "排序",
+  "media_sort_name_asc": "名称 ↑",
+  "media_sort_name_desc": "名称 ↓",
+  "media_sort_size_asc": "大小 ↑",
+  "media_sort_size_desc": "大小 ↓",
+  "media_sort_time_asc": "时间 ↑",
+  "media_sort_time_desc": "时间 ↓",
+  "media_copy_format_label": "图链格式",
   "media_upload_btn_choose_folder": "选择文件夹",
   "media_upload_folder_preserve_hint": "上传文件夹时自动保留其内部子目录结构",
   "media_upload_inline_create_folder": "新建文件夹",

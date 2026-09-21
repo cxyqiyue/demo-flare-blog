@@ -1566,6 +1566,8 @@ export interface ExternalDirectoryFile {
   url: string;
   mimeType: string;
   sizeInBytes: number;
+  /** Optional: only providers that expose a timestamp (S3, D1 index) fill it. */
+  createdAt?: Date | null;
 }
 
 export interface ExternalDirectoryResult {
@@ -1624,6 +1626,7 @@ async function listExternalDirectoryFromD1(
     url: buildMediaAccessUrl(accessSettings, provider, item.key, item.url),
     mimeType: item.mimeType,
     sizeInBytes: item.sizeInBytes,
+    createdAt: item.createdAt,
   }));
 
   return {
@@ -1696,6 +1699,7 @@ async function listExternalDirectoryDirect(
         url: buildS3PublicUrl(s3Config, o.key),
         mimeType: guessMimeFromKey(o.key),
         sizeInBytes: o.size,
+        createdAt: o.lastModified ? new Date(o.lastModified) : null,
       }));
 
     return {

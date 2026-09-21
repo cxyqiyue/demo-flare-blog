@@ -10,6 +10,12 @@ const mediaSearchSchema = z.object({
   folder: z.string().optional().catch(""),
   view: z.enum(["grid", "table"]).optional().catch("grid"),
   provider: z.string().optional().catch("r2"),
+  sortBy: z.enum(["name", "size", "time"]).optional().catch("name"),
+  sortDir: z.enum(["asc", "desc"]).optional().catch("asc"),
+  copyFormat: z
+    .enum(["url", "markdown", "html", "bbcode"])
+    .optional()
+    .catch("url"),
 });
 
 export const Route = createFileRoute("/admin/media/")({

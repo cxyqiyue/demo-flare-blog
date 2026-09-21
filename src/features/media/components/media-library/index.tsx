@@ -36,6 +36,11 @@ export function MediaLibrary() {
     breadcrumbs,
     view,
     setView,
+    sortBy,
+    sortDir,
+    setSort,
+    copyFormat,
+    setCopyFormat,
     searchQuery,
     setSearchQuery,
     unusedOnly,
@@ -276,6 +281,11 @@ export function MediaLibrary() {
             onUnusedOnlyChange={setUnusedOnly}
             view={view}
             onViewChange={setView}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            onSortChange={setSort}
+            copyFormat={copyFormat}
+            onCopyFormatChange={setCopyFormat}
             selectedCount={selectedIds.size}
             totalCount={mediaItems.length + folders.length}
             searching={isSearching}
@@ -510,6 +520,7 @@ export function MediaLibrary() {
           }
           folders={folders}
           currentFolder={currentFolder}
+          copyFormat={copyFormat}
         />
       </div>
     );
@@ -603,6 +614,11 @@ export function MediaLibrary() {
           onUnusedOnlyChange={setUnusedOnly}
           view={view}
           onViewChange={setView}
+          sortBy={sortBy}
+          sortDir={sortDir}
+          onSortChange={setSort}
+          copyFormat={copyFormat}
+          onCopyFormatChange={setCopyFormat}
           selectedCount={selectedIds.size}
           totalCount={mediaItems.length + folders.length}
           searching={isSearching}
@@ -826,6 +842,7 @@ export function MediaLibrary() {
         }
         folders={folders}
         currentFolder={currentFolder}
+        copyFormat={copyFormat}
       />
     </div>
   );

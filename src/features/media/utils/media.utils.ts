@@ -38,6 +38,77 @@ export function joinFolderKey(parent: string, name: string): string {
   return base ? `${base}/${cleanName}/` : `${cleanName}/`;
 }
 
+export type MediaSortBy = "name" | "size" | "time";
+export type MediaSortDir = "asc" | "desc";
+
+export interface SortableMediaFile {
+  fileName: string;
+  sizeInBytes: number;
+  createdAt: Date | null;
+}
+
+/**
+ * Sort a list of media files by name/size/time. Files without a date always
+ * sink to the bottom, regardless of direction, so unknown timestamps never
+ * crowd out known ones. Name comparison is numeric- and case-insensitive.
+ */
+export function sortMediaFiles<T extends SortableMediaFile>(
+  items: T[],
+  sortBy: MediaSortBy,
+  sortDir: MediaSortDir,
+): T[] {
+  const dir = sortDir === "desc" ? -1 : 1;
+  return [...items].sort((a, b) => {
+    if (sortBy === "size") {
+      return (a.sizeInBytes - b.sizeInBytes) * dir;
+    }
+    if (sortBy === "time") {
+      const at = a.createdAt ? a.createdAt.getTime() : null;
+      const bt = b.createdAt ? b.createdAt.getTime() : null;
+      if (at === null && bt === null) return 0;
+      if (at === null) return 1;
+      if (bt === null) return -1;
+      return (at - bt) * dir;
+    }
+    return (
+      a.fileName.localeCompare(b.fileName, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }) * dir
+    );
+  });
+}
+
+export type CopyLinkFormat = "url" | "markdown" | "html" | "bbcode";
+
+const escapeHtmlAttr = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+/**
+ * Render a media link in the selected copy format. `url` is expected to be
+ * absolute; `name` is used as the alt text for Markdown/HTML.
+ */
+export function formatCopyLink(
+  format: CopyLinkFormat,
+  url: string,
+  name: string,
+): string {
+  switch (format) {
+    case "markdown":
+      return `![${name}](${url})`;
+    case "html":
+      return `<img src="${escapeHtmlAttr(url)}" alt="${escapeHtmlAttr(name)}" />`;
+    case "bbcode":
+      return `[img]${url}[/img]`;
+    default:
+      return url;
+  }
+}
+
 /**
  * Extract the last path segment of a key/folder key.
  */

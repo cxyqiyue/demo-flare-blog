@@ -2371,6 +2371,14 @@
       }
     }
   ],
+  "media_sort_label": "Sort",
+  "media_sort_name_asc": "Name ↑",
+  "media_sort_name_desc": "Name ↓",
+  "media_sort_size_asc": "Size ↑",
+  "media_sort_size_desc": "Size ↓",
+  "media_sort_time_asc": "Time ↑",
+  "media_sort_time_desc": "Time ↓",
+  "media_copy_format_label": "Link Format",
   "media_upload_btn_choose_folder": "Choose Folder",
   "media_upload_folder_preserve_hint": "Folder uploads keep their internal subdirectory structure",
   "media_upload_inline_create_folder": "New Folder",

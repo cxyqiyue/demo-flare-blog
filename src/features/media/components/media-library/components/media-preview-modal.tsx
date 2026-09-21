@@ -26,6 +26,7 @@ import type {
   MediaFolder,
 } from "@/features/media/components/media-library/types";
 import { MEDIA_KEYS } from "@/features/media/queries";
+import { formatCopyLink, type CopyLinkFormat } from "@/features/media/utils/media.utils";
 import { useDelayUnmount } from "@/hooks/use-delay-unmount";
 import { isFuwari } from "@/lib/theme-mode";
 import { cn, formatBytes } from "@/lib/utils";
@@ -39,6 +40,7 @@ interface MediaPreviewModalProps {
   onDelete?: (key: string) => Promise<void>;
   folders?: MediaFolder[];
   currentFolder?: string;
+  copyFormat?: CopyLinkFormat;
 }
 
 export function MediaPreviewModal({
@@ -49,6 +51,7 @@ export function MediaPreviewModal({
   onDelete,
   folders = [],
   currentFolder = "",
+  copyFormat = "url",
 }: MediaPreviewModalProps) {
   const isMounted = !!asset;
   const shouldRender = useDelayUnmount(isMounted, 200);
@@ -122,7 +125,9 @@ export function MediaPreviewModal({
         ? activeAsset.url
         : `${window.location.origin}${activeAsset.url}`;
 
-      await navigator.clipboard.writeText(absoluteUrl);
+      await navigator.clipboard.writeText(
+        formatCopyLink(copyFormat, absoluteUrl, activeAsset.fileName),
+      );
       toast.success(m.media_preview_copy_success(), {
         description: m.media_preview_copy_success_desc(),
       });

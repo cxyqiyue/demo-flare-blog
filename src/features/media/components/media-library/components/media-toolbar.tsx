@@ -17,6 +17,12 @@ import { Input } from "@/components/ui/input";
 import { isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import {
+  type CopyLinkFormat,
+  type MediaSortBy,
+  type MediaSortDir,
+  formatCopyLink,
+} from "@/features/media/utils/media.utils";
 import type { MediaFileItem } from "../hooks/use-media-library";
 
 interface MediaToolbarProps {
@@ -37,6 +43,84 @@ interface MediaToolbarProps {
   selectedKeys: Set<string>;
   mediaItems: MediaFileItem[];
   canDelete: boolean;
+  sortBy: MediaSortBy;
+  sortDir: MediaSortDir;
+  onSortChange: (sortBy: MediaSortBy, sortDir: MediaSortDir) => void;
+  copyFormat: CopyLinkFormat;
+  onCopyFormatChange: (format: CopyLinkFormat) => void;
+}
+
+const COPY_FORMATS: Array<{ value: CopyLinkFormat; label: string }> = [
+  { value: "url", label: "URL" },
+  { value: "markdown", label: "Markdown" },
+  { value: "html", label: "HTML" },
+  { value: "bbcode", label: "BBCode" },
+];
+
+function SortSelect({
+  sortBy,
+  sortDir,
+  onChange,
+  className,
+}: {
+  sortBy: MediaSortBy;
+  sortDir: MediaSortDir;
+  onChange: (sortBy: MediaSortBy, sortDir: MediaSortDir) => void;
+  className?: string;
+}) {
+  const value = `${sortBy}:${sortDir}`;
+  const options: Array<{ value: string; label: string }> = [
+    { value: "name:asc", label: m.media_sort_name_asc() },
+    { value: "name:desc", label: m.media_sort_name_desc() },
+    { value: "size:asc", label: m.media_sort_size_asc() },
+    { value: "size:desc", label: m.media_sort_size_desc() },
+    { value: "time:asc", label: m.media_sort_time_asc() },
+    { value: "time:desc", label: m.media_sort_time_desc() },
+  ];
+  return (
+    <select
+      aria-label={m.media_sort_label()}
+      title={m.media_sort_label()}
+      value={value}
+      onChange={(e) => {
+        const [by, dir] = e.target.value.split(":");
+        onChange(by as MediaSortBy, dir as MediaSortDir);
+      }}
+      className={className}
+    >
+      {options.map((opt) => (
+        <option key={opt.value} value={opt.value}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function CopyFormatSelect({
+  value,
+  onChange,
+  className,
+}: {
+  value: CopyLinkFormat;
+  onChange: (format: CopyLinkFormat) => void;
+  className?: string;
+}) {
+  return (
+    <select
+      aria-label={m.media_copy_format_label()}
+      title={m.media_copy_format_label()}
+      value={value}
+      onChange={(e) => onChange(e.target.value as CopyLinkFormat)}
+      className={className}
+    >
+      {COPY_FORMATS.map((opt) => (
+        <option key={opt.value} value={opt.value}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 export function MediaToolbar({
@@ -57,24 +141,29 @@ export function MediaToolbar({
   selectedKeys,
   mediaItems,
   canDelete,
+  sortBy,
+  sortDir,
+  onSortChange,
+  copyFormat,
+  onCopyFormatChange,
 }: MediaToolbarProps) {
   const handleCopyUrls = async () => {
-    const urls = mediaItems
+    const links = mediaItems
       .filter((item) => selectedKeys.has(item.key))
       .map((item) => {
         const absoluteUrl = item.url.startsWith("http")
           ? item.url
           : `${window.location.origin}${item.url}`;
-        return absoluteUrl;
+        return formatCopyLink(copyFormat, absoluteUrl, item.fileName);
       });
 
-    if (urls.length === 0) return;
+    if (links.length === 0) return;
 
     try {
-      await navigator.clipboard.writeText(urls.join("\n"));
+      await navigator.clipboard.writeText(links.join("\n"));
       toast.success(m.media_batch_copy_urls_success(), {
         description: m.media_batch_copy_urls_success_desc({
-          count: urls.length,
+          count: links.length,
         }),
       });
     } catch {
@@ -113,6 +202,18 @@ export function MediaToolbar({
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
+            <SortSelect
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onChange={onSortChange}
+              className="h-10 rounded-xl px-3 text-sm bg-(--fuwari-btn-regular-bg) fuwari-text-75 cursor-pointer"
+            />
+            <CopyFormatSelect
+              value={copyFormat}
+              onChange={onCopyFormatChange}
+              className="h-10 rounded-xl px-3 text-sm bg-(--fuwari-btn-regular-bg) fuwari-text-75 cursor-pointer"
+            />
+
             <Button
               variant={unusedOnly ? "default" : "outline"}
               size="sm"
@@ -279,6 +380,19 @@ export function MediaToolbar({
         </div>
 
         <div className="h-4 w-px bg-border/30 mx-2 hidden lg:block" />
+
+        <SortSelect
+          sortBy={sortBy}
+          sortDir={sortDir}
+          onChange={onSortChange}
+          className="h-10 px-3 text-[11px] uppercase tracking-widest font-mono bg-transparent border border-border/30 text-muted-foreground hover:text-foreground rounded-none shrink-0 cursor-pointer"
+        />
+
+        <CopyFormatSelect
+          value={copyFormat}
+          onChange={onCopyFormatChange}
+          className="h-10 px-3 text-[11px] uppercase tracking-widest font-mono bg-transparent border border-border/30 text-muted-foreground hover:text-foreground rounded-none shrink-0 cursor-pointer"
+        />
 
         <Button
           variant={unusedOnly ? "default" : "outline"}
