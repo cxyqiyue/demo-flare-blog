@@ -13,8 +13,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
-import Dropdown from "@/components/ui/dropdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isFuwari } from "@/lib/theme-mode";
@@ -27,6 +27,7 @@ import {
   formatCopyLink,
 } from "@/features/media/utils/media.utils";
 import type { MediaFileItem } from "../hooks/use-media-library";
+import { PortalPanel } from "./portal-panel";
 
 interface MediaToolbarProps {
   searchQuery: string;
@@ -67,6 +68,28 @@ const triggerClass = cn(
     : "h-10 px-3 text-[11px] uppercase tracking-widest font-mono bg-transparent border border-border/30 text-muted-foreground hover:text-foreground transition-all rounded-none",
 );
 
+const menuPanelClass = isFuwari
+  ? "fuwari-card-base p-1.5 shadow-lg animate-in fade-in-0 zoom-in-95 max-h-80 overflow-y-auto custom-scrollbar"
+  : "bg-popover border border-border/30 py-1 max-h-80 overflow-y-auto custom-scrollbar";
+
+const menuOptionClass = cn(
+  "w-full text-left flex items-center gap-2 transition-colors",
+  isFuwari
+    ? "px-3 py-2 text-sm rounded-lg"
+    : "px-3 py-2 text-[9px] font-mono uppercase tracking-widest",
+);
+
+function menuOptionActiveClass(isActive: boolean) {
+  if (isActive) {
+    return isFuwari
+      ? "text-(--fuwari-primary) bg-(--fuwari-btn-regular-bg) font-semibold"
+      : "bg-foreground text-background hover:bg-foreground/90";
+  }
+  return isFuwari
+    ? "fuwari-text-50 hover:text-(--fuwari-primary) hover:bg-(--fuwari-btn-plain-bg-hover)"
+    : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/30";
+}
+
 function SortDropdown({
   sortBy,
   sortDir,
@@ -86,36 +109,56 @@ function SortDropdown({
   ];
   const currentValue = `${sortBy}:${sortDir}`;
   const label = options.find((o) => o.value === currentValue)?.label ?? "";
+  const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   return (
-    <Dropdown
-      align="left"
-      trigger={
-        <button
-          type="button"
-          title={m.media_sort_label()}
-          aria-label={m.media_sort_label()}
-          className={triggerClass}
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        title={m.media_sort_label()}
+        aria-label={m.media_sort_label()}
+        onClick={() => setIsOpen((open) => !open)}
+        className={triggerClass}
+      >
+        <ArrowUpDown
+          size={isFuwari ? 14 : 12}
+          strokeWidth={1.5}
+          className={isFuwari ? "fuwari-text-30" : "opacity-60"}
+        />
+        {label}
+      </button>
+      {isOpen && (
+        <PortalPanel
+          triggerRef={triggerRef}
+          onClose={() => setIsOpen(false)}
+          align="start"
+          minWidth={isFuwari ? 192 : 160}
+          className={menuPanelClass}
         >
-          <ArrowUpDown
-            size={isFuwari ? 14 : 12}
-            strokeWidth={1.5}
-            className={isFuwari ? "fuwari-text-30" : "opacity-60"}
-          />
-          {label}
-        </button>
-      }
-      items={options.map((opt) => ({
-        label: opt.label,
-        isActive: opt.value === currentValue,
-        onClick: () => {
-          const [by, dir] = opt.value.split(":") as [
-            MediaSortBy,
-            MediaSortDir,
-          ];
-          onChange(by, dir);
-        },
-      }))}
-    />
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                const [by, dir] = opt.value.split(":") as [
+                  MediaSortBy,
+                  MediaSortDir,
+                ];
+                onChange(by, dir);
+                setIsOpen(false);
+              }}
+              className={cn(
+                menuOptionClass,
+                menuOptionActiveClass(opt.value === currentValue),
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </PortalPanel>
+      )}
+    </>
   );
 }
 
@@ -127,30 +170,52 @@ function CopyFormatDropdown({
   onChange: (format: CopyLinkFormat) => void;
 }) {
   const label = COPY_FORMATS.find((f) => f.value === value)?.label ?? "URL";
+  const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   return (
-    <Dropdown
-      align="left"
-      trigger={
-        <button
-          type="button"
-          title={m.media_copy_format_label()}
-          aria-label={m.media_copy_format_label()}
-          className={triggerClass}
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        title={m.media_copy_format_label()}
+        aria-label={m.media_copy_format_label()}
+        onClick={() => setIsOpen((open) => !open)}
+        className={triggerClass}
+      >
+        <Link
+          size={isFuwari ? 14 : 12}
+          strokeWidth={1.5}
+          className={isFuwari ? "fuwari-text-30" : "opacity-60"}
+        />
+        {label}
+      </button>
+      {isOpen && (
+        <PortalPanel
+          triggerRef={triggerRef}
+          onClose={() => setIsOpen(false)}
+          align="start"
+          minWidth={isFuwari ? 192 : 160}
+          className={menuPanelClass}
         >
-          <Link
-            size={isFuwari ? 14 : 12}
-            strokeWidth={1.5}
-            className={isFuwari ? "fuwari-text-30" : "opacity-60"}
-          />
-          {label}
-        </button>
-      }
-      items={COPY_FORMATS.map((opt) => ({
-        label: opt.label,
-        isActive: opt.value === value,
-        onClick: () => onChange(opt.value),
-      }))}
-    />
+          {COPY_FORMATS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={cn(
+                menuOptionClass,
+                menuOptionActiveClass(opt.value === value),
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </PortalPanel>
+      )}
+    </>
   );
 }
 
