@@ -230,10 +230,11 @@ export default function TableOfContents({
                         window.scrollY -
                         80;
                       window.scrollTo({ top, behavior: "smooth" });
-                      navigate({
-                        hash: heading.id,
-                        replace: true,
-                      });
+navigate({
+  hash: heading.id,
+  replace: true,
+  hashScrollIntoView: false,
+});
                       onNavigate?.();
                     }
                   }}
