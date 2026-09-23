@@ -8,6 +8,7 @@ export default function TableOfContents({
   forceVisible = false,
   tocHeightClass,
   onNavigate,
+  card = false,
 }: {
   headers: Array<TableOfContentsItem>;
   /** 抽屉等环境：强制始终可见，不随滚动状态淡入淡出 */
@@ -16,6 +17,8 @@ export default function TableOfContents({
   tocHeightClass?: string;
   /** 点击条目跳到锚点后触发（抽屉用它收起面板） */
   onNavigate?: () => void;
+  /** fuwari 白底卡片样式（右侧悬挂目录用） */
+  card?: boolean;
 }) {
   const [activeIndices, setActiveIndices] = useState<Array<number>>([]);
   const [isReady, setIsReady] = useState(false);
@@ -69,76 +72,30 @@ export default function TableOfContents({
     return () => window.removeEventListener("scroll", handleScrollVisibility);
   }, []);
 
-  // Section-based active heading detection (matches original Fuwari logic)
+  // Active heading detection: find the single section currently in view
   const computeActiveHeadings = useCallback(() => {
     if (headers.length === 0) return;
 
-    const active: Array<boolean> = new Array(headers.length).fill(false);
+    // Reference point: scroll position + header offset (matches click scroll target)
+    const HEADER_OFFSET = 80;
+    const refTop = window.scrollY + HEADER_OFFSET + 1;
 
+    let candidate = -1;
     for (let i = 0; i < headers.length; i++) {
       const heading = document.getElementById(headers[i].id);
       if (!heading) continue;
-
-      const rect = heading.getBoundingClientRect();
-      const sectionTop = rect.top;
-
-      let sectionBottom: number;
-      if (i < headers.length - 1) {
-        const nextHeading = document.getElementById(headers[i + 1].id);
-        sectionBottom = nextHeading
-          ? nextHeading.getBoundingClientRect().top
-          : window.innerHeight;
+      const headingTop = heading.getBoundingClientRect().top + window.scrollY;
+      if (headingTop <= refTop) {
+        candidate = i;
       } else {
-        // Last heading: section extends to end of article
-        const content = heading.closest(".fuwari-custom-md");
-        if (content) {
-          sectionBottom = content.getBoundingClientRect().bottom;
-        } else {
-          sectionBottom =
-            document.documentElement.scrollHeight - window.scrollY;
-        }
-      }
-
-      // Check if any part of this section is visible in viewport
-      // Add a small buffer (px) to match original's sensitivity
-      const isInViewport =
-        (sectionTop >= -1 && sectionTop < window.innerHeight) ||
-        (sectionBottom > 1 && sectionBottom <= window.innerHeight) ||
-        (sectionTop < 0 && sectionBottom > window.innerHeight);
-
-      if (isInViewport) {
-        active[i] = true;
-      } else if (sectionTop > window.innerHeight) {
         break;
       }
     }
 
-    // Find last contiguous block of active headings
-    const newActiveIndices: Array<number> = [];
-    let i = active.length - 1;
-    let minIdx = active.length - 1;
-    let maxIdx = -1;
-
-    // Skip non-active from end
-    while (i >= 0 && !active[i]) i--;
-    // Collect last contiguous block
-    while (i >= 0 && active[i]) {
-      minIdx = Math.min(minIdx, i);
-      maxIdx = Math.max(maxIdx, i);
-      i--;
-    }
-
-    if (minIdx <= maxIdx) {
-      for (let j = minIdx; j <= maxIdx; j++) {
-        newActiveIndices.push(j);
-      }
-    }
-
-    setActiveIndices((prev) => {
-      if (JSON.stringify(prev) === JSON.stringify(newActiveIndices))
-        return prev;
-      return newActiveIndices;
-    });
+    const next: Array<number> = candidate === -1 ? [] : [candidate];
+    setActiveIndices((prev) =>
+      JSON.stringify(prev) === JSON.stringify(next) ? prev : next,
+    );
   }, [headers]);
 
   // Initial and reactive computation
@@ -223,6 +180,7 @@ export default function TableOfContents({
       ref={navRef}
       className={cn(
         "sticky top-14 self-start block w-full transition-all duration-500",
+        card && "fuwari-card-base p-4",
         forceVisible || (isVisible && isReady)
           ? "opacity-100 translate-y-0"
           : "opacity-0 translate-y-4 pointer-events-none",
@@ -247,11 +205,12 @@ export default function TableOfContents({
         >
           {headers
             .filter((heading) => heading.level < minDepth + maxLevel)
-            .map((heading) => {
+            .map((heading, index) => {
               const text = removeTailingHash(heading.text);
               const isH1 = heading.level === minDepth;
               const isH2 = heading.level === minDepth + 1;
               const isH3 = heading.level === minDepth + 2;
+              const isActive = activeIndices.includes(index);
 
               return (
                 <a
@@ -300,8 +259,9 @@ export default function TableOfContents({
 
                   <div
                     className={cn("transition text-sm", {
-                      "fuwari-text-50": isH1 || isH2,
-                      "fuwari-text-30": isH3,
+                      "fuwari-text-75 font-semibold": isActive,
+                      "fuwari-text-50": !isActive && (isH1 || isH2),
+                      "fuwari-text-30": !isActive && isH3,
                     })}
                   >
                     {text}

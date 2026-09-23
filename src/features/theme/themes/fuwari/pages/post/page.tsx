@@ -32,7 +32,7 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
           width: "max(var(--fuwari-toc-width), 0px)",
         }}
       >
-        <TableOfContents headers={post.toc ?? []} />
+        <TableOfContents headers={post.toc ?? []} card />
       </div>
 
       {/* Table Of Contents (Floating Button + Drawer, below 2xl) */}
