@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { headingAnchorId } from "@/features/posts/utils/heading-ids";
 
 describe("headingAnchorId", () => {
-  it("keeps readable slug for latin text", () => {
-    expect(headingAnchorId("Deploy to Cloudflare Pages")).toBe(
-      "deploy-to-cloudflare-pages",
+  it("keeps a readable slug prefix plus hash for latin text", () => {
+    expect(headingAnchorId("Deploy to Cloudflare Pages")).toMatch(
+      /^deploy-to-cloudflare-pages-[0-9a-f]{6}$/,
     );
   });
 
@@ -17,6 +17,13 @@ describe("headingAnchorId", () => {
     const a = headingAnchorId("部署教程");
     const b = headingAnchorId("常见问题");
     expect(a).not.toBe(b);
+  });
+
+  it("distinguishes headings whose slug collapsed to the same value", () => {
+    const a = headingAnchorId("3、Variables变量");
+    const b = headingAnchorId("3、部署Variables");
+    expect(a).not.toBe(b);
+    expect(a.startsWith("3variables-")).toBe(true);
   });
 
   it("is deterministic across calls", () => {

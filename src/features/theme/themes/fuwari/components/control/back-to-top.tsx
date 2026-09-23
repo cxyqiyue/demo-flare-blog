@@ -27,7 +27,7 @@ export function BackToTop() {
     <div className="block absolute right-0 top-0 w-15 h-15 pointer-events-none">
       <div
         className={cn(
-          "fixed bottom-40 flex items-center rounded-2xl overflow-hidden transition-all duration-300 pointer-events-auto",
+          "fixed bottom-40 z-40 flex items-center rounded-2xl overflow-hidden transition-all duration-300 pointer-events-auto",
           isVisible
             ? "opacity-100 translate-x-0 scale-100"
             : "opacity-0 translate-x-20 scale-90 pointer-events-none",
