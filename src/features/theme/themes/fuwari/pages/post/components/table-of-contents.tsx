@@ -49,6 +49,13 @@ export default function TableOfContents({
   // Max depth visible in TOC from config
   const maxLevel = 3;
 
+  // Headings actually rendered in the list (single index space for
+  // detection + highlight + indicator)
+  const visibleHeaders = useMemo(
+    () => headers.filter((heading) => heading.level < minDepth + maxLevel),
+    [headers, minDepth],
+  );
+
   const removeTailingHash = (text: string) => {
     const lastIndexOfHash = text.lastIndexOf("#");
     if (lastIndexOfHash !== -1 && lastIndexOfHash === text.length - 1) {
@@ -74,15 +81,15 @@ export default function TableOfContents({
 
   // Active heading detection: find the single section currently in view
   const computeActiveHeadings = useCallback(() => {
-    if (headers.length === 0) return;
+    if (visibleHeaders.length === 0) return;
 
     // Reference point: scroll position + header offset (matches click scroll target)
     const HEADER_OFFSET = 80;
     const refTop = window.scrollY + HEADER_OFFSET + 1;
 
     let candidate = -1;
-    for (let i = 0; i < headers.length; i++) {
-      const heading = document.getElementById(headers[i].id);
+    for (let i = 0; i < visibleHeaders.length; i++) {
+      const heading = document.getElementById(visibleHeaders[i].id);
       if (!heading) continue;
       const headingTop = heading.getBoundingClientRect().top + window.scrollY;
       if (headingTop <= refTop) {
@@ -96,7 +103,7 @@ export default function TableOfContents({
     setActiveIndices((prev) =>
       JSON.stringify(prev) === JSON.stringify(next) ? prev : next,
     );
-  }, [headers]);
+  }, [visibleHeaders]);
 
   // Initial and reactive computation
   useEffect(() => {
@@ -118,7 +125,7 @@ export default function TableOfContents({
       window.removeEventListener("scroll", computeActiveHeadings);
       window.removeEventListener("resize", computeActiveHeadings);
     };
-  }, [headers, computeActiveHeadings]);
+  }, [visibleHeaders, computeActiveHeadings]);
 
   // Update indicator style based on the range of active indices
   useEffect(() => {
@@ -126,13 +133,13 @@ export default function TableOfContents({
       const firstIdx = activeIndices[0];
       const lastIdx = activeIndices[activeIndices.length - 1];
 
-      if (!headers[firstIdx] || !headers[lastIdx]) {
+      if (!visibleHeaders[firstIdx] || !visibleHeaders[lastIdx]) {
         setIndicatorStyle((prev) => ({ ...prev, opacity: 0 }));
         return;
       }
 
-      const firstId = headers[firstIdx].id;
-      const lastId = headers[lastIdx].id;
+      const firstId = visibleHeaders[firstIdx].id;
+      const lastId = visibleHeaders[lastIdx].id;
 
       const firstLink = linksContainerRef.current.querySelector<HTMLElement>(
         `a[href="#${firstId}"]`,
@@ -169,7 +176,7 @@ export default function TableOfContents({
     } else {
       setIndicatorStyle((prev) => ({ ...prev, opacity: 0 }));
     }
-  }, [activeIndices, headers]);
+  }, [activeIndices, visibleHeaders]);
 
   if (headers.length === 0) return null;
 
@@ -203,9 +210,7 @@ export default function TableOfContents({
           ref={linksContainerRef}
           className="group relative flex flex-col w-full"
         >
-          {headers
-            .filter((heading) => heading.level < minDepth + maxLevel)
-            .map((heading, index) => {
+          {visibleHeaders.map((heading, index) => {
               const text = removeTailingHash(heading.text);
               const isH1 = heading.level === minDepth;
               const isH2 = heading.level === minDepth + 1;
