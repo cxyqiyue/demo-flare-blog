@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { TableOfContentsItem } from "@/features/posts/utils/toc";
 import { useActiveTOC } from "@/hooks/use-active-toc";
+import { scrollToHeadingWithRetry } from "@/features/posts/utils/scroll-to-heading";
 import { cn } from "@/lib/utils";
 
 export default function TableOfContents({
@@ -81,9 +82,7 @@ export default function TableOfContents({
                   e.preventDefault();
                   const element = document.getElementById(node.id);
                   if (element) {
-                    element.scrollIntoView({
-                      behavior: "smooth",
-                    });
+                    scrollToHeadingWithRetry(element, 0);
                     navigate({
                       hash: node.id,
                       replace: true,

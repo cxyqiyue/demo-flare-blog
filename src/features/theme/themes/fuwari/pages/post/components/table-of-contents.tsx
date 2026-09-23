@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TableOfContentsItem } from "@/features/posts/utils/toc";
+import { scrollToHeadingWithRetry } from "@/features/posts/utils/scroll-to-heading";
 import { cn } from "@/lib/utils";
 
 export default function TableOfContents({
@@ -221,20 +222,16 @@ export default function TableOfContents({
                 <a
                   key={heading.id}
                   href={`#${heading.id}`}
-                  onClick={(e) => {
+onClick={(e) => {
                     e.preventDefault();
                     const element = document.getElementById(heading.id);
                     if (element) {
-                      const top =
-                        element.getBoundingClientRect().top +
-                        window.scrollY -
-                        80;
-                      window.scrollTo({ top, behavior: "smooth" });
-navigate({
-  hash: heading.id,
-  replace: true,
-  hashScrollIntoView: false,
-});
+                      scrollToHeadingWithRetry(element, 80);
+                      navigate({
+                        hash: heading.id,
+                        replace: true,
+                        hashScrollIntoView: false,
+                      });
                       onNavigate?.();
                     }
                   }}
