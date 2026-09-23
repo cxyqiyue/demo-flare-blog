@@ -16,6 +16,7 @@ import {
 } from "./components/post-navigation";
 import { RelatedPosts, RelatedPostsSkeleton } from "./components/related-posts";
 import TableOfContents from "./components/table-of-contents";
+import { TocDrawer } from "./components/toc-drawer";
 
 export function PostPage({ post, hideAdminEdit }: PostPageProps) {
   const navigate = useNavigate();
@@ -132,6 +133,9 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
               <TableOfContents headers={post.toc ?? []} />
             </div>
           </aside>
+
+          {/* TOC drawer for small screens */}
+          <TocDrawer headers={post.toc ?? []} />
 
           <main className="max-w-none min-w-0 overflow-x-clip text-foreground leading-relaxed font-serif">
             <ContentRenderer content={post.contentJson} />

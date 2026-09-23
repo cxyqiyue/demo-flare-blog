@@ -229,6 +229,8 @@
   "post_related_posts": "相关阅读",
   "post_read_more": "阅读",
   "post_back_to_top": "顶部",
+  "post_toc": "目录",
+  "post_toc_close": "关闭目录",
   "post_word_count": [
     {
       "declarations": [

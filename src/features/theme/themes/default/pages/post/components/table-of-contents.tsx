@@ -2,11 +2,18 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { TableOfContentsItem } from "@/features/posts/utils/toc";
 import { useActiveTOC } from "@/hooks/use-active-toc";
+import { cn } from "@/lib/utils";
 
 export default function TableOfContents({
   headers,
+  className,
+  onNavigate,
 }: {
   headers: Array<TableOfContentsItem>;
+  /** 覆盖导航容器样式（抽屉等场景需要去掉 sticky / 改宽度与高度） */
+  className?: string;
+  /** 点击条目跳到锚点后触发（抽屉用它收起面板） */
+  onNavigate?: () => void;
 }) {
   const activeId = useActiveTOC(headers);
   const [, setIndicatorTop] = useState<number>(0);
@@ -58,7 +65,10 @@ export default function TableOfContents({
   return (
     <nav
       ref={navRef}
-      className="sticky top-32 self-start block w-60 animate-in fade-in duration-700 delay-500 max-h-[calc(100vh-10rem)] overflow-y-auto overflow-x-hidden custom-scrollbar fill-mode-backwards"
+      className={cn(
+        "sticky top-32 self-start block w-60 animate-in fade-in duration-700 delay-500 max-h-[calc(100vh-10rem)] overflow-y-auto overflow-x-hidden custom-scrollbar fill-mode-backwards",
+        className,
+      )}
     >
       {/* Root List Container */}
       <div className="relative toc-root">
@@ -79,6 +89,7 @@ export default function TableOfContents({
                       replace: true,
                       hashScrollIntoView: false,
                     });
+                    onNavigate?.();
                   }
                 }}
                 className={`

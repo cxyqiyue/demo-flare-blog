@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { Clock, FileText, Pencil } from "lucide-react";
 import { Suspense } from "react";
+import { PostGateShell } from "@/features/posts/components/post-gate-shell";
 import type { PostPageProps } from "@/features/theme/contract/pages";
 import { FuwariCommentSection } from "@/features/theme/themes/fuwari/components/comments/view/comment-section";
 import { ContentRenderer } from "@/features/theme/themes/fuwari/components/content/content-renderer";
-import { PostGateShell } from "@/features/posts/components/post-gate-shell";
 import { authClient } from "@/lib/auth/auth.client";
 import { m } from "@/paraglide/messages";
 import { PostMeta } from "./components/post-meta";
@@ -15,6 +15,7 @@ import {
 import { PostSummary } from "./components/post-summary";
 import { RelatedPosts, RelatedPostsSkeleton } from "./components/related-posts";
 import TableOfContents from "./components/table-of-contents";
+import { TocDrawer } from "./components/toc-drawer";
 
 export function PostPage({ post, hideAdminEdit }: PostPageProps) {
   const { data: session } = authClient.useSession();
@@ -27,12 +28,15 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
       <div
         className="hidden 2xl:block absolute top-0 h-full pl-4"
         style={{
-          right: "max(calc(var(--fuwari-toc-width) * -1), 1rem)",
+          right: "calc(var(--fuwari-toc-width) * -1)",
           width: "max(var(--fuwari-toc-width), 0px)",
         }}
       >
         <TableOfContents headers={post.toc ?? []} />
       </div>
+
+      {/* Table Of Contents (Floating Button + Drawer, below 2xl) */}
+      <TocDrawer headers={post.toc ?? []} />
 
       {/* Main Post Container */}
       <div className="fuwari-card-base z-10 px-6 md:px-9 pt-6 pb-4 relative w-full fuwari-onload-animation">

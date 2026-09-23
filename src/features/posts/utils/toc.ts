@@ -1,5 +1,5 @@
 import type { JSONContent } from "@tiptap/react";
-import { slugify } from "@/features/posts/utils/content";
+import { headingAnchorId } from "@/features/posts/utils/heading-ids";
 
 export interface TableOfContentsItem {
   id: string;
@@ -18,7 +18,7 @@ export function generateTableOfContents(
     if (node.type === "heading") {
       const level = node.attrs?.level || 1;
       const text = getNodeText(node);
-      const id = slugify(text);
+      const id = headingAnchorId(text, level);
 
       if (text) {
         headings.push({ id, text, level });

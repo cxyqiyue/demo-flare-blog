@@ -230,6 +230,8 @@
   "post_related_posts": "Related Reading",
   "post_read_more": "Read",
   "post_back_to_top": "Top",
+  "post_toc": "Table of Contents",
+  "post_toc_close": "Close",
   "post_word_count": [
     {
       "declarations": [

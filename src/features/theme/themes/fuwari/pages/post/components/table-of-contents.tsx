@@ -5,8 +5,17 @@ import { cn } from "@/lib/utils";
 
 export default function TableOfContents({
   headers,
+  forceVisible = false,
+  tocHeightClass,
+  onNavigate,
 }: {
   headers: Array<TableOfContentsItem>;
+  /** 抽屉等环境：强制始终可见，不随滚动状态淡入淡出 */
+  forceVisible?: boolean;
+  /** 覆盖滚动区域高度类（默认 h-[calc(100vh-20rem)]） */
+  tocHeightClass?: string;
+  /** 点击条目跳到锚点后触发（抽屉用它收起面板） */
+  onNavigate?: () => void;
 }) {
   const [activeIndices, setActiveIndices] = useState<Array<number>>([]);
   const [isReady, setIsReady] = useState(false);
@@ -214,14 +223,17 @@ export default function TableOfContents({
       ref={navRef}
       className={cn(
         "sticky top-14 self-start block w-full transition-all duration-500",
-        isVisible && isReady
+        forceVisible || (isVisible && isReady)
           ? "opacity-100 translate-y-0"
           : "opacity-0 translate-y-4 pointer-events-none",
       )}
     >
       <div
         ref={tocRootRef}
-        className="relative toc-root overflow-y-scroll overflow-x-hidden fuwari-toc-scrollbar h-[calc(100vh-20rem)]"
+        className={cn(
+          "relative toc-root overflow-y-scroll overflow-x-hidden fuwari-toc-scrollbar",
+          tocHeightClass ?? "h-[calc(100vh-20rem)]",
+        )}
         style={{
           scrollBehavior: "smooth",
           maskImage:
@@ -258,6 +270,7 @@ export default function TableOfContents({
                         hash: heading.id,
                         replace: true,
                       });
+                      onNavigate?.();
                     }
                   }}
                   className={cn(
