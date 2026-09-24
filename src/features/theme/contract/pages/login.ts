@@ -14,7 +14,6 @@ export interface LoginFormData {
   handleSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   loginStep: LoginStep;
   isSubmitting: boolean;
-  challengePending: boolean;
   /** 验证码已发送到的邮箱（OTP 步骤展示） */
   otpEmail: string | null;
   /** 距可重新发送的剩余秒数（0 = 可重发） */

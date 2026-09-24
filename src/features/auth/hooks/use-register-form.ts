@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { AUTH_KEYS } from "@/features/auth/queries";
-import type { UseChallengeReturn } from "@/features/challenge/hooks/use-challenge";
 import { requestSendOtp } from "@/features/email-otp/client/otp.client";
 import { OTP_RESEND_COOLDOWN_SECONDS } from "@/features/email-otp/otp-constants";
 import { usePreviousLocation } from "@/hooks/use-previous-location";
@@ -37,12 +36,11 @@ const createRegisterSchema = (messages: Messages) =>
 type RegisterSchema = z.infer<ReturnType<typeof createRegisterSchema>>;
 
 export interface UseRegisterFormOptions {
-  challenge: UseChallengeReturn;
   isEmailConfigured: boolean;
 }
 
 export function useRegisterForm(options: UseRegisterFormOptions) {
-  const { challenge, isEmailConfigured } = options;
+  const { isEmailConfigured } = options;
 
   const [step, setStep] = useState<"IDLE" | "OTP" | "VERIFYING" | "SUCCESS">(
     "IDLE",
@@ -98,11 +96,6 @@ export function useRegisterForm(options: UseRegisterFormOptions) {
       });
       return;
     }
-    if (challenge.isPending) {
-      toast.error(m.challenge_pending_hint());
-      return;
-    }
-
     setStep("VERIFYING");
 
     const { error } = await authClient.signUp.email({
@@ -113,15 +106,12 @@ export function useRegisterForm(options: UseRegisterFormOptions) {
       fetchOptions: {
         headers: {
           "X-Otp": code,
-          "X-Turnstile-Token": challenge.token || "",
-          "X-Altcha-Solution": challenge.altchaSolution || "",
         },
       },
     });
 
     if (error) {
-      // token 一次性：失败时重置，重新验证后再重试
-      challenge.reset();
+      // 验证码一次性：失败或过期时回到输入态，重新获取后再试
       setStep("OTP");
       toast.error(m.register_toast_failed(), {
         description:

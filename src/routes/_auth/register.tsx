@@ -34,13 +34,11 @@ function RouteComponent() {
     config: challengeConfig,
   });
 
-  const registerForm = useRegisterForm({
-    challenge,
-    isEmailConfigured,
-  });
+  const registerForm = useRegisterForm({ isEmailConfigured });
 
   const challengeElement =
-    challengeConfig.provider !== "none" ? (
+    challengeConfig.provider !== "none" &&
+    registerForm.registerStep === "IDLE" ? (
       <ChallengeWidget
         action="register"
         challenge={challengeConfig}
@@ -51,10 +49,7 @@ function RouteComponent() {
   return (
     <theme.RegisterPage
       isEmailConfigured={isEmailConfigured}
-      registerForm={{
-        ...registerForm,
-        challengePending: challenge.isPending,
-      }}
+      registerForm={registerForm}
       challengeElement={challengeElement}
     />
   );

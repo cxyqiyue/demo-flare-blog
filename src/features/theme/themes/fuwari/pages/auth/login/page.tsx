@@ -16,7 +16,6 @@ export function LoginPage({
     handleSubmit,
     loginStep,
     isSubmitting,
-    challengePending: formChallengePending,
     otpEmail,
     resendSecondsLeft,
     handleResendCode,
@@ -162,9 +161,7 @@ export function LoginPage({
                 <button
                   type="submit"
                   disabled={
-                    isSubmitting ||
-                    loginStep === "SUCCESS" ||
-                    formChallengePending
+                    isSubmitting || loginStep === "SUCCESS"
                   }
                   className="mt-2 w-full py-3.5 rounded-xl fuwari-btn-primary font-bold text-sm tracking-wide active:scale-[0.98] transition-all gap-2"
                 >

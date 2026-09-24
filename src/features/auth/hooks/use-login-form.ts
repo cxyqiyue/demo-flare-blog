@@ -125,11 +125,6 @@ export function useLoginForm(options: UseLoginFormOptions) {
       });
       return;
     }
-    if (challenge.isPending) {
-      toast.error(m.challenge_pending_hint());
-      return;
-    }
-
     setLoginStep("VERIFYING");
 
     const { error } = await authClient.signIn.email({
@@ -138,15 +133,12 @@ export function useLoginForm(options: UseLoginFormOptions) {
       fetchOptions: {
         headers: {
           "X-Otp": code,
-          "X-Turnstile-Token": challenge.token || "",
-          "X-Altcha-Solution": challenge.altchaSolution || "",
         },
       },
     });
 
     if (error) {
-      // token 一次性：失败时重置，重新验证后再重试
-      challenge.reset();
+      // 验证码一次性：失败或过期时回到输入态，重新获取后再试
       setLoginStep("OTP");
       const description =
         getLoginAuthErrorMessage(error, m) ?? m.auth_error_default_desc();

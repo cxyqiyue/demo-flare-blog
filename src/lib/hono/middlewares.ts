@@ -227,6 +227,11 @@ export const shieldMiddleware = createMiddleware(async (c, next) => {
  */
 export const challengeMiddleware = createMiddleware<{ Bindings: Env }>(
   async (c, next) => {
+    // 邮箱 OTP 校验（登录/注册的最终提交）凭证即邮箱控制权证明：
+    // 验证码由系统下发至本人邮箱、一次性、2 分钟有效，且 /api/auth/otp/send
+    // 同样不挂人机验证并受 IP + 每邮箱限流兜底，故携带 X-Otp 时跳过挑战。
+    if (c.req.header("X-Otp")) return next();
+
     const config = await getChallengeServerConfig({
       db: c.get("db"),
       env: c.env,

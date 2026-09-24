@@ -12,7 +12,6 @@ export function RegisterPage({
     errors,
     handleSubmit,
     isSubmitting,
-    challengePending,
     registerStep,
     otpEmail,
     resendSecondsLeft,
@@ -198,9 +197,7 @@ export function RegisterPage({
               <button
                 type="submit"
                 disabled={
-                  isSubmitting ||
-                  registerStep === "SUCCESS" ||
-                  challengePending
+                  isSubmitting || registerStep === "SUCCESS"
                 }
                 className="mt-4 w-full py-3.5 rounded-xl fuwari-btn-primary font-bold text-sm tracking-wide active:scale-[0.98] transition-all gap-2"
               >
