@@ -5,7 +5,12 @@ import { betterAuth } from "better-auth/minimal";
 import { eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AuthEmail } from "@/features/email/templates/AuthEmail";
+import {
+  type OtpPurpose,
+  verifyAndConsumeOtp,
+} from "@/features/email-otp/service/otp.service";
 import { seedAdminNavigationOnFirstLogin } from "@/features/navigation/navigation.service";
+import { checkEmailAuthRateLimit } from "@/lib/auth/email-rate-limit";
 import { createAuthConfig } from "@/lib/auth/auth.config";
 import { resolveGravatarEmailAvatar } from "@/lib/auth/gravatar";
 import * as authSchema from "@/lib/db/schema/auth.table";
@@ -144,36 +149,83 @@ export function getAuth({ db, env }: { db: DB; env: Env }) {
     },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
-        if (ctx.path !== "/sign-up/email") return;
+        // 邮箱登录 / 注册：必须先通过邮箱验证码（X-Otp 头），验证成功才放行
+        const isEmailAuthPath =
+          ctx.path === "/sign-in/email" || ctx.path === "/sign-up/email";
 
-        const email =
-          typeof ctx.body?.email === "string" ? ctx.body.email.trim() : "";
-        if (!email) return;
+        if (isEmailAuthPath) {
+          const email =
+            typeof ctx.body?.email === "string" ? ctx.body.email.trim() : "";
+          if (!email) return;
 
-        const allowed = await checkEmailRateLimit(env, "email-signup", email);
-        if (allowed) return;
+          const code =
+            (typeof ctx.headers?.get === "function"
+              ? ctx.headers.get("x-otp")
+              : ctx.request?.headers.get("x-otp")) ?? "";
+          const purpose: OtpPurpose =
+            ctx.path === "/sign-in/email" ? "login" : "register";
 
-        throw APIError.from("BAD_REQUEST", {
-          code: "RATE_LIMITED",
-          message: "Too many sign up attempts",
-        });
+          const verification = await verifyAndConsumeOtp(db, {
+            email,
+            purpose,
+            code,
+          });
+
+          if (!verification.ok) {
+            const errorCode =
+              verification.reason === "REQUIRED"
+                ? "OTP_REQUIRED"
+                : verification.reason === "EXPIRED"
+                  ? "OTP_EXPIRED"
+                  : "OTP_INVALID";
+            throw APIError.from("BAD_REQUEST", {
+              code: errorCode,
+              message: "Email verification code required",
+            });
+          }
+
+          if (ctx.path === "/sign-in/email") {
+            // 验证码通过即证明邮箱所有权：直接置为已认证，
+            // 避免旧「邮件链接验证」体系对一次性登录的残留拦截。
+            await db
+              .update(user)
+              .set({ emailVerified: true })
+              .where(eq(user.email, email));
+            return;
+          }
+
+          // 注册：保留原有「每邮箱注册尝试」限流
+          const allowed = await checkEmailRateLimit(
+            env,
+            "email-signup",
+            email,
+          );
+          if (!allowed) {
+            throw APIError.from("BAD_REQUEST", {
+              code: "RATE_LIMITED",
+              message: "Too many sign up attempts",
+            });
+          }
+
+          // 标记 OTP 已通过，user.create 钩子根据它把账号直接创建为已认证
+          (ctx.context as Record<string, unknown>).otpVerified = true;
+          return;
+        }
       }),
     },
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: true,
+      // OTP 验证码已替代「邮件链接验证」充当邮箱所有权证明（见上方 hooks.before）：
+      // 开启会令 signUp 永远不自动登录（token 恒为 null）且多发一封验证邮件，故关闭。
+      requireEmailVerification: false,
       password: {
         hash: (password: string) => getPasswordHasher().hash(password),
         verify: (params: { hash: string; password: string }) =>
           getPasswordHasher().verify(params),
       },
       sendResetPassword: async ({ user, url }) => {
-        // Per-email rate limit: 3 per hour — silently skip if exceeded
-        const allowed = await checkEmailRateLimit(
-          env,
-          "email-reset",
-          user.email,
-        );
+        // Per-email rate limit: 10 per hour (shared auth-mail bucket) — silently skip if exceeded
+        const allowed = await checkEmailAuthRateLimit(env, user.email);
         if (!allowed) return;
 
         const locale = getAuthEmailLocale();
@@ -193,12 +245,8 @@ export function getAuth({ db, env }: { db: DB; env: Env }) {
     },
     emailVerification: {
       sendVerificationEmail: async ({ user, url }) => {
-        // Per-email rate limit: 3 per hour — silently skip if exceeded
-        const allowed = await checkEmailRateLimit(
-          env,
-          "email-verify",
-          user.email,
-        );
+        // Per-email rate limit: 10 per hour (shared auth-mail bucket) — silently skip if exceeded
+        const allowed = await checkEmailAuthRateLimit(env, user.email);
         if (!allowed) return;
 
         const locale = getAuthEmailLocale();
@@ -224,11 +272,19 @@ export function getAuth({ db, env }: { db: DB; env: Env }) {
     databaseHooks: {
       user: {
         create: {
-          before: async (user) => {
+          before: async (user, context) => {
+            const otpVerified =
+              (context?.context as Record<string, unknown> | undefined)
+                ?.otpVerified === true;
+
+            const next = otpVerified
+              ? { ...user, emailVerified: true }
+              : user;
+
             if (isAdminEmail(user.email)) {
-              return { data: { ...user, role: "admin" } };
+              return { data: { ...next, role: "admin" } };
             }
-            return { data: user };
+            return { data: next };
           },
         },
       },

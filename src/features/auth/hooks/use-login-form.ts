@@ -1,26 +1,32 @@
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { AUTH_KEYS } from "@/features/auth/queries";
 import type { UseChallengeReturn } from "@/features/challenge/hooks/use-challenge";
+import { requestSendOtp } from "@/features/email-otp/client/otp.client";
+import { OTP_RESEND_COOLDOWN_SECONDS } from "@/features/email-otp/otp-constants";
 import { usePreviousLocation } from "@/hooks/use-previous-location";
 import { authClient } from "@/lib/auth/auth.client";
 import {
   getLoginAuthErrorMessage,
+  getOtpSendErrorMessage,
   isEmailNotVerifiedError,
 } from "@/lib/auth/auth-errors";
 import type { Messages } from "@/lib/i18n";
 import { m } from "@/paraglide/messages";
 import { normalizeRedirectUrl } from "./normalize-redirect-url";
 
+const OTP_CODE_PATTERN = /^\d{6}$/;
+
 const createLoginSchema = (messages: Messages) =>
   z.object({
     email: z.email(messages.login_validation_invalid_email()),
     password: z.string().min(1, messages.login_validation_password_required()),
+    otp: z.string().optional(),
   });
 
 type LoginSchema = z.infer<ReturnType<typeof createLoginSchema>>;
@@ -33,9 +39,11 @@ export interface UseLoginFormOptions {
 export function useLoginForm(options: UseLoginFormOptions) {
   const { challenge, redirectTo } = options;
 
-  const [loginStep, setLoginStep] = useState<"IDLE" | "VERIFYING" | "SUCCESS">(
-    "IDLE",
-  );
+  const [loginStep, setLoginStep] = useState<
+    "IDLE" | "OTP" | "VERIFYING" | "SUCCESS"
+  >("IDLE");
+  const [otpEmail, setOtpEmail] = useState<string | null>(null);
+  const [resendSecondsLeft, setResendSecondsLeft] = useState(0);
 
   const navigate = useNavigate();
   const previousLocation = usePreviousLocation();
@@ -45,6 +53,15 @@ export function useLoginForm(options: UseLoginFormOptions) {
   const form = useForm<LoginSchema>({
     resolver: standardSchemaResolver(loginSchema),
   });
+
+  // 重发冷却倒计时
+  useEffect(() => {
+    if (resendSecondsLeft <= 0) return;
+    const timer = setInterval(() => {
+      setResendSecondsLeft((seconds) => (seconds > 0 ? seconds - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendSecondsLeft]);
 
   const performRedirect = (
     redirectTarget: string | undefined,
@@ -77,11 +94,42 @@ export function useLoginForm(options: UseLoginFormOptions) {
     challenge,
   };
 
-  const onSubmit = async (data: LoginSchema) => {
+  const handleSendCode = async (data: LoginSchema): Promise<void> => {
+    setLoginStep("IDLE");
+    const result = await requestSendOtp({
+      email: data.email,
+      purpose: "login",
+      password: data.password,
+    });
+
+    if (!result.ok) {
+      const description =
+        getOtpSendErrorMessage(result, m) ?? m.auth_error_default_desc();
+      toast.error(m.otp_toast_send_failed(), { description });
+      return;
+    }
+
+    setOtpEmail(data.email.toLowerCase());
+    setResendSecondsLeft(OTP_RESEND_COOLDOWN_SECONDS);
+    setLoginStep("OTP");
+    form.setValue("otp", "");
+    toast.success(m.otp_toast_sent(), { description: m.otp_toast_sent_desc() });
+  };
+
+  const handleVerify = async (data: LoginSchema): Promise<void> => {
+    const code = data.otp?.trim() ?? "";
+    if (!OTP_CODE_PATTERN.test(code)) {
+      form.setError("otp", {
+        type: "manual",
+        message: m.otp_code_invalid_format(),
+      });
+      return;
+    }
     if (challenge.isPending) {
       toast.error(m.challenge_pending_hint());
       return;
     }
+
     setLoginStep("VERIFYING");
 
     const { error } = await authClient.signIn.email({
@@ -89,6 +137,7 @@ export function useLoginForm(options: UseLoginFormOptions) {
       password: data.password,
       fetchOptions: {
         headers: {
+          "X-Otp": code,
           "X-Turnstile-Token": challenge.token || "",
           "X-Altcha-Solution": challenge.altchaSolution || "",
         },
@@ -98,7 +147,7 @@ export function useLoginForm(options: UseLoginFormOptions) {
     if (error) {
       // token 一次性：失败时重置，重新验证后再重试
       challenge.reset();
-      setLoginStep("IDLE");
+      setLoginStep("OTP");
       const description =
         getLoginAuthErrorMessage(error, m) ?? m.auth_error_default_desc();
 
@@ -123,6 +172,25 @@ export function useLoginForm(options: UseLoginFormOptions) {
       performRedirect(redirectTo, previousLocation);
       toast.success(m.login_toast_success());
     }, 800);
+  };
+
+  const onSubmit = (data: LoginSchema) => {
+    if (loginStep === "OTP") return handleVerify(data);
+    return handleSendCode(data);
+  };
+
+  const handleResendCode = async () => {
+    if (resendSecondsLeft > 0) return;
+    const data = form.getValues();
+    await handleSendCode(data);
+  };
+
+  const handleBackToCredentials = () => {
+    setLoginStep("IDLE");
+    setOtpEmail(null);
+    setResendSecondsLeft(0);
+    form.setValue("otp", "");
+    form.clearErrors("otp");
   };
 
   const handleResendVerification = async () => {
@@ -172,6 +240,10 @@ export function useLoginForm(options: UseLoginFormOptions) {
     loginStep,
     isSubmitting: form.formState.isSubmitting,
     loginSchema,
+    otpEmail,
+    resendSecondsLeft,
+    handleResendCode,
+    handleBackToCredentials,
   };
 }
 
