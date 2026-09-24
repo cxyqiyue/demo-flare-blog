@@ -30,6 +30,7 @@ import postsRelatedRoute from "@/features/posts/api/hono/posts.related.route";
 import postsUnlockRoute from "@/features/posts/api/hono/posts.unlock.route";
 import searchRoute from "@/features/search/api/hono/search.route";
 import siteDocumentsRoute from "@/features/site-documents/api/hono/site-documents.route";
+import { handleOtpSend } from "@/features/email-otp/api/hono/otp.route";
 import tagsRoute from "@/features/tags/api/hono/tags.list.route";
 import wechatVerifyRoute from "@/features/wechat-verify/api/hono/wechat-verify.route";
 import { serverEnv } from "@/lib/env/server.env";
@@ -235,6 +236,25 @@ protectedAuthPaths.forEach((path) => {
     forwardAuthRequest,
   );
 });
+
+// 邮箱验证码下发：受 IP 限流保护（按 IP 5/1m + 10/1h）。
+// 不挂人机验证中间件，避免消耗一次性 token 导致最终登录/注册需重复过挑战；
+// 每个邮箱的发送量由独立的「email-auth」桶（10 封/小时 + 30s 重发冷却）兜底。
+app.post(
+  "/api/auth/otp/send",
+  baseMiddleware,
+  rateLimitMiddleware({
+    capacity: 5,
+    interval: "1m",
+    identifier: createRateLimiterIdentifier,
+  }),
+  rateLimitMiddleware({
+    capacity: 10,
+    interval: "1h",
+    identifier: (c) => `hourly:${createRateLimiterIdentifier(c)}`,
+  }),
+  handleOtpSend,
+);
 
 app.post(
   "/api/auth/*",

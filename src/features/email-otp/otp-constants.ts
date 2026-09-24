@@ -1,0 +1,4 @@
+export const OTP_TTL_MS = 60_000;
+export const OTP_RESEND_COOLDOWN_MS = 30_000;
+export const OTP_RESEND_COOLDOWN_SECONDS = OTP_RESEND_COOLDOWN_MS / 1000;
+export const OTP_LENGTH = 6;

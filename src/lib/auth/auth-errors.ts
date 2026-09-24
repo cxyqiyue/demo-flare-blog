@@ -5,6 +5,9 @@ const CUSTOM_AUTH_ERROR_CODES = [
   "RATE_LIMITED",
   "TURNSTILE_MISSING_TOKEN",
   "TURNSTILE_VERIFICATION_FAILED",
+  "OTP_REQUIRED",
+  "OTP_INVALID",
+  "OTP_EXPIRED",
 ] as const;
 
 type CustomAuthErrorCode = (typeof CUSTOM_AUTH_ERROR_CODES)[number];
@@ -53,6 +56,12 @@ function getCustomAuthErrorMessage(
     case "TURNSTILE_MISSING_TOKEN":
     case "TURNSTILE_VERIFICATION_FAILED":
       return messages.turnstile_error_failed_desc();
+    case "OTP_REQUIRED":
+      return messages.otp_error_required();
+    case "OTP_INVALID":
+      return messages.otp_error_invalid();
+    case "OTP_EXPIRED":
+      return messages.otp_error_expired();
     case "RATE_LIMITED": {
       const seconds =
         typeof error?.retryAfterMs === "number"
@@ -129,6 +138,33 @@ export function getRegisterAuthErrorMessage(
   messages: Messages,
 ): string | undefined {
   return getSharedAuthErrorMessage(error, messages);
+}
+
+export interface OtpSendErrorLike {
+  code?: string | null;
+  retryAfterMs?: number | null;
+}
+
+/** 发送验证码（/api/auth/otp/send）的错误 → 文案 */
+export function getOtpSendErrorMessage(
+  error: OtpSendErrorLike | null | undefined,
+  messages: Messages,
+  options?: { invalidCredentialsMessage?: string },
+): string | undefined {
+  const customMessage = getCustomAuthErrorMessage(error, messages);
+  if (customMessage) return customMessage;
+
+  switch (getErrorCode(error)) {
+    case "INVALID_EMAIL_OR_PASSWORD":
+      return (
+        options?.invalidCredentialsMessage ??
+        messages.login_error_invalid_credentials()
+      );
+    case "USER_ALREADY_EXISTS":
+      return messages.auth_error_user_already_exists();
+    case "EMAIL_DISABLED":
+      return messages.otp_error_email_disabled();
+  }
 }
 
 export function getForgotPasswordAuthErrorMessage(
