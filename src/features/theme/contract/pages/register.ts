@@ -16,7 +16,6 @@ export interface RegisterFormData {
   handleSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   isSubmitting: boolean;
   isSuccess: boolean;
-  challengePending: boolean;
   registerStep: RegisterStep;
   /** 验证码已发送到的邮箱（OTP 步骤展示） */
   otpEmail: string | null;

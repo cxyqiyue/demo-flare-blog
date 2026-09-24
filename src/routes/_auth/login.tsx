@@ -53,7 +53,7 @@ function RouteComponent() {
   });
 
   const challengeElement =
-    challengeConfig.provider !== "none" ? (
+    challengeConfig.provider !== "none" && loginForm.loginStep === "IDLE" ? (
       <ChallengeWidget
         action="login"
         challenge={challengeConfig}
@@ -64,10 +64,7 @@ function RouteComponent() {
   return (
     <theme.LoginPage
       isEmailConfigured={isEmailConfigured}
-      loginForm={{
-        ...loginForm,
-        challengePending: challenge.isPending,
-      }}
+      loginForm={loginForm}
       socialLogin={socialLogin}
       challengeElement={challengeElement}
     />
