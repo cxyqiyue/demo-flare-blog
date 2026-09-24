@@ -31,12 +31,14 @@ export function LoginPage({
           <LoginForm form={loginForm} isEmailConfigured={isEmailConfigured} />
         )}
 
-        <SocialLogin
-          isLoading={socialLogin.isLoading}
-          challengePending={socialLogin.challengePending}
-          handleGithubLogin={socialLogin.handleGithubLogin}
-          showDivider={isEmailConfigured}
-        />
+        {loginForm.loginStep === "IDLE" && (
+          <SocialLogin
+            isLoading={socialLogin.isLoading}
+            challengePending={socialLogin.challengePending}
+            handleGithubLogin={socialLogin.handleGithubLogin}
+            showDivider={isEmailConfigured}
+          />
+        )}
 
         {challengeElement}
 
