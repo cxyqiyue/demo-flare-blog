@@ -1,3 +1,4 @@
+import type { JSONContent } from "@tiptap/react";
 import { findAboutArticleById } from "@/features/about/data/about-article.data";
 import type {
   CreateCommentInput,
@@ -17,7 +18,19 @@ import * as PostService from "@/features/posts/services/posts.service";
 import { convertToPlainText } from "@/features/posts/utils/content";
 import { serverEnv } from "@/lib/env/server.env";
 import { err, ok } from "@/lib/errors";
+import { normalizeRawMarkdownContent } from "@/lib/markdown/raw-markdown";
 import { m } from "@/paraglide/messages";
+
+// 存量「原文 Markdown」评论兜底：内容读出时转为富文本 JSON。
+async function normalizeCommentContent<T extends { content: unknown }>(
+  item: T,
+): Promise<T> {
+  const content = await normalizeRawMarkdownContent(
+    item.content as JSONContent | null,
+  );
+  if (content === (item.content as unknown)) return item;
+  return { ...item, content };
+}
 
 function resolveTarget(data: {
   postId?: number;
@@ -231,7 +244,7 @@ export async function getRootCommentsByTarget(
           status: data.viewerId ? undefined : ["published", "deleted"],
         },
       );
-      return { ...item, replyCount };
+      return { ...(await normalizeCommentContent(item)), replyCount };
     }),
   );
 
@@ -260,7 +273,11 @@ export async function getRepliesByRootId(
     }),
   ]);
 
-  return { items, total };
+  const normalizedItems = await Promise.all(
+    items.map((item) => normalizeCommentContent(item)),
+  );
+
+  return { items: normalizedItems, total };
 }
 
 // ============ Authed User Service Methods ============
@@ -397,7 +414,7 @@ export async function getMyComments(
   context: AuthContext,
   data: GetMyCommentsInput,
 ) {
-  return await CommentRepo.getCommentsByUserId(
+  const items = await CommentRepo.getCommentsByUserId(
     context.db,
     context.session.user.id,
     {
@@ -406,6 +423,7 @@ export async function getMyComments(
       status: data.status,
     },
   );
+  return await Promise.all(items.map((item) => normalizeCommentContent(item)));
 }
 
 // ============ Admin Service Methods ============
@@ -414,7 +432,7 @@ export async function getAllComments(
   context: DbContext,
   data: GetAllCommentsInput,
 ) {
-  const [items, total] = await Promise.all([
+  const [itemsRaw, total] = await Promise.all([
     CommentRepo.getAllComments(context.db, {
       offset: data.offset,
       limit: data.limit,
@@ -434,6 +452,10 @@ export async function getAllComments(
       userName: data.userName,
     }),
   ]);
+
+  const items = await Promise.all(
+    itemsRaw.map((item) => normalizeCommentContent(item)),
+  );
 
   return { items, total };
 }

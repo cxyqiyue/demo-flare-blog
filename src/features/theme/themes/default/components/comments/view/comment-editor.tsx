@@ -1,11 +1,13 @@
-import type { JSONContent } from "@tiptap/react";
+import type { JSONContent, Editor as TiptapEditor } from "@tiptap/react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
-import { Loader2, Send } from "lucide-react";
-import { useCallback, useState } from "react";
+import { FileText, Loader2, Send } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { getCommentExtensions } from "@/features/comments/components/editor/config";
 import { useCommentImageUploader } from "@/features/image-hosting/hooks/use-comment-image-upload";
 import { normalizeLinkHref } from "@/lib/links/normalize-link-href";
+import { useMarkdownMode } from "@/lib/markdown/markdown-mode";
+import { createMarkdownPasteHandler } from "@/lib/markdown/markdown-paste-handler";
 import { m } from "@/paraglide/messages";
 import CommentEditorToolbar from "../editor/comment-editor-toolbar";
 import type { ModalType } from "../editor/comment-insert-modal";
@@ -31,17 +33,28 @@ export const CommentEditor = ({
   const [modalType, setModalType] = useState<ModalType>(null);
   const [modalInitialUrl, setModalInitialUrl] = useState("");
 
+  const markdownMode = useMarkdownMode();
+  const { mode, markdownText, setMarkdownText, converting } = markdownMode;
+
+  const editorRef = useRef<TiptapEditor | null>(null);
+  const handlePaste = useCallback(
+    createMarkdownPasteHandler(() => editorRef.current),
+    [],
+  );
+
   const editor = useEditor({
     extensions: getCommentExtensions(),
     content: "",
     autofocus: autoFocus ? "end" : false,
     editorProps: {
+      handlePaste,
       attributes: {
         class:
           "min-h-[80px] w-full bg-transparent py-2 text-sm focus:outline-none placeholder:text-muted-foreground/30 max-w-none",
       },
     },
   });
+  editorRef.current = editor;
 
   const { isEmpty } = useEditorState({
     editor,
@@ -73,7 +86,31 @@ export const CommentEditor = ({
     setModalType("IMAGE");
   }, [editor, imageHostingEnabled, openUpload]);
 
+  const handleToggleMode = () => {
+    if (converting) return;
+    if (mode === "markdown") {
+      void markdownMode.switchToRich().then((json) => {
+        if (json && editor) editor.commands.setContent(json);
+      });
+    } else {
+      markdownMode.switchToMarkdown(editor ? editor.getJSON() : null);
+    }
+  };
+
   const handleSubmit = async () => {
+    if (isSubmitting || converting) return;
+    if (mode === "markdown") {
+      if (!markdownText.trim()) return;
+      try {
+        const success = await markdownMode.submitInMarkdown(onSubmit);
+        if (success !== false) {
+          editorRef.current?.commands.clearContent();
+        }
+      } catch {
+        // Error handled by parent hook
+      }
+      return;
+    }
     if (isEmpty || isSubmitting) return;
 
     try {
@@ -89,16 +126,48 @@ export const CommentEditor = ({
 
   return (
     <div className="relative group/editor border border-border/10 rounded-sm bg-muted/5 transition-colors duration-300 hover:border-border/30 focus-within:border-border/50 focus-within:bg-background overflow-hidden">
-      {/* Toolbar - Always visible at top */}
-      <div className="border-b border-border/10 p-1 bg-background/50 backdrop-blur-sm sticky top-0 z-10 w-full">
-        <CommentEditorToolbar
-          editor={editor}
-          onLinkClick={openLinkModal}
-          onImageClick={openImageModal}
-        />
-      </div>
+      {mode === "rich" ? (
+        <>
+          {/* Toolbar - Always visible at top */}
+          <div className="border-b border-border/10 p-1 bg-background/50 backdrop-blur-sm sticky top-0 z-10 w-full">
+            <CommentEditorToolbar
+              editor={editor}
+              onLinkClick={openLinkModal}
+              onImageClick={openImageModal}
+              onToggleMarkdown={handleToggleMode}
+            />
+          </div>
 
-      <EditorContent editor={editor} className="min-h-25 w-full px-4 py-3" />
+          <EditorContent
+            editor={editor}
+            className="min-h-25 w-full px-4 py-3"
+          />
+        </>
+      ) : (
+        <>
+          {/* Markdown toolbar */}
+          <div className="flex flex-wrap items-center gap-1 p-1 border-b border-border/10 bg-background/50 backdrop-blur-sm sticky top-0 z-10 w-full">
+            <button
+              onClick={handleToggleMode}
+              title={m.editor_mode_rich()}
+              type="button"
+              className="p-1.5 shrink-0 rounded-sm transition-all duration-200 text-muted-foreground hover:bg-muted/50 hover:text-foreground flex items-center justify-center"
+            >
+              <FileText size={14} />
+            </button>
+            <span className="text-[10px] font-mono text-muted-foreground/40 tracking-widest uppercase">
+              {m.editor_mode_markdown()}
+            </span>
+          </div>
+          <textarea
+            value={markdownText}
+            onChange={(event) => setMarkdownText(event.target.value)}
+            placeholder={m.comments_editor_placeholder()}
+            spellCheck={false}
+            className="min-h-[80px] w-full bg-transparent px-4 py-3 text-sm leading-relaxed text-foreground focus:outline-none placeholder:text-muted-foreground/30 max-w-none font-mono resize-y"
+          />
+        </>
+      )}
 
       <div className="flex items-center justify-between px-4 pb-2 pt-2 border-t border-border/10">
         <div className="text-[10px] font-mono text-muted-foreground/30 tracking-widest pl-2">
@@ -115,13 +184,21 @@ export const CommentEditor = ({
           )}
           <Button
             size="sm"
-            disabled={isEmpty || isSubmitting}
+            disabled={
+              (mode === "markdown" ? !markdownText.trim() : isEmpty) ||
+              isSubmitting ||
+              converting
+            }
             onClick={handleSubmit}
             variant="ghost"
             className="h-8 px-4 text-[10px] font-bold uppercase tracking-widest hover:bg-transparent hover:text-foreground p-0 flex items-center gap-2 group/btn"
           >
-            <span>{actualSubmitLabel}</span>
-            {isSubmitting ? (
+            <span>
+              {isSubmitting || converting
+                ? m.comments_editor_submitting()
+                : actualSubmitLabel}
+            </span>
+            {isSubmitting || converting ? (
               <Loader2 size={12} className="animate-spin" />
             ) : (
               <Send

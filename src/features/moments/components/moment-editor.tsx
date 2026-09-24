@@ -1,11 +1,12 @@
-import type { JSONContent } from "@tiptap/react";
-import type { Editor as TiptapEditor } from "@tiptap/react";
+import type { JSONContent, Editor as TiptapEditor } from "@tiptap/react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import clsx from "clsx";
 import type { LucideIcon } from "lucide-react";
 import {
   Bold,
   Code,
+  FileCode,
+  FileText,
   Heading2,
   Highlighter,
   Image as ImageIcon,
@@ -28,6 +29,7 @@ import {
 import { useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { getMomentExtensions } from "@/features/moments/components/moment-editor-config";
+import { useMarkdownMode } from "@/lib/markdown/markdown-mode";
 import { createMarkdownPasteHandler } from "@/lib/markdown/markdown-paste-handler";
 import { m } from "@/paraglide/messages";
 
@@ -74,6 +76,9 @@ export function MomentEditor({
 }: MomentEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<TiptapEditor | null>(null);
+
+  const markdownMode = useMarkdownMode();
+  const { mode, markdownText, setMarkdownText, converting } = markdownMode;
 
   const handlePaste = useCallback(
     createMarkdownPasteHandler(() => editorRef.current),
@@ -167,7 +172,25 @@ export function MomentEditor({
     [editor],
   );
 
+  const handleToggleMode = () => {
+    if (converting) return;
+    if (mode === "markdown") {
+      void markdownMode.switchToRich().then((json) => {
+        if (json && editor) editor.commands.setContent(json);
+      });
+    } else {
+      markdownMode.switchToMarkdown(editor ? editor.getJSON() : null);
+    }
+  };
+
   const handleSubmit = async () => {
+    if (converting || isSubmitting) return;
+    if (mode === "markdown") {
+      if (!markdownText.trim()) return;
+      const ok = await markdownMode.submitInMarkdown(onSubmit);
+      if (ok) editor?.commands.clearContent();
+      return;
+    }
     if (!editor || isEmpty || isSubmitting) return;
     const ok = await onSubmit(editor.getJSON());
     if (ok) {
@@ -186,133 +209,162 @@ export function MomentEditor({
         onChange={handleFileChange}
       />
 
-      <div className="flex flex-wrap items-center gap-1 p-1.5 border-b border-border/10 bg-background/50">
-        <ToolbarButton
-          onClick={() =>
-            editor?.chain().focus().toggleHeading({ level: 2 }).run()
-          }
-          isActive={isHeading2}
-          icon={Heading2}
-          label={m.editor_toolbar_heading2()}
-        />
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleBold().run()}
-          isActive={isBold}
-          icon={Bold}
-          label={m.comments_editor_toolbar_bold()}
-        />
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleItalic().run()}
-          isActive={isItalic}
-          icon={Italic}
-          label={m.comments_editor_toolbar_italic()}
-        />
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleUnderline().run()}
-          isActive={isUnderline}
-          icon={UnderlineIcon}
-          label={m.comments_editor_toolbar_underline()}
-        />
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleStrike().run()}
-          isActive={isStrike}
-          icon={Strikethrough}
-          label={m.comments_editor_toolbar_strike()}
-        />
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleCode().run()}
-          isActive={isCode}
-          icon={Code}
-          label={m.comments_editor_toolbar_code()}
-        />
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleHighlight().run()}
-          isActive={isHighlight}
-          icon={Highlighter}
-          label={m.editor_toolbar_highlight()}
-        />
+      {mode === "rich" ? (
+        <>
+          <div className="flex flex-wrap items-center gap-1 p-1.5 border-b border-border/10 bg-background/50">
+            <ToolbarButton
+              onClick={handleToggleMode}
+              icon={FileCode}
+              label={m.editor_mode_markdown()}
+            />
+            <ToolbarButton
+              onClick={() =>
+                editor?.chain().focus().toggleHeading({ level: 2 }).run()
+              }
+              isActive={isHeading2}
+              icon={Heading2}
+              label={m.editor_toolbar_heading2()}
+            />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().toggleBold().run()}
+              isActive={isBold}
+              icon={Bold}
+              label={m.comments_editor_toolbar_bold()}
+            />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().toggleItalic().run()}
+              isActive={isItalic}
+              icon={Italic}
+              label={m.comments_editor_toolbar_italic()}
+            />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().toggleUnderline().run()}
+              isActive={isUnderline}
+              icon={UnderlineIcon}
+              label={m.comments_editor_toolbar_underline()}
+            />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().toggleStrike().run()}
+              isActive={isStrike}
+              icon={Strikethrough}
+              label={m.comments_editor_toolbar_strike()}
+            />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().toggleCode().run()}
+              isActive={isCode}
+              icon={Code}
+              label={m.comments_editor_toolbar_code()}
+            />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().toggleHighlight().run()}
+              isActive={isHighlight}
+              icon={Highlighter}
+              label={m.editor_toolbar_highlight()}
+            />
 
-        <div className="h-4 w-px bg-border/20 mx-1" />
+            <div className="h-4 w-px bg-border/20 mx-1" />
 
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          isActive={isBulletList}
-          icon={List}
-          label={m.editor_toolbar_bullet_list()}
-        />
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-          isActive={isOrderedList}
-          icon={ListOrdered}
-          label={m.editor_toolbar_ordered_list()}
-        />
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleTaskList().run()}
-          isActive={isTaskList}
-          icon={ListTodo}
-          label={m.editor_toolbar_task_list()}
-        />
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-          isActive={isBlockquote}
-          icon={Quote}
-          label={m.editor_toolbar_blockquote()}
-        />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().toggleBulletList().run()}
+              isActive={isBulletList}
+              icon={List}
+              label={m.editor_toolbar_bullet_list()}
+            />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+              isActive={isOrderedList}
+              icon={ListOrdered}
+              label={m.editor_toolbar_ordered_list()}
+            />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().toggleTaskList().run()}
+              isActive={isTaskList}
+              icon={ListTodo}
+              label={m.editor_toolbar_task_list()}
+            />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+              isActive={isBlockquote}
+              icon={Quote}
+              label={m.editor_toolbar_blockquote()}
+            />
 
-        <div className="h-4 w-px bg-border/20 mx-1" />
+            <div className="h-4 w-px bg-border/20 mx-1" />
 
-        <ToolbarButton
-          onClick={() =>
-            editor
-              ?.chain()
-              .focus()
-              .insertTable({ rows: 2, cols: 3, withHeaderRow: true })
-              .run()
-          }
-          icon={TableIcon}
-          label={m.editor_toolbar_table()}
-        />
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
-          isActive={isCodeBlock}
-          icon={SquareCode}
-          label={m.editor_toolbar_code_block()}
-        />
-        <ToolbarButton
-          onClick={() => editor?.chain().focus().setHorizontalRule().run()}
-          icon={Minus}
-          label={m.editor_toolbar_horizontal_rule()}
-        />
+            <ToolbarButton
+              onClick={() =>
+                editor
+                  ?.chain()
+                  .focus()
+                  .insertTable({ rows: 2, cols: 3, withHeaderRow: true })
+                  .run()
+              }
+              icon={TableIcon}
+              label={m.editor_toolbar_table()}
+            />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+              isActive={isCodeBlock}
+              icon={SquareCode}
+              label={m.editor_toolbar_code_block()}
+            />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().setHorizontalRule().run()}
+              icon={Minus}
+              label={m.editor_toolbar_horizontal_rule()}
+            />
 
-        <div className="h-4 w-px bg-border/20 mx-1" />
+            <div className="h-4 w-px bg-border/20 mx-1" />
 
-        <ToolbarButton
-          onClick={insertLink}
-          isActive={isLink}
-          icon={LinkIcon}
-          label={m.comments_editor_toolbar_link()}
-        />
-        <ToolbarButton
-          onClick={pickImage}
-          icon={ImageIcon}
-          label={m.comments_editor_toolbar_image()}
-        />
+            <ToolbarButton
+              onClick={insertLink}
+              isActive={isLink}
+              icon={LinkIcon}
+              label={m.comments_editor_toolbar_link()}
+            />
+            <ToolbarButton
+              onClick={pickImage}
+              icon={ImageIcon}
+              label={m.comments_editor_toolbar_image()}
+            />
 
-        <div className="ml-auto flex gap-0.5">
-          <ToolbarButton
-            onClick={() => editor?.chain().focus().undo().run()}
-            icon={Undo}
-            label={m.comments_editor_toolbar_undo()}
+            <div className="ml-auto flex gap-0.5">
+              <ToolbarButton
+                onClick={() => editor?.chain().focus().undo().run()}
+                icon={Undo}
+                label={m.comments_editor_toolbar_undo()}
+              />
+              <ToolbarButton
+                onClick={() => editor?.chain().focus().redo().run()}
+                icon={Redo}
+                label={m.comments_editor_toolbar_redo()}
+              />
+            </div>
+          </div>
+
+          <EditorContent editor={editor} className="w-full px-4 py-2" />
+        </>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-1 p-1.5 border-b border-border/10 bg-background/50">
+            <ToolbarButton
+              onClick={handleToggleMode}
+              icon={FileText}
+              label={m.editor_mode_rich()}
+            />
+            <span className="text-[10px] font-mono text-muted-foreground/40 tracking-widest uppercase">
+              {m.editor_mode_markdown()}
+            </span>
+          </div>
+          <textarea
+            value={markdownText}
+            onChange={(event) => setMarkdownText(event.target.value)}
+            placeholder={m.moments_composer_placeholder()}
+            spellCheck={false}
+            className="min-h-[120px] w-full bg-transparent px-3 py-3 text-sm leading-relaxed text-foreground focus:outline-none placeholder:text-muted-foreground/30 font-mono resize-y"
           />
-          <ToolbarButton
-            onClick={() => editor?.chain().focus().redo().run()}
-            icon={Redo}
-            label={m.comments_editor_toolbar_redo()}
-          />
-        </div>
-      </div>
-
-      <EditorContent editor={editor} className="w-full px-4 py-2" />
+        </>
+      )}
 
       <div className="flex items-center justify-between px-4 pb-2 pt-2 border-t border-border/10">
         <div className="text-[10px] font-mono text-muted-foreground/30 tracking-widest pl-2">
@@ -330,18 +382,22 @@ export function MomentEditor({
           )}
           <Button
             size="sm"
-            disabled={isEmpty || isSubmitting}
+            disabled={
+              (mode === "rich" ? isEmpty : !markdownText.trim()) ||
+              isSubmitting ||
+              converting
+            }
             onClick={handleSubmit}
             className="h-8 px-4 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"
           >
             <span>
-              {isSubmitting
+              {isSubmitting || converting
                 ? m.moments_composer_publishing()
                 : initialContent
                   ? m.moments_edit_submit()
                   : m.moments_composer_submit()}
             </span>
-            {isSubmitting ? (
+            {isSubmitting || converting ? (
               <Loader2 size={12} className="animate-spin" />
             ) : (
               <Send size={12} />

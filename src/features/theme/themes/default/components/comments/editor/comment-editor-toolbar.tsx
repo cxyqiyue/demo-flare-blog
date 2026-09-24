@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Bold,
   Code,
+  FileCode,
   Image as ImageIcon,
   Italic,
   Link as LinkIcon,
@@ -20,6 +21,7 @@ interface CommentEditorToolbarProps {
   editor: Editor;
   onLinkClick: () => void;
   onImageClick: () => void;
+  onToggleMarkdown?: () => void;
 }
 
 interface ToolbarButtonProps {
@@ -55,6 +57,7 @@ const CommentEditorToolbar: React.FC<CommentEditorToolbarProps> = ({
   editor,
   onLinkClick,
   onImageClick,
+  onToggleMarkdown,
 }) => {
   const { isBold, isItalic, isUnderline, isStrike, isCode, isLink } =
     useEditorState({
@@ -71,6 +74,13 @@ const CommentEditorToolbar: React.FC<CommentEditorToolbarProps> = ({
 
   return (
     <div className="flex flex-wrap items-center gap-1 p-1 border border-border/20 rounded-sm bg-background/50 backdrop-blur-sm">
+      {onToggleMarkdown && (
+        <ToolbarButton
+          onClick={onToggleMarkdown}
+          icon={FileCode}
+          label={m.editor_mode_markdown()}
+        />
+      )}
       {/* Formatting */}
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBold().run()}

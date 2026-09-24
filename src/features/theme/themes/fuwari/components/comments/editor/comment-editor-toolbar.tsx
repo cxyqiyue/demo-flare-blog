@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Bold,
   Code,
+  FileCode,
   Image as ImageIcon,
   Italic,
   Link as LinkIcon,
@@ -20,6 +21,7 @@ interface CommentEditorToolbarProps {
   editor: Editor;
   onLinkClick: () => void;
   onImageClick: () => void;
+  onToggleMarkdown?: () => void;
 }
 
 interface ToolbarButtonProps {
@@ -54,6 +56,7 @@ const FuwariCommentEditorToolbar: React.FC<CommentEditorToolbarProps> = ({
   editor,
   onLinkClick,
   onImageClick,
+  onToggleMarkdown,
 }) => {
   const { isBold, isItalic, isUnderline, isStrike, isCode, isLink } =
     useEditorState({
@@ -70,6 +73,13 @@ const FuwariCommentEditorToolbar: React.FC<CommentEditorToolbarProps> = ({
 
   return (
     <div className="flex flex-wrap items-center gap-0.5 p-1">
+      {onToggleMarkdown && (
+        <ToolbarButton
+          onClick={onToggleMarkdown}
+          icon={FileCode}
+          label={m.editor_mode_markdown()}
+        />
+      )}
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBold().run()}
         isActive={isBold}

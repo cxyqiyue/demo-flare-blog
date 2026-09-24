@@ -1,8 +1,6 @@
-import type { Editor } from "@tiptap/react";
 import type { EditorView } from "@tiptap/pm/view";
-
-const MARKDOWN_HINT =
-  /(^|\n)\s{0,3}#{1,6}\s|\n\s{0,3}[-*+]\s|\n\s{0,3}\d+\.\s|```|~~~|\$\$|\[\^[^\]\s]+\]|\|\s*[^|\n]+\s*\||==[^=\n]+==|(?:^|\n)\s{0,3}(?:>|---|\*\*\*|___)\s*(?:\n|$)|\$(?!\s)[^$\n]+?\$/;
+import type { Editor } from "@tiptap/react";
+import { hasMarkdownSyntax } from "@/lib/markdown/markdown-detect";
 
 /**
  * 创建 TipTap editorProps.handlePaste 处理器：
@@ -15,7 +13,7 @@ export function createMarkdownPasteHandler(
   return (_view, event) => {
     if (event.clipboardData?.getData("text/html")) return false;
     const text = event.clipboardData?.getData("text/plain") ?? "";
-    if (!text.trim() || !MARKDOWN_HINT.test(text)) return false;
+    if (!text.trim() || !hasMarkdownSyntax(text)) return false;
 
     event.preventDefault();
     const editor = getEditor();

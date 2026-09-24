@@ -1,10 +1,12 @@
-import type { JSONContent } from "@tiptap/react";
+import type { JSONContent, Editor as TiptapEditor } from "@tiptap/react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
-import { Loader2, Send } from "lucide-react";
-import { useCallback, useState } from "react";
+import { FileText, Loader2, Send } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 import { getCommentExtensions } from "@/features/comments/components/editor/config";
 import { useCommentImageUploader } from "@/features/image-hosting/hooks/use-comment-image-upload";
 import { normalizeLinkHref } from "@/lib/links/normalize-link-href";
+import { useMarkdownMode } from "@/lib/markdown/markdown-mode";
+import { createMarkdownPasteHandler } from "@/lib/markdown/markdown-paste-handler";
 import { m } from "@/paraglide/messages";
 import FuwariCommentEditorToolbar from "./comment-editor-toolbar";
 import type { ModalType } from "./comment-insert-modal";
@@ -30,17 +32,28 @@ export const FuwariCommentEditor = ({
   const [modalType, setModalType] = useState<ModalType>(null);
   const [modalInitialUrl, setModalInitialUrl] = useState("");
 
+  const markdownMode = useMarkdownMode();
+  const { mode, markdownText, setMarkdownText, converting } = markdownMode;
+
+  const editorRef = useRef<TiptapEditor | null>(null);
+  const handlePaste = useCallback(
+    createMarkdownPasteHandler(() => editorRef.current),
+    [],
+  );
+
   const editor = useEditor({
     extensions: getCommentExtensions(),
     content: "",
     autofocus: autoFocus ? "end" : false,
     editorProps: {
+      handlePaste,
       attributes: {
         class:
           "min-h-[80px] w-full bg-transparent py-2 text-sm focus:outline-none fuwari-text-75 max-w-none",
       },
     },
   });
+  editorRef.current = editor;
 
   const { isEmpty } = useEditorState({
     editor,
@@ -72,7 +85,31 @@ export const FuwariCommentEditor = ({
     setModalType("IMAGE");
   }, [editor, imageHostingEnabled, openUpload]);
 
+  const handleToggleMode = () => {
+    if (converting) return;
+    if (mode === "markdown") {
+      void markdownMode.switchToRich().then((json) => {
+        if (json && editor) editor.commands.setContent(json);
+      });
+    } else {
+      markdownMode.switchToMarkdown(editor ? editor.getJSON() : null);
+    }
+  };
+
   const handleSubmit = async () => {
+    if (isSubmitting || converting) return;
+    if (mode === "markdown") {
+      if (!markdownText.trim()) return;
+      try {
+        const success = await markdownMode.submitInMarkdown(onSubmit);
+        if (success !== false) {
+          editorRef.current?.commands.clearContent();
+        }
+      } catch (error) {
+        // Error handled by parent hook
+      }
+      return;
+    }
     if (isEmpty || isSubmitting) return;
 
     try {
@@ -88,16 +125,48 @@ export const FuwariCommentEditor = ({
 
   return (
     <div className="relative rounded-(--fuwari-radius-large) border border-(--fuwari-input-border) bg-transparent transition-all duration-300 overflow-hidden focus-within:bg-(--fuwari-primary)/5 focus-within:border-(--fuwari-primary)/50 focus-within:shadow-sm">
-      {/* Toolbar */}
-      <div className="border-b border-black/5 dark:border-white/5 px-1 py-0.5">
-        <FuwariCommentEditorToolbar
-          editor={editor}
-          onLinkClick={openLinkModal}
-          onImageClick={openImageModal}
-        />
-      </div>
+      {mode === "rich" ? (
+        <>
+          {/* Toolbar */}
+          <div className="border-b border-black/5 dark:border-white/5 px-1 py-0.5">
+            <FuwariCommentEditorToolbar
+              editor={editor}
+              onLinkClick={openLinkModal}
+              onImageClick={openImageModal}
+              onToggleMarkdown={handleToggleMode}
+            />
+          </div>
 
-      <EditorContent editor={editor} className="min-h-25 w-full px-4 py-3" />
+          <EditorContent
+            editor={editor}
+            className="min-h-25 w-full px-4 py-3"
+          />
+        </>
+      ) : (
+        <>
+          {/* Markdown toolbar */}
+          <div className="flex flex-wrap items-center gap-0.5 p-1 border-b border-black/5 dark:border-white/5">
+            <button
+              onClick={handleToggleMode}
+              title={m.editor_mode_rich()}
+              type="button"
+              className="p-1.5 shrink-0 rounded-md transition-all duration-200 fuwari-text-50 hover:bg-black/5 dark:hover:bg-white/10 hover:fuwari-text-75 flex items-center justify-center"
+            >
+              <FileText size={14} />
+            </button>
+            <span className="fuwari-text-30 text-xs uppercase tracking-widest">
+              {m.editor_mode_markdown()}
+            </span>
+          </div>
+          <textarea
+            value={markdownText}
+            onChange={(event) => setMarkdownText(event.target.value)}
+            placeholder={m.comments_editor_placeholder()}
+            spellCheck={false}
+            className="min-h-[80px] w-full bg-transparent px-4 py-3 text-sm leading-relaxed fuwari-text-75 max-w-none font-mono resize-y focus:outline-none"
+          />
+        </>
+      )}
 
       <div className="flex items-center justify-between px-4 pb-3 pt-2 border-t border-black/5 dark:border-white/5">
         <span className="fuwari-text-30 text-xs">
@@ -113,12 +182,20 @@ export const FuwariCommentEditor = ({
             </button>
           )}
           <button
-            disabled={isEmpty || isSubmitting}
+            disabled={
+              (mode === "markdown" ? !markdownText.trim() : isEmpty) ||
+              isSubmitting ||
+              converting
+            }
             onClick={handleSubmit}
             className="fuwari-btn-primary h-8 px-4 text-sm rounded-lg gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <span>{actualSubmitLabel}</span>
-            {isSubmitting ? (
+            <span>
+              {isSubmitting || converting
+                ? m.comments_editor_submitting()
+                : actualSubmitLabel}
+            </span>
+            {isSubmitting || converting ? (
               <Loader2 size={14} className="animate-spin" />
             ) : (
               <Send size={14} />

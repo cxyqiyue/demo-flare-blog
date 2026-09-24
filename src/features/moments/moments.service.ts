@@ -4,6 +4,10 @@ import * as EdgeCacheService from "@/features/cache/edge-cache.service";
 import { isSuperAdmin } from "@/lib/auth/access";
 import { err, ok, type Result } from "@/lib/errors";
 import { purgeCDNCache } from "@/lib/invalidate";
+import {
+  looksLikeUnparsedMarkdown,
+  normalizeRawMarkdownContent,
+} from "@/lib/markdown/raw-markdown";
 import * as MomentRepo from "./data/moments.data";
 import type {
   CreateMomentInput,
@@ -18,6 +22,39 @@ import {
 } from "./moments.schema";
 
 // ============ Public Methods ============
+
+function extractImageUrls(content: JSONContent | null): string[] {
+  if (!content) return [];
+  const urls: string[] = [];
+  const walk = (node: JSONContent) => {
+    if (node.type === "image" && typeof node.attrs?.src === "string") {
+      urls.push(node.attrs.src);
+    }
+    for (const child of node.content ?? []) walk(child);
+  };
+  walk(content);
+  return urls;
+}
+
+// 存量「原文 Markdown」动态兜底：转换为富文本 JSON，图片抽入 images[]、
+// 正文剥离图片节点 —— 与新发布的动态形态保持一致，前台无需额外改动。
+async function normalizeMomentContent(moment: {
+  content: JSONContent | null;
+  images: string[];
+}): Promise<{ content: JSONContent | null; images: string[] }> {
+  const { content } = moment;
+  if (!looksLikeUnparsedMarkdown(content)) {
+    return { content, images: moment.images };
+  }
+  const normalized = await normalizeRawMarkdownContent(content);
+  if (normalized === content) {
+    return { content, images: moment.images };
+  }
+  const mergedImages = Array.from(
+    new Set([...moment.images, ...extractImageUrls(normalized)]),
+  ).slice(0, 9);
+  return { content: stripImageNodes(normalized), images: mergedImages };
+}
 
 export async function getPublicMomentsPage(
   context: DbContext & { executionCtx: ExecutionContext },
@@ -40,15 +77,21 @@ export async function getPublicMomentsPage(
     const authorUserIds = moments.map((m) => m.authorUserId);
     const authorMap = await MomentRepo.getAuthorMap(context.db, authorUserIds);
 
-    const items = moments.map((moment) => ({
-      ...moment,
-      author: moment.authorUserId
-        ? (authorMap[moment.authorUserId] ?? null)
-        : null,
-      likeCount: likeCounts[moment.id] ?? 0,
-      commentCount: commentCounts[moment.id] ?? 0,
-      isLiked: false,
-    }));
+    const items = await Promise.all(
+      moments.map(async (moment) => {
+        const normalized = await normalizeMomentContent(moment);
+        return {
+          ...moment,
+          ...normalized,
+          author: moment.authorUserId
+            ? (authorMap[moment.authorUserId] ?? null)
+            : null,
+          likeCount: likeCounts[moment.id] ?? 0,
+          commentCount: commentCounts[moment.id] ?? 0,
+          isLiked: false,
+        };
+      }),
+    );
 
     return {
       items,
