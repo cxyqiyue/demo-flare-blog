@@ -210,7 +210,7 @@ export function LoginPage({
         )}
 
         {/* Divider */}
-        {isEmailConfigured && (
+        {isEmailConfigured && loginStep === "IDLE" && (
           <div className="relative flex items-center py-2">
             <div className="flex-1 border-t border-border/30"></div>
             <span className="mx-4 text-xs font-medium fuwari-text-30">
@@ -221,26 +221,28 @@ export function LoginPage({
         )}
 
         {/* Social Login */}
-        <button
-          type="button"
-          onClick={handleGithubLogin}
-          disabled={isSocialDisabled}
-          className={`group w-full py-3.5 rounded-xl flex gap-3 transition-all font-bold text-sm active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 ${
-            !isEmailConfigured ? "fuwari-btn-primary" : "fuwari-btn-regular"
-          }`}
-        >
-          {socialIsLoading ? (
-            <Loader2 size={16} className="animate-spin opacity-70" />
-          ) : (
-            <GithubIcon size={16} />
-          )}
+        {loginStep === "IDLE" && (
+          <button
+            type="button"
+            onClick={handleGithubLogin}
+            disabled={isSocialDisabled}
+            className={`group w-full py-3.5 rounded-xl flex gap-3 transition-all font-bold text-sm active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 ${
+              !isEmailConfigured ? "fuwari-btn-primary" : "fuwari-btn-regular"
+            }`}
+          >
+            {socialIsLoading ? (
+              <Loader2 size={16} className="animate-spin opacity-70" />
+            ) : (
+              <GithubIcon size={16} />
+            )}
 
-          <span className="tracking-wide">
-            {socialIsLoading
-              ? m.login_social_connecting()
-              : m.login_github_fuwari()}
-          </span>
-        </button>
+            <span className="tracking-wide">
+              {socialIsLoading
+                ? m.login_social_connecting()
+                : m.login_github_fuwari()}
+            </span>
+          </button>
+        )}
 
         {challengeElement}
 

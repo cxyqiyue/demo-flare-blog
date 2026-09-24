@@ -6,7 +6,7 @@ import type { RateLimitOptions } from "@/lib/do/rate-limiter";
 
 export const AUTH_EMAIL_SCOPE = "email-auth";
 export const AUTH_EMAIL_LIMIT: RateLimitOptions = {
-  capacity: 10,
+  capacity: 20,
   interval: "1h",
 };
 
