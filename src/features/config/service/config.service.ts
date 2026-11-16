@@ -433,6 +433,12 @@ export function resolveSiteConfig(
           config?.site?.theme?.fuwari?.primaryHue ??
           blogConfig.theme.fuwari.primaryHue,
       },
+      flare: {
+        homeBg:
+          config?.site?.theme?.flare?.homeBg ?? blogConfig.theme.flare.homeBg,
+        avatar:
+          config?.site?.theme?.flare?.avatar ?? blogConfig.theme.flare.avatar,
+      },
     },
   });
 }

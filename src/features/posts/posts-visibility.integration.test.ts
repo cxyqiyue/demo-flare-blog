@@ -2,22 +2,23 @@ import { env } from "cloudflare:workers";
 import {
   createAdminTestContext,
   createTestContext,
+  seedUser,
   testRequest,
   waitForBackgroundTasks,
 } from "tests/test-utils";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import postsDetailRoute from "@/features/posts/api/hono/posts.detail.route";
 import postsUnlockRoute from "@/features/posts/api/hono/posts.unlock.route";
-import { POST_RENDER_VERSION } from "@/features/posts/render-version";
 import * as PostRepo from "@/features/posts/data/posts.data";
-import * as PostService from "@/features/posts/services/posts.service";
+import { POST_RENDER_VERSION } from "@/features/posts/render-version";
 import {
   buildUnlockCookieHeader,
+  createUnlockCookieValue,
   hasPostUnlock,
   UNAUTHENTICATED_VIEWER,
   type ViewerAccess,
 } from "@/features/posts/services/post-access.service";
-import { createUnlockCookieValue } from "@/features/posts/services/post-access.service";
+import * as PostService from "@/features/posts/services/posts.service";
 import { hashPassword } from "@/features/posts/utils/post-secret";
 import { unwrap } from "@/lib/errors";
 
@@ -33,6 +34,19 @@ async function seedGatedPost(
     title?: string;
   },
 ) {
+  await seedUser(adminContext.db, {
+    id: "admin-user-id",
+    name: "Admin User",
+    email: "admin@example.com",
+    emailVerified: true,
+    image: null,
+    role: "admin",
+    banned: false,
+    banReason: null,
+    banExpires: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
   const { id } = await PostService.createEmptyPost(adminContext);
   const passwordHash = options.password
     ? await hashPassword(options.password)
@@ -84,6 +98,22 @@ function bodyText(contentJson: any): string | undefined {
 describe("Posts Visibility Integration", () => {
   const adminContext = createAdminTestContext();
   const anonymousContext = createTestContext();
+
+  beforeAll(async () => {
+    await seedUser(adminContext.db, {
+      id: "admin-user-id",
+      name: "Admin User",
+      email: "admin@example.com",
+      emailVerified: true,
+      image: null,
+      role: "admin",
+      banned: false,
+      banReason: null,
+      banExpires: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  });
 
   it("anonymous viewer gets a gated shell (no content) for private posts", async () => {
     const { slug } = await seedGatedPost(adminContext, {
@@ -360,6 +390,19 @@ describe("Posts Visibility Integration", () => {
   });
 
   it("editor plaintext password is hashed+ciphered on save and decrypted back on read", async () => {
+    await seedUser(adminContext.db, {
+      id: "admin-user-id",
+      name: "Admin User",
+      email: "admin@example.com",
+      emailVerified: true,
+      image: null,
+      role: "admin",
+      banned: false,
+      banReason: null,
+      banExpires: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
     const { id } = await PostService.createEmptyPost(adminContext);
 
     // 编辑保存：可见性=password + 明文 password → 服务端派生 hash/cipher 落库
@@ -389,7 +432,10 @@ describe("Posts Visibility Integration", () => {
     expect(adminPost?.visibility).toBe("password");
 
     // 门禁可用新密码解锁
-    const gateMeta = await PostRepo.findPostGateBySlug(adminContext.db, "password-conversion");
+    const gateMeta = await PostRepo.findPostGateBySlug(
+      adminContext.db,
+      "password-conversion",
+    );
     const token = await createUnlockCookieValue(
       adminContext.env,
       gateMeta?.id ?? 0,
