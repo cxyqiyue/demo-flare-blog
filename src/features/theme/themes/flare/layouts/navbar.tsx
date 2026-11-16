@@ -1,61 +1,90 @@
-import { Link, useRouteContext } from "@tanstack/react-router";
-import { Search, UserIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Link, useLocation, useRouteContext } from "@tanstack/react-router";
+import { LogOut, Menu, Search, UserIcon, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NavOption, UserInfo } from "@/features/theme/contract/layouts";
 import { m } from "@/paraglide/messages";
+import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "./language-switcher";
 
 interface NavbarProps {
   navOptions: Array<NavOption>;
-  onMenuClick: () => void;
   isLoading?: boolean;
   user?: UserInfo;
+  logout: () => Promise<void>;
+  bannerHeightVh: number;
 }
+
 export function Navbar({
-  onMenuClick,
-  user,
   navOptions,
+  user,
   isLoading,
+  logout,
+  bannerHeightVh,
 }: NavbarProps) {
   const { siteConfig } = useRouteContext({ from: "__root__" });
-  const [isScrolled, setIsScrolled] = useState(false);
+  const pathname = useLocation({ select: (l) => l.pathname });
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+    const onScroll = () => {
+      const threshold = Math.max(40, window.innerHeight * (bannerHeightVh / 100) - 140);
+      setScrolled(window.scrollY > threshold);
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [bannerHeightVh]);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  const brand = useMemo(
+    () => siteConfig.title || siteConfig.theme?.default?.navBarName || "Blog",
+    [siteConfig],
+  );
 
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-40 flex items-center transition-all duration-500 ${
-          isScrolled
-            ? "bg-background/80 backdrop-blur-md border-b border-border/40 py-4 shadow-sm"
-            : "bg-transparent border-transparent py-8"
-        }`}
+        className={cn(
+          "mt-2 md:mt-3 flex items-center transition-all duration-300",
+          "rounded-2xl md:rounded-full border",
+          scrolled
+            ? "bg-background/75 backdrop-blur-xl border-border/50 shadow-sm"
+            : "bg-black/10 dark:bg-white/5 backdrop-blur-md border-white/15",
+        )}
       >
-        <div className="max-w-3xl mx-auto w-full px-6 md:px-0 flex items-center justify-between">
-          {/* Left: Brand */}
-          <Link to="/" className="group select-none min-w-0">
-            <span className="block font-serif text-lg sm:text-xl font-bold tracking-tighter text-foreground truncate transition-colors group-hover:text-muted-foreground">
-              [ {siteConfig.theme.default.navBarName} ]
+        <div className="flex w-full items-center justify-between gap-2 px-3 py-2 md:px-4">
+          <Link to="/" className="min-w-0 px-2 py-1">
+            <span
+              className={cn(
+                "block truncate text-sm md:text-base font-semibold tracking-tight",
+                scrolled ? "text-foreground" : "text-white",
+              )}
+            >
+              {brand}
             </span>
           </Link>
 
-          {/* Center: Main Nav */}
-          <nav className="hidden lg:flex items-center gap-8">
+          <nav className="hidden lg:flex items-center gap-1">
             {navOptions.map((option) => (
               <Link
                 key={option.id}
                 to={option.to}
-                className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground/60 hover:text-foreground transition-colors"
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-sm transition-colors",
+                  scrolled
+                    ? "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    : "text-white/85 hover:text-white hover:bg-white/10",
+                )}
                 activeProps={{
-                  className: "!text-foreground",
+                  className: scrolled
+                    ? "!text-foreground !bg-muted/70"
+                    : "!text-white !bg-white/15",
                 }}
               >
                 {option.label}
@@ -63,80 +92,121 @@ export function Navbar({
             ))}
           </nav>
 
-          {/* Right: Actions */}
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
+            <div className={cn("flex items-center", scrolled ? "text-foreground" : "text-white")}>
               <ThemeToggle />
-              <LanguageSwitcher className="text-muted-foreground hover:text-foreground h-8 w-8" />
+              <LanguageSwitcher
+                className={cn(
+                  "h-8 w-8",
+                  scrolled ? "text-muted-foreground hover:text-foreground" : "text-white/85 hover:text-white",
+                )}
+              />
               <Link
                 to="/search"
-                className="text-muted-foreground hover:text-foreground h-8 w-8 flex items-center justify-center transition-colors"
+                className={cn(
+                  "h-8 w-8 inline-flex items-center justify-center rounded-md transition-colors",
+                  scrolled ? "text-muted-foreground hover:text-foreground hover:bg-muted/50" : "text-white/85 hover:text-white hover:bg-white/10",
+                )}
                 aria-label={m.nav_search()}
               >
-                <Search
-                  size={16}
-                  strokeWidth={1.5}
-                  style={{ viewTransitionName: "search-input" }}
-                />
+                <Search size={16} strokeWidth={1.75} />
               </Link>
             </div>
 
-            {/* Profile / Menu Toggle */}
-            <div className="flex items-center gap-3 pl-3">
-              <div className="hidden md:flex items-center">
-                {isLoading ? (
-                  <Skeleton className="w-8 h-8 rounded-full" />
-                ) : (
-                  <div className="flex items-center gap-3 animate-in fade-in">
-                    {user ? (
-                      <>
-                        <Link
-                          to="/profile"
-                          className="w-7 h-7 rounded-full overflow-hidden ring-1 ring-border hover:ring-foreground transition-all relative z-10"
-                          style={{ viewTransitionName: "user-avatar" }}
-                        >
-                          {user.image ? (
-                            <img
-                              src={user.image}
-                              alt={user.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-muted flex items-center justify-center">
-                              <UserIcon
-                                size={12}
-                                className="text-muted-foreground"
-                              />
-                            </div>
-                          )}
-                        </Link>
-                      </>
-                    ) : (
-                      <Link
-                        to="/login"
-                        className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {m.nav_login()}
-                      </Link>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <button
-                className="w-8 h-8 flex flex-col items-center justify-center gap-1.5 group lg:hidden"
-                onClick={onMenuClick}
-                aria-label={m.common_open_menu()}
-                type="button"
-              >
-                <div className="w-5 h-px bg-foreground transition-all group-hover:w-3"></div>
-                <div className="w-5 h-px bg-foreground transition-all group-hover:w-6"></div>
-              </button>
+            <div className="hidden md:flex items-center pl-1">
+              {isLoading ? (
+                <Skeleton className="h-8 w-8 rounded-full" />
+              ) : user ? (
+                <Link
+                  to="/profile"
+                  className="h-8 w-8 rounded-full overflow-hidden ring-1 ring-white/30 hover:ring-white/60 transition"
+                  title={user.name}
+                >
+                  {user.image ? (
+                    <img src={user.image} alt={user.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className={cn("h-full w-full flex items-center justify-center", scrolled ? "bg-muted text-muted-foreground" : "bg-white/15 text-white")}>
+                      <UserIcon size={14} />
+                    </div>
+                  )}
+                </Link>
+              ) : (
+                <Link
+                  to="/login"
+                  className={cn(
+                    "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                    scrolled ? "bg-foreground text-background hover:opacity-90" : "bg-white text-black hover:bg-white/90",
+                  )}
+                >
+                  {m.nav_login()}
+                </Link>
+              )}
             </div>
+
+            <button
+              type="button"
+              className={cn(
+                "lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+                scrolled ? "text-foreground hover:bg-muted/60" : "text-white hover:bg-white/10",
+              )}
+              onClick={() => setOpen((v) => !v)}
+              aria-label={open ? m.common_close() : m.common_open_menu()}
+              aria-expanded={open}
+            >
+              {open ? <X size={18} /> : <Menu size={18} />}
+            </button>
           </div>
         </div>
       </header>
-      <div className="h-32"></div>
+
+      {open ? (
+        <div className="mt-2 lg:hidden rounded-2xl border border-border/60 bg-background/90 backdrop-blur-xl shadow-sm overflow-hidden">
+          <nav className="p-2 flex flex-col">
+            {navOptions.map((option) => (
+              <Link
+                key={option.id}
+                to={option.to}
+                className="rounded-xl px-3 py-2.5 text-sm text-foreground/85 hover:bg-muted/60 hover:text-foreground transition-colors"
+                activeProps={{ className: "bg-muted/70 text-foreground" }}
+              >
+                {option.label}
+              </Link>
+            ))}
+            <div className="my-1 h-px bg-border/60" />
+            {isLoading ? (
+              <div className="px-3 py-2"><Skeleton className="h-8 w-24" /></div>
+            ) : user ? (
+              <>
+                <Link
+                  to="/profile"
+                  className="rounded-xl px-3 py-2.5 text-sm text-foreground/85 hover:bg-muted/60 hover:text-foreground transition-colors flex items-center gap-2"
+                >
+                  <UserIcon size={16} />
+                  {m.profile_title()}
+                </Link>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await logout();
+                    setOpen(false);
+                  }}
+                  className="rounded-xl px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-2 text-left"
+                >
+                  <LogOut size={16} />
+                  {m.profile_logout()}
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="rounded-xl px-3 py-2.5 text-sm text-foreground/85 hover:bg-muted/60 hover:text-foreground transition-colors"
+              >
+                {m.nav_login()}
+              </Link>
+            )}
+          </nav>
+        </div>
+      ) : null}
     </>
   );
 }

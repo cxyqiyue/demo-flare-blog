@@ -15,25 +15,25 @@ export function Footer({ navOptions }: FooterProps) {
   const { siteConfig } = useRouteContext({ from: "__root__" });
 
   return (
-    <footer className="border-t border-border/40 bg-background/50 py-16 mt-32">
-      <div className="max-w-3xl mx-auto px-6 md:px-0 flex flex-col md:flex-row justify-between items-center gap-8">
-        {/* Brand / Copyright */}
-        <div className="flex flex-col items-center md:items-start gap-2">
-          <span className="font-serif text-lg font-bold tracking-tighter text-foreground">
-            [ {siteConfig.theme.default.navBarName} ]
-          </span>
-          <span className="font-mono text-[10px] text-muted-foreground tracking-widest uppercase">
+    <footer className="mt-10 border-t border-border/40 pt-8 pb-10 text-sm text-muted-foreground">
+      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div className="space-y-2">
+          <div className="text-base font-medium text-foreground/90">
+            {siteConfig.title}
+          </div>
+          {siteConfig.description ? (
+            <p className="max-w-xl leading-6">{siteConfig.description}</p>
+          ) : null}
+          <div className="text-xs">
             <ClientOnly fallback="-">
               {m.footer_copyright({
                 year: new Date().getFullYear().toString(),
                 author: siteConfig.author,
               })}
             </ClientOnly>
-          </span>
+          </div>
         </div>
-
-        {/* Minimalist Links */}
-        <nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[11px] font-medium uppercase tracking-widest text-muted-foreground/60">
+        <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 md:justify-end">
           {navOptions.map((option) => (
             <Link
               key={option.id}

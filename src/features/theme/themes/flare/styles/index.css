@@ -6,6 +6,20 @@
 @import "@fontsource-variable/noto-serif-sc";
 @import "@fontsource-variable/jetbrains-mono";
 
+/* Flare (immersive-style) theme base */
+:root {
+  --flare-page-width: 1120px;
+}
+
+.flare-shell {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.flare-shell .flare-content-grid > main {
+  background: transparent;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
