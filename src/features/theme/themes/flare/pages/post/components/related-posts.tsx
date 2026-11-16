@@ -21,21 +21,21 @@ export function RelatedPosts({ slug }: RelatedPostsProps) {
   }
 
   return (
-    <section className="space-y-8 animate-in fade-in duration-500 delay-300 fill-mode-both">
-      <div className="flex items-center gap-2 text-muted-foreground/60 font-medium text-xs uppercase tracking-widest">
+    <section className="space-y-5 animate-in fade-in duration-500">
+      <div className="flex items-center gap-2 text-muted-foreground/70 font-medium text-xs uppercase tracking-widest">
         <span className="opacity-50">///</span>
         <span>{m.post_related_posts()}</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {posts.map((post) => (
           <Link
             key={post.id}
             to="/post/$slug"
             params={{ slug: post.slug }}
-            className="group flex flex-col h-full space-y-3 p-4 -mx-4 md:mx-0 md:p-0 rounded-lg hover:bg-muted/40 md:hover:bg-transparent transition-colors"
+            className="group flex flex-col h-full rounded-xl border border-border/50 bg-background/40 p-4 hover:bg-muted/30 hover:border-border/70 transition-colors"
           >
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 font-mono tracking-wider">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60 tracking-wider">
               <span>
                 <ClientOnly fallback="-">
                   {formatDate(post.publishedAt)}
@@ -45,11 +45,11 @@ export function RelatedPosts({ slug }: RelatedPostsProps) {
               <span>{m.read_time({ count: post.readTimeInMinutes })}</span>
             </div>
 
-            <h3 className="text-lg font-serif leading-snug group-hover:text-primary transition-colors">
+            <h3 className="mt-2 text-base md:text-lg font-medium leading-snug text-foreground group-hover:text-foreground/85 transition-colors line-clamp-2">
               {post.title}
             </h3>
 
-            <div className="pt-2 mt-auto flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+            <div className="pt-3 mt-auto flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70 group-hover:text-foreground transition-colors">
               <span>{m.post_read_more()}</span>
               <ArrowRight
                 size={12}

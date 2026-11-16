@@ -13,47 +13,47 @@ export function PostNavigation({ slug }: PostNavigationProps) {
   const { previous, next } = data;
 
   return (
-    <nav className="flex flex-col md:flex-row items-stretch justify-between gap-4 text-sm font-mono text-muted-foreground">
+    <nav className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
       {previous ? (
         <Link
           to="/post/$slug"
           params={{ slug: previous.slug }}
-          className="group flex items-center gap-2 min-w-0 rounded-lg border border-border/30 px-4 py-3 hover:border-foreground/20 hover:text-foreground transition-colors"
+          className="group flex items-center gap-3 min-w-0 rounded-xl border border-border/50 bg-background/40 px-4 py-3 hover:border-border/70 hover:bg-muted/30 transition-colors"
         >
           <ChevronLeft
-            size={14}
-            className="shrink-0 group-hover:-translate-x-0.5 transition-transform"
+            size={16}
+            className="shrink-0 text-muted-foreground group-hover:-translate-x-0.5 transition-transform"
           />
           <span className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground/80">
+            <span className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground/70">
               {m.post_prev()}
             </span>
-            <span className="truncate text-sm">{previous.title}</span>
+            <span className="truncate text-foreground/90">{previous.title}</span>
           </span>
         </Link>
       ) : (
-        <div className="hidden md:flex flex-1" />
+        <div className="hidden md:block" />
       )}
 
       {next ? (
         <Link
           to="/post/$slug"
           params={{ slug: next.slug }}
-          className="group flex items-center justify-end gap-2 min-w-0 rounded-lg border border-border/30 px-4 py-3 hover:border-foreground/20 hover:text-foreground transition-colors"
+          className="group flex items-center justify-end gap-3 min-w-0 rounded-xl border border-border/50 bg-background/40 px-4 py-3 hover:border-border/70 hover:bg-muted/30 transition-colors md:col-start-2"
         >
           <span className="flex flex-col gap-0.5 min-w-0 text-right">
-            <span className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground/80">
+            <span className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground/70">
               {m.post_next()}
             </span>
-            <span className="truncate text-sm">{next.title}</span>
+            <span className="truncate text-foreground/90">{next.title}</span>
           </span>
           <ChevronRight
-            size={14}
-            className="shrink-0 group-hover:translate-x-0.5 transition-transform"
+            size={16}
+            className="shrink-0 text-muted-foreground group-hover:translate-x-0.5 transition-transform"
           />
         </Link>
       ) : (
-        <div className="hidden md:flex flex-1" />
+        <div className="hidden md:block" />
       )}
     </nav>
   );

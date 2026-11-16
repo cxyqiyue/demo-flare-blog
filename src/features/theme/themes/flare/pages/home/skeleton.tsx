@@ -8,77 +8,39 @@ export function HomePageSkeleton() {
   const { siteConfig } = useRouteContext({ from: "__root__" });
 
   return (
-    <div className="flex flex-col w-full max-w-3xl mx-auto px-6 md:px-0 py-12 md:py-20 space-y-20">
-      {/* Intro Section - Static Text Retained */}
-      <section className="space-y-8">
-        <header className="space-y-6">
-          <h1 className="text-4xl md:text-5xl font-serif font-medium tracking-tight text-foreground flex items-center gap-4">
-            {m.home_greeting()}{" "}
-            <span className="animate-wave origin-[70%_70%]">👋</span>
-          </h1>
-
-          <div className="space-y-4 max-w-2xl text-base md:text-lg text-muted-foreground font-light leading-relaxed">
-            <p>
-              {m.home_intro_prefix()}{" "}
-              <span className="text-foreground font-medium">
-                {siteConfig.author}
-              </span>
-              {m.home_intro_separator()}
-              {siteConfig.description}
-            </p>
-          </div>
-        </header>
-
-        <div className="flex items-center gap-6 text-muted-foreground opacity-50 pointer-events-none">
-          <GithubIcon size={20} strokeWidth={1.5} />
-          <Rss size={20} strokeWidth={1.5} />
-          <Mail size={20} strokeWidth={1.5} />
+    <div className="flex flex-col w-full mx-auto py-6 md:py-10 space-y-6 md:space-y-8">
+      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm space-y-4">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-8 w-2/3 max-w-xl" />
+        <Skeleton className="h-4 w-full max-w-3xl" />
+        <Skeleton className="h-4 w-5/6 max-w-2xl" />
+        <div className="flex items-center gap-2 pt-1">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="h-9 w-9 rounded-full" />
         </div>
       </section>
 
-      {/* Selected Posts Skeleton */}
-      <section className="space-y-10">
-        <h2 className="text-xl font-serif font-medium text-foreground tracking-tight flex items-center gap-2">
-          {m.home_latest_posts()}
-        </h2>
-
-        <div className="space-y-8">
+      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 md:px-7 py-4 border-b border-border/40">
+          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-4 w-8" />
+        </div>
+        <div className="px-2 md:px-4">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="group border-b border-border/40 last:border-0"
-            >
-              <div className="block py-8 md:py-10">
-                <div className="flex flex-col gap-3">
-                  {/* Metadata Row Skeleton */}
-                  <div className="flex items-center gap-3 text-xs font-mono tracking-wider">
-                    <Skeleton className="h-4 w-24 bg-muted/60 rounded-none" />
-                    <span className="opacity-30">/</span>
-                    <div className="flex gap-2">
-                      <Skeleton className="h-4 w-16 bg-muted/60 rounded-none" />
-                      <Skeleton className="h-4 w-20 bg-muted/60 rounded-none" />
-                    </div>
-                  </div>
-
-                  {/* Title Skeleton */}
-                  <Skeleton className="h-8 md:h-10 w-3/4 bg-muted/80 rounded-none my-1" />
-
-                  {/* Summary Skeleton */}
-                  <div className="space-y-2 mt-1">
-                    <Skeleton className="h-4 w-full bg-muted/40 rounded-none" />
-                    <Skeleton className="h-4 w-5/6 bg-muted/40 rounded-none" />
-                  </div>
+            <div key={i} className="px-3 md:px-3 py-6 md:py-7 border-b border-border/30 last:border-0">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-20" />
                 </div>
+                <Skeleton className="h-8 w-3/4" />
+                <Skeleton className="h-4 w-full max-w-2xl" />
+                <Skeleton className="h-4 w-5/6 max-w-xl" />
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="pt-8 opacity-50">
-          <div className="text-sm font-mono text-muted-foreground flex items-center gap-2">
-            <Terminal size={14} />
-            cd /posts
-          </div>
         </div>
       </section>
     </div>

@@ -67,13 +67,15 @@ export default function TableOfContents({
     <nav
       ref={navRef}
       className={cn(
-        "sticky top-32 self-start block w-60 animate-in fade-in duration-700 delay-500 max-h-[calc(100vh-10rem)] overflow-y-auto overflow-x-hidden custom-scrollbar fill-mode-backwards",
+        "sticky top-28 self-start block w-60 animate-in fade-in duration-500 max-h-[calc(100vh-8rem)] overflow-y-auto overflow-x-hidden custom-scrollbar rounded-xl border border-border/50 bg-card/70 backdrop-blur-sm p-3",
         className,
       )}
     >
-      {/* Root List Container */}
+      <div className="mb-2 px-1 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/60">
+        TOC
+      </div>
       <div className="relative toc-root">
-        <ul className="space-y-3 list-none m-0 p-0">
+        <ul className="space-y-1.5 list-none m-0 p-0">
           {headers.map((node) => (
             <li key={node.id}>
               <a
@@ -91,15 +93,13 @@ export default function TableOfContents({
                     onNavigate?.();
                   }
                 }}
-                className={`
-                            block text-[11px] transition-all duration-300 leading-relaxed relative border-l-[1.5px] py-0.5
-                            ${
-                              activeId === node.id
-                                ? "text-foreground border-foreground pl-3 font-medium"
-                                : "text-muted-foreground/60 border-border/30 pl-3 hover:text-foreground hover:border-border/60"
-                            }
-                        `}
-                style={{ marginLeft: `${(node.level - 2) * 0.5}rem` }}
+                className={cn(
+                  "block rounded-md px-2 py-1 text-[12px] leading-relaxed transition-colors border-l-2",
+                  activeId === node.id
+                    ? "text-foreground border-foreground/60 bg-muted/50 font-medium"
+                    : "text-muted-foreground/70 border-transparent hover:text-foreground hover:bg-muted/30 hover:border-border/60",
+                )}
+                style={{ marginLeft: `${Math.max(0, node.level - 2) * 0.5}rem` }}
               >
                 {node.text}
               </a>
