@@ -9,7 +9,6 @@ import { MaskedName } from "@/features/navigation/components/masked-name";
 import { useGridPagination } from "@/features/navigation/hooks/use-grid-pagination";
 import { useNavigationPageState } from "@/features/navigation/hooks/use-navigation-page-state";
 import type { NavigationPageProps } from "@/features/theme/contract/pages";
-import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { Pagination } from "../../components/pagination";
 
@@ -30,149 +29,151 @@ export function NavigationPage({
   }, []);
 
   return (
-    <div className="w-full space-y-4 md:space-y-6 flare-enter">
-      <section className="flare-surface p-5 md:p-7 space-y-5">
-        <header className="space-y-2 text-center md:text-left">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            {m.navigation_title()}
-          </h1>
-          <p className="max-w-2xl text-sm md:text-base text-muted-foreground leading-7">
-            {m.navigation_desc()}
-          </p>
-        </header>
-
-        <div className="space-y-4">
-          {state.engines.length > 0 ? (
-            <div className="flex flex-nowrap gap-2 overflow-x-auto overscroll-x-contain no-scrollbar md:flex-wrap">
-              {state.engines.map((engine) => (
-                <EngineButton
-                  key={engine.id}
-                  engine={engine}
-                  selected={state.selectedEngine?.id === engine.id}
-                  onSelect={() => state.selectEngine(engine.id)}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground/60">
-              {m.navigation_no_engines()}
+    <div className="flare-enter flex w-full flex-col gap-4">
+      <section className="flare-surface overflow-hidden">
+        <div className="space-y-5 p-5 md:p-8">
+          <header className="space-y-2 text-center md:text-left">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-[2.5rem]">
+              {m.navigation_title()}
+            </h1>
+            <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-[15px]">
+              {m.navigation_desc()}
             </p>
-          )}
+          </header>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              state.submitSearch();
-            }}
-            className="flex flex-col sm:flex-row gap-2"
-          >
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={state.query}
-              onChange={(e) => state.setQuery(e.target.value)}
-              placeholder={m.navigation_search_placeholder()}
-              className="flex-1 min-w-0 h-11 rounded-xl border border-border/60 bg-background/70 px-4 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/30"
-            />
-            <button
-              type="submit"
-              className="h-11 px-5 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition whitespace-nowrap shrink-0"
+          <div className="space-y-4">
+            {state.engines.length > 0 ? (
+              <div className="no-scrollbar flex flex-nowrap gap-2 overflow-x-auto overscroll-x-contain md:flex-wrap">
+                {state.engines.map((engine) => (
+                  <EngineButton
+                    key={engine.id}
+                    engine={engine}
+                    selected={state.selectedEngine?.id === engine.id}
+                    onSelect={() => state.selectEngine(engine.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground/60">
+                {m.navigation_no_engines()}
+              </p>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                state.submitSearch();
+              }}
+              className="flex flex-col gap-2 sm:flex-row"
             >
-              {m.navigation_search_btn()}
-            </button>
-          </form>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={state.query}
+                onChange={(e) => state.setQuery(e.target.value)}
+                placeholder={m.navigation_search_placeholder()}
+                className="h-11 min-w-0 flex-1 rounded-full border border-border/60 bg-background/70 px-4 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/30"
+              />
+              <button
+                type="submit"
+                className="h-11 shrink-0 whitespace-nowrap rounded-full bg-foreground px-5 text-sm font-medium text-background transition hover:opacity-90"
+              >
+                {m.navigation_search_btn()}
+              </button>
+            </form>
+          </div>
         </div>
-      </section>
 
-      {/* Bookmarks（仅管理员可见） */}
-      {showBookmarks && (
-        <section className="flare-surface p-5 md:p-7 space-y-6">
-          {/* 面包屑：根目录 ↔ 文件夹 */}
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3 min-w-0">
-              {state.currentFolder ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={state.backToRoot}
-                    className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border/40 text-xs font-mono text-muted-foreground hover:text-foreground hover:border-border/80 transition-all"
-                  >
-                    <ArrowLeft size={13} />
-                    {m.navigation_all()}
-                  </button>
-                  <h2 className="font-serif text-xl font-medium text-foreground truncate">
-                    {state.currentFolder.name}
+        {/* Bookmarks（仅管理员可见） */}
+        {showBookmarks && (
+          <div className="space-y-6 border-t border-border/50 p-5 md:p-8">
+            {/* 面包屑：根目录 ↔ 文件夹 */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                {state.currentFolder ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={state.backToRoot}
+                      className="flare-chip h-8 shrink-0 px-3 text-xs"
+                    >
+                      <ArrowLeft size={13} />
+                      {m.navigation_all()}
+                    </button>
+                    <h2 className="truncate text-xl font-semibold text-foreground">
+                      {state.currentFolder.name}
+                    </h2>
+                  </>
+                ) : (
+                  <h2 className="text-xl font-semibold text-foreground">
+                    {m.navigation_bookmarks()}
                   </h2>
-                </>
-              ) : (
-                <h2 className="font-serif text-xl font-medium text-foreground">
-                  {m.navigation_bookmarks()}
-                </h2>
+                )}
+              </div>
+              {isAdmin && (
+                <Link
+                  to="/admin/navigation"
+                  className="text-xs font-mono text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  [ {m.navigation_admin_title()} ]
+                </Link>
               )}
             </div>
-            {isAdmin && (
-              <Link
-                to="/admin/navigation"
-                className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
+            {!state.currentFolder && (
+              <p className="-mt-3 text-xs font-mono text-muted-foreground/60">
+                {m.navigation_level_summary({
+                  folders: state.folders.length,
+                  bookmarks: state.bookmarks.filter((b) => b.folderId === null)
+                    .length,
+                })}
+              </p>
+            )}
+
+            {/* 卡片网格：固定尺寸卡片，列数随屏宽自适应，按同级数量自动分页 */}
+            {state.pageItems.length > 0 ? (
+              <div
+                ref={grid.containerRef}
+                className="flex flex-wrap content-start gap-2"
               >
-                [ {m.navigation_admin_title()} ]
-              </Link>
+                {state.pageItems.map((item) =>
+                  item.kind === "folder" ? (
+                    <FolderCard
+                      key={`folder-${item.folder.id}`}
+                      folder={item.folder}
+                      onOpen={() => state.enterFolder(item.folder.id)}
+                    />
+                  ) : (
+                    <BookmarkCard
+                      key={item.bookmark.id}
+                      bookmark={item.bookmark}
+                    />
+                  ),
+                )}
+              </div>
+            ) : (
+              <div className="py-16 text-center">
+                <p className="font-serif text-lg text-muted-foreground/50">
+                  {m.navigation_no_bookmarks()}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground/30 font-mono">
+                  {m.navigation_no_bookmarks_desc()}
+                </p>
+              </div>
+            )}
+
+            {state.total > state.pageSize && (
+              <Pagination
+                page={state.page}
+                total={state.total}
+                pageSize={state.pageSize}
+                hasPrevPage={state.hasPrevPage}
+                hasNextPage={state.hasNextPage}
+                onPageChange={state.onPageChange}
+              />
             )}
           </div>
-          {!state.currentFolder && (
-            <p className="-mt-4 text-xs font-mono text-muted-foreground/60">
-              {m.navigation_level_summary({
-                folders: state.folders.length,
-                bookmarks: state.bookmarks.filter((b) => b.folderId === null)
-                  .length,
-              })}
-            </p>
-          )}
-
-          {/* 卡片网格：固定尺寸卡片，列数随屏宽自适应，按同级数量自动分页 */}
-          {state.pageItems.length > 0 ? (
-            <div
-              ref={grid.containerRef}
-              className="flex flex-wrap content-start gap-2"
-            >
-              {state.pageItems.map((item) =>
-                item.kind === "folder" ? (
-                  <FolderCard
-                    key={`folder-${item.folder.id}`}
-                    folder={item.folder}
-                    onOpen={() => state.enterFolder(item.folder.id)}
-                  />
-                ) : (
-                  <BookmarkCard
-                    key={item.bookmark.id}
-                    bookmark={item.bookmark}
-                  />
-                ),
-              )}
-            </div>
-          ) : (
-            <div className="py-16 text-center">
-              <p className="font-serif text-lg text-muted-foreground/50">
-                {m.navigation_no_bookmarks()}
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground/30 font-mono">
-                {m.navigation_no_bookmarks_desc()}
-              </p>
-            </div>
-          )}
-
-          {state.total > state.pageSize && (
-            <Pagination
-              page={state.page}
-              total={state.total}
-              pageSize={state.pageSize}
-              hasPrevPage={state.hasPrevPage}
-              hasNextPage={state.hasNextPage}
-              onPageChange={state.onPageChange}
-            />
-          )}
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 }
@@ -198,12 +199,8 @@ function EngineButton({ engine, selected, onSelect }: EngineButtonProps) {
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={cn(
-        "shrink-0 inline-flex items-center gap-2 px-3 h-9 rounded-md border text-xs font-mono transition-all",
-        selected
-          ? "border-foreground bg-foreground text-background"
-          : "border-border/40 bg-background/50 text-muted-foreground hover:border-border/80 hover:text-foreground",
-      )}
+      className="flare-chip h-9 shrink-0 font-mono"
+      data-active={selected}
     >
       <span className="w-4 h-4 flex items-center justify-center overflow-hidden rounded-sm shrink-0">
         {favicon.hasIcon ? (

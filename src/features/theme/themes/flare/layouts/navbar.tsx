@@ -30,7 +30,12 @@ export function Navbar({
 
   useEffect(() => {
     const onScroll = () => {
-      const threshold = Math.max(16, window.innerHeight * (bannerHeightVh / 100) - 120);
+      // Condense before the content reaches the bar, so the links never sit
+      // white-on-white over the first panel.
+      const threshold = Math.max(
+        12,
+        window.innerHeight * (bannerHeightVh / 100) - 168,
+      );
       setScrolled(window.scrollY > threshold);
     };
     onScroll();
@@ -46,143 +51,147 @@ export function Navbar({
     () => siteConfig.title || siteConfig.theme?.default?.navBarName || "Blog",
     [siteConfig],
   );
+  const avatar =
+    siteConfig.theme?.flare?.avatar || siteConfig.theme?.fuwari?.avatar || "";
 
   const onBanner = !scrolled;
 
+  const iconButton = cn(
+    "inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors",
+    onBanner
+      ? "text-white/85 hover:bg-white/15 hover:text-white"
+      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+  );
+
   return (
-    <>
-      <header className="pt-2 md:pt-3">
+    <header className="flare-nav" data-on-banner={onBanner ? "true" : "false"}>
+      <div
+        className={cn(
+          "flex w-full items-center justify-between gap-2 px-2 py-1.5 transition-all duration-300 md:px-3",
+          onBanner
+            ? "border border-transparent bg-transparent"
+            : "flare-nav-plate border-border/70",
+          "rounded-full",
+        )}
+      >
+        <Link
+          to="/"
+          className="flex min-w-0 items-center gap-2.5 rounded-full px-2 py-1"
+        >
+          {avatar ? (
+            <img
+              src={avatar}
+              alt=""
+              width={28}
+              height={28}
+              className={cn(
+                "h-7 w-7 shrink-0 rounded-full object-cover ring-1",
+                onBanner ? "ring-white/35" : "ring-border/70",
+              )}
+            />
+          ) : null}
+          <span
+            className={cn(
+              "block truncate text-[15px] font-bold tracking-tight transition-colors md:text-base",
+              onBanner ? "text-white drop-shadow-sm" : "text-foreground",
+            )}
+          >
+            {brand}
+          </span>
+        </Link>
+
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
+          {navOptions.map((option) => (
+            <Link
+              key={option.id}
+              to={option.to}
+              className="flare-nav-link"
+              activeProps={{ "data-status": "active" }}
+            >
+              <span className="truncate">{option.label}</span>
+            </Link>
+          ))}
+        </nav>
+
         <div
           className={cn(
-            "flex w-full items-center justify-between gap-2 px-2 py-2 md:px-3 md:py-2.5 transition-all duration-300",
-            "rounded-2xl md:rounded-full border backdrop-blur-xl",
-            onBanner
-              ? "bg-black/20 dark:bg-black/25 border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.12)]"
-              : "bg-background/75 border-border/55 shadow-[var(--flare-float-shadow)]",
+            "flare-nav-controls flex shrink-0 items-center gap-0.5",
           )}
         >
-          <Link to="/" className="min-w-0 px-2 py-1">
-            <span
-              className={cn(
-                "block truncate text-sm md:text-base font-semibold tracking-tight",
-                onBanner ? "text-white" : "text-foreground",
-              )}
-            >
-              {brand}
-            </span>
+          <Link to="/search" className={iconButton} aria-label={m.nav_search()}>
+            <Search size={17} strokeWidth={1.9} />
           </Link>
+          <ThemeToggle className="inline-flex h-9 w-9 items-center justify-center" />
+          <LanguageSwitcher className="h-9 w-9" />
 
-          <nav className="hidden lg:flex items-center gap-1">
-            {navOptions.map((option) => (
+          <div className="hidden items-center pl-1 md:flex">
+            {isLoading ? (
+              <Skeleton className="h-8 w-8 rounded-full" />
+            ) : user ? (
               <Link
-                key={option.id}
-                to={option.to}
+                to="/profile"
                 className={cn(
-                  "rounded-full px-3 py-1.5 text-sm transition-colors",
+                  "h-8 w-8 overflow-hidden rounded-full ring-1 transition",
                   onBanner
-                    ? "text-white/85 hover:text-white hover:bg-white/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+                    ? "ring-white/40 hover:ring-white/70"
+                    : "ring-border/60 hover:ring-border",
                 )}
-                activeProps={{
-                  className: onBanner
-                    ? "!text-white !bg-white/15"
-                    : "!text-foreground !bg-muted/70",
-                }}
+                title={user.name}
               >
-                {option.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-1 shrink-0">
-            <div className={cn("flex items-center", onBanner ? "text-white" : "text-foreground")}>
-              <ThemeToggle />
-              <LanguageSwitcher
-                className={cn(
-                  "h-8 w-8",
-                  onBanner
-                    ? "text-white/85 hover:text-white"
-                    : "text-muted-foreground hover:text-foreground",
+                {user.image ? (
+                  <img
+                    src={user.image}
+                    alt={user.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className={cn(
+                      "flex h-full w-full items-center justify-center",
+                      onBanner
+                        ? "bg-white/15 text-white"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    <UserIcon size={14} />
+                  </div>
                 )}
-              />
+              </Link>
+            ) : (
               <Link
-                to="/search"
+                to="/login"
                 className={cn(
-                  "h-8 w-8 inline-flex items-center justify-center rounded-md transition-colors",
+                  "rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors",
                   onBanner
-                    ? "text-white/85 hover:text-white hover:bg-white/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                    ? "bg-white text-black hover:bg-white/90"
+                    : "bg-foreground text-background hover:opacity-90",
                 )}
-                aria-label={m.nav_search()}
               >
-                <Search size={16} strokeWidth={1.75} />
+                {m.nav_login()}
               </Link>
-            </div>
-
-            <div className="hidden md:flex items-center pl-1">
-              {isLoading ? (
-                <Skeleton className="h-8 w-8 rounded-full" />
-              ) : user ? (
-                <Link
-                  to="/profile"
-                  className={cn(
-                    "h-8 w-8 rounded-full overflow-hidden ring-1 transition",
-                    onBanner ? "ring-white/30 hover:ring-white/55" : "ring-border/60 hover:ring-border",
-                  )}
-                  title={user.name}
-                >
-                  {user.image ? (
-                    <img src={user.image} alt={user.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <div
-                      className={cn(
-                        "h-full w-full flex items-center justify-center",
-                        onBanner ? "bg-white/15 text-white" : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      <UserIcon size={14} />
-                    </div>
-                  )}
-                </Link>
-              ) : (
-                <Link
-                  to="/login"
-                  className={cn(
-                    "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                    onBanner
-                      ? "bg-white text-black hover:bg-white/90"
-                      : "bg-foreground text-background hover:opacity-90",
-                  )}
-                >
-                  {m.nav_login()}
-                </Link>
-              )}
-            </div>
-
-            <button
-              type="button"
-              className={cn(
-                "lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors",
-                onBanner ? "text-white hover:bg-white/10" : "text-foreground hover:bg-muted/60",
-              )}
-              onClick={() => setOpen((v) => !v)}
-              aria-label={open ? m.common_close() : m.common_open_menu()}
-              aria-expanded={open}
-            >
-              {open ? <X size={18} /> : <Menu size={18} />}
-            </button>
+            )}
           </div>
+
+          <button
+            type="button"
+            className={cn(iconButton, "lg:hidden")}
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? m.common_close() : m.common_open_menu()}
+            aria-expanded={open}
+          >
+            {open ? <X size={18} /> : <Menu size={18} />}
+          </button>
         </div>
-      </header>
+      </div>
 
       {open ? (
-        <div className="mt-2 lg:hidden rounded-2xl border border-border/60 bg-background/90 backdrop-blur-xl shadow-sm overflow-hidden">
-          <nav className="p-2 flex flex-col">
+        <div className="flare-nav-plate mt-2 overflow-hidden rounded-2xl border border-border/70 lg:hidden">
+          <nav className="flex flex-col p-2">
             {navOptions.map((option) => (
               <Link
                 key={option.id}
                 to={option.to}
-                className="rounded-xl px-3 py-2.5 text-sm text-foreground/85 hover:bg-muted/60 hover:text-foreground transition-colors"
+                className="rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/85 transition-colors hover:bg-muted/60 hover:text-foreground"
                 activeProps={{ className: "bg-muted/70 text-foreground" }}
               >
                 {option.label}
@@ -197,7 +206,7 @@ export function Navbar({
               <>
                 <Link
                   to="/profile"
-                  className="rounded-xl px-3 py-2.5 text-sm text-foreground/85 hover:bg-muted/60 hover:text-foreground transition-colors flex items-center gap-2"
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-foreground/85 transition-colors hover:bg-muted/60 hover:text-foreground"
                 >
                   <UserIcon size={16} />
                   {m.profile_title()}
@@ -208,7 +217,7 @@ export function Navbar({
                     await logout();
                     setOpen(false);
                   }}
-                  className="rounded-xl px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-2 text-left"
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
                 >
                   <LogOut size={16} />
                   {m.profile_logout()}
@@ -217,7 +226,7 @@ export function Navbar({
             ) : (
               <Link
                 to="/login"
-                className="rounded-xl px-3 py-2.5 text-sm text-foreground/85 hover:bg-muted/60 hover:text-foreground transition-colors"
+                className="rounded-xl px-3 py-2.5 text-sm text-foreground/85 transition-colors hover:bg-muted/60 hover:text-foreground"
               >
                 {m.nav_login()}
               </Link>
@@ -225,6 +234,6 @@ export function Navbar({
           </nav>
         </div>
       ) : null}
-    </>
+    </header>
   );
 }

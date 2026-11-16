@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { SearchPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
@@ -14,85 +14,99 @@ export function SearchPage({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 100);
+    const timer = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
-    <div className="w-full space-y-4 md:space-y-6 flare-enter">
-      <section className="flare-surface p-5 md:p-7 space-y-5">
-        <div className="flex items-center justify-between">
-          <button onClick={onBack} className="flare-chip">
-            <ArrowLeft size={14} />
-            <span>{m.search_back()}</span>
-          </button>
-        </div>
-        <div className="space-y-2">
-          <label className="block text-xs font-medium text-muted-foreground">
-            {m.search_input_label()}
-          </label>
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder={m.search_input_label()}
-            className="w-full rounded-xl border border-border/60 bg-background/70 px-4 py-3 text-lg md:text-2xl text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/30"
-          />
-        </div>
-      </section>
-
-      <section className="flare-surface p-4 md:p-6 space-y-2">
-        {query.trim() !== "" && !isSearching && results.length === 0 && (
-          <div className="py-12 opacity-50">
-            <p className="font-serif text-lg text-muted-foreground">
-              {m.search_no_results()} "{query}"
-            </p>
+    <div className="flare-enter flex w-full flex-col gap-4">
+      <section className="flare-surface overflow-hidden">
+        <div className="space-y-5 p-5 md:p-8">
+          <div className="flex items-center justify-between gap-3">
+            <button type="button" onClick={onBack} className="flare-chip">
+              <ArrowLeft size={14} />
+              <span>{m.search_back()}</span>
+            </button>
+            <span className="rounded-full bg-muted/60 px-2.5 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
+              {results.length}
+            </span>
           </div>
-        )}
 
-        {results.map((result) => {
-          return (
-            <div
-              key={result.post.id}
-              onClick={() => onSelectPost(result.post.slug)}
-              className="group relative cursor-pointer p-4 -mx-4 transition-all duration-300 rounded-lg hover:bg-muted/10"
-            >
-              <div className="flex flex-col gap-2">
-                <div className="flex items-baseline justify-between">
-                  <h4
-                    className="text-lg md:text-xl text-muted-foreground font-serif tracking-tight transition-colors duration-300 group-hover:text-foreground"
-                    style={{
-                      viewTransitionName: `post-title-${result.post.slug}`,
-                    }}
-                    dangerouslySetInnerHTML={{
-                      __html: result.matches.title || result.post.title,
-                    }}
-                  />
-                </div>
-
-                <p
-                  className="text-sm font-sans text-muted-foreground line-clamp-2 opacity-60 group-hover:opacity-100 transition-opacity duration-300"
-                  dangerouslySetInnerHTML={{
-                    __html: result.matches.summary || result.post.summary || "",
-                  }}
-                />
-
-                {result.post.tags.length > 0 && (
-                  <div className="flex gap-2 pt-2">
-                    {result.post.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-[9px] uppercase tracking-wider font-mono text-muted-foreground/60 border border-border/30 px-1.5 py-0.5 rounded-sm"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-muted-foreground">
+              {m.search_input_label()}
+            </label>
+            <div className="relative">
+              <Search
+                size={17}
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/50"
+              />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => onQueryChange(e.target.value)}
+                placeholder={m.search_input_label()}
+                className="h-12 w-full rounded-full border border-border/60 bg-background/70 pl-11 pr-4 text-base text-foreground placeholder:text-muted-foreground/40 focus:border-border focus:outline-none focus:ring-2 focus:ring-ring/30 md:text-lg"
+              />
             </div>
-          );
-        })}
+          </div>
+        </div>
+
+        <div className="border-t border-border/50">
+          {query.trim() !== "" && !isSearching && results.length === 0 ? (
+            <div className="px-5 py-16 text-center md:px-8">
+              <p className="text-lg text-muted-foreground/70">
+                {m.search_no_results()} "{query}"
+              </p>
+            </div>
+          ) : null}
+
+          {results.length > 0 ? (
+            <ul className="divide-y divide-border/50">
+              {results.map((result) => (
+                <li key={result.post.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectPost(result.post.slug)}
+                    className="group flex w-full flex-col gap-2 px-5 py-4 text-left transition-colors hover:bg-muted/30 md:px-8 md:py-5"
+                  >
+                    <h2
+                      className="text-lg font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary md:text-xl"
+                      style={{
+                        viewTransitionName: `post-title-${result.post.slug}`,
+                      }}
+                      dangerouslySetInnerHTML={{
+                        __html: result.matches.title || result.post.title,
+                      }}
+                    />
+
+                    <p
+                      className="line-clamp-2 text-sm leading-6 text-muted-foreground"
+                      dangerouslySetInnerHTML={{
+                        __html:
+                          result.matches.summary || result.post.summary || "",
+                      }}
+                    />
+
+                    {result.post.tags.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {result.post.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="flare-chip h-6 px-2 text-[11px]"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       </section>
     </div>
   );

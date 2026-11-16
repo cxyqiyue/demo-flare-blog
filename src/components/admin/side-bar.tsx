@@ -23,7 +23,7 @@ import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { AUTH_KEYS, sessionQuery } from "@/features/auth/queries";
 import type { EnrichedSessionUser } from "@/features/auth/service/auth.service";
 import { authClient } from "@/lib/auth/auth.client";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { FileRoutesByTo } from "@/routeTree.gen";
@@ -154,6 +154,19 @@ export function SideBar({
   if (isFuwari) {
     return (
       <FuwariSidebar
+        visibleNavItems={visibleNavItems}
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        closeMobileSidebar={closeMobileSidebar}
+        user={user}
+        onSignOut={handleSignOutClick}
+        onConfirmSignOut={handleConfirmSignOut}
+      />
+    );
+  }
+
+  if (isFlare) {
+    return (
+      <FlareSidebar
         visibleNavItems={visibleNavItems}
         isMobileSidebarOpen={isMobileSidebarOpen}
         closeMobileSidebar={closeMobileSidebar}
@@ -427,6 +440,149 @@ function FuwariSidebar({
       </aside>
 
       {/* Logout Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleConfirmLogout}
+        title={m.admin_sidebar_logout_title()}
+        message={m.admin_sidebar_logout_message()}
+        confirmLabel={m.admin_sidebar_logout_confirm()}
+        isLoading={isLoggingOut}
+      />
+    </>
+  );
+}
+
+/**
+ * Flare admin sidebar — the workbench rail: the site's mark, the menu as a
+ * list of quiet rows where only the current page sits on a raised white pill,
+ * and the account at the foot. It sits directly on the tinted canvas, as in
+ * the reference admin.
+ */
+function FlareSidebar({
+  visibleNavItems,
+  isMobileSidebarOpen,
+  closeMobileSidebar,
+  user,
+  onSignOut,
+  onConfirmSignOut,
+}: FuwariSidebarProps) {
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleConfirmLogout = async () => {
+    setIsLoggingOut(true);
+    await onConfirmSignOut();
+  };
+
+  const sidebarContent = (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex h-11 items-center justify-between gap-2 px-1">
+        <Link
+          to="/admin"
+          onClick={closeMobileSidebar}
+          className="flex min-w-0 items-center gap-2.5 rounded-[0.7rem] py-1"
+        >
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-[0.55rem] bg-foreground text-[11px] font-semibold text-background">
+            A
+          </span>
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate text-sm font-semibold tracking-tight text-foreground">
+              Admin
+            </span>
+            <span className="block truncate text-[11px] text-muted-foreground">
+              Management
+            </span>
+          </span>
+        </Link>
+        <button
+          onClick={closeMobileSidebar}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/[0.045] hover:text-foreground lg:hidden dark:hover:bg-white/[0.06]"
+          aria-label={m.admin_sidebar_close_navigation()}
+        >
+          <X size={17} strokeWidth={1.75} />
+        </button>
+      </div>
+
+      <nav className="custom-scrollbar mt-3 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-2">
+        {visibleNavItems.map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            onClick={closeMobileSidebar}
+            activeOptions={{ exact: item.exact, includeSearch: false }}
+            className="flex h-9 items-center gap-2.5 rounded-[0.7rem] px-2.5 text-[13.5px] font-medium text-muted-foreground transition-colors hover:bg-black/[0.045] hover:text-foreground dark:hover:bg-white/[0.06]"
+            activeProps={{
+              className:
+                "bg-(--flare-surface) text-foreground shadow-[0_1px_2px_rgb(15_23_42/0.06)] ring-1 ring-border/70 hover:bg-(--flare-surface) hover:text-foreground",
+            }}
+          >
+            <item.icon size={16} strokeWidth={1.75} className="shrink-0" />
+            <span className="truncate">{item.label}</span>
+          </Link>
+        ))}
+      </nav>
+
+      <div className="space-y-1 border-t border-border/60 pt-2">
+        <div className="flex items-center justify-between rounded-[0.7rem] px-2 py-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            {m.admin_sidebar_theme_mode()}
+          </span>
+          <ThemeToggle className="size-8" />
+        </div>
+
+        <div className="flex items-center gap-2.5 rounded-[0.7rem] px-2 py-1.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/[0.09]">
+            {user?.image ? (
+              <img
+                src={user.image}
+                alt={user.name || ""}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <User size={14} className="text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col leading-tight">
+            <span className="truncate text-[13.5px] font-medium text-foreground">
+              {user?.name || m.admin_sidebar_admin_fallback()}
+            </span>
+            <span className="truncate text-[11px] text-muted-foreground">
+              {user?.role === "admin"
+                ? m.admin_sidebar_role_admin()
+                : m.admin_sidebar_role_user()}
+            </span>
+          </div>
+          <button
+            onClick={onSignOut}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            title={m.admin_sidebar_logout()}
+          >
+            <LogOut size={15} strokeWidth={1.75} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {isMobileSidebarOpen ? (
+        <>
+          <div
+            className="fixed inset-0 z-60 bg-black/25 backdrop-blur-sm lg:hidden dark:bg-black/45"
+            onClick={closeMobileSidebar}
+          />
+          <div className="flare-admin-drawer fixed inset-y-0 left-0 z-70 flex w-[min(18rem,86vw)] flex-col bg-(--flare-ground) px-3 py-4 shadow-2xl lg:hidden">
+            {sidebarContent}
+          </div>
+        </>
+      ) : null}
+
+      <aside className="hidden shrink-0 flex-col px-3 py-4 lg:sticky lg:top-0 lg:z-30 lg:flex lg:h-screen lg:w-64">
+        {sidebarContent}
+      </aside>
+
       <ConfirmationModal
         isOpen={showLogoutConfirm}
         onClose={() => setShowLogoutConfirm(false)}

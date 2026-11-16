@@ -4,8 +4,8 @@ import { m } from "@/paraglide/messages";
 
 export function UserLayout({ isAuthenticated, children }: UserLayoutProps) {
   return (
-    <div className="min-h-screen font-sans relative antialiased bg-background">
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(900px_360px_at_50%_-10%,hsl(var(--muted)/0.3),transparent_70%),linear-gradient(to_bottom,hsl(var(--background)),hsl(var(--background)))]" />
+    <div className="flare-shell min-h-screen font-sans relative antialiased bg-(--flare-ground)">
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(900px_360px_at_50%_-10%,hsl(var(--muted)/0.3),transparent_70%)]" />
       {isAuthenticated ? (
         <main className="relative z-10 max-w-4xl mx-auto w-full px-4 md:px-6 py-8 md:py-12 flare-enter">
           {children}

@@ -11,7 +11,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import Toaster from "@/components/ui/toaster";
 import { sessionQuery } from "@/features/auth/queries";
 import { CACHE_CONTROL } from "@/lib/constants";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 // 管理后台跟随当前激活主题（THEME 变量），使用当前主题的样式
 import "@theme/styles/index.css";
@@ -95,6 +95,61 @@ function AdminLayout() {
           {/* Content Scroll: inner scrolling region, spacious padding */}
           <div className="flex-1 min-h-0 overflow-y-auto p-6 md:p-12 custom-scrollbar">
             <div className="mx-auto max-w-7xl flex flex-col gap-5 lg:gap-6 fuwari-onload-animation">
+              <Outlet />
+            </div>
+          </div>
+        </main>
+        <Toaster />
+      </div>
+    );
+  }
+
+  if (isFlare) {
+    return (
+      <div className="flare-admin admin-layout flex h-dvh overflow-hidden bg-(--flare-ground) font-sans text-foreground">
+        <SideBar
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          closeMobileSidebar={closeMobileSidebar}
+        />
+
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <header className="z-30 flex h-16 shrink-0 items-center justify-between gap-4 bg-(--flare-ground)/85 px-4 backdrop-blur-xl sm:px-6 md:px-8">
+            <div className="flex min-w-0 items-center gap-2">
+              <button
+                onClick={() => setIsMobileSidebarOpen(true)}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-(--flare-surface) text-muted-foreground shadow-[0_1px_2px_rgb(15_23_42/0.05)] transition-colors hover:text-foreground lg:hidden"
+                aria-label={m.admin_layout_open_navigation()}
+              >
+                <Menu size={17} strokeWidth={1.75} />
+              </button>
+              <div className="no-scrollbar min-w-0 overflow-x-auto">
+                <Breadcrumbs />
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Link
+                to="/admin/settings"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-(--flare-surface) text-muted-foreground shadow-[0_1px_2px_rgb(15_23_42/0.05)] transition-colors hover:text-foreground"
+                title={m.admin_layout_settings()}
+                aria-label={m.admin_layout_settings()}
+              >
+                <Settings size={16} strokeWidth={1.75} />
+              </Link>
+              <Link
+                to="/"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border/70 bg-(--flare-surface) px-3 text-sm font-medium text-muted-foreground shadow-[0_1px_2px_rgb(15_23_42/0.05)] transition-colors hover:text-foreground"
+              >
+                <span className="hidden sm:inline">
+                  {m.admin_layout_back_to_site()}
+                </span>
+                <ArrowUpRight size={14} strokeWidth={1.75} />
+              </Link>
+            </div>
+          </header>
+
+          <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-1 sm:px-6 md:px-8">
+            <div className="flare-enter mx-auto flex w-full max-w-[1400px] flex-col gap-4">
               <Outlet />
             </div>
           </div>
