@@ -25,8 +25,8 @@ export function MomentsPage({
   const [composerOpen, setComposerOpen] = useState(false);
 
   return (
-    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
-      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm">
+    <div className="w-full space-y-4 md:space-y-6 flare-enter">
+      <section className="flare-surface p-5 md:p-7">
         <header className="space-y-2">
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
             {m.moments_title()}
@@ -37,59 +37,57 @@ export function MomentsPage({
         </header>
       </section>
 
-      {/* Admin Composer (collapsible) */}
-      {isAdmin && (
-        <div className="mb-8">
+      {isAdmin ? (
+        <section className="flare-surface-soft p-4 md:p-5">
           <button
             type="button"
             onClick={() => setComposerOpen((v) => !v)}
-            className="flex items-center gap-2 text-sm font-serif font-medium text-muted-foreground hover:text-foreground transition-colors mb-4"
+            className="flare-chip"
           >
-            {composerOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {composerOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             {m.moments_composer_title()}
           </button>
-          {composerOpen && <MomentComposer onCreate={onCreateMoment} />}
-        </div>
-      )}
+          {composerOpen ? <div className="mt-4"><MomentComposer onCreate={onCreateMoment} /></div> : null}
+        </section>
+      ) : null}
 
-      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-4 md:p-6 shadow-sm">
-      {/* Moments List */}
-      <div className="space-y-4 md:space-y-5">
-        {moments.length === 0 ? (
-          <div className="py-20 text-center">
-            <p className="font-serif text-lg text-muted-foreground/50">
-              {m.moments_empty()}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground/30 font-mono">
-              {m.moments_empty_desc()}
-            </p>
-          </div>
-        ) : (
-          <>
-            {moments.map((moment) => (
-              <MomentCard
-                key={moment.id}
-                moment={moment}
-                isAdmin={isAdmin}
-                isSuperAdmin={isSuperAdmin}
-                currentUserId={currentUserId}
-                onToggleLike={onToggleLike}
-                onDelete={onDeleteMoment}
-                onUpdate={onUpdateMoment}
+      <section className="flare-surface p-4 md:p-6">
+        <div className="space-y-4 md:space-y-5">
+          {moments.length === 0 ? (
+            <div className="py-16 text-center">
+              <p className="text-lg text-muted-foreground/60">
+                {m.moments_empty()}
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground/50">
+                {m.moments_empty_desc()}
+              </p>
+            </div>
+          ) : (
+            <>
+              {moments.map((moment) => (
+                <MomentCard
+                  key={moment.id}
+                  moment={moment}
+                  isAdmin={isAdmin}
+                  isSuperAdmin={isSuperAdmin}
+                  currentUserId={currentUserId}
+                  onToggleLike={onToggleLike}
+                  onDelete={onDeleteMoment}
+                  onUpdate={onUpdateMoment}
+                />
+              ))}
+
+              <Pagination
+                page={page}
+                total={total}
+                pageSize={pageSize}
+                hasPrevPage={hasPrevPage}
+                hasNextPage={hasNextPage}
+                onPageChange={onPageChange}
               />
-            ))}
-
-            <Pagination
-              page={page}
-              total={total}
-              pageSize={pageSize}
-              hasPrevPage={hasPrevPage}
-              hasNextPage={hasNextPage}
-              onPageChange={onPageChange}
-            />
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </div>
       </section>
     </div>
   );

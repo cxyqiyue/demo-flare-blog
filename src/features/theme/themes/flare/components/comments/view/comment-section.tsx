@@ -77,9 +77,7 @@ export const CommentSection = ({
     return !result?.error;
   };
 
-  const handleCreateReply = async (
-    content: JSONContent,
-  ): Promise<boolean> => {
+  const handleCreateReply = async (content: JSONContent): Promise<boolean> => {
     if (!replyTarget) return false;
     const result = await createComment({
       data: {
@@ -152,13 +150,13 @@ export const CommentSection = ({
   return (
     <section
       className={cn(
-        "space-y-12 mt-24 pt-12 border-t border-border/20 animate-in fade-in duration-700",
+        "space-y-8 mt-12 pt-8 border-t border-border/30 animate-in fade-in duration-500",
         className,
       )}
     >
       <header className="flex items-center justify-between">
-        <div className="space-y-2">
-          <p className="text-xl font-serif font-medium text-foreground">
+        <div className="space-y-1">
+          <p className="text-lg md:text-xl font-semibold text-foreground">
             {m.comments_count({ count: totalCount })}
           </p>
         </div>
@@ -166,23 +164,20 @@ export const CommentSection = ({
 
       {/* Main Editor */}
       {session ? (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <CommentEditor
             onSubmit={handleCreateComment}
             isSubmitting={isCreating && !replyTarget}
           />
         </div>
       ) : (
-        <div className="py-12 flex flex-col items-center justify-center gap-4 text-center">
-          <p className="text-xs font-mono text-muted-foreground/60 tracking-wider">
+        <div className="py-10 flex flex-col items-center justify-center gap-4 text-center flare-surface-soft">
+          <p className="text-sm text-muted-foreground">
             {m.comments_join_discussion()}
           </p>
           <Link to="/login">
-            <Button
-              variant="outline"
-              className="h-10 px-6 text-[10px] uppercase tracking-[0.25em] font-bold border-border/40 bg-transparent hover:bg-foreground hover:text-background transition-all"
-            >
-              <LogIn size={12} className="mr-2.5 opacity-70" />
+            <Button variant="outline" className="rounded-full">
+              <LogIn size={14} className="mr-2 opacity-80" />
               {m.comments_login()}
             </Button>
           </Link>

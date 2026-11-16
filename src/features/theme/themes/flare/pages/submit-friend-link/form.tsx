@@ -26,7 +26,9 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
             placeholder={m.friend_link_placeholder_site_name_default()}
           />
           {errors.siteName && (
-            <span className="text-xs text-destructive">{errors.siteName.message}</span>
+            <span className="text-xs text-destructive">
+              {errors.siteName.message}
+            </span>
           )}
         </div>
 
@@ -40,7 +42,9 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
             placeholder={m.friend_link_placeholder_site_url()}
           />
           {errors.siteUrl && (
-            <span className="text-xs text-destructive">{errors.siteUrl.message}</span>
+            <span className="text-xs text-destructive">
+              {errors.siteUrl.message}
+            </span>
           )}
         </div>
       </div>
@@ -55,7 +59,9 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
           placeholder={m.friend_link_placeholder_description_default()}
         />
         {errors.description && (
-          <span className="text-xs text-destructive">{errors.description.message}</span>
+          <span className="text-xs text-destructive">
+            {errors.description.message}
+          </span>
         )}
       </div>
 
@@ -70,7 +76,9 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
             placeholder={m.friend_link_placeholder_site_url()}
           />
           {errors.logoUrl && (
-            <span className="text-xs text-destructive">{errors.logoUrl.message}</span>
+            <span className="text-xs text-destructive">
+              {errors.logoUrl.message}
+            </span>
           )}
         </div>
 
@@ -84,7 +92,9 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
             placeholder={m.friend_link_placeholder_contact_email_default()}
           />
           {errors.contactEmail && (
-            <span className="text-xs text-destructive">{errors.contactEmail.message}</span>
+            <span className="text-xs text-destructive">
+              {errors.contactEmail.message}
+            </span>
           )}
         </div>
       </div>

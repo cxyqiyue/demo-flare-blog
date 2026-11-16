@@ -44,7 +44,7 @@ export function MobileMenu({
         {/* Header */}
         <div className="flex justify-between items-center">
           <div className="flex flex-col">
-            <span className="font-serif text-2xl font-bold tracking-tighter text-foreground">
+            <span className="text-2xl font-semibold tracking-tight text-foreground">
               [ {siteConfig.theme.default.navBarName} ]
             </span>
           </div>

@@ -6,18 +6,15 @@ export function AboutPageSkeleton() {
   const navigate = useNavigate();
 
   return (
-    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
-      <nav className="flex items-center justify-between px-1">
-        <button
-          onClick={() => navigate({ to: "/posts" })}
-          className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-        >
+    <div className="w-full space-y-4 md:space-y-6">
+      <nav className="flex items-center justify-between px-0.5">
+        <button onClick={() => navigate({ to: "/posts" })} className="flare-chip">
           <ArrowLeft size={14} />
           <span>{m.post_back_to_list()}</span>
         </button>
       </nav>
 
-      <article className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-8 lg:p-10 shadow-sm space-y-8">
+      <article className="flare-surface p-5 md:p-8 lg:p-10 space-y-8">
         <header className="space-y-4">
           <div className="h-10 md:h-14 w-3/4 bg-muted animate-pulse rounded-md" />
           <div className="h-4 w-full bg-muted/70 animate-pulse rounded-sm" />

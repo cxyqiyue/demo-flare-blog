@@ -18,7 +18,10 @@ export function ForgotPasswordForm({ form }: ForgotPasswordFormProps) {
       </p>
 
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium text-foreground/90">
+        <label
+          htmlFor="email"
+          className="text-sm font-medium text-foreground/90"
+        >
           {m.forgot_password_email_label()}
         </label>
         <Input

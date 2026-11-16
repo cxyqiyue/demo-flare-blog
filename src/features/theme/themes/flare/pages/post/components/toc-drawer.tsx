@@ -27,7 +27,7 @@ export function TocDrawer({
         onClick={() => setIsOpen(true)}
         aria-label={m.post_toc()}
         title={m.post_toc()}
-        className="fixed bottom-20 right-8 z-40 flex items-center justify-center w-12 h-12 rounded-full bg-background border border-border/40 shadow-sm text-muted-foreground hover:text-foreground transition-all xl:hidden active:scale-90"
+        className="fixed bottom-20 right-6 md:right-8 z-40 flex items-center justify-center w-11 h-11 rounded-full flare-surface text-muted-foreground hover:text-foreground transition-all xl:hidden active:scale-95"
       >
         <List className="w-5 h-5" strokeWidth={1.5} />
       </button>

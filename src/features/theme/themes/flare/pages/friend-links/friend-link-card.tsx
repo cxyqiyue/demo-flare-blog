@@ -15,10 +15,10 @@ export function FriendLinkCard({ link }: FriendLinkCardProps) {
       href={link.siteUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-start gap-4 p-4 rounded-lg hover:bg-muted/40 transition-colors border border-transparent hover:border-border/40"
+      className="group flex items-start gap-4 p-4 flare-surface-soft hover:bg-muted/30 transition-colors"
     >
       {/* Logo */}
-      <div className="shrink-0 w-10 h-10 rounded-md bg-muted/30 border border-border/40 flex items-center justify-center overflow-hidden">
+      <div className="shrink-0 w-11 h-11 rounded-xl bg-muted/30 border border-border/40 flex items-center justify-center overflow-hidden">
         {link.logoUrl ? (
           <img
             src={link.logoUrl}
@@ -27,7 +27,7 @@ export function FriendLinkCard({ link }: FriendLinkCardProps) {
             loading="lazy"
           />
         ) : (
-          <span className="text-sm font-serif font-medium text-muted-foreground/60">
+          <span className="text-sm font-semibold text-muted-foreground/70">
             {link.siteName.slice(0, 1)}
           </span>
         )}
@@ -35,10 +35,10 @@ export function FriendLinkCard({ link }: FriendLinkCardProps) {
 
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="font-medium text-foreground tracking-tight truncate group-hover:underline decoration-border/60 underline-offset-4 decoration-1">
+          <h3 className="font-medium text-foreground tracking-tight truncate group-hover:text-foreground/85 transition-colors">
             {link.siteName}
           </h3>
-          <span className="text-[10px] font-mono text-muted-foreground/30 hidden sm:block truncate shrink-0">
+          <span className="text-xs text-muted-foreground/50 hidden sm:block truncate shrink-0">
             {displayUrl}
           </span>
         </div>

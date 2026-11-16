@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NavOption, UserInfo } from "@/features/theme/contract/layouts";
-import { m } from "@/paraglide/messages";
 import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages";
 import { LanguageSwitcher } from "./language-switcher";
 
 interface NavbarProps {
@@ -30,7 +30,7 @@ export function Navbar({
 
   useEffect(() => {
     const onScroll = () => {
-      const threshold = Math.max(24, window.innerHeight * (bannerHeightVh / 100) - 160);
+      const threshold = Math.max(16, window.innerHeight * (bannerHeightVh / 100) - 120);
       setScrolled(window.scrollY > threshold);
     };
     onScroll();
@@ -47,23 +47,25 @@ export function Navbar({
     [siteConfig],
   );
 
+  const onBanner = !scrolled;
+
   return (
     <>
-      <header
-        className={cn(
-          "mt-2 md:mt-3 flex items-center transition-all duration-300",
-          "rounded-2xl md:rounded-full border",
-          scrolled
-            ? "bg-background/80 backdrop-blur-xl border-border/50 shadow-sm"
-            : "bg-black/15 dark:bg-white/5 backdrop-blur-md border-white/20 shadow-[0_8px_24px_rgba(0,0,0,0.08)]",
-        )}
-      >
-        <div className="flex w-full items-center justify-between gap-2 px-3 py-2 md:px-4 md:py-2.5">
+      <header className="pt-2 md:pt-3">
+        <div
+          className={cn(
+            "flex w-full items-center justify-between gap-2 px-2 py-2 md:px-3 md:py-2.5 transition-all duration-300",
+            "rounded-2xl md:rounded-full border backdrop-blur-xl",
+            onBanner
+              ? "bg-black/20 dark:bg-black/25 border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.12)]"
+              : "bg-background/75 border-border/55 shadow-[var(--flare-float-shadow)]",
+          )}
+        >
           <Link to="/" className="min-w-0 px-2 py-1">
             <span
               className={cn(
                 "block truncate text-sm md:text-base font-semibold tracking-tight",
-                scrolled ? "text-foreground" : "text-white",
+                onBanner ? "text-white" : "text-foreground",
               )}
             >
               {brand}
@@ -77,14 +79,14 @@ export function Navbar({
                 to={option.to}
                 className={cn(
                   "rounded-full px-3 py-1.5 text-sm transition-colors",
-                  scrolled
-                    ? "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                    : "text-white/85 hover:text-white hover:bg-white/10",
+                  onBanner
+                    ? "text-white/85 hover:text-white hover:bg-white/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
                 )}
                 activeProps={{
-                  className: scrolled
-                    ? "!text-foreground !bg-muted/70"
-                    : "!text-white !bg-white/15",
+                  className: onBanner
+                    ? "!text-white !bg-white/15"
+                    : "!text-foreground !bg-muted/70",
                 }}
               >
                 {option.label}
@@ -93,19 +95,23 @@ export function Navbar({
           </nav>
 
           <div className="flex items-center gap-1 shrink-0">
-            <div className={cn("flex items-center", scrolled ? "text-foreground" : "text-white")}>
+            <div className={cn("flex items-center", onBanner ? "text-white" : "text-foreground")}>
               <ThemeToggle />
               <LanguageSwitcher
                 className={cn(
                   "h-8 w-8",
-                  scrolled ? "text-muted-foreground hover:text-foreground" : "text-white/85 hover:text-white",
+                  onBanner
+                    ? "text-white/85 hover:text-white"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               />
               <Link
                 to="/search"
                 className={cn(
                   "h-8 w-8 inline-flex items-center justify-center rounded-md transition-colors",
-                  scrolled ? "text-muted-foreground hover:text-foreground hover:bg-muted/50" : "text-white/85 hover:text-white hover:bg-white/10",
+                  onBanner
+                    ? "text-white/85 hover:text-white hover:bg-white/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                 )}
                 aria-label={m.nav_search()}
               >
@@ -119,13 +125,21 @@ export function Navbar({
               ) : user ? (
                 <Link
                   to="/profile"
-                  className="h-8 w-8 rounded-full overflow-hidden ring-1 ring-white/30 hover:ring-white/60 transition"
+                  className={cn(
+                    "h-8 w-8 rounded-full overflow-hidden ring-1 transition",
+                    onBanner ? "ring-white/30 hover:ring-white/55" : "ring-border/60 hover:ring-border",
+                  )}
                   title={user.name}
                 >
                   {user.image ? (
                     <img src={user.image} alt={user.name} className="h-full w-full object-cover" />
                   ) : (
-                    <div className={cn("h-full w-full flex items-center justify-center", scrolled ? "bg-muted text-muted-foreground" : "bg-white/15 text-white")}>
+                    <div
+                      className={cn(
+                        "h-full w-full flex items-center justify-center",
+                        onBanner ? "bg-white/15 text-white" : "bg-muted text-muted-foreground",
+                      )}
+                    >
                       <UserIcon size={14} />
                     </div>
                   )}
@@ -135,7 +149,9 @@ export function Navbar({
                   to="/login"
                   className={cn(
                     "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                    scrolled ? "bg-foreground text-background hover:opacity-90" : "bg-white text-black hover:bg-white/90",
+                    onBanner
+                      ? "bg-white text-black hover:bg-white/90"
+                      : "bg-foreground text-background hover:opacity-90",
                   )}
                 >
                   {m.nav_login()}
@@ -147,7 +163,7 @@ export function Navbar({
               type="button"
               className={cn(
                 "lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors",
-                scrolled ? "text-foreground hover:bg-muted/60" : "text-white hover:bg-white/10",
+                onBanner ? "text-white hover:bg-white/10" : "text-foreground hover:bg-muted/60",
               )}
               onClick={() => setOpen((v) => !v)}
               aria-label={open ? m.common_close() : m.common_open_menu()}
@@ -174,7 +190,9 @@ export function Navbar({
             ))}
             <div className="my-1 h-px bg-border/60" />
             {isLoading ? (
-              <div className="px-3 py-2"><Skeleton className="h-8 w-24" /></div>
+              <div className="px-3 py-2">
+                <Skeleton className="h-8 w-24" />
+              </div>
             ) : user ? (
               <>
                 <Link

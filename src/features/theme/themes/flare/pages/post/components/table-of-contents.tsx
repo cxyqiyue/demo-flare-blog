@@ -1,9 +1,10 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { scrollToHeadingWithRetry } from "@/features/posts/utils/scroll-to-heading";
 import type { TableOfContentsItem } from "@/features/posts/utils/toc";
 import { useActiveTOC } from "@/hooks/use-active-toc";
-import { scrollToHeadingWithRetry } from "@/features/posts/utils/scroll-to-heading";
 import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages";
 
 export default function TableOfContents({
   headers,
@@ -67,12 +68,12 @@ export default function TableOfContents({
     <nav
       ref={navRef}
       className={cn(
-        "sticky top-28 self-start block w-60 animate-in fade-in duration-500 max-h-[calc(100vh-8rem)] overflow-y-auto overflow-x-hidden custom-scrollbar rounded-xl border border-border/50 bg-card/70 backdrop-blur-sm p-3",
+        "sticky top-28 self-start block w-60 animate-in fade-in duration-500 max-h-[calc(100vh-8rem)] overflow-y-auto overflow-x-hidden custom-scrollbar flare-surface-soft p-3",
         className,
       )}
     >
-      <div className="mb-2 px-1 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/60">
-        TOC
+      <div className="mb-2 px-1 text-xs font-medium text-muted-foreground">
+        {m.post_toc?.() ?? "TOC"}
       </div>
       <div className="relative toc-root">
         <ul className="space-y-1.5 list-none m-0 p-0">
@@ -99,7 +100,9 @@ export default function TableOfContents({
                     ? "text-foreground border-foreground/60 bg-muted/50 font-medium"
                     : "text-muted-foreground/70 border-transparent hover:text-foreground hover:bg-muted/30 hover:border-border/60",
                 )}
-                style={{ marginLeft: `${Math.max(0, node.level - 2) * 0.5}rem` }}
+                style={{
+                  marginLeft: `${Math.max(0, node.level - 2) * 0.5}rem`,
+                }}
               >
                 {node.text}
               </a>
