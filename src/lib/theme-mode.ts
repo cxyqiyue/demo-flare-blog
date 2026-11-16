@@ -4,3 +4,4 @@
  * tree-shaken away and the build never mixes theme class systems.
  */
 export const isFuwari = __THEME_NAME__ === "fuwari";
+export const isFlare = __THEME_NAME__ === "flare";

@@ -3,8 +3,8 @@ import { m } from "@/paraglide/messages";
 
 export function AuthLayout({ onBack, children }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen w-full flex flex-col bg-background relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(900px_360px_at_50%_-10%,hsl(var(--muted)/0.35),transparent_70%),linear-gradient(to_bottom,hsl(var(--background)),hsl(var(--background)))]" />
+    <div className="flare-shell min-h-screen w-full flex flex-col bg-(--flare-ground) relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(900px_360px_at_50%_-10%,hsl(var(--muted)/0.35),transparent_70%)]" />
       <header className="h-16 flex items-center px-4 md:px-8">
         <button onClick={onBack} type="button" className="flare-chip">
           ← {m.auth_layout_back_home()}

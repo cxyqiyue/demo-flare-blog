@@ -7,17 +7,16 @@ import {
   SOCIAL_PLATFORMS,
   type SocialLink,
 } from "@/features/config/utils/social-platforms";
-import type { PublicLayoutProps } from "@/features/theme/contract/layouts";
 import { tagsQueryOptions } from "@/features/tags/queries";
+import type { PublicLayoutProps } from "@/features/theme/contract/layouts";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { Footer } from "./footer";
 import { Navbar } from "./navbar";
 
 const BANNER_HEIGHT_HOME = 78;
-const BANNER_HEIGHT_PAGE = 32;
+const BANNER_HEIGHT_PAGE = 44;
 const BANNER_HEIGHT_FOCUSED = 24;
-const NAVBAR_CLEARANCE_REM = 4.75;
 
 function isFocusedPath(pathname: string) {
   return (
@@ -28,59 +27,59 @@ function isFocusedPath(pathname: string) {
     pathname.startsWith("/register") ||
     pathname.startsWith("/forgot-password") ||
     pathname.startsWith("/reset-password") ||
-    pathname.startsWith("/verify-email")
+    pathname.startsWith("/verify-email") ||
+    pathname.startsWith("/unsubscribe")
   );
 }
 
-function Sidebar({
-  showTags = true,
-}: {
-  showTags?: boolean;
-}) {
+/**
+ * The two sidebar widgets. On the home page they lead the content as one slim
+ * strip; on every other page they follow it, as the reference site does.
+ */
+function SidebarWidgets({ place }: { place: "before" | "after" }) {
   const { siteConfig } = useRouteContext({ from: "__root__" });
-  const { data: tags } = useQuery({
-    ...tagsQueryOptions,
-    enabled: showTags,
-  });
+  const { data: tags } = useQuery(tagsQueryOptions);
 
   const avatar =
     siteConfig.theme?.flare?.avatar || siteConfig.theme?.fuwari?.avatar || "";
-  const socialLinks = siteConfig.social.filter(
-    (link: SocialLink) => Boolean(link.url),
+  const socialLinks = siteConfig.social.filter((link: SocialLink) =>
+    Boolean(link.url),
   );
-  const topTags = (tags ?? []).slice(0, 18);
+  const topTags = (tags ?? []).slice(0, 24);
 
   return (
-    <aside className="flare-sidebar" aria-label="Sidebar">
-      <section className="flare-surface-soft p-5 md:p-6">
-        <div className="flex items-start gap-4">
+    <div className="flare-widgets" data-place={place}>
+      <section className="flare-widget flare-surface flex flex-col gap-4 p-5">
+        <div className="flex items-center gap-4">
           {avatar ? (
             <img
               src={avatar}
               alt={siteConfig.author || siteConfig.title}
-              className="h-14 w-14 rounded-2xl object-cover border border-border/50 shadow-sm"
+              className="h-14 w-14 shrink-0 rounded-2xl border border-border/50 bg-muted/30 object-cover"
             />
           ) : (
-            <div className="h-14 w-14 rounded-2xl border border-border/50 bg-muted/50 flex items-center justify-center text-muted-foreground">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-border/50 bg-muted/40 text-muted-foreground">
               <UserRound size={20} />
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold tracking-tight text-foreground truncate">
+            <p className="truncate text-base font-semibold tracking-tight text-foreground">
               {siteConfig.author || siteConfig.title}
             </p>
             {siteConfig.tagline || siteConfig.description ? (
-              <p className="mt-1 text-sm leading-6 text-muted-foreground line-clamp-3">
+              <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted-foreground">
                 {siteConfig.tagline || siteConfig.description}
               </p>
             ) : null}
           </div>
         </div>
         {socialLinks.length > 0 ? (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {socialLinks.map((link: SocialLink, i: number) => {
               const preset =
-                link.platform === "custom" ? null : SOCIAL_PLATFORMS[link.platform];
+                link.platform === "custom"
+                  ? null
+                  : SOCIAL_PLATFORMS[link.platform];
               const Icon = preset?.icon;
               const label = preset?.label ?? link.label ?? link.platform;
               const href = resolveSocialHref(link.platform, link.url);
@@ -90,7 +89,7 @@ function Sidebar({
                   href={href}
                   target={link.platform === "email" ? undefined : "_blank"}
                   rel={link.platform === "email" ? undefined : "noreferrer"}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/50 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/60 text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
                   aria-label={label}
                   title={label}
                 >
@@ -108,43 +107,128 @@ function Sidebar({
         ) : null}
       </section>
 
-      {showTags ? (
-        <section className="flare-surface-soft p-5 md:p-6">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold tracking-wide text-foreground flex items-center gap-2">
-              <Hash size={15} className="text-muted-foreground" />
-              {m.posts_tags_filter?.() ?? "Tags"}
-            </h2>
-            <Link
-              to="/posts"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {m.nav_posts?.() ?? "Posts"}
-            </Link>
+      <section className="flare-widget flare-surface flex flex-col gap-3 p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Hash size={15} className="text-muted-foreground" />
+            {m.posts_tags_filter?.() ?? "Tags"}
+          </h2>
+          <Link
+            to="/posts"
+            className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {m.nav_posts?.() ?? "Posts"}
+          </Link>
+        </div>
+        {topTags.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {topTags.map((tag) => (
+              <Link
+                key={tag.id}
+                to="/posts"
+                search={{ tagName: tag.name }}
+                className="flare-chip"
+                title={`${tag.name}${typeof tag.postCount === "number" ? ` (${tag.postCount})` : ""}`}
+              >
+                <span className="max-w-[8.5rem] truncate">{tag.name}</span>
+                {typeof tag.postCount === "number" ? (
+                  <span className="text-[11px] tabular-nums opacity-70">
+                    {tag.postCount}
+                  </span>
+                ) : null}
+              </Link>
+            ))}
           </div>
-          {topTags.length > 0 ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {topTags.map((tag) => (
-                <Link
-                  key={tag.id}
-                  to="/posts"
-                  search={{ tagName: tag.name }}
-                  className="flare-chip"
-                  title={`${tag.name} (${tag.postCount ?? 0})`}
-                >
-                  <span className="truncate max-w-[9rem]">{tag.name}</span>
-                  {typeof tag.postCount === "number" ? (
-                    <span className="text-[11px] opacity-70 tabular-nums">
-                      {tag.postCount}
-                    </span>
-                  ) : null}
-                </Link>
-              ))}
-            </div>
-          ) : null}
-        </section>
+        ) : (
+          <p className="text-sm text-muted-foreground/70">—</p>
+        )}
+      </section>
+    </div>
+  );
+}
+
+/**
+ * The hero introduction on the home page: the title, the description and the
+ * author chip with the social links, laid over the lower part of the banner.
+ */
+function HeroIntroduction() {
+  const { siteConfig } = useRouteContext({ from: "__root__" });
+  const avatar =
+    siteConfig.theme?.flare?.avatar || siteConfig.theme?.fuwari?.avatar || "";
+  const socialLinks = siteConfig.social.filter((link: SocialLink) =>
+    Boolean(link.url),
+  );
+
+  return (
+    <div className="max-w-3xl flare-enter">
+      <h1 className="text-[2.35rem] font-extrabold leading-[1.04] tracking-tight text-white drop-shadow-[0_6px_28px_rgba(0,0,0,0.4)] sm:text-5xl md:text-6xl lg:text-[4.25rem]">
+        {siteConfig.title}
+      </h1>
+      {siteConfig.description || siteConfig.tagline ? (
+        <p className="mt-4 max-w-2xl text-[15px] leading-7 text-white/90 drop-shadow-[0_2px_14px_rgba(0,0,0,0.35)] md:mt-5 md:text-lg md:leading-8">
+          {siteConfig.description || siteConfig.tagline}
+        </p>
       ) : null}
-    </aside>
+
+      <div className="mt-6 flex flex-wrap items-center gap-3 md:mt-8">
+        <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-sm font-medium text-white ring-1 ring-inset ring-white/25 backdrop-blur-md">
+          {avatar ? (
+            <img
+              src={avatar}
+              alt=""
+              className="h-7 w-7 rounded-full border border-white/35 object-cover"
+            />
+          ) : null}
+          <span className="drop-shadow-sm">
+            {siteConfig.author || siteConfig.title}
+          </span>
+        </span>
+
+        {socialLinks.slice(0, 6).map((link: SocialLink, i: number) => {
+          const preset =
+            link.platform === "custom" ? null : SOCIAL_PLATFORMS[link.platform];
+          const Icon = preset?.icon;
+          const label = preset?.label ?? link.label ?? link.platform;
+          const href = resolveSocialHref(link.platform, link.url);
+          return (
+            <a
+              key={`${link.platform}-${i}`}
+              href={href}
+              target={link.platform === "email" ? undefined : "_blank"}
+              rel={link.platform === "email" ? undefined : "noreferrer"}
+              aria-label={label}
+              title={label}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/85 ring-1 ring-inset ring-white/25 backdrop-blur-md transition-colors hover:bg-white/15 hover:text-white"
+            >
+              {Icon ? (
+                <Icon size={16} strokeWidth={1.75} />
+              ) : link.icon ? (
+                <img src={link.icon} alt={label} className="h-4 w-4" />
+              ) : (
+                <UserRound size={15} />
+              )}
+            </a>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        className="mt-8 inline-flex h-10 w-10 items-center justify-center rounded-full text-white ring-1 ring-inset ring-white/30 backdrop-blur-md transition hover:bg-white/15"
+        aria-label={m.common_open_menu?.() ?? "Scroll to content"}
+        onClick={() =>
+          window.scrollTo({
+            top: Math.max(
+              0,
+              window.innerHeight * (BANNER_HEIGHT_HOME / 100) - 88,
+            ),
+            behavior: "smooth",
+          })
+        }
+      >
+        <ArrowDown size={18} />
+      </button>
+    </div>
   );
 }
 
@@ -167,15 +251,13 @@ export function PublicLayout({
       : BANNER_HEIGHT_PAGE;
   const bannerImage =
     siteConfig.theme?.flare?.homeBg || siteConfig.theme?.fuwari?.homeBg || "";
-  const avatar =
-    siteConfig.theme?.flare?.avatar || siteConfig.theme?.fuwari?.avatar || "";
 
-  const showSidebar = !focused && !isPost && !pathname.startsWith("/friend-links/submit");
+  const showWidgets = !focused && !isPost;
   const isReadingPage = isPost || pathname.startsWith("/friend-links/submit");
   const pageInsetClass = useMemo(
     () =>
       cn(
-        "mx-auto w-full px-4 md:px-6",
+        "mx-auto w-full px-5 md:px-6",
         isReadingPage
           ? "max-w-[min(var(--flare-reading-width),calc(100%-2rem))] md:max-w-[var(--flare-reading-width)]"
           : "max-w-[var(--flare-page-width)]",
@@ -183,7 +265,7 @@ export function PublicLayout({
     [isReadingPage],
   );
 
-  const bodyOverlap = isHome ? "3.5rem" : "2.75rem";
+  const bodyOverlap = isHome ? "3.5rem" : "2.5rem";
 
   return (
     <div
@@ -197,8 +279,10 @@ export function PublicLayout({
         </div>
       ) : null}
 
-      <div className="sticky top-0 z-50 pointer-events-none">
-        <div className={cn("pointer-events-auto", pageInsetClass, !isReadingPage && "md:px-4")}>
+      <div className="fixed inset-x-0 top-0 z-50 pointer-events-none">
+        <div
+          className={cn("pointer-events-auto", pageInsetClass, "pt-2 md:pt-3")}
+        >
           <Navbar
             navOptions={navOptions}
             user={user}
@@ -211,7 +295,7 @@ export function PublicLayout({
 
       <section
         className="flare-banner"
-        style={{ height: `${bannerHeightVh}vh` }}
+        style={{ height: `${bannerHeightVh}svh` }}
         aria-label={isHome ? "Hero banner" : undefined}
       >
         {bannerImage ? (
@@ -222,81 +306,29 @@ export function PublicLayout({
             fetchPriority={isHome ? "high" : "auto"}
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-b from-muted/70 via-muted/40 to-background" />
+          <div className="h-full w-full bg-[linear-gradient(180deg,hsl(222_24%_32%),hsl(222_28%_18%))]" />
         )}
         <div className="flare-banner-overlay" />
 
         {isHome ? (
-          <div className={cn("flare-hero", pageInsetClass, "md:px-10")}>
-            <div className="max-w-3xl text-white drop-shadow-[0_8px_30px_rgba(0,0,0,0.28)] flare-enter">
-              <h1 className="text-4xl font-semibold tracking-tight leading-[1.03] md:text-6xl lg:text-[4rem]">
-                {siteConfig.title}
-              </h1>
-              {siteConfig.description ? (
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 md:text-lg md:leading-8">
-                  {siteConfig.description}
-                </p>
-              ) : siteConfig.tagline ? (
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 md:text-lg md:leading-8">
-                  {siteConfig.tagline}
-                </p>
-              ) : null}
-              <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-white/90 md:text-base">
-                {avatar ? (
-                  <img
-                    src={avatar}
-                    alt={siteConfig.author || siteConfig.title}
-                    className="h-8 w-8 rounded-full border border-white/35 object-cover"
-                  />
-                ) : null}
-                {siteConfig.author ? (
-                  <span className="font-medium">{siteConfig.author}</span>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                className="mt-8 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white backdrop-blur-sm transition hover:bg-white/20 hover:translate-y-[1px]"
-                aria-label={m.common_open_menu?.() ?? "Scroll to content"}
-                onClick={() =>
-                  window.scrollTo({
-                    top: Math.max(
-                      0,
-                      window.innerHeight * (bannerHeightVh / 100) - 96,
-                    ),
-                    behavior: "smooth",
-                  })
-                }
-              >
-                <ArrowDown size={18} />
-              </button>
-            </div>
+          <div className={cn("flare-hero", pageInsetClass)}>
+            <HeroIntroduction />
           </div>
         ) : null}
       </section>
 
       <div
         className={cn("flare-body", pageInsetClass, "pb-10 md:pb-14")}
-        style={{
-          marginTop: `calc(${bannerHeightVh}vh - ${bodyOverlap} - ${NAVBAR_CLEARANCE_REM})`,
-          paddingTop: "0.5rem",
-        }}
+        style={{ marginTop: `calc(${bannerHeightVh}svh - ${bodyOverlap})` }}
       >
-        <div
-          className={cn(
-            "flare-grid",
-            showSidebar ? "lg:grid-cols-[minmax(0,1fr)_18rem]" : "",
-          )}
-          data-has-sidebar={showSidebar ? "true" : "false"}
-        >
-          <main className="min-w-0 space-y-4 md:space-y-6" data-shell-region="main">
+        <div className="flare-layout">
+          {isHome && showWidgets ? <SidebarWidgets place="before" /> : null}
+
+          <main className="flare-main" data-shell-region="main">
             {children}
           </main>
 
-          {showSidebar ? (
-            <div className="flare-sidebar-sticky self-start">
-              <Sidebar showTags />
-            </div>
-          ) : null}
+          {!isHome && showWidgets ? <SidebarWidgets place="after" /> : null}
         </div>
 
         <div className="mt-8 md:mt-10" data-shell-region="footer">

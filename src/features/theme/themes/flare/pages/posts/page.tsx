@@ -41,98 +41,94 @@ export function PostsPage({
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
-    <div className="w-full space-y-4 md:space-y-6 flare-enter">
-      <section className="flare-surface p-5 md:p-7 space-y-4">
-        <header className="space-y-2">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            {m.nav_posts()}
-          </h1>
-          <p className="max-w-2xl text-sm md:text-base text-muted-foreground leading-7">
-            {siteConfig.description}
-          </p>
-        </header>
-
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+    <div className="flare-enter flex w-full flex-col gap-4">
+      <section className="flare-surface overflow-hidden">
+        <header className="flex flex-col gap-2 px-5 pb-2 pt-6 md:flex-row md:items-end md:justify-between md:gap-6 md:px-8 md:pt-8">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-[2.5rem]">
+              {m.nav_posts()}
+            </h1>
+            <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-[15px]">
+              {siteConfig.description}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+            <span className="rounded-full bg-muted/60 px-2.5 py-0.5 font-mono tabular-nums">
+              {tags.length}
+            </span>
             <span>{m.posts_tags_filter()}</span>
           </div>
+        </header>
 
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 px-5 py-5 md:px-8">
+          <button
+            onClick={() => onTagClick(undefined)}
+            className={cn("flare-chip")}
+            data-active={!selectedTag}
+          >
+            {m.posts_all()}
+          </button>
+
+          {visibleTags.map((tag) => (
             <button
-              onClick={() => onTagClick(undefined)}
-              className={cn(
-                "flare-chip",
-              )}
-              data-active={!selectedTag}
+              key={tag.id}
+              onClick={() => onTagClick(tag.name)}
+              className="flare-chip"
+              data-active={selectedTag === tag.name}
             >
-              {m.posts_all()}
+              <span>{tag.name}</span>
+              <span className="text-xs tabular-nums opacity-70">
+                {tag.postCount}
+              </span>
             </button>
+          ))}
 
-            {visibleTags.map((tag) => (
-              <button
-                key={tag.id}
-                onClick={() => onTagClick(tag.name)}
-                className="flare-chip"
-                data-active={selectedTag === tag.name}
-              >
-                <span>{tag.name}</span>
-                <span className="text-xs opacity-70 tabular-nums">
-                  {tag.postCount}
-                </span>
-              </button>
-            ))}
-
-            {hasMoreTags && (
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="flare-chip border-dashed"
-              >
-                {isExpanded
-                  ? m.tags_collapse()
-                  : `+${tags.length - INITIAL_TAG_COUNT}`}
-              </button>
-            )}
-          </div>
+          {hasMoreTags && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flare-chip border-dashed"
+            >
+              {isExpanded
+                ? m.tags_collapse()
+                : `+${tags.length - INITIAL_TAG_COUNT}`}
+            </button>
+          )}
         </div>
-      </section>
 
-      <section className="flare-surface overflow-hidden">
-        <div className="px-2 md:px-4">
+        <div className="border-t border-border/50 px-2 md:px-4">
           {posts.length === 0 ? (
-            <div className="py-16 text-center">
+            <div className="py-20 text-center">
               <p className="text-muted-foreground">{m.posts_no_posts()}</p>
             </div>
           ) : (
-            posts.map((post) => (
-              <div key={post.id} className="px-3 md:px-3">
-                <PostItem post={post} />
-              </div>
-            ))
+            posts.map((post) => <PostItem key={post.id} post={post} />)
           )}
         </div>
-      </section>
 
-      <div
-        ref={observerRef}
-        className="py-12 flex flex-col items-center justify-center gap-4"
-      >
-        {isFetchingNextPage ? (
-          <div className="flex flex-col items-center gap-3 text-muted-foreground">
-            <div className="w-1.5 h-1.5 bg-foreground/70 rounded-full animate-ping" />
-            <span className="text-xs tracking-[0.2em] uppercase">
-              {m.posts_loading()}
-            </span>
-          </div>
-        ) : hasNextPage ? (
-          <div className="h-px w-24 bg-border/50" />
-        ) : posts.length > 0 ? (
-          <div className="flex items-center gap-4 text-muted-foreground/40">
-            <span className="h-px w-12 bg-current" />
-            <span className="text-sm text-muted-foreground/70">{m.posts_end()}</span>
-            <span className="h-px w-12 bg-current" />
-          </div>
-        ) : null}
-      </div>
+        <div
+          ref={observerRef}
+          className="flex flex-col items-center justify-center gap-4 px-5 py-8"
+        >
+          {isFetchingNextPage ? (
+            <div className="flex flex-col items-center gap-3 text-muted-foreground">
+              <div className="h-1.5 w-1.5 animate-ping rounded-full bg-foreground/70" />
+              <span className="text-xs uppercase tracking-[0.2em]">
+                {m.posts_loading()}
+              </span>
+            </div>
+          ) : hasNextPage ? (
+            <div className="h-px w-24 bg-border/50" />
+          ) : posts.length > 0 ? (
+            <div className="flex items-center gap-4 text-muted-foreground/40">
+              <span className="h-px w-12 bg-current" />
+              <span className="text-sm text-muted-foreground/70">
+                {m.posts_end()}
+              </span>
+              <span className="h-px w-12 bg-current" />
+            </div>
+          ) : null}
+        </div>
+      </section>
     </div>
   );
 }

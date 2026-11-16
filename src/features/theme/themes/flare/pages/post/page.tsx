@@ -53,7 +53,7 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
         )}
       </nav>
 
-      <article className="flare-surface overflow-hidden">
+      <article className="flare-surface">
         <div className="p-5 md:p-8 lg:p-10 space-y-8 md:space-y-10">
           <header className="space-y-6 md:space-y-7">
             <div className="space-y-5">
@@ -61,7 +61,8 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
                 {post.author ? (
                   <>
                     <span className="flex items-center gap-1.5">
-                      {m.post_author()}: <span className="text-foreground/90">{post.author}</span>
+                      {m.post_author()}:{" "}
+                      <span className="text-foreground/90">{post.author}</span>
                     </span>
                     <span className="opacity-30">/</span>
                   </>
@@ -110,12 +111,12 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
             </div>
 
             {post.summary ? (
-              <div className="bg-muted/25 rounded-2xl p-5 md:p-6 space-y-2.5 border border-border/40">
-                <div className="flex items-center gap-2 text-muted-foreground/85 font-medium text-sm">
-                  <Sparkles className="w-4 h-4" />
+              <div className="space-y-2.5 rounded-xl border border-border/50 bg-muted/25 p-5 md:p-6">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Sparkles className="h-4 w-4" />
                   <span>{m.post_summary_title()}</span>
                 </div>
-                <p className="text-base md:text-lg leading-relaxed text-muted-foreground">
+                <p className="text-base leading-relaxed text-muted-foreground md:text-[17px]">
                   {post.summary}
                 </p>
               </div>

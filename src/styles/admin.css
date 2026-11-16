@@ -7,7 +7,11 @@
 .admin-layout-flare {
   --admin-canvas: hsl(var(--muted) / 0.18);
   background:
-    radial-gradient(900px 320px at 50% -10%, hsl(var(--muted) / 0.28), transparent 70%),
+    radial-gradient(
+      900px 320px at 50% -10%,
+      hsl(var(--muted) / 0.28),
+      transparent 70%
+    ),
     hsl(var(--background));
 }
 
@@ -21,7 +25,11 @@
 
 /* Flare-style admin surfaces */
 .admin-layout-flare [class*="bg-background"][class*="border"] {
-  background-color: color-mix(in oklab, hsl(var(--card)) 86%, hsl(var(--background)));
+  background-color: color-mix(
+    in oklab,
+    hsl(var(--card)) 86%,
+    hsl(var(--background))
+  );
 }
 
 .admin-layout-flare .rounded-lg[class*="border"],
@@ -208,4 +216,83 @@
 
 .admin-layout .ProseMirror ul[data-type="taskList"] li > div > p {
   margin: 0;
+}
+
+/* ── Flare admin workbench ─────────────────────────────────────────────────
+   The Flare admin shares the public theme's materials: a soft tinted canvas,
+   white raised panels, hairlines and very light shadows. Only the chrome and
+   the panel surfaces change; every page keeps its own layout. */
+.flare-admin {
+  --admin-surface: var(--flare-surface);
+  --admin-canvas: var(--flare-ground);
+  background: var(--flare-ground);
+}
+
+.flare-admin :is(.rounded-lg, .rounded-xl, .rounded-2xl)[class*="border"] {
+  border-color: var(--flare-border);
+}
+
+.flare-admin
+  :is(
+    .rounded-lg,
+    .rounded-xl,
+    .rounded-2xl
+  )[class*="border"][class*="bg-background"],
+.flare-admin
+  :is(
+    .rounded-lg,
+    .rounded-xl,
+    .rounded-2xl
+  )[class*="border"][class*="bg-muted"] {
+  background-color: var(--flare-surface);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.flare-admin table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.flare-admin thead th {
+  background: var(--flare-surface-soft);
+  color: hsl(var(--muted-foreground));
+  font-weight: 600;
+}
+
+.flare-admin tbody tr:hover {
+  background: color-mix(in oklab, hsl(var(--foreground)) 3%, transparent);
+}
+
+.flare-admin
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.flare-admin textarea,
+.flare-admin select {
+  border-color: var(--flare-border);
+  background-color: var(--flare-surface);
+}
+
+.flare-admin
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.flare-admin textarea:focus,
+.flare-admin select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.12);
+  border-color: hsl(var(--ring) / 0.35);
+}
+
+.flare-admin-drawer {
+  animation: flare-admin-drawer-in 0.32s var(--flare-ease) both;
+}
+
+@keyframes flare-admin-drawer-in {
+  from {
+    opacity: 0.6;
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flare-admin-drawer {
+    animation: none;
+  }
 }
