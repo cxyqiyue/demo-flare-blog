@@ -78,6 +78,7 @@ function AccessGateDialogInternal({
       dialogContent = <FuwariGateContent {...contentProps} />;
       break;
     case "default":
+    case "flare":
       dialogContent = <DefaultGateContent {...contentProps} />;
       break;
     default:

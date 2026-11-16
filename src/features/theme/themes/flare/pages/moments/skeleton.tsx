@@ -1,4 +1,3 @@
-import { Skeleton } from "@/components/ui/skeleton";
 import { m } from "@/paraglide/messages";
 import { MomentSkeleton } from "./moment-skeleton";
 

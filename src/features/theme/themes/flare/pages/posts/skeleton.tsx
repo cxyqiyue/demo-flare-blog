@@ -1,10 +1,7 @@
-import { useRouteContext } from "@tanstack/react-router";
 import { Skeleton } from "@/components/ui/skeleton";
-import { m } from "@/paraglide/messages";
 import { INITIAL_TAG_COUNT } from "./page";
 
 export function PostsPageSkeleton() {
-  const { siteConfig } = useRouteContext({ from: "__root__" });
 
   return (
     <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">

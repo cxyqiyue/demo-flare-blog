@@ -1,11 +1,6 @@
-import { useRouteContext } from "@tanstack/react-router";
-import { Mail, Rss, Terminal } from "lucide-react";
-import { GithubIcon } from "@/components/common/brand-icon";
 import { Skeleton } from "@/components/ui/skeleton";
-import { m } from "@/paraglide/messages";
 
 export function HomePageSkeleton() {
-  const { siteConfig } = useRouteContext({ from: "__root__" });
 
   return (
     <div className="flex flex-col w-full mx-auto py-6 md:py-10 space-y-6 md:space-y-8">
