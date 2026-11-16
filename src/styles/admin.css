@@ -1,8 +1,19 @@
 /* Admin Dashboard Specific Scaling and UI/UX Adjustments */
 
 .admin-layout:not(.fuwari-admin) {
-  /* Increase base font size slightly across the entire admin area */
   font-size: 15px;
+}
+
+.admin-layout-flare {
+  --admin-canvas: hsl(var(--muted) / 0.2);
+}
+
+.admin-layout-flare .max-w-7xl > * {
+  /* give content some breathing room in card-heavy pages */
+}
+
+.admin-layout-flare [class*="border-border/30"] {
+  border-color: hsl(var(--border) / 0.45);
 }
 
 /* ── Mobile-first: default (no overrides on small screens) ── */

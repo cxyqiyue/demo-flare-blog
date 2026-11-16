@@ -27,5 +27,9 @@ export const blogConfig = {
       avatar: "/images/avatar.png",
       primaryHue: 250,
     },
+    flare: {
+      homeBg: "/images/home-bg.webp",
+      avatar: "/images/avatar.png",
+    },
   },
 } as const satisfies SiteConfig;
