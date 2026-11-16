@@ -16,11 +16,11 @@ interface PostItemProps {
 export const PostItem = memo(
   ({ post, pinned, views, isLoadingViews }: PostItemProps) => {
     return (
-      <div className="group border-b border-border/40 last:border-0">
+      <div className="group border-b border-border/30 last:border-0">
         <Link
           to="/post/$slug"
           params={{ slug: post.slug }}
-          className="block py-8 md:py-10 transition-all duration-300 hover:pl-4"
+          className="block py-6 md:py-7 transition-colors duration-200 hover:bg-muted/20 -mx-2 px-2 md:-mx-3 md:px-3 rounded-xl"
         >
           <div className="flex flex-col gap-3">
             {/* Metadata Row */}

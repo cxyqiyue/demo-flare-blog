@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import type { MomentsPageProps } from "@/features/theme/contract/pages";
-import { Pagination } from "@/features/theme/themes/default/components/pagination";
+import { Pagination } from "@/features/theme/themes/flare/components/pagination";
 import { m } from "@/paraglide/messages";
 import { MomentCard } from "./moment-card";
 import { MomentComposer } from "./moment-composer";

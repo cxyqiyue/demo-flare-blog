@@ -1,7 +1,7 @@
 import { useRouteContext } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { PostsPageProps } from "@/features/theme/contract/pages";
-import { PostItem } from "@/features/theme/themes/default/components/post-item";
+import { PostItem } from "@/features/theme/themes/flare/components/post-item";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -41,40 +41,33 @@ export function PostsPage({
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
-    <div className="w-full max-w-3xl mx-auto pb-20 px-6 md:px-0">
-      {/* Header Section */}
-      <header className="py-12 md:py-20 space-y-6">
-        <h1 className="text-4xl md:text-5xl font-serif font-medium tracking-tight text-foreground">
-          {m.nav_posts()}
-        </h1>
-        <p className="max-w-xl text-base md:text-lg font-light text-muted-foreground leading-relaxed">
-          {siteConfig.description}
-        </p>
-      </header>
+    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
+      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm space-y-4">
+        <header className="space-y-2">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+            {m.nav_posts()}
+          </h1>
+          <p className="max-w-2xl text-sm md:text-base text-muted-foreground leading-7">
+            {siteConfig.description}
+          </p>
+        </header>
 
-      {/* Tag Filters - Minimalist Text Chips */}
-      <div className="mb-12 space-y-4">
-        <div className="flex items-center gap-2 text-[10px] font-mono tracking-[0.2em] uppercase text-muted-foreground/50">
-          <span>{m.posts_tags_filter()}</span>
-        </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <span>{m.posts_tags_filter()}</span>
+          </div>
 
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => onTagClick(undefined)}
             className={cn(
-              "text-sm font-mono transition-all duration-300 relative group",
+              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
               !selectedTag
-                ? "text-foreground font-medium"
-                : "text-muted-foreground hover:text-foreground/80",
+                ? "border-foreground/20 bg-foreground text-background"
+                : "border-border/60 bg-background/60 text-muted-foreground hover:text-foreground hover:bg-muted/60",
             )}
           >
             {m.posts_all()}
-            <span
-              className={cn(
-                "absolute -bottom-1 left-0 h-px bg-foreground transition-all duration-300",
-                !selectedTag ? "w-full" : "w-0 group-hover:w-full",
-              )}
-            />
           </button>
 
           {visibleTags.map((tag) => (
@@ -82,52 +75,46 @@ export function PostsPage({
               key={tag.id}
               onClick={() => onTagClick(tag.name)}
               className={cn(
-                "text-sm font-mono transition-all duration-300 relative group flex items-baseline gap-1.5",
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
                 selectedTag === tag.name
-                  ? "text-foreground font-medium"
-                  : "text-muted-foreground hover:text-foreground/80",
+                  ? "border-foreground/20 bg-foreground text-background"
+                  : "border-border/60 bg-background/60 text-muted-foreground hover:text-foreground hover:bg-muted/60",
               )}
             >
               <span>{tag.name}</span>
-              <span className="text-[10px] opacity-40 group-hover:opacity-70 transition-opacity">
-                {tag.postCount}
-              </span>
-              <span
-                className={cn(
-                  "absolute -bottom-1 left-0 h-px bg-foreground transition-all duration-300",
-                  selectedTag === tag.name
-                    ? "w-full"
-                    : "w-0 group-hover:w-full",
-                )}
-              />
+              <span className="text-xs opacity-70 tabular-nums">{tag.postCount}</span>
             </button>
           ))}
 
           {hasMoreTags && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-xs font-mono text-muted-foreground/50 hover:text-foreground transition-colors ml-2"
+              className="inline-flex items-center rounded-full border border-dashed border-border/70 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             >
               {isExpanded
-                ? `[- ${m.tags_collapse()}]`
-                : `[+ ${m.tags_expand()} ${tags.length - INITIAL_TAG_COUNT}]`}
+                ? m.tags_collapse()
+                : `+${tags.length - INITIAL_TAG_COUNT}`}
             </button>
           )}
         </div>
-      </div>
+        </div>
+      </section>
 
-      {/* Posts List - Clean Divide */}
-      <div className="flex flex-col gap-0 border-t border-border/40">
-        {posts.length === 0 ? (
-          <div className="py-20 text-left">
-            <p className="font-serif text-xl text-muted-foreground/50">
-              {m.posts_no_posts()}
-            </p>
-          </div>
-        ) : (
-          posts.map((post) => <PostItem key={post.id} post={post} />)
-        )}
-      </div>
+      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-sm overflow-hidden">
+        <div className="px-2 md:px-4">
+          {posts.length === 0 ? (
+            <div className="py-16 text-center">
+              <p className="text-muted-foreground">{m.posts_no_posts()}</p>
+            </div>
+          ) : (
+            posts.map((post) => (
+              <div key={post.id} className="px-3 md:px-3">
+                <PostItem post={post} />
+              </div>
+            ))
+          )}
+        </div>
+      </section>
 
       {/* Load More Area */}
       <div

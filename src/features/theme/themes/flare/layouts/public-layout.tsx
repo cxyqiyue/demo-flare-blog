@@ -38,8 +38,8 @@ export function PublicLayout({
   const focused = isFocusedPath(pathname);
   const bannerHeightVh = isHome ? BANNER_HEIGHT_HOME : BANNER_HEIGHT_PAGE;
   const bannerImage =
-    (siteConfig.theme as any)?.fuwari?.homeBg ||
-    (siteConfig.theme as any)?.flare?.homeBg ||
+    siteConfig.theme?.flare?.homeBg ||
+    siteConfig.theme?.fuwari?.homeBg ||
     "";
 
   const contentWrapClass = useMemo(

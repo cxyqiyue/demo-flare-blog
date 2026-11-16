@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PostGateShell } from "@/features/posts/components/post-gate-shell";
 import type { PostPageProps } from "@/features/theme/contract/pages";
-import { ContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
+import { ContentRenderer } from "@/features/theme/themes/flare/components/content/content-renderer";
 import { authClient } from "@/lib/auth/auth.client";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";

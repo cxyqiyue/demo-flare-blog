@@ -270,6 +270,27 @@ function createFuwariThemeSiteConfigInputFormSchema(messages: Messages) {
   });
 }
 
+function createFlareThemeSiteConfigSchema() {
+  return z.object({
+    homeBg: createBackgroundImageRefSchema(),
+    avatar: createAssetRefSchema(),
+  });
+}
+
+function createFlareThemeSiteConfigInputSchema() {
+  return z.object({
+    homeBg: createBackgroundImageRefSchema().optional(),
+    avatar: createAssetRefSchema().optional(),
+  });
+}
+
+function createFlareThemeSiteConfigInputFormSchema(messages: Messages) {
+  return z.object({
+    homeBg: createBackgroundImageRefFormSchema(messages).optional(),
+    avatar: createAssetRefFormSchema(messages).optional(),
+  });
+}
+
 export const defaultThemeBackgroundSchema =
   createDefaultThemeBackgroundSchema();
 export const defaultThemeBackgroundInputSchema =
@@ -281,6 +302,9 @@ export const defaultThemeSiteConfigInputSchema =
 export const fuwariThemeSiteConfigSchema = createFuwariThemeSiteConfigSchema();
 export const fuwariThemeSiteConfigInputSchema =
   createFuwariThemeSiteConfigInputSchema();
+export const flareThemeSiteConfigSchema = createFlareThemeSiteConfigSchema();
+export const flareThemeSiteConfigInputSchema =
+  createFlareThemeSiteConfigInputSchema();
 
 export const FullSiteConfigSchema = z.object({
   title: createSiteTextSchema(120),
@@ -298,6 +322,7 @@ export const FullSiteConfigSchema = z.object({
   theme: z.object({
     default: defaultThemeSiteConfigSchema,
     fuwari: fuwariThemeSiteConfigSchema,
+    flare: flareThemeSiteConfigSchema,
   }),
 });
 
@@ -322,6 +347,7 @@ export function createSiteConfigInputFormSchema(messages: Messages) {
         default:
           createDefaultThemeSiteConfigInputFormSchema(messages).optional(),
         fuwari: createFuwariThemeSiteConfigInputFormSchema(messages).optional(),
+        flare: createFlareThemeSiteConfigInputFormSchema(messages).optional(),
       })
       .optional(),
   });
@@ -346,6 +372,7 @@ export const SiteConfigInputSchema = z.object({
     .object({
       default: defaultThemeSiteConfigInputSchema.optional(),
       fuwari: fuwariThemeSiteConfigInputSchema.optional(),
+      flare: flareThemeSiteConfigInputSchema.optional(),
     })
     .optional(),
 });
@@ -364,6 +391,10 @@ export type DefaultThemeSiteConfigInput = z.infer<
 export type FuwariThemeSiteConfig = z.infer<typeof fuwariThemeSiteConfigSchema>;
 export type FuwariThemeSiteConfigInput = z.infer<
   typeof fuwariThemeSiteConfigInputSchema
+>;
+export type FlareThemeSiteConfig = z.infer<typeof flareThemeSiteConfigSchema>;
+export type FlareThemeSiteConfigInput = z.infer<
+  typeof flareThemeSiteConfigInputSchema
 >;
 export type SiteConfig = z.infer<typeof FullSiteConfigSchema>;
 export type SiteConfigInput = z.infer<typeof SiteConfigInputSchema>;
