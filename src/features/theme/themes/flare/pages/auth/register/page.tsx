@@ -9,21 +9,21 @@ export function RegisterPage({
 }: RegisterPageProps) {
   if (registerForm.isSuccess) {
     return (
-      <div className="text-center space-y-8 animate-in fade-in duration-500">
-        <div className="space-y-4">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">
-            [ {m.register_success_label()} ]
+      <div className="text-center space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {m.register_success_label()}
           </p>
-          <h3 className="text-xl font-serif font-medium tracking-tight">
+          <h3 className="text-xl md:text-2xl font-semibold tracking-tight text-foreground">
             {m.register_success_title()}
           </h3>
-          <p className="text-sm text-muted-foreground/70 font-light leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-6">
             {m.register_success_desc()}
           </p>
         </div>
         <Link
           to="/login"
-          className="block w-full py-4 border border-border/40 text-[10px] font-mono uppercase tracking-[0.3em] hover:border-foreground transition-all text-center"
+          className="inline-flex w-full h-11 items-center justify-center rounded-lg border border-border/60 bg-background/60 text-sm font-medium hover:bg-muted/50 transition-colors"
         >
           {m.register_back_to_login()}
         </Link>
@@ -32,29 +32,29 @@ export function RegisterPage({
   }
 
   return (
-    <div className="space-y-12">
-      <header className="text-center space-y-3">
-        <p className="text-[10px] font-mono uppercase tracking-[0.4em] text-muted-foreground/60">
-          [ {m.register_label()} ]
+    <div className="space-y-8">
+      <header className="text-center space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {m.register_label()}
         </p>
-        <h1 className="text-2xl font-serif font-medium tracking-tight">
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
           {m.register_title()}
         </h1>
       </header>
 
-      <div className="space-y-10">
+      <div className="space-y-6">
         <RegisterForm form={registerForm} />
 
         {challengeElement}
 
-        <div className="text-center pt-4">
-          <p className="text-[10px] font-mono text-muted-foreground/50 tracking-wider">
+        <div className="text-center pt-1">
+          <p className="text-sm text-muted-foreground">
             {m.register_have_account()}{" "}
             <Link
               to="/login"
-              className="text-foreground hover:opacity-70 transition-opacity ml-1"
+              className="text-foreground hover:underline underline-offset-4"
             >
-              [ {m.register_go_to_login()} ]
+              {m.register_go_to_login()}
             </Link>
           </p>
         </div>

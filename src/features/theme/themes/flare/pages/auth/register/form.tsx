@@ -22,78 +22,81 @@ export function RegisterForm({ form }: RegisterFormProps) {
 
   const isIdle = registerStep === "IDLE";
 
+  const inputClassName =
+    "h-11 rounded-lg border border-border/60 bg-background/60 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {isIdle ? (
         <>
-          <div className="space-y-6">
-            <div className="space-y-2 group">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 group-focus-within:text-foreground transition-colors">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground/90">
                 {m.register_nickname()}
               </label>
               <Input
                 type="text"
                 {...register("name")}
-                className="w-full bg-transparent border-0 border-b border-border/40 rounded-none py-3 text-sm font-light focus-visible:ring-0 focus:border-foreground focus:outline-none transition-all placeholder:text-muted-foreground/30 shadow-none px-0"
+                className={inputClassName}
                 placeholder={m.register_nickname_placeholder()}
                 disabled={isSubmitting}
               />
               {errors.name && (
-                <span className="text-[9px] font-mono text-destructive uppercase tracking-widest mt-1 block">
+                <span className="text-xs text-destructive block">
                   {errors.name.message}
                 </span>
               )}
             </div>
 
-            <div className="space-y-2 group">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 group-focus-within:text-foreground transition-colors">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground/90">
                 {m.login_email_address()}
               </label>
               <Input
                 type="email"
                 {...register("email")}
-                className="w-full bg-transparent border-0 border-b border-border/40 rounded-none py-3 text-sm font-light focus-visible:ring-0 focus:border-foreground focus:outline-none transition-all placeholder:text-muted-foreground/30 shadow-none px-0"
+                className={inputClassName}
                 placeholder={m.login_email_placeholder()}
                 disabled={isSubmitting}
               />
               {errors.email && (
-                <span className="text-[9px] font-mono text-destructive uppercase tracking-widest mt-1 block">
+                <span className="text-xs text-destructive block">
                   {errors.email.message}
                 </span>
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2 group">
-                <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 group-focus-within:text-foreground transition-colors">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground/90">
                   {m.register_password()}
                 </label>
                 <Input
                   type="password"
                   {...register("password")}
-                  className="w-full bg-transparent border-0 border-b border-border/40 rounded-none py-3 text-sm font-light focus-visible:ring-0 focus:border-foreground focus:outline-none transition-all placeholder:text-muted-foreground/30 shadow-none px-0"
+                  className={inputClassName}
                   placeholder={m.login_password_placeholder()}
                   disabled={isSubmitting}
                 />
                 {errors.password && (
-                  <span className="text-[9px] font-mono text-destructive uppercase tracking-widest mt-1 block">
+                  <span className="text-xs text-destructive block">
                     {errors.password.message}
                   </span>
                 )}
               </div>
-              <div className="space-y-2 group">
-                <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 group-focus-within:text-foreground transition-colors">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground/90">
                   {m.register_confirm_password()}
                 </label>
                 <Input
                   type="password"
                   {...register("confirmPassword")}
-                  className="w-full bg-transparent border-0 border-b border-border/40 rounded-none py-3 text-sm font-light focus-visible:ring-0 focus:border-foreground focus:outline-none transition-all placeholder:text-muted-foreground/30 shadow-none px-0"
+                  className={inputClassName}
                   placeholder={m.login_password_placeholder()}
                   disabled={isSubmitting}
                 />
                 {errors.confirmPassword && (
-                  <span className="text-[9px] font-mono text-destructive uppercase tracking-widest mt-1 block">
+                  <span className="text-xs text-destructive block">
                     {errors.confirmPassword.message}
                   </span>
                 )}
@@ -104,10 +107,10 @@ export function RegisterForm({ form }: RegisterFormProps) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-4 bg-foreground text-background text-[10px] font-mono uppercase tracking-[0.3em] hover:opacity-80 transition-all disabled:opacity-30 flex items-center justify-center gap-3"
+            className="w-full h-11 rounded-lg bg-foreground text-background text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isSubmitting ? (
-              <Loader2 className="animate-spin" size={14} />
+              <Loader2 className="animate-spin" size={16} />
             ) : (
               <span>{m.otp_send_code()}</span>
             )}
@@ -115,22 +118,20 @@ export function RegisterForm({ form }: RegisterFormProps) {
         </>
       ) : (
         <>
-          <div className="space-y-2 text-center">
-            <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">
-              [ {m.register_label()} ]
+          <div className="space-y-2 text-center rounded-xl border border-border/50 bg-background/40 p-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              {m.register_label()}
             </p>
-            <p className="text-xs text-muted-foreground/70 font-light leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-6">
               {m.otp_desc_register({ email: otpEmail ?? "" })}
             </p>
-            <p className="text-[9px] font-mono text-muted-foreground/40">
-              {m.otp_expires_hint()}
-            </p>
+            <p className="text-xs text-muted-foreground/80">{m.otp_expires_hint()}</p>
           </div>
 
-          <div className="space-y-2 group">
+          <div className="space-y-2">
             <label
               htmlFor="register-otp"
-              className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 group-focus-within:text-foreground transition-colors"
+              className="text-sm font-medium text-foreground/90"
             >
               {m.otp_code_label()}
             </label>
@@ -141,12 +142,12 @@ export function RegisterForm({ form }: RegisterFormProps) {
               autoComplete="one-time-code"
               maxLength={6}
               {...register("otp")}
-              className="w-full bg-transparent border-0 border-b border-border/40 rounded-none py-3 text-center text-lg font-mono tracking-[0.5em] focus-visible:ring-0 focus:border-foreground focus:outline-none transition-all placeholder:text-muted-foreground/30 shadow-none px-0"
+              className="h-12 rounded-lg border border-border/60 bg-background/60 px-3 text-center text-lg font-mono tracking-[0.4em] shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border"
               placeholder="000000"
               disabled={isSubmitting || registerStep === "SUCCESS"}
             />
             {errors.otp && (
-              <span className="text-[9px] font-mono text-destructive uppercase tracking-widest mt-1 block">
+              <span className="text-xs text-destructive block">
                 {errors.otp.message}
               </span>
             )}
@@ -154,24 +155,22 @@ export function RegisterForm({ form }: RegisterFormProps) {
 
           <button
             type="submit"
-            disabled={
-              isSubmitting || registerStep === "SUCCESS"
-            }
-            className="w-full py-4 bg-foreground text-background text-[10px] font-mono uppercase tracking-[0.3em] hover:opacity-80 transition-all disabled:opacity-30 flex items-center justify-center gap-3"
+            disabled={isSubmitting || registerStep === "SUCCESS"}
+            className="w-full h-11 rounded-lg bg-foreground text-background text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {registerStep === "VERIFYING" || isSubmitting ? (
-              <Loader2 className="animate-spin" size={14} />
+              <Loader2 className="animate-spin" size={16} />
             ) : (
               <span>{m.otp_verify_submit_register()}</span>
             )}
           </button>
 
-          <div className="flex justify-between items-center text-[9px] font-mono uppercase tracking-widest">
+          <div className="flex justify-between items-center text-xs">
             <button
               type="button"
               onClick={handleBackToCredentials}
               disabled={isSubmitting || registerStep === "SUCCESS"}
-              className="text-muted-foreground/40 hover:text-foreground transition-colors disabled:opacity-30"
+              className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             >
               ← {m.otp_back()}
             </button>
@@ -183,7 +182,7 @@ export function RegisterForm({ form }: RegisterFormProps) {
                 isSubmitting ||
                 registerStep === "SUCCESS"
               }
-              className="text-muted-foreground/40 hover:text-foreground transition-colors disabled:opacity-30"
+              className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             >
               {resendSecondsLeft > 0
                 ? m.otp_resend_in({ seconds: String(resendSecondsLeft) })

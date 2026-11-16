@@ -11,16 +11,16 @@ export function ResetPasswordForm({ form }: ResetPasswordFormProps) {
   const { register, errors, handleSubmit, isSubmitting } = form;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <p className="text-sm text-muted-foreground/60 font-light leading-relaxed">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <p className="text-sm text-muted-foreground leading-6">
         {m.reset_password_header_desc()}
       </p>
 
-      <div className="space-y-6">
-        <div className="space-y-2 group">
+      <div className="space-y-4">
+        <div className="space-y-2">
           <label
             htmlFor="new-password"
-            className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 group-focus-within:text-foreground transition-colors"
+            className="text-sm font-medium text-foreground/90"
           >
             {m.reset_password_new_password()}
           </label>
@@ -28,20 +28,20 @@ export function ResetPasswordForm({ form }: ResetPasswordFormProps) {
             type="password"
             id="new-password"
             {...register("password")}
-            className="w-full bg-transparent border-0 border-b border-border/40 rounded-none py-3 text-sm font-light focus-visible:ring-0 focus:border-foreground focus:outline-none transition-all placeholder:text-muted-foreground/30 shadow-none px-0"
+            className="h-11 rounded-lg border border-border/60 bg-background/60 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border"
             placeholder={m.login_password_placeholder()}
           />
           {errors.password && (
-            <span className="text-[9px] font-mono text-destructive uppercase tracking-widest mt-1 block">
+            <span className="text-xs text-destructive block">
               {errors.password.message}
             </span>
           )}
         </div>
 
-        <div className="space-y-2 group">
+        <div className="space-y-2">
           <label
             htmlFor="confirm-password"
-            className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 group-focus-within:text-foreground transition-colors"
+            className="text-sm font-medium text-foreground/90"
           >
             {m.reset_password_confirm_new_password()}
           </label>
@@ -49,11 +49,11 @@ export function ResetPasswordForm({ form }: ResetPasswordFormProps) {
             type="password"
             id="confirm-password"
             {...register("confirmPassword")}
-            className="w-full bg-transparent border-0 border-b border-border/40 rounded-none py-3 text-sm font-light focus-visible:ring-0 focus:border-foreground focus:outline-none transition-all placeholder:text-muted-foreground/30 shadow-none px-0"
+            className="h-11 rounded-lg border border-border/60 bg-background/60 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border"
             placeholder={m.login_password_placeholder()}
           />
           {errors.confirmPassword && (
-            <span className="text-[9px] font-mono text-destructive uppercase tracking-widest mt-1 block">
+            <span className="text-xs text-destructive block">
               {errors.confirmPassword.message}
             </span>
           )}
@@ -63,10 +63,10 @@ export function ResetPasswordForm({ form }: ResetPasswordFormProps) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-4 bg-foreground text-background text-[10px] font-mono uppercase tracking-[0.3em] hover:opacity-80 transition-all disabled:opacity-30 flex items-center justify-center gap-3"
+        className="w-full h-11 rounded-lg bg-foreground text-background text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
       >
         {isSubmitting ? (
-          <Loader2 className="animate-spin" size={14} />
+          <Loader2 className="animate-spin" size={16} />
         ) : (
           <span>{m.reset_password_submit()}</span>
         )}
