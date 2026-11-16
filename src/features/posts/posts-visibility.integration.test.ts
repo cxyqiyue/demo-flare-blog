@@ -34,6 +34,19 @@ async function seedGatedPost(
     title?: string;
   },
 ) {
+  await seedUser(adminContext.db, {
+    id: "admin-user-id",
+    name: "Admin User",
+    email: "admin@example.com",
+    emailVerified: true,
+    image: null,
+    role: "admin",
+    banned: false,
+    banReason: null,
+    banExpires: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
   const { id } = await PostService.createEmptyPost(adminContext);
   const passwordHash = options.password
     ? await hashPassword(options.password)
@@ -377,6 +390,19 @@ describe("Posts Visibility Integration", () => {
   });
 
   it("editor plaintext password is hashed+ciphered on save and decrypted back on read", async () => {
+    await seedUser(adminContext.db, {
+      id: "admin-user-id",
+      name: "Admin User",
+      email: "admin@example.com",
+      emailVerified: true,
+      image: null,
+      role: "admin",
+      banned: false,
+      banReason: null,
+      banExpires: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
     const { id } = await PostService.createEmptyPost(adminContext);
 
     // 编辑保存：可见性=password + 明文 password → 服务端派生 hash/cipher 落库
