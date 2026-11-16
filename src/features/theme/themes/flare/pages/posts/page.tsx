@@ -128,7 +128,7 @@ export function PostsPage({
         ) : posts.length > 0 ? (
           <div className="flex items-center gap-4 text-muted-foreground/40">
             <span className="h-px w-12 bg-current" />
-            <span className="text-base font-serif italic">{m.posts_end()}</span>
+            <span className="text-sm text-muted-foreground/70">{m.posts_end()}</span>
             <span className="h-px w-12 bg-current" />
           </div>
         ) : null}

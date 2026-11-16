@@ -134,15 +134,15 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
             {/* TOC drawer for small screens */}
             <TocDrawer headers={post.toc ?? []} />
 
-            <main className="max-w-none min-w-0 overflow-x-clip text-foreground leading-relaxed font-serif">
+            <main className="max-w-none min-w-0 overflow-x-clip text-foreground leading-relaxed">
               <ContentRenderer content={post.contentJson} />
 
-              <footer className="mt-24 pt-8 border-t border-border/20 flex flex-col md:flex-row justify-between items-center gap-6">
-                <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground/60 tracking-widest uppercase">
+              <footer className="mt-16 md:mt-20 pt-6 md:pt-8 border-t border-border/30 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground/70">
                   <span>{m.post_end_notice()}</span>
                 </div>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   onClick={() => {
                     navigator.clipboard
                       .writeText(window.location.href)
@@ -157,14 +157,10 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
                         });
                       });
                   }}
-                  className="group h-auto p-0 flex items-center gap-3 text-xs uppercase tracking-widest font-medium text-muted-foreground hover:text-foreground transition-colors bg-transparent hover:bg-transparent"
+                  className="rounded-full gap-2"
                 >
+                  <Share2 size={14} strokeWidth={1.75} />
                   <span>{m.post_share()}</span>
-                  <Share2
-                    size={12}
-                    strokeWidth={1.5}
-                    className="group-hover:-translate-y-0.5 transition-transform"
-                  />
                 </Button>
               </footer>
             </main>

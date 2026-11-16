@@ -141,11 +141,7 @@ function Sidebar({
                 </Link>
               ))}
             </div>
-          ) : (
-            <p className="mt-3 text-sm text-muted-foreground">
-              {m.posts_no_posts?.() ?? ""}
-            </p>
-          )}
+          ) : null}
         </section>
       ) : null}
     </aside>
