@@ -16,6 +16,32 @@
   border-color: hsl(var(--border) / 0.45);
 }
 
+/* Flare-style admin surfaces (default admin chrome) */
+.admin-layout-flare [class*="bg-background"][class*="border"] {
+  background-color: hsl(var(--card) / 0.72);
+}
+
+.admin-layout-flare table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-layout-flare thead th {
+  background: hsl(var(--muted) / 0.25);
+}
+
+.admin-layout-flare input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.admin-layout-flare textarea,
+.admin-layout-flare select {
+  border-color: hsl(var(--border) / 0.6);
+}
+
+.admin-layout-flare input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.admin-layout-flare textarea:focus,
+.admin-layout-flare select:focus {
+  outline: none;
+}
+
 /* ── Mobile-first: default (no overrides on small screens) ── */
 
 /* ── Desktop-only overrides (≥768px) ── */
