@@ -32,18 +32,15 @@ export function PostPageSkeleton() {
     .find((p) => p.slug === slug);
 
   return (
-    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
-      <nav className="flex items-center justify-between px-1">
-        <button
-          onClick={() => navigate({ to: "/posts" })}
-          className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-        >
+    <div className="w-full space-y-4 md:space-y-6">
+      <nav className="flex items-center justify-between px-0.5">
+        <button onClick={() => navigate({ to: "/posts" })} className="flare-chip">
           <ArrowLeft size={14} />
           <span>{m.post_back_to_list()}</span>
         </button>
       </nav>
 
-      <article className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-sm overflow-hidden">
+      <article className="flare-surface overflow-hidden">
         <div className="p-5 md:p-8 lg:p-10 space-y-8">
           <header className="space-y-5">
             <div className="flex flex-wrap items-center gap-3">
@@ -78,7 +75,9 @@ export function PostPageSkeleton() {
                 <div className="h-4 w-full bg-muted animate-pulse rounded-sm" />
                 <div className="h-4 w-11/12 bg-muted animate-pulse rounded-sm" />
                 <div className="h-4 w-4/5 bg-muted animate-pulse rounded-sm" />
-                {i === 2 && <div className="my-6 h-56 w-full bg-muted animate-pulse rounded-lg" />}
+                {i === 2 && (
+                  <div className="my-6 h-56 w-full bg-muted animate-pulse rounded-lg" />
+                )}
               </div>
             ))}
           </main>

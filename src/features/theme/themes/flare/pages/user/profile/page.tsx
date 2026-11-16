@@ -16,11 +16,10 @@ export function ProfilePage({
 }: ProfilePageProps) {
   const inputClassName =
     "h-10 rounded-lg border border-border/60 bg-background/60 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border";
-  const sectionClassName =
-    "rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm space-y-5";
+  const sectionClassName = "flare-surface p-5 md:p-7 space-y-5";
 
   return (
-    <div className="flex flex-col w-full mx-auto space-y-4 md:space-y-6">
+    <div className="flex flex-col w-full space-y-4 md:space-y-6">
       <section className={sectionClassName}>
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="space-y-2">
@@ -31,10 +30,7 @@ export function ProfilePage({
               {m.profile_settings_desc()}
             </p>
           </div>
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors w-fit"
-          >
+          <Link to="/" className="flare-chip w-fit">
             <Terminal size={14} />
             {m.profile_back_home()}
           </Link>
@@ -82,7 +78,10 @@ export function ProfilePage({
             <label className="text-sm font-medium text-foreground/90">
               {m.profile_name()}
             </label>
-            <Input {...profileForm.register("name")} className={inputClassName} />
+            <Input
+              {...profileForm.register("name")}
+              className={inputClassName}
+            />
             {profileForm.errors.name && (
               <span className="text-xs text-destructive">
                 {profileForm.errors.name.message}
@@ -107,7 +106,11 @@ export function ProfilePage({
           </div>
 
           <div className="pt-1">
-            <Button type="submit" disabled={profileForm.isSubmitting} className="rounded-full">
+            <Button
+              type="submit"
+              disabled={profileForm.isSubmitting}
+              className="rounded-full"
+            >
               {profileForm.isSubmitting ? (
                 <span className="flex items-center gap-2">
                   <Loader2 size={14} className="animate-spin" />
@@ -242,7 +245,12 @@ export function ProfilePage({
             </div>
 
             <div className="pt-1">
-              <Button type="submit" disabled={passwordForm.isSubmitting} variant="outline" className="rounded-full">
+              <Button
+                type="submit"
+                disabled={passwordForm.isSubmitting}
+                variant="outline"
+                className="rounded-full"
+              >
                 {passwordForm.isSubmitting ? (
                   <span className="flex items-center gap-2">
                     <Loader2 size={14} className="animate-spin" />
@@ -257,7 +265,12 @@ export function ProfilePage({
         </section>
       )}
 
-      <section className={cn(sectionClassName, "flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3")}>
+      <section
+        className={cn(
+          sectionClassName,
+          "flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3",
+        )}
+      >
         <div className="flex items-center gap-2">
           {user.role === "admin" && (
             <Link
@@ -268,7 +281,11 @@ export function ProfilePage({
             </Link>
           )}
         </div>
-        <Button variant="ghost" onClick={logout} className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full">
+        <Button
+          variant="ghost"
+          onClick={logout}
+          className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full"
+        >
           {m.profile_logout()}
         </Button>
       </section>

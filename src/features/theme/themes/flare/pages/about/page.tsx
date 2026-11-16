@@ -10,8 +10,8 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
 
   if (!article) {
     return (
-      <div className="w-full mx-auto pb-10">
-        <div className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-8 md:p-12 shadow-sm flex flex-col items-center text-center">
+      <div className="w-full flare-enter">
+        <div className="flare-surface p-8 md:p-12 flex flex-col items-center text-center">
           <div className="mb-5 w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center border border-border/40">
             <FileQuestion size={22} className="text-muted-foreground/70" />
           </div>
@@ -21,44 +21,33 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
           <p className="max-w-md text-sm md:text-base text-muted-foreground leading-7 mb-7">
             {m.about_empty_desc()}
           </p>
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={onStartEdit}
-              className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-            >
+          {isAdmin ? (
+            <button type="button" onClick={onStartEdit} className="flare-chip">
               <Pencil size={14} />
               <span>{m.about_admin_create()}</span>
             </button>
-          )}
+          ) : null}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
-      <nav className="flex items-center justify-between px-1">
-        <button
-          onClick={() => navigate({ to: "/posts" })}
-          className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-        >
+    <div className="w-full space-y-4 md:space-y-6 flare-enter">
+      <nav className="flex items-center justify-between px-0.5">
+        <button onClick={() => navigate({ to: "/posts" })} className="flare-chip">
           <ArrowLeft size={14} />
           <span>{m.post_back_to_list()}</span>
         </button>
-        {isAdmin && (
-          <button
-            type="button"
-            onClick={onStartEdit}
-            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-          >
+        {isAdmin ? (
+          <button type="button" onClick={onStartEdit} className="flare-chip">
             <Pencil size={14} />
             <span>{m.about_edit()}</span>
           </button>
-        )}
+        ) : null}
       </nav>
 
-      <article className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-8 lg:p-10 shadow-sm space-y-8">
+      <article className="flare-surface p-5 md:p-8 lg:p-10 space-y-8">
         {article.title ? (
           <header>
             <h1 className="text-3xl md:text-5xl font-semibold leading-tight tracking-tight text-foreground">
@@ -75,7 +64,7 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
         </main>
       </article>
 
-      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-8 shadow-sm">
+      <section className="flare-surface p-5 md:p-8">
         <CommentSection aboutArticleId={article.id} />
       </section>
     </div>

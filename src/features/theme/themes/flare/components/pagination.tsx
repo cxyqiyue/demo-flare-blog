@@ -41,20 +41,20 @@ export function Pagination({
 
   return (
     <nav
-      className="flex items-center justify-between gap-3 pt-8 border-t border-border/40"
+      className="flex items-center justify-between gap-3 pt-6 mt-2 border-t border-border/40"
       aria-label={m.pagination_page({ page, pages: totalPages })}
     >
       <button
         type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={!hasPrevPage}
-        className="inline-flex items-center gap-1.5 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:hover:text-muted-foreground disabled:cursor-not-allowed whitespace-nowrap"
+        className="flare-chip disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        <ChevronLeft size={16} />
+        <ChevronLeft size={15} />
         {m.pagination_prev()}
       </button>
 
-      <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground tabular-nums whitespace-nowrap select-none">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground tabular-nums whitespace-nowrap select-none">
         <span className="shrink-0">{m.pagination_page_prefix()}</span>
 
         {isEditing ? (
@@ -75,14 +75,14 @@ export function Pagination({
               }
             }}
             onBlur={() => setIsEditing(false)}
-            className="w-14 h-8 rounded border border-border bg-background text-center text-xs font-mono text-foreground tabular-nums outline-none focus:border-foreground/50 focus:ring-1 focus:ring-foreground/10"
+            className="w-14 h-8 rounded-full border border-border/60 bg-background/70 text-center text-sm text-foreground tabular-nums outline-none focus:border-foreground/40 focus:ring-2 focus:ring-ring/20"
             aria-label={m.pagination_page_input()}
           />
         ) : (
           <button
             type="button"
             onClick={startEditing}
-            className="min-w-8 h-8 px-1.5 rounded text-xs font-mono font-semibold text-foreground hover:text-primary hover:bg-muted active:bg-muted/60 cursor-pointer transition-colors"
+            className="min-w-8 h-8 px-2 rounded-full border border-border/50 bg-background/50 text-sm font-medium text-foreground hover:bg-muted/60 transition-colors"
             title={m.pagination_page_input_hint({ pages: totalPages })}
           >
             {page}
@@ -92,9 +92,7 @@ export function Pagination({
         <span className="shrink-0">
           <span className="opacity-50">/</span>
           &nbsp;{totalPages}
-          {m.pagination_page_suffix() && (
-            <>&nbsp;{m.pagination_page_suffix()}</>
-          )}
+          {m.pagination_page_suffix() ? <>&nbsp;{m.pagination_page_suffix()}</> : null}
         </span>
       </div>
 
@@ -102,10 +100,10 @@ export function Pagination({
         type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={!hasNextPage}
-        className="inline-flex items-center gap-1.5 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:hover:text-muted-foreground disabled:cursor-not-allowed whitespace-nowrap"
+        className="flare-chip disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {m.pagination_next()}
-        <ChevronRight size={16} />
+        <ChevronRight size={15} />
       </button>
     </nav>
   );

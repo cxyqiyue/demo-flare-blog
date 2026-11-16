@@ -11,8 +11,8 @@ export function FriendLinksPage({
   applyRules,
 }: FriendLinksPageProps) {
   return (
-    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
-      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm">
+    <div className="w-full space-y-4 md:space-y-6 flare-enter">
+      <section className="flare-surface p-5 md:p-7">
         <header className="space-y-2">
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
             {m.friend_links_title()}
@@ -23,7 +23,7 @@ export function FriendLinksPage({
         </header>
       </section>
 
-      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm">
+      <section className="flare-surface p-5 md:p-7">
         {links.length === 0 ? (
           <div className="py-12 text-center">
             <p className="text-muted-foreground">{m.friend_links_no_links()}</p>
@@ -40,7 +40,7 @@ export function FriendLinksPage({
         )}
       </section>
 
-      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm space-y-8">
+      <section className="flare-surface p-5 md:p-7 space-y-8">
         <SiteInfoAndApplyRules siteInfo={siteInfo} applyRules={applyRules} />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-6 border-t border-border/40">
           <div className="space-y-1">
@@ -53,7 +53,7 @@ export function FriendLinksPage({
           </div>
           <Link
             to="/submit-friend-link"
-            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            className="flare-chip"
           >
             <span>{m.friend_links_apply()}</span>
             <ArrowUpRight size={14} />

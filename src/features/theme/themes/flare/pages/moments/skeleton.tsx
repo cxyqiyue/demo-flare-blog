@@ -3,8 +3,8 @@ import { MomentSkeleton } from "./moment-skeleton";
 
 export function MomentsPageSkeleton() {
   return (
-    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
-      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm space-y-3">
+    <div className="w-full space-y-4 md:space-y-6">
+      <section className="flare-surface p-5 md:p-7 space-y-3">
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
           {m.moments_title()}
         </h1>
@@ -13,7 +13,7 @@ export function MomentsPageSkeleton() {
         </p>
       </section>
 
-      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-4 md:p-6 shadow-sm space-y-4">
+      <section className="flare-surface p-4 md:p-6 space-y-4">
         {Array.from({ length: 3 }).map((_, i) => (
           <MomentSkeleton key={i} />
         ))}

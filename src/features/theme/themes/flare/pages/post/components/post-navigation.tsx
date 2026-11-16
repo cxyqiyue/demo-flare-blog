@@ -18,17 +18,19 @@ export function PostNavigation({ slug }: PostNavigationProps) {
         <Link
           to="/post/$slug"
           params={{ slug: previous.slug }}
-          className="group flex items-center gap-3 min-w-0 rounded-xl border border-border/50 bg-background/40 px-4 py-3 hover:border-border/70 hover:bg-muted/30 transition-colors"
+          className="group flex items-center gap-3 min-w-0 flare-surface-soft px-4 py-3 hover:bg-muted/30 transition-colors"
         >
           <ChevronLeft
             size={16}
             className="shrink-0 text-muted-foreground group-hover:-translate-x-0.5 transition-transform"
           />
           <span className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground/70">
+            <span className="text-xs text-muted-foreground">
               {m.post_prev()}
             </span>
-            <span className="truncate text-foreground/90">{previous.title}</span>
+            <span className="truncate text-foreground/90 font-medium">
+              {previous.title}
+            </span>
           </span>
         </Link>
       ) : (
@@ -39,13 +41,13 @@ export function PostNavigation({ slug }: PostNavigationProps) {
         <Link
           to="/post/$slug"
           params={{ slug: next.slug }}
-          className="group flex items-center justify-end gap-3 min-w-0 rounded-xl border border-border/50 bg-background/40 px-4 py-3 hover:border-border/70 hover:bg-muted/30 transition-colors md:col-start-2"
+          className="group flex items-center justify-end gap-3 min-w-0 flare-surface-soft px-4 py-3 hover:bg-muted/30 transition-colors md:col-start-2"
         >
           <span className="flex flex-col gap-0.5 min-w-0 text-right">
-            <span className="text-[10px] uppercase tracking-widest font-medium text-muted-foreground/70">
+            <span className="text-xs text-muted-foreground">
               {m.post_next()}
             </span>
-            <span className="truncate text-foreground/90">{next.title}</span>
+            <span className="truncate text-foreground/90 font-medium">{next.title}</span>
           </span>
           <ChevronRight
             size={16}

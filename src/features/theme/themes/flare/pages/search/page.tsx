@@ -18,13 +18,10 @@ export function SearchPage({
   }, []);
 
   return (
-    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
-      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm space-y-5">
+    <div className="w-full space-y-4 md:space-y-6 flare-enter">
+      <section className="flare-surface p-5 md:p-7 space-y-5">
         <div className="flex items-center justify-between">
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-          >
+          <button onClick={onBack} className="flare-chip">
             <ArrowLeft size={14} />
             <span>{m.search_back()}</span>
           </button>
@@ -44,7 +41,7 @@ export function SearchPage({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-4 md:p-6 shadow-sm space-y-2">
+      <section className="flare-surface p-4 md:p-6 space-y-2">
         {query.trim() !== "" && !isSearching && results.length === 0 && (
           <div className="py-12 opacity-50">
             <p className="font-serif text-lg text-muted-foreground">

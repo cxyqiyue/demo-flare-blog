@@ -112,7 +112,9 @@ export function LoginForm({ form, isEmailConfigured }: LoginFormProps) {
             <p className="text-sm text-muted-foreground leading-6">
               {m.otp_desc_login({ email: otpEmail ?? "" })}
             </p>
-            <p className="text-xs text-muted-foreground/80">{m.otp_expires_hint()}</p>
+            <p className="text-xs text-muted-foreground/80">
+              {m.otp_expires_hint()}
+            </p>
           </div>
 
           <div className="space-y-2">

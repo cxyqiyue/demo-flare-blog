@@ -5,20 +5,29 @@
 }
 
 .admin-layout-flare {
-  --admin-canvas: hsl(var(--muted) / 0.2);
+  --admin-canvas: hsl(var(--muted) / 0.18);
+  background:
+    radial-gradient(900px 320px at 50% -10%, hsl(var(--muted) / 0.28), transparent 70%),
+    hsl(var(--background));
 }
 
-.admin-layout-flare .max-w-7xl > * {
-  /* give content some breathing room in card-heavy pages */
+.admin-layout-flare header {
+  box-shadow: 0 1px 0 hsl(var(--border) / 0.35);
 }
 
 .admin-layout-flare [class*="border-border/30"] {
-  border-color: hsl(var(--border) / 0.45);
+  border-color: hsl(var(--border) / 0.42);
 }
 
-/* Flare-style admin surfaces (default admin chrome) */
+/* Flare-style admin surfaces */
 .admin-layout-flare [class*="bg-background"][class*="border"] {
-  background-color: hsl(var(--card) / 0.72);
+  background-color: color-mix(in oklab, hsl(var(--card)) 86%, hsl(var(--background)));
+}
+
+.admin-layout-flare .rounded-lg[class*="border"],
+.admin-layout-flare .rounded-xl[class*="border"],
+.admin-layout-flare .rounded-2xl[class*="border"] {
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.02);
 }
 
 .admin-layout-flare table {
@@ -27,19 +36,34 @@
 }
 
 .admin-layout-flare thead th {
-  background: hsl(var(--muted) / 0.25);
+  background: hsl(var(--muted) / 0.28);
+  color: hsl(var(--muted-foreground));
+  font-weight: 600;
 }
 
-.admin-layout-flare input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.admin-layout-flare tbody tr:hover {
+  background: hsl(var(--muted) / 0.18);
+}
+
+.admin-layout-flare
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .admin-layout-flare textarea,
 .admin-layout-flare select {
-  border-color: hsl(var(--border) / 0.6);
+  border-color: hsl(var(--border) / 0.58);
+  background-color: hsl(var(--background) / 0.75);
 }
 
-.admin-layout-flare input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.admin-layout-flare
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
 .admin-layout-flare textarea:focus,
 .admin-layout-flare select:focus {
   outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.12);
+  border-color: hsl(var(--ring) / 0.35);
+}
+
+.admin-layout-flare button[class*="border"][class*="bg-background"] {
+  backdrop-filter: blur(6px);
 }
 
 /* ── Mobile-first: default (no overrides on small screens) ── */

@@ -61,8 +61,7 @@ export function MomentCard({
 
   // 超管可管理所有动态；普通管理员仅可管理自己发布的动态
   const canManage =
-    isAdmin &&
-    (isSuperAdmin || moment.authorUserId === currentUserId);
+    isAdmin && (isSuperAdmin || moment.authorUserId === currentUserId);
 
   const isLiked = moment.isLiked;
 
@@ -102,11 +101,11 @@ export function MomentCard({
   const renderedContent = renderCommentReact(moment.content);
 
   return (
-    <article className="group border border-border/20 bg-background/50 transition-colors hover:border-border/40">
+    <article className="flare-surface-soft overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between gap-4 px-6 pt-6">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-muted/30 border border-border/20 overflow-hidden flex items-center justify-center">
+      <header className="flex items-center justify-between gap-4 px-5 md:px-6 pt-5 md:pt-6">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-full bg-muted/40 border border-border/40 overflow-hidden flex items-center justify-center shrink-0">
             {moment.author?.image ? (
               <img
                 src={moment.author.image}
@@ -114,16 +113,16 @@ export function MomentCard({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-[10px] font-mono text-muted-foreground uppercase">
+              <span className="text-xs font-medium text-muted-foreground uppercase">
                 {moment.author?.name?.slice(0, 1) || "?"}
               </span>
             )}
           </div>
-          <div className="space-y-0.5">
-            <p className="text-xs font-medium text-foreground tracking-wide">
+          <div className="space-y-0.5 min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">
               {moment.author?.name || m.moments_anonymous()}
             </p>
-            <p className="text-[9px] font-mono text-muted-foreground/40 uppercase tracking-widest">
+            <p className="text-xs text-muted-foreground/70">
               <ClientOnly fallback="-">
                 {formatDate(moment.createdAt, { includeTime: true })}
               </ClientOnly>
@@ -138,7 +137,7 @@ export function MomentCard({
                 variant="ghost"
                 size="sm"
                 onClick={() => setEditing(true)}
-                className="h-auto p-1 text-muted-foreground/40 hover:text-foreground bg-transparent hover:bg-transparent"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
               >
                 <Pencil size={14} />
               </Button>
@@ -147,7 +146,7 @@ export function MomentCard({
               variant="ghost"
               size="sm"
               onClick={() => setShowDeleteModal(true)}
-              className="h-auto p-1 text-muted-foreground/40 hover:text-destructive bg-transparent hover:bg-transparent"
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
             >
               <Trash2 size={14} />
             </Button>
@@ -157,7 +156,7 @@ export function MomentCard({
 
       {/* Content / Editor */}
       {editing ? (
-        <div className="px-6 pt-4">
+        <div className="px-5 md:px-6 pt-4">
           <Suspense fallback={null}>
             <MomentEditor
               onSubmit={handleEditSubmit}
@@ -168,13 +167,13 @@ export function MomentCard({
           </Suspense>
         </div>
       ) : (
-        <div className="px-6 pt-4">
+        <div className="px-5 md:px-6 pt-4">
           {renderedContent ? (
-            <div className="default-md text-sm leading-relaxed text-foreground/90 font-light">
+            <div className="flare-md text-sm md:text-[15px] leading-relaxed text-foreground/90">
               {renderedContent}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground/50 font-light italic">
+            <p className="text-sm text-muted-foreground/60 italic">
               {m.moments_empty_content()}
             </p>
           )}
@@ -185,7 +184,7 @@ export function MomentCard({
       {moment.images.length > 0 && !editing && (
         <div
           className={cn(
-            "px-6 pt-4 grid gap-2",
+            "px-5 md:px-6 pt-4 grid gap-2",
             moment.images.length === 1
               ? "grid-cols-1"
               : moment.images.length === 2
@@ -203,12 +202,12 @@ export function MomentCard({
 
       {/* Actions */}
       {!editing && (
-        <footer className="flex items-center gap-6 px-6 pb-5 pt-5 border-t border-border/10 mt-5">
+        <footer className="flex items-center gap-4 px-5 md:px-6 pb-5 pt-4 border-t border-border/30 mt-5">
           <button
             type="button"
             onClick={handleToggleLike}
             disabled={liking}
-            className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            className="flare-chip disabled:opacity-50"
           >
             {liking ? (
               <Loader2 size={14} className="animate-spin" />
@@ -218,23 +217,24 @@ export function MomentCard({
                 className={cn(isLiked && "fill-current text-red-500")}
               />
             )}
-            {moment.likeCount}
+            <span className="tabular-nums">{moment.likeCount}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setCommentsOpen((open) => !open)}
-            className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+            className="flare-chip"
+            data-active={commentsOpen}
           >
             <MessageCircle size={14} />
-            {moment.commentCount}
+            <span className="tabular-nums">{moment.commentCount}</span>
           </button>
         </footer>
       )}
 
       {/* Comments */}
       {commentsOpen && !editing && (
-        <div className="border-t border-border/10 px-6 py-5">
+        <div className="border-t border-border/30 px-5 md:px-6 py-5 bg-background/20">
           <CommentSection momentId={moment.id} />
         </div>
       )}

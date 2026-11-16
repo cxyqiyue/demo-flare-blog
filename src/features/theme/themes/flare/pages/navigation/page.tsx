@@ -30,8 +30,8 @@ export function NavigationPage({
   }, []);
 
   return (
-    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
-      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm space-y-5">
+    <div className="w-full space-y-4 md:space-y-6 flare-enter">
+      <section className="flare-surface p-5 md:p-7 space-y-5">
         <header className="space-y-2 text-center md:text-left">
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
             {m.navigation_title()}
@@ -86,7 +86,7 @@ export function NavigationPage({
 
       {/* Bookmarks（仅管理员可见） */}
       {showBookmarks && (
-        <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm space-y-6">
+        <section className="flare-surface p-5 md:p-7 space-y-6">
           {/* 面包屑：根目录 ↔ 文件夹 */}
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3 min-w-0">
@@ -123,9 +123,8 @@ export function NavigationPage({
             <p className="-mt-4 text-xs font-mono text-muted-foreground/60">
               {m.navigation_level_summary({
                 folders: state.folders.length,
-                bookmarks: state.bookmarks.filter(
-                  (b) => b.folderId === null,
-                ).length,
+                bookmarks: state.bookmarks.filter((b) => b.folderId === null)
+                  .length,
               })}
             </p>
           )}
@@ -144,7 +143,10 @@ export function NavigationPage({
                     onOpen={() => state.enterFolder(item.folder.id)}
                   />
                 ) : (
-                  <BookmarkCard key={item.bookmark.id} bookmark={item.bookmark} />
+                  <BookmarkCard
+                    key={item.bookmark.id}
+                    bookmark={item.bookmark}
+                  />
                 ),
               )}
             </div>

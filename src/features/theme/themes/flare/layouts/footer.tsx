@@ -15,16 +15,18 @@ export function Footer({ navOptions }: FooterProps) {
   const { siteConfig } = useRouteContext({ from: "__root__" });
 
   return (
-    <footer className="mt-10 border-t border-border/40 pt-8 pb-10 text-sm text-muted-foreground">
+    <footer className="flare-surface-soft mt-2 px-5 py-6 md:px-7 md:py-7 text-sm text-muted-foreground">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div className="space-y-2">
-          <div className="text-base font-medium text-foreground/90">
+          <div className="text-base font-semibold text-foreground/90 tracking-tight">
             {siteConfig.title}
           </div>
           {siteConfig.description ? (
-            <p className="max-w-xl leading-6">{siteConfig.description}</p>
+            <p className="max-w-xl leading-6 text-muted-foreground/90">
+              {siteConfig.description}
+            </p>
           ) : null}
-          <div className="text-xs">
+          <div className="text-xs text-muted-foreground/80">
             <ClientOnly fallback="-">
               {m.footer_copyright({
                 year: new Date().getFullYear().toString(),
@@ -33,7 +35,7 @@ export function Footer({ navOptions }: FooterProps) {
             </ClientOnly>
           </div>
         </div>
-        <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 md:justify-end">
+        <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 md:justify-end">
           {navOptions.map((option) => (
             <Link
               key={option.id}

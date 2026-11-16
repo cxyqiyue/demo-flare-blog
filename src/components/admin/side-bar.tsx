@@ -187,8 +187,12 @@ export function SideBar({
               A
             </span>
             <div className="min-w-0">
-              <div className="text-sm font-semibold tracking-tight truncate">Admin</div>
-              <div className="text-[11px] text-muted-foreground truncate">Management</div>
+              <div className="text-sm font-semibold tracking-tight truncate">
+                Admin
+              </div>
+              <div className="text-[11px] text-muted-foreground truncate">
+                Management
+              </div>
             </div>
           </Link>
           <button
@@ -218,7 +222,11 @@ export function SideBar({
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/60 border-transparent",
                   )}
                 >
-                  <item.icon size={16} strokeWidth={1.75} className="shrink-0" />
+                  <item.icon
+                    size={16}
+                    strokeWidth={1.75}
+                    className="shrink-0"
+                  />
                   <span className="truncate font-medium">{item.label}</span>
                 </div>
               )}

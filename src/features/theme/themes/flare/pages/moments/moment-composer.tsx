@@ -33,10 +33,10 @@ export function MomentComposer({ onCreate }: MomentComposerProps) {
   };
 
   return (
-    <div className="mb-12 border border-border/30 bg-muted/5 p-6 space-y-5">
+    <div className="flare-surface-soft p-5 md:p-6 space-y-4">
       <div className="flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-foreground/40" />
-        <h3 className="text-sm font-serif font-medium text-foreground">
+        <h3 className="text-sm font-semibold text-foreground">
           {m.moments_composer_title()}
         </h3>
       </div>

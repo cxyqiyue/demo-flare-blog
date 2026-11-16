@@ -19,27 +19,27 @@
   }
 
   h1 {
-    @apply scroll-m-20 text-4xl font-serif font-medium tracking-tight lg:text-5xl;
+    @apply scroll-m-20 text-4xl font-sans font-semibold tracking-tight lg:text-5xl;
   }
 
   h2 {
-    @apply scroll-m-20 text-3xl font-serif font-medium tracking-tight;
+    @apply scroll-m-20 text-3xl font-sans font-semibold tracking-tight;
   }
 
   h3 {
-    @apply scroll-m-20 text-2xl font-serif font-medium tracking-tight;
+    @apply scroll-m-20 text-2xl font-sans font-semibold tracking-tight;
   }
 
   h4 {
-    @apply scroll-m-20 text-xl font-serif font-medium tracking-tight;
+    @apply scroll-m-20 text-xl font-sans font-semibold tracking-tight;
   }
 
   h5 {
-    @apply scroll-m-20 text-lg font-serif font-medium tracking-tight;
+    @apply scroll-m-20 text-lg font-sans font-semibold tracking-tight;
   }
 
   h6 {
-    @apply scroll-m-20 text-base font-serif font-medium tracking-tight;
+    @apply scroll-m-20 text-base font-sans font-semibold tracking-tight;
   }
 
   h1,
@@ -133,7 +133,7 @@
     line-height: 0;
   }
 
-  /* 折叠块等原始 HTML �?*/
+  /* 折叠块等原始 HTML �?*/
   details {
     @apply my-6 rounded-lg border border-border/60 bg-muted/20;
 
@@ -154,7 +154,7 @@
     @apply my-6 first:mt-0 last:mb-0;
   }
 
-  /* 脚注区块（preprocessExtendedMarkdown 生成�?*/
+  /* 脚注区块（preprocessExtendedMarkdown 生成�?*/
   .footnotes {
     @apply mt-12 text-sm text-muted-foreground;
 

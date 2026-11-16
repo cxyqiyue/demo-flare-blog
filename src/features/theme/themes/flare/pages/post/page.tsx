@@ -32,11 +32,11 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
   }, []);
 
   return (
-    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
-      <nav className="flex items-center justify-between px-1">
+    <div className="w-full space-y-4 md:space-y-6 flare-enter">
+      <nav className="flex items-center justify-between gap-2 px-0.5">
         <button
           onClick={() => navigate({ to: "/posts" })}
-          className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="flare-chip"
         >
           <ArrowLeft size={14} />
           <span>{m.post_back_to_list()}</span>
@@ -45,7 +45,7 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
           <Link
             to="/admin/posts/edit/$id"
             params={{ id: String(post.id) }}
-            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            className="flare-chip"
           >
             <Pencil size={14} />
             <span>{m.post_edit()}</span>
@@ -53,144 +53,141 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
         )}
       </nav>
 
-      <article className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-sm overflow-hidden">
-        <div className="p-5 md:p-8 lg:p-10 space-y-10">
-        {/* Header Section */}
-        <header className="space-y-8">
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-muted-foreground/60 tracking-wider">
-              {post.author && (
-                <>
-                  <span className="flex items-center gap-1.5">
-                    {m.post_author()}:{" "}
-                    <span className="text-foreground">{post.author}</span>
-                  </span>
-                  <span className="opacity-30">/</span>
-                </>
-              )}
-              <span className="flex items-center gap-1.5">
-                {m.post_published_at()}:{" "}
-                <ClientOnly fallback={<span>-</span>}>
-                  {formatDate(post.publishedAt)}
-                </ClientOnly>
-              </span>
-              <span className="opacity-30">/</span>
-              <span className="flex items-center gap-1.5">
-                {m.post_last_updated()}:{" "}
-                <ClientOnly fallback={<span>-</span>}>
-                  {formatDate(post.updatedAt)}
-                </ClientOnly>
-              </span>
-              <span className="opacity-30">/</span>
-              <span>{m.read_time({ count: post.readTimeInMinutes })}</span>
+      <article className="flare-surface overflow-hidden">
+        <div className="p-5 md:p-8 lg:p-10 space-y-8 md:space-y-10">
+          <header className="space-y-6 md:space-y-7">
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs md:text-[13px] text-muted-foreground/75">
+                {post.author ? (
+                  <>
+                    <span className="flex items-center gap-1.5">
+                      {m.post_author()}: <span className="text-foreground/90">{post.author}</span>
+                    </span>
+                    <span className="opacity-30">/</span>
+                  </>
+                ) : null}
+                <span className="flex items-center gap-1.5">
+                  {m.post_published_at()}:{" "}
+                  <ClientOnly fallback={<span>-</span>}>
+                    {formatDate(post.publishedAt)}
+                  </ClientOnly>
+                </span>
+                <span className="opacity-30">/</span>
+                <span className="flex items-center gap-1.5">
+                  {m.post_last_updated()}:{" "}
+                  <ClientOnly fallback={<span>-</span>}>
+                    {formatDate(post.updatedAt)}
+                  </ClientOnly>
+                </span>
+                <span className="opacity-30">/</span>
+                <span>{m.read_time({ count: post.readTimeInMinutes })}</span>
 
-              {/* Tags */}
-              {post.tags && post.tags.length > 0 && (
-                <>
-                  <span className="opacity-30">/</span>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {post.tags.map((tag) => (
-                      <Link
-                        key={tag.id}
-                        to="/posts"
-                        search={{ tagName: tag.name }}
-                        className="hover:text-foreground transition-colors"
-                      >
-                        #{tag.name}
-                      </Link>
-                    ))}
-                  </div>
-                </>
-              )}
+                {post.tags && post.tags.length > 0 ? (
+                  <>
+                    <span className="opacity-30">/</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {post.tags.map((tag) => (
+                        <Link
+                          key={tag.id}
+                          to="/posts"
+                          search={{ tagName: tag.name }}
+                          className="hover:text-foreground transition-colors"
+                        >
+                          #{tag.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+
+              <h1
+                className="text-3xl md:text-5xl lg:text-[3.2rem] font-semibold leading-[1.12] tracking-tight text-foreground"
+                style={{ viewTransitionName: `post-title-${post.slug}` }}
+              >
+                {post.title}
+              </h1>
             </div>
 
-            <h1
-              className="text-4xl md:text-5xl lg:text-6xl font-serif font-medium leading-[1.1] tracking-tight text-foreground"
-              style={{ viewTransitionName: `post-title-${post.slug}` }}
-            >
-              {post.title}
-            </h1>
+            {post.summary ? (
+              <div className="bg-muted/25 rounded-2xl p-5 md:p-6 space-y-2.5 border border-border/40">
+                <div className="flex items-center gap-2 text-muted-foreground/85 font-medium text-sm">
+                  <Sparkles className="w-4 h-4" />
+                  <span>{m.post_summary_title()}</span>
+                </div>
+                <p className="text-base md:text-lg leading-relaxed text-muted-foreground">
+                  {post.summary}
+                </p>
+              </div>
+            ) : null}
+          </header>
+
+          {/* Content Layout */}
+          <div className="relative">
+            {/* Floating TOC for Large Screens */}
+            <aside className="hidden xl:block absolute left-full ml-12 top-0 h-full">
+              <div className="sticky top-32 w-60">
+                <TableOfContents headers={post.toc ?? []} />
+              </div>
+            </aside>
+
+            {/* TOC drawer for small screens */}
+            <TocDrawer headers={post.toc ?? []} />
+
+            <main className="max-w-none min-w-0 overflow-x-clip text-foreground leading-relaxed font-serif">
+              <ContentRenderer content={post.contentJson} />
+
+              <footer className="mt-24 pt-8 border-t border-border/20 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground/60 tracking-widest uppercase">
+                  <span>{m.post_end_notice()}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    navigator.clipboard
+                      .writeText(window.location.href)
+                      .then(() => {
+                        toast.success(m.post_share_success(), {
+                          description: m.post_share_success_desc(),
+                        });
+                      })
+                      .catch(() => {
+                        toast.error(m.post_share_error(), {
+                          description: m.post_share_error_desc(),
+                        });
+                      });
+                  }}
+                  className="group h-auto p-0 flex items-center gap-3 text-xs uppercase tracking-widest font-medium text-muted-foreground hover:text-foreground transition-colors bg-transparent hover:bg-transparent"
+                >
+                  <span>{m.post_share()}</span>
+                  <Share2
+                    size={12}
+                    strokeWidth={1.5}
+                    className="group-hover:-translate-y-0.5 transition-transform"
+                  />
+                </Button>
+              </footer>
+            </main>
           </div>
 
-          {post.summary && (
-            <div className="bg-muted/30 rounded-lg p-6 space-y-3 border border-border/40">
-              <div className="flex items-center gap-2 text-muted-foreground/80 font-medium text-sm uppercase tracking-widest">
-                <Sparkles className="w-4 h-4" />
-                <span>{m.post_summary_title()}</span>
-              </div>
-              <p className="text-lg leading-relaxed text-muted-foreground font-serif">
-                {post.summary}
-              </p>
-            </div>
-          )}
-        </header>
+          {/* Prev/Next Navigation */}
+          <div className="pt-16 border-t border-border/40">
+            <Suspense fallback={<PostNavigationSkeleton />}>
+              <PostNavigation slug={post.slug} />
+            </Suspense>
+          </div>
 
-        {/* Content Layout */}
-        <div className="relative">
-          {/* Floating TOC for Large Screens */}
-          <aside className="hidden xl:block absolute left-full ml-12 top-0 h-full">
-            <div className="sticky top-32 w-60">
-              <TableOfContents headers={post.toc ?? []} />
-            </div>
-          </aside>
+          {/* Related Posts */}
+          <div className="pt-24 border-t border-border/40">
+            <Suspense fallback={<RelatedPostsSkeleton />}>
+              <RelatedPosts slug={post.slug} />
+            </Suspense>
+          </div>
 
-          {/* TOC drawer for small screens */}
-          <TocDrawer headers={post.toc ?? []} />
-
-          <main className="max-w-none min-w-0 overflow-x-clip text-foreground leading-relaxed font-serif">
-            <ContentRenderer content={post.contentJson} />
-
-            <footer className="mt-24 pt-8 border-t border-border/20 flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground/60 tracking-widest uppercase">
-                <span>{m.post_end_notice()}</span>
-              </div>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  navigator.clipboard
-                    .writeText(window.location.href)
-                    .then(() => {
-                      toast.success(m.post_share_success(), {
-                        description: m.post_share_success_desc(),
-                      });
-                    })
-                    .catch(() => {
-                      toast.error(m.post_share_error(), {
-                        description: m.post_share_error_desc(),
-                      });
-                    });
-                }}
-                className="group h-auto p-0 flex items-center gap-3 text-xs uppercase tracking-widest font-medium text-muted-foreground hover:text-foreground transition-colors bg-transparent hover:bg-transparent"
-              >
-                <span>{m.post_share()}</span>
-                <Share2
-                  size={12}
-                  strokeWidth={1.5}
-                  className="group-hover:-translate-y-0.5 transition-transform"
-                />
-              </Button>
-            </footer>
-          </main>
-        </div>
-
-        {/* Prev/Next Navigation */}
-        <div className="pt-16 border-t border-border/40">
-          <Suspense fallback={<PostNavigationSkeleton />}>
-            <PostNavigation slug={post.slug} />
-          </Suspense>
-        </div>
-
-        {/* Related Posts */}
-        <div className="pt-24 border-t border-border/40">
-          <Suspense fallback={<RelatedPostsSkeleton />}>
-            <RelatedPosts slug={post.slug} />
-          </Suspense>
-        </div>
-
-        {/* Comments Section */}
-        <div className="pt-10 border-t border-border/30">
-          <CommentSection postId={post.id} />
-        </div>
+          {/* Comments Section */}
+          <div className="pt-10 border-t border-border/30">
+            <CommentSection postId={post.id} />
+          </div>
         </div>
       </article>
 

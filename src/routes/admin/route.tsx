@@ -50,7 +50,7 @@ function AdminLayout() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const closeMobileSidebar = () => setIsMobileSidebarOpen(false);
 
-if (isFuwari) {
+  if (isFuwari) {
     return (
       <div className="admin-layout fuwari-admin relative h-dvh overflow-hidden bg-(--fuwari-page-bg) flex font-sans">
         <SideBar
@@ -139,7 +139,9 @@ if (isFuwari) {
               to="/"
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border/60 bg-background px-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
             >
-              <span className="hidden sm:inline">{m.admin_layout_back_to_site()}</span>
+              <span className="hidden sm:inline">
+                {m.admin_layout_back_to_site()}
+              </span>
               <ArrowUpRight size={14} strokeWidth={1.75} />
             </Link>
           </div>
