@@ -30,7 +30,7 @@ export function Navbar({
 
   useEffect(() => {
     const onScroll = () => {
-      const threshold = Math.max(40, window.innerHeight * (bannerHeightVh / 100) - 140);
+      const threshold = Math.max(24, window.innerHeight * (bannerHeightVh / 100) - 160);
       setScrolled(window.scrollY > threshold);
     };
     onScroll();
@@ -54,11 +54,11 @@ export function Navbar({
           "mt-2 md:mt-3 flex items-center transition-all duration-300",
           "rounded-2xl md:rounded-full border",
           scrolled
-            ? "bg-background/75 backdrop-blur-xl border-border/50 shadow-sm"
-            : "bg-black/10 dark:bg-white/5 backdrop-blur-md border-white/15",
+            ? "bg-background/80 backdrop-blur-xl border-border/50 shadow-sm"
+            : "bg-black/15 dark:bg-white/5 backdrop-blur-md border-white/20 shadow-[0_8px_24px_rgba(0,0,0,0.08)]",
         )}
       >
-        <div className="flex w-full items-center justify-between gap-2 px-3 py-2 md:px-4">
+        <div className="flex w-full items-center justify-between gap-2 px-3 py-2 md:px-4 md:py-2.5">
           <Link to="/" className="min-w-0 px-2 py-1">
             <span
               className={cn(
