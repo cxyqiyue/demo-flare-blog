@@ -18,41 +18,33 @@ export function SearchPage({
   }, []);
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-6 md:px-0 py-12 md:py-20">
-      <header className="flex items-center justify-between mb-12">
-        <button
-          onClick={onBack}
-          className="group flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft
-            size={18}
-            className="group-hover:-translate-x-1 transition-transform"
+    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
+      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm space-y-5">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onBack}
+            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          >
+            <ArrowLeft size={14} />
+            <span>{m.search_back()}</span>
+          </button>
+        </div>
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-muted-foreground">
+            {m.search_input_label()}
+          </label>
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder={m.search_input_label()}
+            className="w-full rounded-xl border border-border/60 bg-background/70 px-4 py-3 text-lg md:text-2xl text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/30"
           />
-          <span className="font-mono text-xs uppercase tracking-widest">
-            {m.search_back()}
-          </span>
-        </button>
-      </header>
-
-      <section className="mb-16">
-        <div className="relative flex items-center gap-4 border-b border-border/30 pb-4 focus-within:border-foreground transition-all">
-          <div className="flex-1">
-            <label className="block text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-1 opacity-50">
-              {m.search_input_label()}
-            </label>
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => onQueryChange(e.target.value)}
-              placeholder="..."
-              className="w-full bg-transparent text-4xl md:text-5xl font-serif text-foreground placeholder:text-muted-foreground/10 focus:outline-none rounded-none selection:bg-foreground selection:text-background"
-            />
-          </div>
         </div>
       </section>
 
-      <section className="space-y-4">
+      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-4 md:p-6 shadow-sm space-y-2">
         {query.trim() !== "" && !isSearching && results.length === 0 && (
           <div className="py-12 opacity-50">
             <p className="font-serif text-lg text-muted-foreground">

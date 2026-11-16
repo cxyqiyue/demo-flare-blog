@@ -32,29 +32,29 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
   }, []);
 
   return (
-    <div className="w-full max-w-3xl mx-auto pb-20 px-6 md:px-0">
-      {/* Back Link */}
-      <nav className="py-12 flex items-center justify-between">
+    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
+      <nav className="flex items-center justify-between px-1">
         <button
           onClick={() => navigate({ to: "/posts" })}
-          className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] opacity-40 hover:opacity-100 transition-opacity"
+          className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
         >
-          <ArrowLeft size={12} />
+          <ArrowLeft size={14} />
           <span>{m.post_back_to_list()}</span>
         </button>
         {session?.user.role === "admin" && !hideAdminEdit && (
           <Link
             to="/admin/posts/edit/$id"
             params={{ id: String(post.id) }}
-            className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] opacity-40 hover:opacity-100 transition-opacity"
+            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
           >
-            <Pencil size={12} />
+            <Pencil size={14} />
             <span>{m.post_edit()}</span>
           </Link>
         )}
       </nav>
 
-      <article className="space-y-16">
+      <article className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-sm overflow-hidden">
+        <div className="p-5 md:p-8 lg:p-10 space-y-10">
         {/* Header Section */}
         <header className="space-y-8">
           <div className="space-y-6">
@@ -188,8 +188,9 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
         </div>
 
         {/* Comments Section */}
-        <div className="pt-12 border-t-0 border-border/40">
+        <div className="pt-10 border-t border-border/30">
           <CommentSection postId={post.id} />
+        </div>
         </div>
       </article>
 

@@ -10,24 +10,24 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
 
   if (!article) {
     return (
-      <div className="w-full max-w-3xl mx-auto pb-20 px-6 md:px-0">
-        <div className="py-16 md:py-24 flex flex-col items-center text-center">
-          <div className="mb-6 w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center">
-            <FileQuestion size={22} className="text-muted-foreground/60" />
+      <div className="w-full mx-auto pb-10">
+        <div className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-8 md:p-12 shadow-sm flex flex-col items-center text-center">
+          <div className="mb-5 w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center border border-border/40">
+            <FileQuestion size={22} className="text-muted-foreground/70" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-serif font-medium tracking-tight text-foreground mb-3">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground mb-3">
             {m.about_empty_title()}
           </h1>
-          <p className="max-w-md text-sm font-light text-muted-foreground leading-relaxed mb-8">
+          <p className="max-w-md text-sm md:text-base text-muted-foreground leading-7 mb-7">
             {m.about_empty_desc()}
           </p>
           {isAdmin && (
             <button
               type="button"
               onClick={onStartEdit}
-              className="inline-flex items-center gap-2 text-xs uppercase tracking-widest font-medium text-muted-foreground hover:text-foreground transition-colors border border-border rounded-full px-5 py-2.5 hover:border-foreground/40"
+              className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             >
-              <Pencil size={13} />
+              <Pencil size={14} />
               <span>{m.about_admin_create()}</span>
             </button>
           )}
@@ -37,46 +37,47 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto pb-20 px-6 md:px-0">
-      <nav className="py-12 flex items-center justify-between">
+    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
+      <nav className="flex items-center justify-between px-1">
         <button
           onClick={() => navigate({ to: "/posts" })}
-          className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] opacity-40 hover:opacity-100 transition-opacity"
+          className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
         >
-          <ArrowLeft size={12} />
+          <ArrowLeft size={14} />
           <span>{m.post_back_to_list()}</span>
         </button>
         {isAdmin && (
           <button
             type="button"
             onClick={onStartEdit}
-            className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground opacity-60 hover:opacity-100 transition-opacity"
+            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
           >
-            <Pencil size={12} />
+            <Pencil size={14} />
             <span>{m.about_edit()}</span>
           </button>
         )}
       </nav>
 
-      <article className="space-y-16">
+      <article className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-8 lg:p-10 shadow-sm space-y-8">
         {article.title ? (
-          <header className="space-y-6">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-medium leading-[1.1] tracking-tight text-foreground">
+          <header>
+            <h1 className="text-3xl md:text-5xl font-semibold leading-tight tracking-tight text-foreground">
               {article.title}
             </h1>
           </header>
         ) : null}
-
-        <main className="max-w-none min-w-0 overflow-x-clip text-foreground leading-relaxed font-serif">
+        <main className="max-w-none min-w-0 overflow-x-clip text-foreground leading-relaxed">
           <MarkdownContent
             markdown={article.markdown}
             preRenderedHtml={article.renderedHtml}
-            className="default-md"
+            className="flare-md"
           />
         </main>
       </article>
 
-      <CommentSection aboutArticleId={article.id} />
+      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-8 shadow-sm">
+        <CommentSection aboutArticleId={article.id} />
+      </section>
     </div>
   );
 }

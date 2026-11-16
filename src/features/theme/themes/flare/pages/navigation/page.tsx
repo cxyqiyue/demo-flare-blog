@@ -30,65 +30,63 @@ export function NavigationPage({
   }, []);
 
   return (
-    <div className="w-full max-w-4xl mx-auto pb-20 px-6 md:px-0">
-      {/* Header */}
-      <header className="py-12 md:py-16 space-y-6 text-center">
-        <h1 className="text-4xl md:text-5xl font-serif font-medium tracking-tight text-foreground">
-          {m.navigation_title()}
-        </h1>
-        <p className="max-w-xl mx-auto text-base md:text-lg font-light text-muted-foreground leading-relaxed">
-          {m.navigation_desc()}
-        </p>
-      </header>
-
-      {/* Search Area */}
-      <div className="border border-border/40 bg-background/50 rounded-lg p-6 md:p-8 space-y-6">
-        {/* Engine buttons (horizontal, responsive) */}
-        {state.engines.length > 0 ? (
-          <div className="flex flex-nowrap gap-2 overflow-x-auto overscroll-x-contain no-scrollbar md:flex-wrap md:justify-center">
-            {state.engines.map((engine) => (
-              <EngineButton
-                key={engine.id}
-                engine={engine}
-                selected={state.selectedEngine?.id === engine.id}
-                onSelect={() => state.selectEngine(engine.id)}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground/50 text-center">
-            {m.navigation_no_engines()}
+    <div className="w-full mx-auto pb-10 space-y-4 md:space-y-6">
+      <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm space-y-5">
+        <header className="space-y-2 text-center md:text-left">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+            {m.navigation_title()}
+          </h1>
+          <p className="max-w-2xl text-sm md:text-base text-muted-foreground leading-7">
+            {m.navigation_desc()}
           </p>
-        )}
+        </header>
 
-        {/* Search form */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            state.submitSearch();
-          }}
-          className="flex gap-2"
-        >
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={state.query}
-            onChange={(e) => state.setQuery(e.target.value)}
-            placeholder={m.navigation_search_placeholder()}
-            className="flex-1 min-w-0 h-11 bg-transparent border border-border/50 px-4 text-sm text-foreground placeholder:text-muted-foreground/30 focus:border-foreground/60 focus:outline-none transition-colors"
-          />
-          <button
-            type="submit"
-            className="h-11 px-6 bg-foreground text-background text-sm font-mono hover:bg-foreground/90 transition-colors whitespace-nowrap shrink-0"
+        <div className="space-y-4">
+          {state.engines.length > 0 ? (
+            <div className="flex flex-nowrap gap-2 overflow-x-auto overscroll-x-contain no-scrollbar md:flex-wrap">
+              {state.engines.map((engine) => (
+                <EngineButton
+                  key={engine.id}
+                  engine={engine}
+                  selected={state.selectedEngine?.id === engine.id}
+                  onSelect={() => state.selectEngine(engine.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground/60">
+              {m.navigation_no_engines()}
+            </p>
+          )}
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              state.submitSearch();
+            }}
+            className="flex flex-col sm:flex-row gap-2"
           >
-            {m.navigation_search_btn()}
-          </button>
-        </form>
-      </div>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={state.query}
+              onChange={(e) => state.setQuery(e.target.value)}
+              placeholder={m.navigation_search_placeholder()}
+              className="flex-1 min-w-0 h-11 rounded-xl border border-border/60 bg-background/70 px-4 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/30"
+            />
+            <button
+              type="submit"
+              className="h-11 px-5 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition whitespace-nowrap shrink-0"
+            >
+              {m.navigation_search_btn()}
+            </button>
+          </form>
+        </div>
+      </section>
 
       {/* Bookmarks（仅管理员可见） */}
       {showBookmarks && (
-        <section className="mt-14 space-y-6">
+        <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-5 md:p-7 shadow-sm space-y-6">
           {/* 面包屑：根目录 ↔ 文件夹 */}
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3 min-w-0">
