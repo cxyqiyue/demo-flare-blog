@@ -11,15 +11,13 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
   const { register, errors, handleSubmit, isSubmitting } = form;
 
   const inputClassName =
-    "bg-transparent border-0 border-b border-border text-foreground font-serif text-lg px-0 rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all placeholder:text-muted-foreground/30 shadow-none h-auto py-2";
-  const monoInputClassName =
-    "bg-transparent border-0 border-b border-border text-foreground font-mono text-sm px-0 rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all placeholder:text-muted-foreground/30 shadow-none h-auto py-2";
+    "h-10 rounded-lg border border-border/60 bg-background/60 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <div className="space-y-6">
-        <div className="space-y-2 group">
-          <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider group-focus-within:text-foreground transition-colors">
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2 md:col-span-1">
+          <label className="text-sm font-medium text-foreground/90">
             {m.friend_link_field_site_name()} *
           </label>
           <Input
@@ -28,88 +26,80 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
             placeholder={m.friend_link_placeholder_site_name_default()}
           />
           {errors.siteName && (
-            <span className="text-[10px] text-destructive font-mono">
-              {errors.siteName.message}
-            </span>
+            <span className="text-xs text-destructive">{errors.siteName.message}</span>
           )}
         </div>
 
-        <div className="space-y-2 group">
-          <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider group-focus-within:text-foreground transition-colors">
+        <div className="space-y-2 md:col-span-1">
+          <label className="text-sm font-medium text-foreground/90">
             {m.friend_link_field_site_url()} *
           </label>
           <Input
             {...register("siteUrl")}
-            className={monoInputClassName}
+            className={inputClassName}
             placeholder={m.friend_link_placeholder_site_url()}
           />
           {errors.siteUrl && (
-            <span className="text-[10px] text-destructive font-mono">
-              {errors.siteUrl.message}
-            </span>
-          )}
-        </div>
-
-        <div className="space-y-2 group">
-          <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider group-focus-within:text-foreground transition-colors">
-            {m.friend_link_field_description_default()}
-          </label>
-          <Input
-            {...register("description")}
-            className={inputClassName}
-            placeholder={m.friend_link_placeholder_description_default()}
-          />
-          {errors.description && (
-            <span className="text-[10px] text-destructive font-mono">
-              {errors.description.message}
-            </span>
-          )}
-        </div>
-
-        <div className="space-y-2 group">
-          <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider group-focus-within:text-foreground transition-colors">
-            {m.friend_link_field_logo_url_default()}
-          </label>
-          <Input
-            {...register("logoUrl")}
-            className={monoInputClassName}
-            placeholder={m.friend_link_placeholder_site_url()}
-          />
-          {errors.logoUrl && (
-            <span className="text-[10px] text-destructive font-mono">
-              {errors.logoUrl.message}
-            </span>
-          )}
-        </div>
-
-        <div className="space-y-2 group">
-          <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider group-focus-within:text-foreground transition-colors">
-            {m.friend_link_field_contact_email()} *
-          </label>
-          <Input
-            {...register("contactEmail")}
-            className={monoInputClassName}
-            placeholder={m.friend_link_placeholder_contact_email_default()}
-          />
-          {errors.contactEmail && (
-            <span className="text-[10px] text-destructive font-mono">
-              {errors.contactEmail.message}
-            </span>
+            <span className="text-xs text-destructive">{errors.siteUrl.message}</span>
           )}
         </div>
       </div>
 
-      <div className="flex justify-start">
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-foreground/90">
+          {m.friend_link_field_description_default()}
+        </label>
+        <Input
+          {...register("description")}
+          className={inputClassName}
+          placeholder={m.friend_link_placeholder_description_default()}
+        />
+        {errors.description && (
+          <span className="text-xs text-destructive">{errors.description.message}</span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground/90">
+            {m.friend_link_field_logo_url_default()}
+          </label>
+          <Input
+            {...register("logoUrl")}
+            className={inputClassName}
+            placeholder={m.friend_link_placeholder_site_url()}
+          />
+          {errors.logoUrl && (
+            <span className="text-xs text-destructive">{errors.logoUrl.message}</span>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground/90">
+            {m.friend_link_field_contact_email()} *
+          </label>
+          <Input
+            {...register("contactEmail")}
+            className={inputClassName}
+            placeholder={m.friend_link_placeholder_contact_email_default()}
+          />
+          {errors.contactEmail && (
+            <span className="text-xs text-destructive">{errors.contactEmail.message}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="pt-1">
         <button
           type="submit"
           disabled={isSubmitting}
-          className="font-mono text-xs text-muted-foreground hover:text-foreground hover:bg-transparent p-0 h-auto transition-colors disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground text-background px-5 py-2.5 text-sm font-medium hover:opacity-90 transition disabled:opacity-50"
         >
           {isSubmitting ? (
-            <span className="flex items-center gap-2">
-              <Loader2 size={12} className="animate-spin" />{" "}
+            <>
+              <Loader2 size={14} className="animate-spin" />
               {m.friend_link_submitting()}
-            </span>
+            </>
           ) : (
             m.friend_link_submit_button_default()
           )}

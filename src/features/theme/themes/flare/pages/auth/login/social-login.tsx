@@ -14,14 +14,14 @@ export function SocialLogin({
   showDivider = true,
 }: SocialLoginProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {showDivider && (
         <div className="relative flex items-center">
-          <div className="grow h-px bg-border/30"></div>
-          <span className="shrink-0 mx-4 text-[9px] font-mono uppercase tracking-widest text-muted-foreground/40">
+          <div className="grow h-px bg-border/40"></div>
+          <span className="shrink-0 mx-3 text-xs text-muted-foreground/70">
             {m.login_or()}
           </span>
-          <div className="grow h-px bg-border/30"></div>
+          <div className="grow h-px bg-border/40"></div>
         </div>
       )}
 
@@ -29,27 +29,26 @@ export function SocialLogin({
         type="button"
         onClick={handleGithubLogin}
         disabled={isLoading || challengePending}
-        className={`group w-full py-4 border border-border/40 flex items-center justify-center gap-3 transition-all hover:border-foreground disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`w-full h-11 rounded-lg border flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
           !showDivider
-            ? "bg-foreground text-background border-transparent hover:opacity-80"
-            : ""
+            ? "bg-foreground text-background border-transparent hover:opacity-90"
+            : "border-border/60 bg-background/60 hover:bg-muted/50 hover:border-border"
         }`}
       >
         {isLoading ? (
           <Loader2
-            size={14}
+            size={16}
             className={`${showDivider ? "text-muted-foreground" : "text-background"} animate-spin`}
           />
         ) : (
-          <GithubIcon size={14} strokeWidth={1.5} />
+          <GithubIcon size={16} strokeWidth={1.5} />
         )}
-
-        <span className="text-[10px] font-mono uppercase tracking-widest">
+        <span className="text-sm font-medium">
           {isLoading ? m.login_social_connecting() : m.login_github()}
         </span>
       </button>
       {!showDivider && (
-        <p className="text-[9px] font-mono text-muted-foreground/30 text-center">
+        <p className="text-xs text-muted-foreground/70 text-center">
           {m.login_powered_by_github()}
         </p>
       )}

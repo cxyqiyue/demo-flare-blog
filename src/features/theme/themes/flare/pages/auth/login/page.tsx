@@ -11,22 +11,22 @@ export function LoginPage({
   challengeElement,
 }: LoginPageProps) {
   return (
-    <div className="space-y-12">
-      <header className="text-center space-y-3">
-        <p className="text-[10px] font-mono uppercase tracking-[0.4em] text-muted-foreground/60">
-          [ {isEmailConfigured ? m.login_label() : m.login_auth_label()} ]
+    <div className="space-y-8">
+      <header className="text-center space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {isEmailConfigured ? m.login_label() : m.login_auth_label()}
         </p>
-        <h1 className="text-2xl font-serif font-medium tracking-tight">
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
           {isEmailConfigured ? m.login_title() : m.login_auth_title()}
         </h1>
         {!isEmailConfigured && (
-          <p className="text-[10px] font-mono text-muted-foreground/40 tracking-wider">
+          <p className="text-sm text-muted-foreground">
             {m.login_only_third_party()}
           </p>
         )}
       </header>
 
-      <div className={isEmailConfigured ? "space-y-10" : "space-y-0"}>
+      <div className={isEmailConfigured ? "space-y-6" : "space-y-0"}>
         {isEmailConfigured && (
           <LoginForm form={loginForm} isEmailConfigured={isEmailConfigured} />
         )}
@@ -43,14 +43,14 @@ export function LoginPage({
         {challengeElement}
 
         {isEmailConfigured && (
-          <div className="text-center pt-8">
-            <p className="text-[10px] font-mono text-muted-foreground/50 tracking-wider">
+          <div className="text-center pt-2">
+            <p className="text-sm text-muted-foreground">
               {m.login_no_account()}{" "}
               <Link
                 to="/register"
-                className="text-foreground hover:opacity-70 transition-opacity ml-1"
+                className="text-foreground hover:underline underline-offset-4"
               >
-                [ {m.login_register_now()} ]
+                {m.login_register_now()}
               </Link>
             </p>
           </div>

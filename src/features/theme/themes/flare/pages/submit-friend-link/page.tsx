@@ -45,11 +45,11 @@ export function SubmitFriendLinkPage(props: SubmitFriendLinkPageProps) {
               {myLinks.map((link) => (
                 <div
                   key={link.id}
-                  className="flex items-start justify-between py-4 border-b border-border/30"
+                  className="flex items-start justify-between gap-4 py-4 border-b border-border/30 last:border-b-0"
                 >
                   <div className="space-y-2 min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-serif font-medium">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm md:text-base font-medium text-foreground">
                         {link.siteName}
                       </span>
                       <FriendLinkStatusBadge status={link.status} />
@@ -58,19 +58,18 @@ export function SubmitFriendLinkPage(props: SubmitFriendLinkPageProps) {
                       href={link.siteUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                      className="text-xs md:text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 max-w-full"
                     >
-                      <ExternalLink size={10} className="shrink-0" />
+                      <ExternalLink size={12} className="shrink-0" />
                       <span className="truncate">{link.siteUrl}</span>
                     </a>
                     {link.rejectionReason && (
-                      <p className="text-[11px] text-orange-500 font-mono">
-                        {m.friend_link_rejection_reason()}:{" "}
-                        {link.rejectionReason}
+                      <p className="text-xs text-orange-500">
+                        {m.friend_link_rejection_reason()}: {link.rejectionReason}
                       </p>
                     )}
                   </div>
-                  <div className="text-[10px] font-mono text-muted-foreground shrink-0 ml-4">
+                  <div className="text-xs text-muted-foreground shrink-0">
                     <ClientOnly fallback="-">
                       {formatDate(link.createdAt).split(" ")[0]}
                     </ClientOnly>
@@ -99,7 +98,7 @@ function FriendLinkStatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`text-[9px] font-mono uppercase tracking-widest px-1.5 py-0.5 border ${styles[status] || "text-muted-foreground border-border"}`}
+      className={`text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full border ${styles[status] || "text-muted-foreground border-border"}`}
     >
       {labels[status] || status}
     </span>
