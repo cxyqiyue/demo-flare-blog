@@ -4,14 +4,14 @@ import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import type { ReactNode } from "react";
 import { MathFormula } from "@/components/content/math-formula";
 import { getStaticRenderExtensions } from "@/features/posts/editor/static-extensions";
-import { CodeBlock } from "@/features/theme/themes/default/components/content/code-block";
-import { ImageDisplay } from "@/features/theme/themes/default/components/content/image-display";
+import { CodeBlock } from "./code-block";
+import { ImageDisplay } from "./image-display";
 
 /** static-renderer 节点映射函数签名 */
 type NodeRenderer = (ctx: NodeProps) => ReactNode;
 
-/** 文章 / 动态 / 评论共用的节点映射（default 主题视觉） */
-export function buildDefaultNodeMappings(): Record<string, NodeRenderer> {
+/** Flare 文章、动态与评论共用的内容节点。 */
+export function buildFlareNodeMappings(): Record<string, NodeRenderer> {
   return {
     image: ({ node }) => {
       const attrs = node.attrs as {
@@ -122,6 +122,6 @@ export function renderReact(content: JSONContent) {
   return renderToReactElement({
     extensions: getStaticRenderExtensions(),
     content,
-    options: { nodeMapping: buildDefaultNodeMappings() },
+    options: { nodeMapping: buildFlareNodeMappings() },
   });
 }

@@ -53,18 +53,18 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
       <article className="flare-surface p-5 md:p-8 lg:p-10 space-y-8">
         {article.title ? (
           <header>
-            <h1 className="text-3xl md:text-5xl font-semibold leading-tight tracking-tight text-foreground">
+            <h1 className="break-words text-2xl sm:text-3xl lg:text-4xl font-bold leading-relaxed text-foreground">
               {article.title}
             </h1>
           </header>
         ) : null}
-        <main className="max-w-none min-w-0 overflow-x-clip text-foreground leading-relaxed">
+        <div className="max-w-none min-w-0 text-foreground leading-relaxed">
           <MarkdownContent
             markdown={article.markdown}
             preRenderedHtml={article.renderedHtml}
             className="flare-md"
           />
-        </main>
+        </div>
       </article>
 
       <section className="flare-surface p-5 md:p-8">

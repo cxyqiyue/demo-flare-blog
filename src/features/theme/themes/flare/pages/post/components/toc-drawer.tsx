@@ -1,13 +1,12 @@
 import { List, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TableOfContentsItem } from "@/features/posts/utils/toc";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import TableOfContents from "./table-of-contents";
 
 /**
- * 小屏（<xl）的文章目录：浮动按钮 + 右侧滑出抽屉。
- * 桌面（>=xl）仍使用页面右侧固定大纲，此按钮隐藏。
+ * 全尺寸文章目录抽屉，使用原生 dialog 管理焦点与 Escape 关闭。
  */
 export function TocDrawer({
   headers,
@@ -15,6 +14,14 @@ export function TocDrawer({
   headers: Array<TableOfContentsItem>;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isOpen) dialog.showModal();
+    else dialog.close();
+  }, [isOpen]);
 
   if (headers.length === 0) return null;
 
@@ -27,28 +34,20 @@ export function TocDrawer({
         onClick={() => setIsOpen(true)}
         aria-label={m.post_toc()}
         title={m.post_toc()}
-        className="fixed bottom-20 right-6 md:right-8 z-40 flex items-center justify-center w-11 h-11 rounded-full flare-surface text-muted-foreground hover:text-foreground transition-all xl:hidden active:scale-95"
+        className="fixed bottom-24 right-6 md:right-8 z-40 flex items-center justify-center w-11 h-11 rounded-full flare-surface text-muted-foreground hover:text-foreground transition-all active:scale-95"
       >
         <List className="w-5 h-5" strokeWidth={1.5} />
       </button>
 
-      {/* Backdrop */}
-      <div
-        className={cn(
-          "fixed inset-0 z-49 bg-black/20 backdrop-blur-sm transition-opacity duration-300 xl:hidden",
-          isOpen ? "opacity-100" : "opacity-0 pointer-events-none",
-        )}
-        onClick={close}
-      />
-
-      {/* Panel */}
-      <div
-        role="dialog"
-        aria-modal="true"
+      <dialog
+        ref={dialogRef}
+        onClose={close}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) close();
+        }}
         aria-label={m.post_toc()}
         className={cn(
-          "fixed inset-y-0 right-0 z-50 w-80 max-w-[85vw] bg-background border-l border-border overflow-hidden transition-transform duration-300 ease-out xl:hidden",
-          isOpen ? "translate-x-0" : "translate-x-full",
+          "fixed inset-y-0 left-auto right-0 m-0 h-dvh max-h-none w-80 max-w-[85vw] bg-background text-foreground border-l border-border p-0 overflow-hidden backdrop:bg-black/30 backdrop:backdrop-blur-sm",
         )}
       >
         <div className="flex items-center justify-between h-14 px-5 border-b border-border shrink-0">
@@ -71,7 +70,7 @@ export function TocDrawer({
             onNavigate={close}
           />
         </div>
-      </div>
+      </dialog>
     </>
   );
 }

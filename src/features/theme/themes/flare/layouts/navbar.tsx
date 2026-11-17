@@ -47,6 +47,15 @@ export function Navbar({
     setOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", dismiss);
+    return () => window.removeEventListener("keydown", dismiss);
+  }, [open]);
+
   const brand = useMemo(
     () => siteConfig.title || siteConfig.theme?.default?.navBarName || "Blog",
     [siteConfig],
@@ -100,7 +109,10 @@ export function Navbar({
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
+        <nav
+          className="hidden items-center gap-1 min-[1200px]:flex"
+          aria-label="Main"
+        >
           {navOptions.map((option) => (
             <Link
               key={option.id}
@@ -174,10 +186,11 @@ export function Navbar({
 
           <button
             type="button"
-            className={cn(iconButton, "lg:hidden")}
+            className={cn(iconButton, "min-[1200px]:hidden")}
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? m.common_close() : m.common_open_menu()}
             aria-expanded={open}
+            aria-controls="flare-navigation-menu"
           >
             {open ? <X size={18} /> : <Menu size={18} />}
           </button>
@@ -185,7 +198,10 @@ export function Navbar({
       </div>
 
       {open ? (
-        <div className="flare-nav-plate mt-2 overflow-hidden rounded-2xl border border-border/70 lg:hidden">
+        <div
+          id="flare-navigation-menu"
+          className="flare-nav-plate mt-2 max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain rounded-2xl border border-border/70 min-[1200px]:hidden"
+        >
           <nav className="flex flex-col p-2">
             {navOptions.map((option) => (
               <Link
