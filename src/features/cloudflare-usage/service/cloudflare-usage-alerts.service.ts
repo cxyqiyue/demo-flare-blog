@@ -106,7 +106,10 @@ export async function checkAndDispatchUsageAlerts(
     }
     if (raw === null) {
       try {
-        raw = await CacheService.getRaw(context, CF_USAGE_CACHE_KEYS.alertState);
+        raw = await CacheService.getRaw(
+          context,
+          CF_USAGE_CACHE_KEYS.alertState,
+        );
       } catch {
         raw = null;
       }

@@ -61,8 +61,7 @@ export function MomentCard({
 
   // 超管可管理所有动态；普通管理员仅可管理自己发布的动态
   const canManage =
-    isAdmin &&
-    (isSuperAdmin || moment.authorUserId === currentUserId);
+    isAdmin && (isSuperAdmin || moment.authorUserId === currentUserId);
 
   const isLiked = moment.isLiked;
 

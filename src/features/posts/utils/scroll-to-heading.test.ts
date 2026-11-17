@@ -19,9 +19,7 @@ function stubWindow(initialY: number) {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     setTimeout: ((...args: Parameters<typeof setTimeout>) =>
-      globalThis.setTimeout(
-        ...args,
-      )) as typeof setTimeout,
+      globalThis.setTimeout(...args)) as typeof setTimeout,
     clearTimeout: ((id: ReturnType<typeof setTimeout>) =>
       globalThis.clearTimeout(id)) as typeof clearTimeout,
   };

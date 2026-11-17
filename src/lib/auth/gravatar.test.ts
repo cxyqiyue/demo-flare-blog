@@ -59,9 +59,7 @@ describe("buildGravatarUrl", () => {
   });
 
   it("appends the default parameter", () => {
-    expect(
-      buildGravatarUrl("user@example.com", { default: "404" }),
-    ).toBe(
+    expect(buildGravatarUrl("user@example.com", { default: "404" })).toBe(
       `https://www.gravatar.com/avatar/${gravatarHash(
         "user@example.com",
       )}?d=404`,

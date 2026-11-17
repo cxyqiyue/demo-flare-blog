@@ -9,9 +9,9 @@ import {
   useProfileForm,
 } from "@/features/auth/hooks";
 import { AUTH_KEYS } from "@/features/auth/queries";
+import { useBlogSubscription } from "@/features/subscription/hooks/use-blog-subscription";
 import { authClient } from "@/lib/auth/auth.client";
 import { m } from "@/paraglide/messages";
-import { useBlogSubscription } from "@/features/subscription/hooks/use-blog-subscription";
 
 export const Route = createFileRoute("/_user/profile")({
   ssr: false,

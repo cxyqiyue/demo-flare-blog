@@ -81,9 +81,9 @@ describe("planImageProcessing", () => {
 
   it("editor compression threshold triggers below the channel limit", () => {
     const file = makeFile("image/png", 3 * MB);
-    expect(
-      planImageProcessing(file, { maxBytes: 10 * MB }).action,
-    ).toBe("skip");
+    expect(planImageProcessing(file, { maxBytes: 10 * MB }).action).toBe(
+      "skip",
+    );
     expect(
       planImageProcessing(file, {
         maxBytes: 10 * MB,

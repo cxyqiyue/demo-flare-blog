@@ -1,5 +1,11 @@
 import { relations } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import { user } from "./auth.table";
 import { createdAt, updatedAt } from "./helper";
 
@@ -57,9 +63,12 @@ export const AnnouncementDeliveriesTable = sqliteTable(
   ],
 );
 
-export const announcementsRelations = relations(AnnouncementsTable, ({ many }) => ({
-  deliveries: many(AnnouncementDeliveriesTable),
-}));
+export const announcementsRelations = relations(
+  AnnouncementsTable,
+  ({ many }) => ({
+    deliveries: many(AnnouncementDeliveriesTable),
+  }),
+);
 
 export const announcementDeliveriesRelations = relations(
   AnnouncementDeliveriesTable,

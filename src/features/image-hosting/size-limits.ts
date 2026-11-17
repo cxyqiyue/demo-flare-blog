@@ -41,7 +41,9 @@ export function resolveDiscordMaxBytes(
   if (channel?.maxFileSizeMb && channel.maxFileSizeMb > 0) {
     return mbToBytes(channel.maxFileSizeMb);
   }
-  return mbToBytes(channel?.isNitro ? DISCORD_NITRO_MAX_MB : DISCORD_DEFAULT_MAX_MB);
+  return mbToBytes(
+    channel?.isNitro ? DISCORD_NITRO_MAX_MB : DISCORD_DEFAULT_MAX_MB,
+  );
 }
 
 export function resolveHuggingFaceMaxBytes(

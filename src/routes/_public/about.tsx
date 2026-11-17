@@ -1,4 +1,8 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import theme from "@theme";
 import { useState } from "react";
@@ -7,8 +11,8 @@ import { saveAboutArticleFn } from "@/features/about/api/about.api";
 import { AboutMarkdownEditor } from "@/features/about/components/about-markdown-editor";
 import { ABOUT_KEYS, aboutArticleQuery } from "@/features/about/queries";
 import { markdownToPlainText } from "@/features/about/utils/markdown";
-import { siteConfigQuery, siteDomainQuery } from "@/features/config/queries";
 import { sessionQuery } from "@/features/auth/queries";
+import { siteConfigQuery, siteDomainQuery } from "@/features/config/queries";
 import { buildCanonicalUrl, canonicalLink } from "@/lib/seo";
 import { m } from "@/paraglide/messages";
 

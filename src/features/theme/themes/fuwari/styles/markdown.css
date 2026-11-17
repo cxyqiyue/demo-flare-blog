@@ -283,7 +283,11 @@
 
   th {
     @apply font-medium;
-    background-color: color-mix(in srgb, var(--fuwari-primary) 10%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--fuwari-primary) 10%,
+      transparent
+    );
   }
 
   /* 脚注区块（preprocessExtendedMarkdown 生成） */

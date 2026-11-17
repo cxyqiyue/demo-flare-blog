@@ -8,10 +8,11 @@ import {
   Trash2,
 } from "lucide-react";
 import { getOptimizedImageUrl } from "@/features/media/utils/media.utils";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn, formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { MediaDirectoryFile, MediaFolder } from "../types";
+import { FlareMediaList } from "./flare-media-list";
 
 interface MediaTableProps {
   media: Array<MediaDirectoryFile>;
@@ -51,7 +52,9 @@ const FolderRow = ({
         "group flex items-center gap-3 px-3 py-2.5 transition-colors",
         isFuwari
           ? "rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-input-bg) hover:border-(--fuwari-primary)/50"
-          : "border border-border/50 hover:border-foreground/50 bg-muted/5",
+          : isFlare
+            ? "rounded-xl border border-border/60 bg-card hover:border-primary/50"
+            : "border border-border/50 hover:border-foreground/50 bg-muted/5",
       )}
     >
       <button
@@ -173,7 +176,9 @@ const FileRow = ({
         "flex items-center gap-3 px-3 py-2.5 transition-colors",
         isFuwari
           ? "rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-card-bg) hover:border-(--fuwari-primary)/50"
-          : "border border-border/50 hover:border-foreground/50 bg-background",
+          : isFlare
+            ? "rounded-xl border border-border/60 bg-card hover:border-primary/50"
+            : "border border-border/50 hover:border-foreground/50 bg-background",
       )}
     >
       <button
@@ -206,7 +211,9 @@ const FileRow = ({
             "shrink-0 w-9 h-9 overflow-hidden flex items-center justify-center",
             isFuwari
               ? "rounded-lg bg-(--fuwari-btn-regular-bg)"
-              : "bg-muted/20 border border-border/30",
+              : isFlare
+                ? "rounded-lg bg-muted/30 border border-border/50"
+                : "bg-muted/20 border border-border/30",
           )}
         >
           {isImage ? (
@@ -330,6 +337,27 @@ export function MediaTable({
   onRefetch,
 }: MediaTableProps) {
   const hasContent = media.length > 0 || folders.length > 0;
+
+  if (isFlare)
+    return (
+      <FlareMediaList
+        view="table"
+        media={media}
+        folders={folders}
+        selectedIds={selectedIds}
+        onToggleSelect={onToggleSelect}
+        onPreview={onPreview}
+        onOpenFolder={onOpenFolder}
+        onRenameFolder={onRenameFolder}
+        onDeleteFolder={onDeleteFolder}
+        onRenameFile={onRenameFile}
+        onDeleteFile={onDeleteFile}
+        onLoadMore={onLoadMore}
+        hasMore={hasMore}
+        isLoadingMore={isLoadingMore}
+        onRefetch={onRefetch}
+      />
+    );
 
   if (!hasContent) {
     return (

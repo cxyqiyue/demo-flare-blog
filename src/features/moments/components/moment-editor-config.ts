@@ -1,7 +1,7 @@
 import FileHandler from "@tiptap/extension-file-handler";
+import Highlight from "@tiptap/extension-highlight";
 import Mathematics from "@tiptap/extension-mathematics";
 import Placeholder from "@tiptap/extension-placeholder";
-import Highlight from "@tiptap/extension-highlight";
 import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import TaskItem from "@tiptap/extension-task-item";
@@ -17,9 +17,9 @@ import { uploadEditorImage } from "@/features/image-hosting/utils/upload-editor-
 import { CodeBlockExtension } from "@/features/posts/editor/extensions/code-block";
 import { HtmlBlockEditorExtension } from "@/features/posts/editor/extensions/html-block-view";
 import { ImageExtension } from "@/features/posts/editor/extensions/images";
+import { TableBlockExtension } from "@/features/posts/editor/extensions/table";
 import type { ImageUploadResult } from "@/features/posts/editor/extensions/upload-image";
 import { ImageUpload } from "@/features/posts/editor/extensions/upload-image";
-import { TableBlockExtension } from "@/features/posts/editor/extensions/table";
 import { showUploadProgressToast } from "@/lib/upload-progress-toast";
 import { m } from "@/paraglide/messages";
 

@@ -1,21 +1,23 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as ConfigRepo from "@/features/config/data/config.data";
-import { DEFAULT_CONFIG } from "@/features/config/config.schema";
-import * as SubscriptionService from "@/features/subscription/service/subscription.service";
-import { BlogSubscriptionsTable } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import {
   createAdminTestContext,
   createAuthTestContext,
   seedUser,
 } from "tests/test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_CONFIG } from "@/features/config/config.schema";
+import * as ConfigRepo from "@/features/config/data/config.data";
+import * as SubscriptionService from "@/features/subscription/service/subscription.service";
+import { BlogSubscriptionsTable } from "@/lib/db/schema";
 
 const POST = { id: 101, title: "Hello World", slug: "hello-world" };
 
-function getEnqueuedRecipients(context: ReturnType<typeof createAdminTestContext>) {
-  return vi.mocked(context.env.QUEUE.send).mock.calls.map(
-    (call) => (call[0] as { data: { to: string } }).data.to,
-  );
+function getEnqueuedRecipients(
+  context: ReturnType<typeof createAdminTestContext>,
+) {
+  return vi
+    .mocked(context.env.QUEUE.send)
+    .mock.calls.map((call) => (call[0] as { data: { to: string } }).data.to);
 }
 
 describe("SubscriptionService", () => {
@@ -89,8 +91,10 @@ describe("SubscriptionService", () => {
     it("marks the post notified and never sends twice", async () => {
       await SubscriptionService.notifySubscribersOfNewPost(context, POST);
 
-      const second =
-        await SubscriptionService.notifySubscribersOfNewPost(context, POST);
+      const second = await SubscriptionService.notifySubscribersOfNewPost(
+        context,
+        POST,
+      );
 
       expect(second.data).toEqual({ recipients: 0, skipped: true });
       expect(getEnqueuedRecipients(context)).toHaveLength(1);
@@ -120,7 +124,9 @@ describe("SubscriptionService", () => {
         data: { subject: string; html: string };
       };
       expect(firstCall.data.subject).toContain("Hello World");
-      expect(firstCall.data.html).toContain("https://example.com/post/hello-world");
+      expect(firstCall.data.html).toContain(
+        "https://example.com/post/hello-world",
+      );
       expect(firstCall.data.html).toContain("Hello World");
     });
 

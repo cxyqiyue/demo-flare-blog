@@ -10,7 +10,9 @@ import {
 import { ANNOUNCEMENTS_KEYS } from "@/features/announcements/queries";
 import { m } from "@/paraglide/messages";
 
-function invalidateAnnouncements(queryClient: ReturnType<typeof useQueryClient>) {
+function invalidateAnnouncements(
+  queryClient: ReturnType<typeof useQueryClient>,
+) {
   queryClient.invalidateQueries({ queryKey: ANNOUNCEMENTS_KEYS.all });
 }
 

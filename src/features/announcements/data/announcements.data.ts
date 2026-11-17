@@ -1,11 +1,4 @@
-import {
-  and,
-  eq,
-  inArray,
-  ne,
-  notInArray,
-  sql,
-} from "drizzle-orm";
+import { and, eq, inArray, ne, notInArray, sql } from "drizzle-orm";
 import type {
   Announcement,
   AnnouncementDelivery,
@@ -56,10 +49,7 @@ export async function updateAnnouncement(
   return row;
 }
 
-export async function deleteAnnouncement(
-  db: DB,
-  id: number,
-): Promise<boolean> {
+export async function deleteAnnouncement(db: DB, id: number): Promise<boolean> {
   const found = await findAnnouncementById(db, id);
   if (!found) return false;
   await db.delete(AnnouncementsTable).where(eq(AnnouncementsTable.id, id));
@@ -86,7 +76,9 @@ export async function listAnnouncements(
   return await db
     .select()
     .from(AnnouncementsTable)
-    .orderBy(sql`${AnnouncementsTable.createdAt} desc, ${AnnouncementsTable.id} desc`)
+    .orderBy(
+      sql`${AnnouncementsTable.createdAt} desc, ${AnnouncementsTable.id} desc`,
+    )
     .limit(Math.min(limit, 100))
     .offset(offset);
 }
@@ -180,9 +172,7 @@ export async function listAnnouncementDeliveries(
     limit?: number;
     status?: AnnouncementDeliveryStatus;
   } = {},
-): Promise<
-  Array<AnnouncementDelivery & { userName: string | null }>
-> {
+): Promise<Array<AnnouncementDelivery & { userName: string | null }>> {
   const { offset = 0, limit = 20, status } = options;
   const conditions = [
     eq(AnnouncementDeliveriesTable.announcementId, announcementId),
@@ -197,17 +187,17 @@ export async function listAnnouncementDeliveries(
       userName: user.name,
     })
     .from(AnnouncementDeliveriesTable)
-    .leftJoin(
-      user,
-      eq(AnnouncementDeliveriesTable.userId, user.id),
-    )
+    .leftJoin(user, eq(AnnouncementDeliveriesTable.userId, user.id))
     .where(and(...conditions))
     .orderBy(sql`${AnnouncementDeliveriesTable.id} desc`)
     .limit(Math.min(limit, 100))
     .offset(offset);
 }
 
-export async function countAnnouncementDeliveries(db: DB, announcementId: number) {
+export async function countAnnouncementDeliveries(
+  db: DB,
+  announcementId: number,
+) {
   const rows = await db
     .select({
       status: AnnouncementDeliveriesTable.status,

@@ -73,7 +73,11 @@ export function Navbar({
   );
 
   return (
-    <header className="flare-nav" data-on-banner={onBanner ? "true" : "false"}>
+    <header
+      className="flare-nav mx-auto transition-[max-width] duration-300 motion-reduce:transition-none"
+      style={{ maxWidth: scrolled ? "68rem" : "100%" }}
+      data-on-banner={onBanner ? "true" : "false"}
+    >
       <div
         className={cn(
           "flex w-full items-center justify-between gap-2 px-2 py-1.5 transition-all duration-300 md:px-3",

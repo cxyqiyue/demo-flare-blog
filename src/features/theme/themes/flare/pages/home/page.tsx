@@ -19,10 +19,10 @@ export function HomePage({
     useViewCounts(allSlugs);
 
   return (
-    <div className="flare-enter flex w-full flex-col gap-4">
+    <div className="flare-enter flare-home-posts flex w-full flex-col gap-4">
       {posts.length > 0 ? (
         <section className="flex flex-col gap-4">
-          <div className="flare-surface flex items-center justify-between gap-3 px-5 py-4 md:px-6">
+          <div className="sr-only">
             <h2 className="text-base font-semibold tracking-tight text-foreground md:text-lg">
               {m.home_latest_posts()}
             </h2>
@@ -31,7 +31,7 @@ export function HomePage({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 min-[1200px]:grid-cols-2">
+          <div className="flare-home-post-grid">
             {posts.map((post) => (
               <PostItem
                 key={post.id}

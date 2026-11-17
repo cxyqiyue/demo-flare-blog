@@ -73,7 +73,11 @@ export const setDefaultSearchEngineFn = createServerFn({ method: "POST" })
   .inputValidator(withOwnerId(setDefaultSearchEngineInputSchema))
   .handler(
     async ({ data, context }) =>
-      await NavigationService.setDefaultSearchEngine(context, data, data.ownerId),
+      await NavigationService.setDefaultSearchEngine(
+        context,
+        data,
+        data.ownerId,
+      ),
   );
 
 export const createFolderFn = createServerFn({ method: "POST" })

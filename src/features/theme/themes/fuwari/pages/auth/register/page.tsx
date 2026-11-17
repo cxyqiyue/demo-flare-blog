@@ -104,7 +104,10 @@ export function RegisterPage({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-4">
                 {/* Password Field */}
                 <div className="flex flex-col gap-1.5 focus-within:text-(--fuwari-primary) transition-colors text-(--fuwari-text-50)">
-                  <label htmlFor="reg-password" className="text-sm font-bold ml-1">
+                  <label
+                    htmlFor="reg-password"
+                    className="text-sm font-bold ml-1"
+                  >
                     {m.register_password()}
                   </label>
                   <input
@@ -196,9 +199,7 @@ export function RegisterPage({
 
               <button
                 type="submit"
-                disabled={
-                  isSubmitting || registerStep === "SUCCESS"
-                }
+                disabled={isSubmitting || registerStep === "SUCCESS"}
                 className="mt-4 w-full py-3.5 rounded-xl fuwari-btn-primary font-bold text-sm tracking-wide active:scale-[0.98] transition-all gap-2"
               >
                 {registerStep === "VERIFYING" || isSubmitting ? (

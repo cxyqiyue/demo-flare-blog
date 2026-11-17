@@ -1,4 +1,3 @@
-import * as AnnouncementRepo from "@/features/announcements/data/announcements.data";
 import type {
   AnnouncementDetail,
   CreateAnnouncementInput,
@@ -8,6 +7,7 @@ import type {
   SendAnnouncementInput,
   UpdateAnnouncementInput,
 } from "@/features/announcements/announcements.schema";
+import * as AnnouncementRepo from "@/features/announcements/data/announcements.data";
 import * as EmailService from "@/features/email/service/email.service";
 import { err, ok } from "@/lib/errors";
 
@@ -48,11 +48,15 @@ export async function updateAnnouncement(
     return err({ reason: "ANNOUNCEMENT_ALREADY_SENT" });
   }
 
-  const updated = await AnnouncementRepo.updateAnnouncement(context.db, data.id, {
-    title: data.title,
-    subject: data.subject,
-    bodyHtml: data.bodyHtml,
-  });
+  const updated = await AnnouncementRepo.updateAnnouncement(
+    context.db,
+    data.id,
+    {
+      title: data.title,
+      subject: data.subject,
+      bodyHtml: data.bodyHtml,
+    },
+  );
   if (!updated) {
     return err({ reason: "ANNOUNCEMENT_NOT_FOUND" });
   }
@@ -63,7 +67,10 @@ export async function deleteAnnouncement(
   context: DbContext,
   data: { id: number },
 ) {
-  const deleted = await AnnouncementRepo.deleteAnnouncement(context.db, data.id);
+  const deleted = await AnnouncementRepo.deleteAnnouncement(
+    context.db,
+    data.id,
+  );
   if (!deleted) {
     return err({ reason: "ANNOUNCEMENT_NOT_FOUND" });
   }

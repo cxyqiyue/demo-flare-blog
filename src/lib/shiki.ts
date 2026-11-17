@@ -50,21 +50,28 @@ export async function getHighlighter() {
       import("shiki/engine/javascript"),
       import("shiki/themes/vitesse-dark.mjs"),
       import("shiki/themes/vitesse-light.mjs"),
-    ]).then(([{ createHighlighterCore }, { createJavaScriptRegexEngine }, viteDark, viteLight]) => {
-      // Customizing the background color of vitesse-dark to remove the greenish tint
-      // using Zinc-900 (#18181b) to match the dark mode UI
-      const customViteDark = {
-        ...viteDark.default,
-        bg: "#18181b",
-        name: "vitesse-dark", // Ensure name matches
-      };
+    ]).then(
+      ([
+        { createHighlighterCore },
+        { createJavaScriptRegexEngine },
+        viteDark,
+        viteLight,
+      ]) => {
+        // Customizing the background color of vitesse-dark to remove the greenish tint
+        // using Zinc-900 (#18181b) to match the dark mode UI
+        const customViteDark = {
+          ...viteDark.default,
+          bg: "#18181b",
+          name: "vitesse-dark", // Ensure name matches
+        };
 
-      return createHighlighterCore({
-        themes: [customViteDark, viteLight.default],
-        langs: [],
-        engine: createJavaScriptRegexEngine(),
-      });
-    });
+        return createHighlighterCore({
+          themes: [customViteDark, viteLight.default],
+          langs: [],
+          engine: createJavaScriptRegexEngine(),
+        });
+      },
+    );
   }
   return highlighterPromise;
 }

@@ -13,12 +13,17 @@ export interface MomentsPageProps {
   /** 点赞 / 取消点赞，返回是否成功 */
   onToggleLike: (momentId: number) => Promise<boolean>;
   /** 发布动态（管理员），返回是否成功 */
-  onCreateMoment: (content: JSONContent, images: string[]) => Promise<boolean>;
+  onCreateMoment: (
+    content: JSONContent,
+    images: string[],
+    videoUrl?: string | null,
+  ) => Promise<boolean>;
   /** 编辑动态（管理员），返回是否成功 */
   onUpdateMoment: (
     id: number,
     content: JSONContent,
     images: string[],
+    videoUrl?: string | null,
   ) => Promise<boolean>;
   /** 删除动态（管理员），返回是否成功 */
   onDeleteMoment: (id: number) => Promise<boolean>;

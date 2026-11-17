@@ -9,9 +9,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { createEmptyPostFn } from "@/features/posts/api/posts.admin.api";
 import { POSTS_KEYS } from "@/features/posts/queries";
+import {
+  FlareAdminHeader,
+  FlareAdminPanel,
+} from "@/features/theme/themes/flare/components/admin/page";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ADMIN_ITEMS_PER_PAGE } from "@/lib/constants";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import { BatchActionBar, PostRow, PostsToolbar } from "./components";
 import { useBatchUpdatePostsStatus, useDeletePost, usePosts } from "./hooks";
@@ -171,6 +175,143 @@ export function PostManager({
     });
     setBatchTarget(null);
   };
+
+  if (isFlare) {
+    return (
+      <div className="space-y-5 pb-12">
+        <FlareAdminHeader
+          title={m.admin_posts_title()}
+          actions={
+            <Button
+              onClick={() => createMutation.mutate()}
+              disabled={createMutation.isPending}
+            >
+              <Plus size={16} />
+              {createMutation.isPending
+                ? m.admin_posts_creating()
+                : m.admin_posts_create()}
+            </Button>
+          }
+        />
+        <PostsToolbar
+          searchTerm={searchInput}
+          onSearchChange={setSearchInput}
+          status={status}
+          onStatusChange={onStatusChange}
+          sortDir={sortDir}
+          sortBy={sortBy}
+          onSortUpdate={onSortUpdate}
+          onResetFilters={() => {
+            setSearchInput("");
+            onResetFilters();
+          }}
+        />
+        <FlareAdminPanel>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={toggleSelectAll}
+              />
+              {m.admin_posts_select_post()}
+            </label>
+            <span className="text-sm tabular-nums text-muted-foreground">
+              {totalCount}
+            </span>
+          </div>
+          {selectedIds.size ? (
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-muted/50 p-3">
+              <span className="mr-auto text-sm tabular-nums">
+                {selectedIds.size}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBatchTarget("published")}
+                disabled={batchMutation.isPending}
+              >
+                {m.admin_posts_filter_published()}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBatchTarget("draft")}
+                disabled={batchMutation.isPending}
+              >
+                {m.admin_posts_filter_draft()}
+              </Button>
+            </div>
+          ) : null}
+          {error ? (
+            <ErrorPage />
+          ) : isPending ? (
+            <div className="space-y-3" aria-busy="true">
+              {Array.from({ length: 3 }, (_, i) => (
+                <div
+                  key={i}
+                  className="h-32 animate-pulse rounded-xl bg-muted/50"
+                />
+              ))}
+            </div>
+          ) : posts.length ? (
+            <div className="space-y-3">
+              {posts.map((post) => (
+                <PostRow
+                  key={post.id}
+                  post={post}
+                  selected={selectedIds.has(post.id)}
+                  onSelectChange={(checked) => toggleSelected(post.id, checked)}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              {m.admin_posts_no_match()}
+            </p>
+          )}
+        </FlareAdminPanel>
+        <AdminPagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={totalCount}
+          itemsPerPage={ADMIN_ITEMS_PER_PAGE}
+          currentPageItemCount={posts.length}
+          onPageChange={onPageChange}
+        />
+        <ConfirmationModal
+          isOpen={Boolean(postToDelete)}
+          onClose={() => setPostToDelete(null)}
+          onConfirm={confirmDelete}
+          title={m.admin_posts_action_delete_post()}
+          message={postToDelete?.title ?? ""}
+          isDanger
+          isLoading={deleteMutation.isPending}
+        />
+        <ConfirmationModal
+          isOpen={batchTarget !== null}
+          onClose={() => !batchMutation.isPending && setBatchTarget(null)}
+          onConfirm={confirmBatch}
+          title={
+            batchTarget === "published"
+              ? m.admin_posts_batch_publish_confirm_title()
+              : m.admin_posts_batch_draft_confirm_title()
+          }
+          message={
+            batchTarget === "published"
+              ? m.admin_posts_batch_publish_confirm_desc({
+                  count: String(selectedIds.size),
+                })
+              : m.admin_posts_batch_draft_confirm_desc({
+                  count: String(selectedIds.size),
+                })
+          }
+          confirmLabel={m.admin_posts_batch_confirm_btn()}
+          isLoading={batchMutation.isPending}
+        />
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (

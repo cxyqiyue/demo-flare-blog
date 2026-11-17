@@ -4,7 +4,15 @@ import type {
   Editor as TiptapEditor,
 } from "@tiptap/react";
 import { EditorContent, useEditor } from "@tiptap/react";
-import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { uploadEditorImage } from "@/features/image-hosting/utils/upload-editor-image";
 import { handleServerError } from "@/lib/errors/error-handler";
@@ -206,7 +214,11 @@ export const Editor = memo(function Editor({
   const handleFilesUploaded = useCallback(
     (results: Array<{ url: string; width?: number; height?: number }>) => {
       for (const item of results) {
-        editor?.chain().focus().setImage({ src: item.url, ...item }).run();
+        editor
+          ?.chain()
+          .focus()
+          .setImage({ src: item.url, ...item })
+          .run();
       }
       setModalOpen(null);
     },

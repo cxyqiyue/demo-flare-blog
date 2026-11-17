@@ -19,6 +19,7 @@ export const MomentsTable = sqliteTable(
     id,
     content: text({ mode: "json" }).$type<JSONContent | null>(),
     images: text({ mode: "json" }).$type<string[]>().notNull().default([]),
+    videoUrl: text("video_url"),
     authorUserId: text("author_user_id").references(() => user.id, {
       onDelete: "set null",
     }),

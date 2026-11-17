@@ -1,37 +1,66 @@
-import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import theme from "@theme";
 import type { JSONContent } from "@tiptap/react";
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { sessionQuery } from "@/features/auth/queries";
 import {
   createMomentFn,
   deleteMomentFn,
   updateMomentFn,
 } from "@/features/moments/api/moments.admin.api";
-import { toggleMomentLikeFn } from "@/features/moments/api/moments.user.api";
+import {
+  getMomentPageFn,
+  toggleMomentLikeFn,
+} from "@/features/moments/api/moments.user.api";
+import type { MomentsPageResponse } from "@/features/moments/moments.schema";
 import {
   MOMENTS_KEYS,
   publicMomentsPageQuery,
 } from "@/features/moments/queries";
-import type { MomentsPageResponse } from "@/features/moments/moments.schema";
-import { sessionQuery } from "@/features/auth/queries";
 import { m } from "@/paraglide/messages";
 
 const MOMENTS_PER_PAGE = 5;
 
 const searchSchema = z.object({
+  momentId: z.coerce.number().int().positive().optional().catch(undefined),
   page: z.coerce.number().int().min(1).optional().catch(undefined),
   highlightCommentId: z.coerce.number().optional(),
-  rootId: z.number().optional(),
+  rootId: z.coerce.number().int().positive().optional().catch(undefined),
 });
 
 export const Route = createFileRoute("/_public/moments")({
   validateSearch: searchSchema,
-  loaderDeps: ({ search }) => ({ page: search.page ?? 1 }),
+  loaderDeps: ({ search }) => ({
+    page: search.page ?? 1,
+    momentId: search.momentId,
+    highlightCommentId: search.highlightCommentId,
+    rootId: search.rootId,
+  }),
   component: MomentsPage,
   loader: async ({ context, deps }) => {
+    if (deps.momentId) {
+      const targetPage = await getMomentPageFn({ data: { id: deps.momentId } });
+      if (targetPage && targetPage !== deps.page)
+        throw redirect({
+          to: "/moments",
+          search: {
+            momentId: deps.momentId,
+            page: targetPage,
+            highlightCommentId: deps.highlightCommentId,
+            rootId: deps.rootId,
+          },
+          hash: deps.highlightCommentId
+            ? `comment-${deps.highlightCommentId}`
+            : `moment-${deps.momentId}`,
+        });
+    }
     const offset = (deps.page - 1) * MOMENTS_PER_PAGE;
     await context.queryClient.ensureQueryData(
       publicMomentsPageQuery({ offset, limit: MOMENTS_PER_PAGE }),
@@ -82,20 +111,17 @@ function MomentsPage() {
           return false;
         }
         const { liked, likeCount } = result.data;
-        queryClient.setQueryData<MomentsPageResponse>(
-          pageQueryKey,
-          (old) => {
-            if (!old) return old;
-            return {
-              ...old,
-              items: old.items.map((item) =>
-                item.id === momentId
-                  ? { ...item, isLiked: liked, likeCount }
-                  : item,
-              ),
-            };
-          },
-        );
+        queryClient.setQueryData<MomentsPageResponse>(pageQueryKey, (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.map((item) =>
+              item.id === momentId
+                ? { ...item, isLiked: liked, likeCount }
+                : item,
+            ),
+          };
+        });
         return true;
       } catch {
         toast.error(m.moments_like_error());
@@ -106,12 +132,17 @@ function MomentsPage() {
   );
 
   const onCreateMoment = useCallback(
-    async (content: JSONContent, images: string[]): Promise<boolean> => {
+    async (
+      content: JSONContent,
+      images: string[],
+      videoUrl?: string | null,
+    ): Promise<boolean> => {
       try {
         const result = await createMomentFn({
           data: {
             content,
             images,
+            videoUrl,
           },
         });
         if (result.error) {
@@ -141,17 +172,14 @@ function MomentsPage() {
           toast.error(m.moments_delete_error());
           return false;
         }
-        queryClient.setQueryData<MomentsPageResponse>(
-          pageQueryKey,
-          (old) => {
-            if (!old) return old;
-            return {
-              ...old,
-              items: old.items.filter((item) => item.id !== id),
-              total: old.total - 1,
-            };
-          },
-        );
+        queryClient.setQueryData<MomentsPageResponse>(pageQueryKey, (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            items: old.items.filter((item) => item.id !== id),
+            total: old.total - 1,
+          };
+        });
         toast.success(m.moments_delete_success());
         return true;
       } catch {
@@ -167,10 +195,11 @@ function MomentsPage() {
       id: number,
       content: JSONContent,
       images: string[],
+      videoUrl?: string | null,
     ): Promise<boolean> => {
       try {
         const result = await updateMomentFn({
-          data: { id, content, images },
+          data: { id, content, images, videoUrl },
         });
         if (result.error) {
           toast.error(m.moments_update_error());

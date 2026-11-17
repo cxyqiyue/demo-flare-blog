@@ -27,7 +27,9 @@ export function buildFuwariNodeMappings(): Record<string, NodeRenderer> {
       const width =
         typeof attrs.width === "string" ? parseInt(attrs.width) : attrs.width;
       const height =
-        typeof attrs.height === "string" ? parseInt(attrs.height) : attrs.height;
+        typeof attrs.height === "string"
+          ? parseInt(attrs.height)
+          : attrs.height;
 
       return (
         <ImageDisplay

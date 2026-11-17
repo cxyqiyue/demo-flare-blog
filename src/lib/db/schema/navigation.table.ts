@@ -27,7 +27,9 @@ export const SearchEnginesTable = sqliteTable(
       .notNull()
       .default(false),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
+    ownerId: text("owner_id").references(() => user.id, {
+      onDelete: "cascade",
+    }),
     createdAt,
     updatedAt,
   },
@@ -49,11 +51,16 @@ export const BookmarkFoldersTable = sqliteTable(
     id,
     name: text("name").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
-    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
+    ownerId: text("owner_id").references(() => user.id, {
+      onDelete: "cascade",
+    }),
     createdAt,
     updatedAt,
   },
-  (table) => [index("bookmark_folders_owner_idx").on(table.ownerId), index("bookmark_folders_order_idx").on(table.sortOrder)],
+  (table) => [
+    index("bookmark_folders_owner_idx").on(table.ownerId),
+    index("bookmark_folders_order_idx").on(table.sortOrder),
+  ],
 );
 
 /**
@@ -70,7 +77,9 @@ export const BookmarksTable = sqliteTable(
     name: text("name").notNull(),
     url: text("url").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
-    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
+    ownerId: text("owner_id").references(() => user.id, {
+      onDelete: "cascade",
+    }),
     createdAt,
     updatedAt,
   },

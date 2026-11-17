@@ -26,7 +26,10 @@ import type {
   MediaFolder,
 } from "@/features/media/components/media-library/types";
 import { MEDIA_KEYS } from "@/features/media/queries";
-import { formatCopyLink, type CopyLinkFormat } from "@/features/media/utils/media.utils";
+import {
+  type CopyLinkFormat,
+  formatCopyLink,
+} from "@/features/media/utils/media.utils";
 import { useDelayUnmount } from "@/hooks/use-delay-unmount";
 import { isFuwari } from "@/lib/theme-mode";
 import { cn, formatBytes } from "@/lib/utils";

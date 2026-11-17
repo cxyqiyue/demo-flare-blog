@@ -1,3 +1,4 @@
+import { guardedKvPut } from "@/features/cache/kv-write-guard";
 import {
   ALTCHA_CHALLENGE_TTL_SECONDS,
   createAltchaChallenge,
@@ -5,7 +6,6 @@ import {
   parseAltchaSolution,
   verifyAltchaSolution,
 } from "@/features/challenge/pow/altcha";
-import { guardedKvPut } from "@/features/cache/kv-write-guard";
 import type {
   ChallengeProvider,
   ChallengeScope,

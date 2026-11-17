@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { scrollToHeadingWithRetry } from "@/features/posts/utils/scroll-to-heading";
 import type { TableOfContentsItem } from "@/features/posts/utils/toc";
 import { useActiveTOC } from "@/hooks/use-active-toc";
-import { scrollToHeadingWithRetry } from "@/features/posts/utils/scroll-to-heading";
 import { cn } from "@/lib/utils";
 
 export default function TableOfContents({

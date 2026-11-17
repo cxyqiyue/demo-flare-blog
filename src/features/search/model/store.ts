@@ -30,7 +30,9 @@ async function compressRaw(raw: RawData): Promise<Uint8Array> {
   return new Uint8Array(compressed);
 }
 
-async function decompressToRaw(buffer: ArrayBuffer | Uint8Array): Promise<RawData> {
+async function decompressToRaw(
+  buffer: ArrayBuffer | Uint8Array,
+): Promise<RawData> {
   const bytes = new Uint8Array(buffer);
   // Attempt gzip first; if it fails, treat as plain JSON string (back-compat)
   const tryGzip = async () => {

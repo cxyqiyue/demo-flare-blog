@@ -1,16 +1,16 @@
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import * as AiService from "@/features/ai/ai.service";
 import * as CacheService from "@/features/cache/cache.service";
 import * as EdgeCacheService from "@/features/cache/edge-cache.service";
+import {
+  ADMIN_LIST_VISIBILITIES,
+  PUBLIC_LIST_VISIBILITIES,
+} from "@/features/posts/data/helper";
 import { syncPostMedia } from "@/features/posts/data/post-media.data";
 import * as PostRevisionRepo from "@/features/posts/data/post-revisions.data";
 import * as PostRepo from "@/features/posts/data/posts.data";
 import { POST_RENDER_VERSION } from "@/features/posts/render-version";
-import {
-  decryptPassword,
-  encryptPassword,
-  hashPassword,
-} from "@/features/posts/utils/post-secret";
 import type {
   AdjacentPostsResponse,
   BatchUpdatePostsStatusInput,
@@ -38,6 +38,11 @@ import {
   PostWithTocSchema,
   PublicPostsPageResponseSchema,
 } from "@/features/posts/schema/posts.schema";
+import {
+  hasPostUnlock,
+  UNAUTHENTICATED_VIEWER,
+  type ViewerAccess,
+} from "@/features/posts/services/post-access.service";
 import { logPostAutoSnapshot } from "@/features/posts/services/post-auto-snapshot.logging";
 import * as PostAutoSnapshotService from "@/features/posts/services/post-auto-snapshot.service";
 import {
@@ -45,21 +50,18 @@ import {
   highlightCodeBlocks,
   slugify,
 } from "@/features/posts/utils/content";
-import {
-  ADMIN_LIST_VISIBILITIES,
-  PUBLIC_LIST_VISIBILITIES,
-} from "@/features/posts/data/helper";
 import { isFuturePublishDate } from "@/features/posts/utils/date";
+import {
+  decryptPassword,
+  encryptPassword,
+  hashPassword,
+} from "@/features/posts/utils/post-secret";
 import { calculatePostHash } from "@/features/posts/utils/sync";
 import { generateTableOfContents } from "@/features/posts/utils/toc";
 import * as SearchService from "@/features/search/service/search.service";
-import {
-  hasPostUnlock,
-  UNAUTHENTICATED_VIEWER,
-  type ViewerAccess,
-} from "@/features/posts/services/post-access.service";
-import { err, ok } from "@/lib/errors";
 import { isSuperAdmin } from "@/lib/auth/access";
+import { CategoriesTable, PostCategoriesTable } from "@/lib/db/schema";
+import { err, ok } from "@/lib/errors";
 import { purgePostCDNCache } from "@/lib/invalidate";
 
 function stripPublicContentJson<T extends { publicContentJson?: unknown }>(
@@ -87,16 +89,13 @@ function isFullAccessOwner(context: OwnerContext) {
 
 /** 普通管理员是否可访问某篇由其 authorId 归属的文章（无会话或超级管理员视为全量）。 */
 function isPostOwner(context: OwnerContext, authorId: string | null) {
-  return (
-    isFullAccessOwner(context) || context.session!.user.id === authorId
-  );
+  return isFullAccessOwner(context) || context.session!.user.id === authorId;
 }
 
 /** 列表/计数过滤：普通管理员只看自己的文章，其余全量。 */
 function authorScopeFilter(context: OwnerContext) {
   return isFullAccessOwner(context) ? undefined : context.session!.user.id;
 }
-
 
 /**
  * 发布/下架等状态切换时的同步快速失效：
@@ -120,11 +119,14 @@ async function fastInvalidatePublicCaches(
 }
 
 export async function getPostsCursor(
-  context: DbContext &
-    { executionCtx: ExecutionContext; viewer?: ViewerAccess },
+  context: DbContext & {
+    executionCtx: ExecutionContext;
+    viewer?: ViewerAccess;
+  },
   data: GetPostsCursorInput,
 ) {
   const tagName = normalizePostTagName(data.tagName);
+  const categoryName = normalizePostTagName(data.categoryName);
   const isAdminViewer = context.viewer?.isAdmin === true;
   const allowedVisibilities = isAdminViewer
     ? ADMIN_LIST_VISIBILITIES
@@ -135,6 +137,7 @@ export async function getPostsCursor(
       limit: data.limit,
       publicOnly: true,
       tagName,
+      categoryName,
       excludePinned: data.excludePinned,
       allowedVisibilities,
     });
@@ -152,6 +155,7 @@ export async function getPostsCursor(
         data.cursor ?? 0,
         tagName,
         isAdminViewer ? "admin" : "public",
+        categoryName,
       ),
     PostListResponseSchema,
     fetcher,
@@ -162,8 +166,10 @@ export async function getPostsCursor(
 }
 
 export async function findPostBySlug(
-  context: DbContext &
-    { executionCtx: ExecutionContext; viewer?: ViewerAccess },
+  context: DbContext & {
+    executionCtx: ExecutionContext;
+    viewer?: ViewerAccess;
+  },
   data: FindPostBySlugInput,
 ) {
   const viewer = context.viewer ?? UNAUTHENTICATED_VIEWER;
@@ -270,7 +276,9 @@ export async function findPostBySlug(
 
 /** 受限文章的公开壳：仅元信息，无正文；gate 指示前台渲染门禁形态 */
 function buildGatedShell(
-  gateMeta: NonNullable<Awaited<ReturnType<typeof PostRepo.findPostGateBySlug>>>,
+  gateMeta: NonNullable<
+    Awaited<ReturnType<typeof PostRepo.findPostGateBySlug>>
+  >,
 ) {
   return {
     id: gateMeta.id,
@@ -293,7 +301,10 @@ function buildGatedShell(
     tags: [],
     contentJson: null,
     toc: null,
-    gate: gateMeta.visibility === "password" ? ("password" as const) : ("private" as const),
+    gate:
+      gateMeta.visibility === "password"
+        ? ("password" as const)
+        : ("private" as const),
   };
 }
 
@@ -338,8 +349,10 @@ export async function getRelatedPosts(
 }
 
 export async function getPublicPostsPage(
-  context: DbContext &
-    { executionCtx: ExecutionContext; viewer?: ViewerAccess },
+  context: DbContext & {
+    executionCtx: ExecutionContext;
+    viewer?: ViewerAccess;
+  },
   data: GetPublicPostsPageInput,
 ): Promise<PublicPostsPageResponse> {
   const offset = data.offset ?? 0;
@@ -567,6 +580,7 @@ export async function findPostById(
       contentJson: post.contentJson,
       summary: post.summary,
       tagIds: post.tags.map((t) => t.id),
+      categoryId: post.categoryId,
       slug: post.slug,
       publishedAt: post.publishedAt,
       pinnedAt: post.pinnedAt,
@@ -578,8 +592,11 @@ export async function findPostById(
   // 管理端读取：解密访问密码明文供编辑器展示；绝不进公开响应。
   const password = await decryptPassword(post.passwordCipher, context.env);
   const publicPost = stripPublicContentJson(post);
-  const { passwordHash: _passwordHash, passwordCipher: _passwordCipher, ...rest } =
-    publicPost;
+  const {
+    passwordHash: _passwordHash,
+    passwordCipher: _passwordCipher,
+    ...rest
+  } = publicPost;
   void _passwordHash;
   void _passwordCipher;
 
@@ -613,6 +630,16 @@ export async function updatePost(
   // 服务端在此派生安全字段后落库，确保明文/杂凑的生成只在服务端完成。
   const persisted = { ...data.data };
   delete persisted.password;
+  delete persisted.categoryId;
+
+  if (data.data.categoryId != null) {
+    const category = await context.db
+      .select({ id: CategoriesTable.id })
+      .from(CategoriesTable)
+      .where(eq(CategoriesTable.id, data.data.categoryId))
+      .get();
+    if (!category) return err({ reason: "CATEGORY_NOT_FOUND" });
+  }
 
   // 作者归属：普通管理员不得修改作者（强制保留原作者）；
   // 超级管理员可修改 authorId（若编辑器提交）。
@@ -637,9 +664,23 @@ export async function updatePost(
     // 留空 = 保持现有密码（改密码才派生新字段）。
   }
 
-  const updatedPost = await PostRepo.updatePost(context.db, data.id, persisted);
+  const updatedPost = Object.values(persisted).some(
+    (value) => value !== undefined,
+  )
+    ? await PostRepo.updatePost(context.db, data.id, persisted)
+    : existingPost;
   if (!updatedPost) {
     return err({ reason: "POST_NOT_FOUND" });
+  }
+
+  if (data.data.categoryId !== undefined) {
+    await context.db
+      .insert(PostCategoriesTable)
+      .values({ postId: data.id, categoryId: data.data.categoryId })
+      .onConflictDoUpdate({
+        target: PostCategoriesTable.postId,
+        set: { categoryId: data.data.categoryId },
+      });
   }
 
   // Pin changes affect the home page list ordering, so invalidate the cached
@@ -666,7 +707,13 @@ export async function updatePost(
     }),
   );
 
-  return ok(updatedPost);
+  return ok({
+    ...updatedPost,
+    categoryId:
+      data.data.categoryId === undefined
+        ? existingPost.categoryId
+        : data.data.categoryId,
+  });
 }
 
 /**
@@ -707,6 +754,10 @@ export async function batchUpdatePostsStatus(
   for (const post of affected) {
     let publishedAtISO: string | undefined;
     if (isPublished) {
+      await context.db
+        .update(PostCategoriesTable)
+        .set({ publicCategoryId: sql`${PostCategoriesTable.categoryId}` })
+        .where(eq(PostCategoriesTable.postId, post.id));
       const latest = await PostRepo.findPostById(context.db, post.id);
       publishedAtISO = (latest?.publishedAt ?? new Date()).toISOString();
     }
@@ -823,11 +874,16 @@ export async function startPostProcessWorkflow(
   if (data.status === "published") {
     const post = await PostRepo.findPostById(context.db, data.id);
     if (post) {
+      await context.db
+        .update(PostCategoriesTable)
+        .set({ publicCategoryId: sql`${PostCategoriesTable.categoryId}` })
+        .where(eq(PostCategoriesTable.postId, data.id));
       const snapshotHash = await calculatePostHash({
         title: post.title,
         contentJson: post.contentJson,
         summary: post.summary,
         tagIds: post.tags.map((tag) => tag.id),
+        categoryId: post.categoryId,
         slug: post.slug,
         publishedAt: post.publishedAt,
         pinnedAt: post.pinnedAt,
@@ -846,6 +902,7 @@ export async function startPostProcessWorkflow(
           publishedAt: post.publishedAt ? post.publishedAt.toISOString() : null,
           readTimeInMinutes: post.readTimeInMinutes,
           contentJson: post.contentJson,
+          ...(post.categoryId != null ? { categoryId: post.categoryId } : {}),
           tagIds: [...new Set(post.tags.map((tag) => tag.id))].sort(
             (a, b) => a - b,
           ),

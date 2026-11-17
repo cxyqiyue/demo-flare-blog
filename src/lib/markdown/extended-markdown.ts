@@ -45,10 +45,7 @@ export function guardCodeRegions(markdown: string): CodeGuard {
 }
 
 function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 /**
@@ -133,8 +130,7 @@ export function processFootnotes(
     );
   });
 
-  const section =
-    `\n\n<div class="footnotes">\n<hr>\n<ol>\n${items.join("\n")}\n</ol>\n</div>\n`;
+  const section = `\n\n<div class="footnotes">\n<hr>\n<ol>\n${items.join("\n")}\n</ol>\n</div>\n`;
 
   return body.replace(/\n*$/, "\n") + section;
 }

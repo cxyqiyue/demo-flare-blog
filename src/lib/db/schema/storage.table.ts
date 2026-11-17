@@ -49,9 +49,7 @@ export const UsedChallengesTable = sqliteTable(
 export const KvRateLimitStateTable = sqliteTable(
   "kv_rate_limit_state",
   {
-    id: integer("id")
-      .primaryKey({ autoIncrement: true })
-      .notNull(),
+    id: integer("id").primaryKey({ autoIncrement: true }).notNull(),
     dailyWriteCount: integer("daily_write_count").notNull().default(0),
     lastWriteDate: text("last_write_date").notNull(),
     autoDisabled: integer("auto_disabled", { mode: "boolean" })

@@ -156,6 +156,7 @@ export async function createMoment(
   const moment = await MomentRepo.insertMoment(context.db, {
     content,
     images: data.images,
+    videoUrl: data.videoUrl ?? null,
     authorUserId: context.session.user.id,
   });
 
@@ -185,6 +186,7 @@ export async function updateMoment(
   const updated = await MomentRepo.updateMoment(context.db, data.id, {
     content,
     images: data.images,
+    ...(data.videoUrl !== undefined ? { videoUrl: data.videoUrl } : {}),
   });
 
   await invalidateCache(context);

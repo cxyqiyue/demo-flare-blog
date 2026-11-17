@@ -5,6 +5,7 @@ export async function calculatePostHash(post: {
   contentJson: JSONContent | null;
   summary: string | null;
   tagIds: Array<number>;
+  categoryId?: number | null;
   slug: string;
   publishedAt: Date | string | null;
   pinnedAt?: Date | string | null;
@@ -18,6 +19,7 @@ export async function calculatePostHash(post: {
     contentJson: post.contentJson,
     summary: post.summary,
     tagIds: [...post.tagIds].sort(),
+    ...(post.categoryId != null ? { categoryId: post.categoryId } : {}),
     slug: post.slug,
     publishedAt: toISOOrNull(post.publishedAt),
     pinnedAt: toISOOrNull(post.pinnedAt ?? null),

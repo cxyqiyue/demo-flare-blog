@@ -134,10 +134,7 @@ export function LoginPage({
                 </div>
 
                 <div className="flex flex-col gap-1.5 focus-within:text-(--fuwari-primary) transition-colors text-(--fuwari-text-50)">
-                  <label
-                    htmlFor="login-otp"
-                    className="text-sm font-bold ml-1"
-                  >
+                  <label htmlFor="login-otp" className="text-sm font-bold ml-1">
                     {m.otp_code_label()}
                   </label>
                   <input
@@ -160,9 +157,7 @@ export function LoginPage({
 
                 <button
                   type="submit"
-                  disabled={
-                    isSubmitting || loginStep === "SUCCESS"
-                  }
+                  disabled={isSubmitting || loginStep === "SUCCESS"}
                   className="mt-2 w-full py-3.5 rounded-xl fuwari-btn-primary font-bold text-sm tracking-wide active:scale-[0.98] transition-all gap-2"
                 >
                   {loginStep === "VERIFYING" || isSubmitting ? (

@@ -1,9 +1,9 @@
 import type { FieldErrors, UseFormRegister } from "react-hook-form";
+import type { FriendLinksConfig } from "@/features/config/config.schema";
 import type {
   FriendLinkWithUser,
   SubmitFriendLinkInput,
 } from "@/features/friend-links/friend-links.schema";
-import type { FriendLinksConfig } from "@/features/config/config.schema";
 
 export interface FriendLinksPageProps {
   links: Array<Omit<FriendLinkWithUser, "createdAt" | "updatedAt">>;

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, or } from "drizzle-orm";
 import {
   CommentsTable,
   MomentLikesTable,
@@ -20,6 +20,24 @@ export async function findMomentById(db: DB, id: number) {
   });
 }
 
+export async function findMomentPage(db: DB, id: number, limit: number) {
+  const moment = await findMomentById(db, id);
+  if (!moment) return null;
+  const [row] = await db
+    .select({ total: count() })
+    .from(MomentsTable)
+    .where(
+      or(
+        gt(MomentsTable.createdAt, moment.createdAt),
+        and(
+          eq(MomentsTable.createdAt, moment.createdAt),
+          gt(MomentsTable.id, id),
+        ),
+      ),
+    );
+  return Math.floor(row.total / limit) + 1;
+}
+
 export async function getAllMoments(
   db: DB,
   options: { offset?: number; limit?: number | null } = {},
@@ -30,6 +48,7 @@ export async function getAllMoments(
       id: MomentsTable.id,
       content: MomentsTable.content,
       images: MomentsTable.images,
+      videoUrl: MomentsTable.videoUrl,
       authorUserId: MomentsTable.authorUserId,
       createdAt: MomentsTable.createdAt,
       updatedAt: MomentsTable.updatedAt,
@@ -41,7 +60,7 @@ export async function getAllMoments(
     })
     .from(MomentsTable)
     .leftJoin(user, eq(MomentsTable.authorUserId, user.id))
-    .orderBy(desc(MomentsTable.createdAt))
+    .orderBy(desc(MomentsTable.createdAt), desc(MomentsTable.id))
     .limit(limit == null ? 1000 : Math.min(limit, 100))
     .offset(offset);
 }
@@ -49,7 +68,11 @@ export async function getAllMoments(
 export async function updateMoment(
   db: DB,
   id: number,
-  data: { content: typeof MomentsTable.$inferInsert.content; images: string[] },
+  data: {
+    content: typeof MomentsTable.$inferInsert.content;
+    images: string[];
+    videoUrl?: string | null;
+  },
 ) {
   const [moment] = await db
     .update(MomentsTable)

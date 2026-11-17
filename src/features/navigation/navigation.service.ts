@@ -1,11 +1,11 @@
+import { eq } from "drizzle-orm";
 import * as CacheService from "@/features/cache/cache.service";
 import * as EdgeCacheService from "@/features/cache/edge-cache.service";
 import { isSuperAdmin } from "@/lib/auth/access";
-import { eq } from "drizzle-orm";
-import { err, ok } from "@/lib/errors";
-import { serverEnv } from "@/lib/env/server.env";
-import { purgeCDNCache } from "@/lib/invalidate";
 import { user } from "@/lib/db/schema";
+import { serverEnv } from "@/lib/env/server.env";
+import { err, ok } from "@/lib/errors";
+import { purgeCDNCache } from "@/lib/invalidate";
 import * as NavigationRepo from "./data/navigation.data";
 import type {
   CreateBookmarkInput,
@@ -49,7 +49,9 @@ function resolveOwnerScope(
 async function resolvePublicOwnerScope(
   context: DbContext,
 ): Promise<{ ownerId: string | null; includeLegacy: boolean }> {
-  const superAdminEmail = serverEnv(context.env).ADMIN_EMAIL.trim().toLowerCase();
+  const superAdminEmail = serverEnv(context.env)
+    .ADMIN_EMAIL.trim()
+    .toLowerCase();
   const superAdminUser = await context.db.query.user.findFirst({
     where: eq(user.email, superAdminEmail),
   });
@@ -65,13 +67,23 @@ async function resolvePublicOwnerScope(
  * 所有普通管理员（role=admin）以及超级管理员（ADMIN_EMAIL 持有者）。
  */
 export async function getNavigationOwnerAccounts(context: AdminContext) {
-  const superAdminEmail = serverEnv(context.env).ADMIN_EMAIL.trim().toLowerCase();
+  const superAdminEmail = serverEnv(context.env)
+    .ADMIN_EMAIL.trim()
+    .toLowerCase();
   const admins = await context.db
-    .select({ id: user.id, name: user.name, email: user.email, role: user.role })
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    })
     .from(user)
     .where(eq(user.role, "admin"));
 
-  const accounts = new Map<string, { id: string; name: string; email: string }>();
+  const accounts = new Map<
+    string,
+    { id: string; name: string; email: string }
+  >();
   for (const a of admins) {
     accounts.set(a.id, { id: a.id, name: a.name, email: a.email });
   }
@@ -122,7 +134,9 @@ export async function seedAdminNavigationOnFirstLogin(
     if (existing.length > 0) return;
 
     // 复制来源：超管当前生效的全部引擎（自身 owner + 遗留 NULL）
-    const superAdminEmail = serverEnv(context.env).ADMIN_EMAIL.trim().toLowerCase();
+    const superAdminEmail = serverEnv(context.env)
+      .ADMIN_EMAIL.trim()
+      .toLowerCase();
     const superAdminUser = await context.db.query.user.findFirst({
       where: eq(user.email, superAdminEmail),
     });
@@ -173,9 +187,7 @@ export async function getNavigationPublicData(
     viewerOwner?: { ownerId: string | null; includeLegacy: boolean };
   },
 ) {
-  const owner =
-    context.viewerOwner ??
-    (await resolvePublicOwnerScope(context));
+  const owner = context.viewerOwner ?? (await resolvePublicOwnerScope(context));
 
   const ownerKey = owner.ownerId ?? "legacy";
 
@@ -347,7 +359,11 @@ export async function updateSearchEngine(
   } else if (isDefault === false && existing.isDefault) {
     // 取消默认：如果仍需要默认引擎，则回退到第一条
     const others = (
-      await NavigationRepo.getAllSearchEngines(context.db, ownerId, includeLegacy)
+      await NavigationRepo.getAllSearchEngines(
+        context.db,
+        ownerId,
+        includeLegacy,
+      )
     ).filter((engine) => engine.id !== id);
     if (others.length === 0) {
       // 仅此一条引擎，不能取消默认
@@ -388,7 +404,12 @@ export async function deleteSearchEngine(
     return err({ reason: "NOT_FOUND" });
   }
 
-  await NavigationRepo.deleteSearchEngine(context.db, data.id, ownerId, includeLegacy);
+  await NavigationRepo.deleteSearchEngine(
+    context.db,
+    data.id,
+    ownerId,
+    includeLegacy,
+  );
 
   // 删除默认引擎后，将剩余第一条设为默认
   const remaining = await NavigationRepo.getAllSearchEngines(
@@ -434,7 +455,11 @@ export async function setDefaultSearchEngine(
     return err({ reason: "NOT_FOUND" });
   }
 
-  await NavigationRepo.clearDefaultSearchEngine(context.db, ownerId, includeLegacy);
+  await NavigationRepo.clearDefaultSearchEngine(
+    context.db,
+    ownerId,
+    includeLegacy,
+  );
   const updated = await NavigationRepo.updateSearchEngine(
     context.db,
     data.id,
@@ -520,7 +545,12 @@ export async function deleteFolder(
     return err({ reason: "NOT_FOUND" });
   }
 
-  await NavigationRepo.deleteFolder(context.db, data.id, ownerId, includeLegacy);
+  await NavigationRepo.deleteFolder(
+    context.db,
+    data.id,
+    ownerId,
+    includeLegacy,
+  );
   invalidateCache(context);
   return ok({ success: true });
 }
@@ -619,7 +649,12 @@ export async function deleteBookmark(
     return err({ reason: "NOT_FOUND" });
   }
 
-  await NavigationRepo.deleteBookmark(context.db, data.id, ownerId, includeLegacy);
+  await NavigationRepo.deleteBookmark(
+    context.db,
+    data.id,
+    ownerId,
+    includeLegacy,
+  );
   invalidateCache(context);
   return ok({ success: true });
 }
@@ -666,7 +701,12 @@ export async function importBookmarks(
     );
     await Promise.all(
       existingFolders.map((folder) =>
-        NavigationRepo.deleteFolder(context.db, folder.id, ownerId, includeLegacy),
+        NavigationRepo.deleteFolder(
+          context.db,
+          folder.id,
+          ownerId,
+          includeLegacy,
+        ),
       ),
     );
   }

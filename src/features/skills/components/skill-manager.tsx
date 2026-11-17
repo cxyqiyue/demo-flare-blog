@@ -16,7 +16,11 @@ import {
   SKILLS_KEYS,
   skillsAdminQueryOptions,
 } from "@/features/skills/queries";
-import { isFuwari } from "@/lib/theme-mode";
+import {
+  FlareAdminHeader,
+  FlareAdminPanel,
+} from "@/features/theme/themes/flare/components/admin/page";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 export function SkillManager() {
@@ -130,6 +134,214 @@ export function SkillManager() {
 
   const activeCount = skills.filter((skill) => skill.postCount > 0).length;
   const emptyCount = skills.filter((skill) => skill.postCount === 0).length;
+
+  if (isFlare) {
+    return (
+      <div className="space-y-5">
+        <FlareAdminHeader
+          title={m.skills_manager_title()}
+          actions={
+            <Button onClick={() => setIsCreating(true)}>
+              <Wand2 size={16} />
+              {m.skills_manager_new_skill()}
+            </Button>
+          }
+        />
+        <FlareAdminPanel>
+          <label className="block text-sm">
+            {m.skills_manager_search_placeholder()}
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="mt-2"
+            />
+          </label>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {skills.length} / {activeCount} / {emptyCount}
+          </p>
+        </FlareAdminPanel>
+        {isCreating ? (
+          <FlareAdminPanel>
+            <form
+              className="space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (newName.trim())
+                  createSkillMutation.mutate({
+                    name: newName.trim(),
+                    description: newDescription,
+                  });
+              }}
+            >
+              <Input
+                aria-label={m.skills_manager_col_name()}
+                value={newName}
+                onChange={(event) => setNewName(event.target.value)}
+                placeholder={m.skills_manager_col_name()}
+              />
+              <Textarea
+                aria-label={m.skills_manager_col_desc()}
+                value={newDescription}
+                onChange={(event) => setNewDescription(event.target.value)}
+                placeholder={m.skills_manager_col_desc()}
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  disabled={createSkillMutation.isPending || !newName.trim()}
+                >
+                  {m.skills_manager_new_skill()}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setIsCreating(false);
+                    setNewName("");
+                    setNewDescription("");
+                  }}
+                >
+                  {m.skills_manager_inline_cancel()}
+                </Button>
+              </div>
+            </form>
+          </FlareAdminPanel>
+        ) : null}
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div
+            className="grid content-start gap-3 sm:grid-cols-2"
+            aria-busy={isLoading}
+          >
+            {filteredSkills.map((skill) => (
+              <FlareAdminPanel key={skill.id}>
+                {skillToEdit?.id === skill.id ? (
+                  <form
+                    className="space-y-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (skillToEdit.name.trim())
+                        updateSkillMutation.mutate({
+                          ...skillToEdit,
+                          name: skillToEdit.name.trim(),
+                        });
+                    }}
+                  >
+                    <Input
+                      aria-label={m.skills_manager_col_name()}
+                      value={skillToEdit.name}
+                      onChange={(event) =>
+                        setSkillToEdit({
+                          ...skillToEdit,
+                          name: event.target.value,
+                        })
+                      }
+                    />
+                    <Textarea
+                      aria-label={m.skills_manager_col_desc()}
+                      value={skillToEdit.description}
+                      onChange={(event) =>
+                        setSkillToEdit({
+                          ...skillToEdit,
+                          description: event.target.value,
+                        })
+                      }
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="submit"
+                        disabled={updateSkillMutation.isPending}
+                      >
+                        {m.skills_manager_edit()}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setSkillToEdit(null)}
+                      >
+                        {m.skills_manager_inline_cancel()}
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <h2 className="break-words text-base font-semibold">
+                      {skill.name}
+                    </h2>
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
+                      {skill.description}
+                    </p>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      {m.skills_manager_col_posts()} · {skill.postCount}
+                    </p>
+                    <div className="mt-4 flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setSkillToEdit({
+                            id: skill.id,
+                            name: skill.name,
+                            description: skill.description ?? "",
+                          })
+                        }
+                      >
+                        {m.skills_manager_edit()}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() =>
+                          setSkillToDelete({ id: skill.id, name: skill.name })
+                        }
+                      >
+                        {m.skills_manager_delete()}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </FlareAdminPanel>
+            ))}
+          </div>
+          <FlareAdminPanel className="self-start">
+            <h2 className="font-semibold">{m.skills_manager_import_title()}</h2>
+            <p className="my-3 text-sm leading-6 text-muted-foreground">
+              {m.skills_manager_import_desc()}
+            </p>
+            <Textarea
+              aria-label={m.skills_manager_import_title()}
+              value={markdown}
+              onChange={(event) => setMarkdown(event.target.value)}
+              rows={8}
+              placeholder={m.skills_manager_import_placeholder()}
+            />
+            <Button
+              className="mt-3"
+              onClick={() => importSkillMutation.mutate(markdown)}
+              disabled={!markdown.trim() || importSkillMutation.isPending}
+            >
+              {m.skills_manager_import_btn()}
+            </Button>
+          </FlareAdminPanel>
+        </div>
+        <ConfirmationModal
+          isOpen={Boolean(skillToDelete)}
+          onClose={() => setSkillToDelete(null)}
+          onConfirm={() =>
+            skillToDelete && deleteSkillMutation.mutate(skillToDelete.id)
+          }
+          title={m.skills_manager_delete_title()}
+          message={
+            skillToDelete
+              ? m.skills_manager_delete_desc({ skillName: skillToDelete.name })
+              : ""
+          }
+          isLoading={deleteSkillMutation.isPending}
+          isDanger
+        />
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (

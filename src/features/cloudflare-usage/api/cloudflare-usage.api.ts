@@ -1,16 +1,19 @@
 import { createServerFn } from "@tanstack/react-start";
-import { sendEmail } from "@/features/email/service/email.service";
+import { TestCloudflareConnectionInputSchema } from "@/features/cloudflare-usage/cloudflare-usage.schema";
 import { testCloudflareConnection } from "@/features/cloudflare-usage/lib/cf-graphql";
 import {
-  getCloudflareUsage,
   getCloudflareAlertStatus,
+  getCloudflareUsage,
   refreshCloudflareUsage,
 } from "@/features/cloudflare-usage/service/cloudflare-usage.service";
-import { TestCloudflareConnectionInputSchema } from "@/features/cloudflare-usage/cloudflare-usage.schema";
-import { sendWebhookRequest } from "@/features/webhook/api/webhook.consumer";
-import { createNotificationExampleEvent, getWebhookExampleLabel } from "@/features/webhook/webhook.helpers";
-import { NOTIFICATION_EVENT } from "@/features/notification/notification.schema";
 import * as ConfigService from "@/features/config/service/config.service";
+import { sendEmail } from "@/features/email/service/email.service";
+import { NOTIFICATION_EVENT } from "@/features/notification/notification.schema";
+import { sendWebhookRequest } from "@/features/webhook/api/webhook.consumer";
+import {
+  createNotificationExampleEvent,
+  getWebhookExampleLabel,
+} from "@/features/webhook/webhook.helpers";
 import { serverEnv } from "@/lib/env/server.env";
 import { adminMiddleware, superAdminMiddleware } from "@/lib/middlewares";
 
@@ -63,7 +66,10 @@ export const testCloudflareAlertEmailFn = createServerFn({
     });
     if (result.error) {
       const err = result.error;
-      return { success: false, error: "message" in err ? err.message : err.reason };
+      return {
+        success: false,
+        error: "message" in err ? err.message : err.reason,
+      };
     }
     return { success: true };
   });
@@ -80,7 +86,12 @@ export const testCloudflareAlertWebhookFn = createServerFn({
       return { success: false, error: "未配置启用的 Webhook 端点" };
     }
     const locale = serverEnv(context.env).LOCALE;
-    const results: Array<{ id: string; name: string; success: boolean; error?: string }> = [];
+    const results: Array<{
+      id: string;
+      name: string;
+      success: boolean;
+      error?: string;
+    }> = [];
     for (const endpoint of enabled) {
       try {
         const resolvedEventType =

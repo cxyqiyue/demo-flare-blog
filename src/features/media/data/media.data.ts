@@ -24,8 +24,15 @@ export async function updateMediaName(db: DB, key: string, name: string) {
     .where(eq(MediaTable.key, key));
 }
 
-export async function getMediaByKey(db: DB, key: string): Promise<Media | undefined> {
-  const [row] = await db.select().from(MediaTable).where(eq(MediaTable.key, key)).limit(1);
+export async function getMediaByKey(
+  db: DB,
+  key: string,
+): Promise<Media | undefined> {
+  const [row] = await db
+    .select()
+    .from(MediaTable)
+    .where(eq(MediaTable.key, key))
+    .limit(1);
   return row;
 }
 
@@ -66,9 +73,7 @@ export async function getMediaByKeyPrefix(
   return await db
     .select()
     .from(MediaTable)
-    .where(
-      sql`substr(${MediaTable.key}, 1, ${prefix.length}) = ${prefix}`,
-    );
+    .where(sql`substr(${MediaTable.key}, 1, ${prefix.length}) = ${prefix}`);
 }
 
 const DEFAULT_PAGE_SIZE = 20;

@@ -1,9 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { toast } from "sonner";
-import {
-  getCommentImageHostingConfigFn,
-} from "@/features/image-hosting/api/image-hosting.api";
+import { getCommentImageHostingConfigFn } from "@/features/image-hosting/api/image-hosting.api";
 import { IMGBB_UPLOAD_PAGE } from "@/features/image-hosting/image-hosting.schema";
 import { extractImageUrlFromMarkdown } from "@/features/image-hosting/utils/extract-image-url";
 import { handleServerError } from "@/lib/errors/error-handler";

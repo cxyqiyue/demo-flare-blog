@@ -38,6 +38,7 @@ interface MomentEditorProps {
   isSubmitting?: boolean;
   onCancel?: () => void;
   initialContent?: JSONContent | null;
+  allowEmpty?: boolean;
 }
 
 interface ToolbarButtonProps {
@@ -73,6 +74,7 @@ export function MomentEditor({
   isSubmitting,
   onCancel,
   initialContent,
+  allowEmpty = false,
 }: MomentEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<TiptapEditor | null>(null);
@@ -186,12 +188,15 @@ export function MomentEditor({
   const handleSubmit = async () => {
     if (converting || isSubmitting) return;
     if (mode === "markdown") {
-      if (!markdownText.trim()) return;
+      if (!markdownText.trim()) {
+        if (allowEmpty) await onSubmit({ type: "doc", content: [] });
+        return;
+      }
       const ok = await markdownMode.submitInMarkdown(onSubmit);
       if (ok) editor?.commands.clearContent();
       return;
     }
-    if (!editor || isEmpty || isSubmitting) return;
+    if (!editor || (isEmpty && !allowEmpty) || isSubmitting) return;
     const ok = await onSubmit(editor.getJSON());
     if (ok) {
       editor.commands.clearContent();
@@ -383,7 +388,8 @@ export function MomentEditor({
           <Button
             size="sm"
             disabled={
-              (mode === "rich" ? isEmpty : !markdownText.trim()) ||
+              (!allowEmpty &&
+                (mode === "rich" ? isEmpty : !markdownText.trim())) ||
               isSubmitting ||
               converting
             }

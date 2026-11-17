@@ -10,7 +10,10 @@ import { requestSendOtp } from "@/features/email-otp/client/otp.client";
 import { OTP_RESEND_COOLDOWN_SECONDS } from "@/features/email-otp/otp-constants";
 import { usePreviousLocation } from "@/hooks/use-previous-location";
 import { authClient } from "@/lib/auth/auth.client";
-import { getOtpSendErrorMessage, getRegisterAuthErrorMessage } from "@/lib/auth/auth-errors";
+import {
+  getOtpSendErrorMessage,
+  getRegisterAuthErrorMessage,
+} from "@/lib/auth/auth-errors";
 import type { Messages } from "@/lib/i18n";
 import { m } from "@/paraglide/messages";
 

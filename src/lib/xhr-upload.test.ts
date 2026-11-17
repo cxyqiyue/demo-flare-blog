@@ -17,11 +17,13 @@ class FakeXMLHttpRequest {
   timeout = 0;
   responseType = "";
   upload: {
-    onprogress: ((event: {
-      lengthComputable: boolean;
-      loaded: number;
-      total: number;
-    }) => void) | null;
+    onprogress:
+      | ((event: {
+          lengthComputable: boolean;
+          loaded: number;
+          total: number;
+        }) => void)
+      | null;
   } = { onprogress: null };
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;

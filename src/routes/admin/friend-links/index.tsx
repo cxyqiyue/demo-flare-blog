@@ -7,9 +7,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddFriendLinkModal } from "@/features/friend-links/components/admin/add-friend-link-modal";
 import { FriendLinkModerationTable } from "@/features/friend-links/components/admin/friend-link-moderation-table";
 import { FriendLinksConfigEditor } from "@/features/friend-links/components/admin/friend-links-config-editor";
+import {
+  FlareAdminHeader,
+  FlareAdminPanel,
+} from "@/features/theme/themes/flare/components/admin/page";
 import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
 import type { FriendLinkStatus } from "@/lib/db/schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 const searchSchema = z.object({
@@ -155,6 +159,61 @@ function FriendLinksAdminPage() {
     { key: "rejected", label: m.friend_links_tab_rejected() },
     { key: "ALL", label: m.friend_links_tab_all() },
   ];
+
+  if (isFlare) {
+    return (
+      <div className="space-y-5 pb-12">
+        <FlareAdminHeader
+          title={m.friend_links_admin_title()}
+          description={m.friend_links_admin_tag()}
+          actions={
+            <Button onClick={() => setShowAddModal(true)}>
+              <Plus size={16} />
+              {m.friend_links_add_btn()}
+            </Button>
+          }
+        />
+        <FlareAdminPanel>
+          <nav
+            aria-label={m.friend_links_th_status()}
+            className="flex flex-wrap gap-2"
+          >
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                aria-pressed={status === tab.key}
+                onClick={() => handleStatusChange(tab.key)}
+                className={`rounded-xl px-3 py-2 text-sm ${status === tab.key ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </FlareAdminPanel>
+        <FlareAdminPanel>
+          <FriendLinkModerationTable
+            key={`${status}:${page}`}
+            status={currentStatus}
+            page={page}
+          />
+        </FlareAdminPanel>
+        <FlareAdminPanel>
+          <h2 className="text-lg font-semibold">
+            {m.friend_links_site_info_section_title()}
+          </h2>
+          <p className="mb-5 mt-2 text-sm text-muted-foreground">
+            {m.friend_links_site_info_section_tag()}
+          </p>
+          <FriendLinksConfigEditor />
+        </FlareAdminPanel>
+        <AddFriendLinkModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+        />
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (

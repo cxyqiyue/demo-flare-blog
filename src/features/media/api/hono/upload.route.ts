@@ -1,9 +1,9 @@
-import { Hono } from "hono";
 import type { Context } from "hono";
-import { isAdmin, isSuperAdmin } from "@/lib/auth/access";
+import { Hono } from "hono";
 import { resolveR2NativeMaxBytes } from "@/features/image-hosting/size-limits";
 import { parseUploadMediaInput } from "@/features/media/media.schema";
 import * as MediaService from "@/features/media/service/media.service";
+import { isAdmin, isSuperAdmin } from "@/lib/auth/access";
 import { getAuth } from "@/lib/auth/auth.server";
 import { getDb } from "@/lib/db";
 import { m } from "@/paraglide/messages";
@@ -105,7 +105,10 @@ mediaUploadRoute.post("/upload", async (c) => {
         "message" in result.error && result.error.message
           ? result.error.message
           : result.error.reason;
-      return jsonResponse({ ok: false, message: detail }, errorStatus(result.error.reason));
+      return jsonResponse(
+        { ok: false, message: detail },
+        errorStatus(result.error.reason),
+      );
     }
 
     return jsonResponse({ ok: true, data: result.data }, 200);

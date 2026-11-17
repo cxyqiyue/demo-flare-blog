@@ -3,11 +3,11 @@ import {
   CF_FREE_TIER_LIMITS,
   CF_SERVICE_ORDER,
   CF_USAGE_CACHE_KEYS,
-  thresholdForService,
-  CfUsageDataSchema,
   type CfService,
-  type CfUsageData,
   type CfServiceUsage,
+  type CfUsageData,
+  CfUsageDataSchema,
+  thresholdForService,
 } from "@/features/cloudflare-usage/cloudflare-usage.schema";
 import { fetchAllUsage } from "@/features/cloudflare-usage/lib/cf-graphql";
 import * as ConfigService from "@/features/config/service/config.service";
@@ -63,12 +63,8 @@ export function mapUsageToServices(
   const services = results.map(toServiceUsage);
   services.sort(
     (a, b) =>
-      CF_SERVICE_ORDER.indexOf(
-        a.service as (typeof CF_SERVICE_ORDER)[number],
-      ) -
-      CF_SERVICE_ORDER.indexOf(
-        b.service as (typeof CF_SERVICE_ORDER)[number],
-      ),
+      CF_SERVICE_ORDER.indexOf(a.service as (typeof CF_SERVICE_ORDER)[number]) -
+      CF_SERVICE_ORDER.indexOf(b.service as (typeof CF_SERVICE_ORDER)[number]),
   );
   return services;
 }
@@ -93,12 +89,7 @@ export async function getCloudflareUsage(
     const apiToken = ca!.apiToken!;
     const env = context.env;
     // 与 Cloudflare 告警邮件同口径：今日用量 vs 每日免费额度
-    const results = await fetchAllUsage(
-      env,
-      accountId,
-      apiToken,
-      "today",
-    );
+    const results = await fetchAllUsage(env, accountId, apiToken, "today");
 
     return {
       services: mapUsageToServices(results),

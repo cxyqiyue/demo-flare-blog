@@ -10,11 +10,11 @@ import {
   verifyAndConsumeOtp,
 } from "@/features/email-otp/service/otp.service";
 import { seedAdminNavigationOnFirstLogin } from "@/features/navigation/navigation.service";
-import { checkEmailAuthRateLimit } from "@/lib/auth/email-rate-limit";
 import { createAuthConfig } from "@/lib/auth/auth.config";
+import { checkEmailAuthRateLimit } from "@/lib/auth/email-rate-limit";
 import { resolveGravatarEmailAvatar } from "@/lib/auth/gravatar";
-import * as authSchema from "@/lib/db/schema/auth.table";
 import { user } from "@/lib/db/schema";
+import * as authSchema from "@/lib/db/schema/auth.table";
 import { serverEnv } from "@/lib/env/server.env";
 import type { Locale } from "@/lib/i18n";
 import { m } from "@/paraglide/messages";
@@ -116,7 +116,11 @@ export function getAuth({ db, env }: { db: DB; env: Env }) {
         .from(user)
         .where(eq(user.id, sessionUserId))
         .limit(1);
-      if (!found || found.email.trim() === "" || (found.image ?? "").trim() !== "") {
+      if (
+        !found ||
+        found.email.trim() === "" ||
+        (found.image ?? "").trim() !== ""
+      ) {
         return;
       }
       const avatar = await resolveGravatarEmailAvatar(found.email, {
@@ -195,11 +199,7 @@ export function getAuth({ db, env }: { db: DB; env: Env }) {
           }
 
           // 注册：保留原有「每邮箱注册尝试」限流
-          const allowed = await checkEmailRateLimit(
-            env,
-            "email-signup",
-            email,
-          );
+          const allowed = await checkEmailRateLimit(env, "email-signup", email);
           if (!allowed) {
             throw APIError.from("BAD_REQUEST", {
               code: "RATE_LIMITED",
@@ -277,9 +277,7 @@ export function getAuth({ db, env }: { db: DB; env: Env }) {
               (context?.context as Record<string, unknown> | undefined)
                 ?.otpVerified === true;
 
-            const next = otpVerified
-              ? { ...user, emailVerified: true }
-              : user;
+            const next = otpVerified ? { ...user, emailVerified: true } : user;
 
             if (isAdminEmail(user.email)) {
               return { data: { ...next, role: "admin" } };
@@ -293,10 +291,7 @@ export function getAuth({ db, env }: { db: DB; env: Env }) {
           after: async (session) => {
             await syncSuperAdminRole(session.userId);
             // 首次登录时初始化管理员账号的导航搜索引擎（从超管复制，幂等）
-            await seedAdminNavigationOnFirstLogin(
-              { db, env },
-              session.userId,
-            );
+            await seedAdminNavigationOnFirstLogin({ db, env }, session.userId);
             // 邮箱账号登录后自动回填 Gravatar 头像（image 为空时才写库）
             await syncEmailAvatarOnLogin(session.userId);
           },

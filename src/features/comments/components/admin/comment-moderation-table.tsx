@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ExpandableContent } from "@/features/theme/themes/default/components/comments/view/expandable-content";
 import type { CommentStatus } from "@/lib/db/schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { useAdminComments } from "../../hooks/use-comments";
@@ -166,6 +166,149 @@ export const CommentModerationTable = ({
   const allSelected =
     response.items.length > 0 && selectedIds.size === response.items.length;
   const totalPages = Math.ceil(response.total / PAGE_SIZE);
+
+  if (isFlare) {
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/40 p-3">
+          <label className="mr-auto flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={handleSelectAll}
+              aria-label={m.comments_batch_selected({
+                count: response.items.length,
+              })}
+            />
+            {m.comments_batch_selected({ count: selectedIds.size })}
+          </label>
+          {selectedIds.size ? (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleBatchApprove}
+              >
+                {m.comments_batch_approve()}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleBatchTrash}
+              >
+                {m.comments_batch_trash()}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                {m.comments_batch_cancel()}
+              </Button>
+            </>
+          ) : null}
+        </div>
+        {response.items.map((comment) => (
+          <article
+            key={comment.id}
+            className="min-w-0 space-y-4 rounded-xl border border-border/60 p-4 sm:p-5"
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <Checkbox
+                checked={selectedIds.has(comment.id)}
+                onCheckedChange={() => handleSelectOne(comment.id)}
+                aria-label={`${m.comments_th_content()} #${comment.id}`}
+              />
+              <span className="mr-auto text-sm font-semibold">
+                {comment.user?.name || m.comments_item_unknown_user()}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {formatDate(comment.createdAt)}
+              </span>
+              <StatusBadge status={comment.status} />
+            </div>
+            <ExpandableContent
+              content={comment.content as JSONContent}
+              maxLines={5}
+              className="break-words text-sm leading-7"
+            />
+            <div className="flex flex-col gap-2 rounded-lg bg-muted/30 p-3 text-xs text-muted-foreground">
+              {comment.post ? (
+                <Link
+                  to="/post/$slug"
+                  params={{ slug: comment.post.slug || "" }}
+                  hash={`comment-${comment.id}`}
+                  search={{
+                    highlightCommentId: comment.id,
+                    rootId: comment.rootId || undefined,
+                  }}
+                >
+                  {m.comments_jump_to()} {comment.post.title}
+                </Link>
+              ) : null}
+              {comment.moment ? (
+                <Link
+                  to="/moments"
+                  hash={`comment-${comment.id}`}
+                  search={{
+                    momentId: comment.moment.id,
+                    highlightCommentId: comment.id,
+                    rootId: comment.rootId || undefined,
+                  }}
+                >
+                  {m.comments_jump_to()}{" "}
+                  {m.comments_moment_notification_title()}
+                </Link>
+              ) : null}
+              {comment.about ? (
+                <Link
+                  to="/about"
+                  hash={`comment-${comment.id}`}
+                  search={{
+                    highlightCommentId: comment.id,
+                    rootId: comment.rootId || undefined,
+                  }}
+                >
+                  {m.comments_jump_to()} {m.comments_about_target()}
+                </Link>
+              ) : null}
+              {comment.replyToUser ? (
+                <span>
+                  {m.comments_reply_to()} @{comment.replyToUser.name}
+                </span>
+              ) : null}
+              {comment.aiReason ? (
+                <span className="text-orange-600 dark:text-orange-400">
+                  {m.comments_ai_flag({ reason: comment.aiReason })}
+                </span>
+              ) : null}
+            </div>
+            <CommentModerationActions
+              commentId={comment.id}
+              status={comment.status}
+            />
+          </article>
+        ))}
+        <AdminPagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={response.total}
+          itemsPerPage={PAGE_SIZE}
+          currentPageItemCount={response.items.length}
+          onPageChange={(nextPage) =>
+            navigate({
+              search: ((prev: Record<string, unknown>) => ({
+                ...prev,
+                page: nextPage,
+              })) as never,
+            })
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

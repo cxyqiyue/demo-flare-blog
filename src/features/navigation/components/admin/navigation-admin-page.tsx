@@ -2,7 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { sessionQuery } from "@/features/auth/queries";
 import { getNavigationOwnerAccountsFn } from "@/features/navigation/api/navigation.admin.api";
-import { isFuwari } from "@/lib/theme-mode";
+import {
+  FlareAdminHeader,
+  FlareAdminPanel,
+} from "@/features/theme/themes/flare/components/admin/page";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { BookmarkManager } from "./bookmark-manager";
@@ -33,6 +37,79 @@ export function NavigationAdminPage() {
     { key: "engines" as const, label: m.navigation_admin_tab_engines() },
     { key: "bookmarks" as const, label: m.navigation_admin_tab_bookmarks() },
   ];
+
+  if (isFlare) {
+    return (
+      <div className="space-y-5 pb-12">
+        <FlareAdminHeader
+          title={m.navigation_admin_title()}
+          description={m.navigation_admin_tag()}
+          actions={
+            isSuperAdmin ? (
+              <label className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">
+                  {m.navigation_admin_account_label()}
+                </span>
+                <select
+                  value={selectedOwnerId ?? "__self__"}
+                  onChange={(event) =>
+                    setSelectedOwnerId(
+                      event.target.value === "__self__"
+                        ? undefined
+                        : event.target.value,
+                    )
+                  }
+                  className="min-h-10 max-w-full rounded-xl border border-border bg-background px-3 text-sm"
+                >
+                  {accountsPending ? (
+                    <option value="">
+                      {m.navigation_admin_account_switch()}…
+                    </option>
+                  ) : (
+                    <>
+                      <option value="__self__">
+                        {m.navigation_admin_account_my()} (
+                        {myAccountName(ownerAccounts, myId)})
+                      </option>
+                      {ownerAccounts
+                        ?.filter((account) => account.id !== myId)
+                        .map((account) => (
+                          <option key={account.id} value={account.id}>
+                            {account.name} ({account.email})
+                          </option>
+                        ))}
+                    </>
+                  )}
+                </select>
+              </label>
+            ) : undefined
+          }
+        />
+        <FlareAdminPanel>
+          <nav className="flex flex-wrap gap-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                aria-pressed={activeTab === tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`rounded-xl px-4 py-2 text-sm ${activeTab === tab.key ? "bg-primary/10 font-semibold text-primary" : "text-muted-foreground hover:bg-muted"}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </FlareAdminPanel>
+        <FlareAdminPanel>
+          {activeTab === "engines" ? (
+            <EngineManager ownerId={ownerId} />
+          ) : (
+            <BookmarkManager ownerId={ownerId} />
+          )}
+        </FlareAdminPanel>
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (

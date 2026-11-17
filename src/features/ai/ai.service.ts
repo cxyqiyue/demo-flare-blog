@@ -4,9 +4,9 @@ import { createWorkersAI } from "workers-ai-provider";
 import { z } from "zod";
 import type {
   AiBlogSkillType,
+  AiCompatType,
   SystemConfig,
 } from "@/features/config/config.schema";
-import type { AiCompatType } from "@/features/config/config.schema";
 import * as ConfigService from "@/features/config/service/config.service";
 import { markdownToJsonContent } from "@/features/import-export/utils/markdown-parser";
 import { err, ok } from "@/lib/errors";

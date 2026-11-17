@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import type { SaveStatus } from "./types";
 
@@ -97,6 +97,21 @@ export function PostEditorStatusBar({
         );
     }
   };
+
+  if (isFlare)
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-card px-4 py-3 text-xs text-muted-foreground">
+        <div className="flex gap-4">
+          <span>
+            {m.editor_status_chars()} {chars}
+          </span>
+          <span>
+            {m.editor_status_words()} {words}
+          </span>
+        </div>
+        <div role="status">{renderStatus()}</div>
+      </div>
+    );
 
   if (isFuwari) {
     return (

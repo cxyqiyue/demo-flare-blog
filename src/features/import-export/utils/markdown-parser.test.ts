@@ -292,15 +292,15 @@ describe("markdownToJsonContent", () => {
   });
 
   it("should convert <kbd> to inline code", async () => {
-    const json = await markdownToJsonContent("press <kbd>Ctrl</kbd>+<kbd>C</kbd>");
+    const json = await markdownToJsonContent(
+      "press <kbd>Ctrl</kbd>+<kbd>C</kbd>",
+    );
 
     expect(JSON.stringify(json)).not.toContain("<kbd>");
     const p = json.content!.find((n) => n.type === "paragraph")!;
     const codeTexts = p
       .content!.filter((n) => n.type === "text")
-      .filter((n) =>
-        (n.marks ?? []).some((mk) => mk.type === "code"),
-      )
+      .filter((n) => (n.marks ?? []).some((mk) => mk.type === "code"))
       .map((n) => n.text);
     expect(codeTexts).toEqual(["Ctrl", "C"]);
   });
@@ -333,9 +333,7 @@ describe("markdownToJsonContent", () => {
     expect(serialized).toContain('"superscript"');
     expect(serialized).toContain("#fn-1");
     // 文末出现编号列表（脚注内容）
-    const orderedLists = json.content!.filter(
-      (n) => n.type === "orderedList",
-    );
+    const orderedLists = json.content!.filter((n) => n.type === "orderedList");
     expect(orderedLists.length).toBeGreaterThan(0);
     const lastList = orderedLists[orderedLists.length - 1];
     const listText = JSON.stringify(lastList);

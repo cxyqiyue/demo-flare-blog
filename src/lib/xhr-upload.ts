@@ -63,7 +63,10 @@ interface AttemptOutcome<T> {
 }
 
 function attemptUpload<T>(
-  options: Pick<XhrUploadOptions, "url" | "formData" | "onProgress" | "timeoutMs">,
+  options: Pick<
+    XhrUploadOptions,
+    "url" | "formData" | "onProgress" | "timeoutMs"
+  >,
 ): Promise<AttemptOutcome<T>> {
   const { url, formData, onProgress, timeoutMs = 120_000 } = options;
 
@@ -91,15 +94,26 @@ function attemptUpload<T>(
     xhr.onload = () => {
       let parsed: { ok?: boolean; data?: T; message?: string } | null = null;
       try {
-        parsed = JSON.parse(xhr.responseText) as
-          | { ok?: boolean; data?: T; message?: string }
-          | null;
+        parsed = JSON.parse(xhr.responseText) as {
+          ok?: boolean;
+          data?: T;
+          message?: string;
+        } | null;
       } catch {
         parsed = null;
       }
 
-      if (xhr.status >= 200 && xhr.status < 300 && parsed && parsed.ok === true && parsed.data !== undefined) {
-        finish({ ok: true, data: parsed.data }, { retryable: false, retryAfterMs: null });
+      if (
+        xhr.status >= 200 &&
+        xhr.status < 300 &&
+        parsed &&
+        parsed.ok === true &&
+        parsed.data !== undefined
+      ) {
+        finish(
+          { ok: true, data: parsed.data },
+          { retryable: false, retryAfterMs: null },
+        );
         return;
       }
 
@@ -108,8 +122,7 @@ function attemptUpload<T>(
         {
           ok: false,
           message:
-            (parsed && parsed.message) ||
-            `Upload failed (HTTP ${xhr.status})`,
+            (parsed && parsed.message) || `Upload failed (HTTP ${xhr.status})`,
         },
         {
           retryable,
@@ -119,11 +132,20 @@ function attemptUpload<T>(
     };
 
     xhr.onerror = () =>
-      finish({ ok: false, message: "Network error" }, { retryable: true, retryAfterMs: null });
+      finish(
+        { ok: false, message: "Network error" },
+        { retryable: true, retryAfterMs: null },
+      );
     xhr.ontimeout = () =>
-      finish({ ok: false, message: "Upload timed out" }, { retryable: true, retryAfterMs: null });
+      finish(
+        { ok: false, message: "Upload timed out" },
+        { retryable: true, retryAfterMs: null },
+      );
     xhr.onabort = () =>
-      finish({ ok: false, message: "Upload aborted" }, { retryable: false, retryAfterMs: null });
+      finish(
+        { ok: false, message: "Upload aborted" },
+        { retryable: false, retryAfterMs: null },
+      );
 
     xhr.send(formData);
   });

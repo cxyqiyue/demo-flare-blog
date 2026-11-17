@@ -23,7 +23,10 @@ function fromBase64(value: string): Uint8Array<ArrayBuffer> {
 }
 
 function toBase64Url(buffer: ArrayBuffer): string {
-  return toBase64(buffer).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return toBase64(buffer)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 /** 恒时字符串比较，避免时间侧信道 */
@@ -106,7 +109,11 @@ async function deriveHmacKey(env: Env): Promise<CryptoKey> {
   );
 }
 
-async function signUnlock(env: Env, postId: number, passwordHash: string): Promise<string> {
+async function signUnlock(
+  env: Env,
+  postId: number,
+  passwordHash: string,
+): Promise<string> {
   const key = await deriveHmacKey(env);
   const mac = await crypto.subtle.sign(
     "HMAC",

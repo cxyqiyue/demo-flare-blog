@@ -1,11 +1,9 @@
-import { Hono } from "hono";
 import type { Context } from "hono";
+import { Hono } from "hono";
 import * as ImageHostingService from "@/features/image-hosting/image-hosting.service";
 import { getAuth } from "@/lib/auth/auth.server";
 import { getDb } from "@/lib/db";
-import {
-  rateLimitMiddleware,
-} from "@/lib/hono/middlewares";
+import { rateLimitMiddleware } from "@/lib/hono/middlewares";
 
 /**
  * 编辑器图片上传端点（XMLHttpRequest 直传，支持真实上传进度回调）。
@@ -35,9 +33,7 @@ interface UploadSession {
   user: { id: string };
 }
 
-async function requireSession(
-  c: Ctx,
-): Promise<UploadSession | null> {
+async function requireSession(c: Ctx): Promise<UploadSession | null> {
   const db = getDb(c.env);
   const auth = getAuth({ db, env: c.env });
   const session = await auth.api.getSession({
@@ -57,9 +53,13 @@ imageHostingUploadRoute.post("/upload", async (c) => {
     const context = ImageHostingService.resolveImageHostingRequestContext(c);
     const formData = await c.req.formData();
 
-    const result = await ImageHostingService.uploadForArticle(context, formData, {
-      origin: new URL(c.req.url).origin,
-    });
+    const result = await ImageHostingService.uploadForArticle(
+      context,
+      formData,
+      {
+        origin: new URL(c.req.url).origin,
+      },
+    );
 
     if (result.error) {
       return jsonResponse(

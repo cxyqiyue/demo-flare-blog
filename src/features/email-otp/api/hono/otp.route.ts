@@ -14,10 +14,7 @@ export async function handleOtpSend(
   const body = await c.req.json().catch(() => null);
   const parsed = otpSendSchema.safeParse(body);
   if (!parsed.success) {
-    return c.json(
-      { code: "INVALID_INPUT", message: "Invalid request" },
-      400,
-    );
+    return c.json({ code: "INVALID_INPUT", message: "Invalid request" }, 400);
   }
 
   const result = await sendOtp(

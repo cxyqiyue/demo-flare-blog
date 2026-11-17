@@ -5,9 +5,13 @@ import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommentModerationTable } from "@/features/comments/components/admin/comment-moderation-table";
+import {
+  FlareAdminHeader,
+  FlareAdminPanel,
+} from "@/features/theme/themes/flare/components/admin/page";
 import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
 import type { CommentStatus } from "@/lib/db/schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 const searchSchema = z.object({
@@ -80,6 +84,53 @@ function CommentAdminPage() {
     { key: "deleted", label: m.comments_tab_deleted() },
     { key: "ALL", label: m.comments_tab_all() },
   ];
+
+  if (isFlare) {
+    return (
+      <div className="space-y-5 pb-12">
+        <FlareAdminHeader
+          title={m.comments_admin_title()}
+          description={m.comments_admin_tag()}
+        />
+        <FlareAdminPanel>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <nav
+              aria-label={m.comments_th_status()}
+              className="flex flex-wrap gap-2"
+            >
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  aria-pressed={status === tab.key}
+                  onClick={() => handleStatusChange(tab.key)}
+                  className={`rounded-xl px-3 py-2 text-sm transition-colors ${status === tab.key ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+            <Input
+              type="search"
+              aria-label={m.comments_admin_search()}
+              placeholder={m.comments_admin_search()}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              className="lg:max-w-72"
+            />
+          </div>
+        </FlareAdminPanel>
+        <FlareAdminPanel>
+          <CommentModerationTable
+            key={`${status}:${userName ?? ""}:${page}`}
+            status={currentStatus}
+            userName={userName}
+            page={page}
+          />
+        </FlareAdminPanel>
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (

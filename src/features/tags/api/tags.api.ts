@@ -10,7 +10,11 @@ import {
   UpdateTagInputSchema,
 } from "@/features/tags/tags.schema";
 import * as TagService from "@/features/tags/tags.service";
-import { adminMiddleware, dbMiddleware, superAdminMiddleware } from "@/lib/middlewares";
+import {
+  adminMiddleware,
+  dbMiddleware,
+  superAdminMiddleware,
+} from "@/lib/middlewares";
 
 // ============ Public API ============
 

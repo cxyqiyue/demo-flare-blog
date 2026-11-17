@@ -65,9 +65,10 @@ function wrapHtmlDocument(body: string): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /></head><body style="margin:0;padding:24px;background:#ffffff;color:#222222;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;font-size:14px;line-height:1.7;">${body}</div></body></html>`;
 }
 
-export function renderSubscriptionEmail(
-  input: RenderSubscriptionEmailInput,
-): { subject: string; html: string } {
+export function renderSubscriptionEmail(input: RenderSubscriptionEmailInput): {
+  subject: string;
+  html: string;
+} {
   const { config, vars } = input;
 
   const subjectTemplate =

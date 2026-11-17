@@ -2,7 +2,7 @@ import { ArrowUpDown, Filter, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Dropdown from "@/components/ui/dropdown";
 import { Input } from "@/components/ui/input";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { SortDirection, SortField, StatusFilter } from "../types";
@@ -34,6 +34,76 @@ export function PostsToolbar({
     sortDir !== "DESC" ||
     sortBy !== "updatedAt" ||
     searchTerm !== "";
+
+  if (isFlare) {
+    const labels = {
+      ALL: m.admin_posts_filter_status(),
+      PUBLISHED: m.admin_posts_filter_published(),
+      DRAFT: m.admin_posts_filter_draft(),
+      IN_PROGRESS: m.admin_posts_filter_in_progress(),
+    };
+    return (
+      <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-4 xl:flex-row xl:items-center">
+        <label className="relative min-w-0 flex-1">
+          <Search
+            size={16}
+            className="absolute left-3 top-3 text-muted-foreground"
+          />
+          <Input
+            type="search"
+            value={searchTerm}
+            onChange={(event) => onSearchChange(event.target.value)}
+            aria-label={m.admin_posts_search_placeholder()}
+            placeholder={m.admin_posts_search_placeholder()}
+            className="pl-9"
+          />
+        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            aria-label={m.admin_posts_filter_status()}
+            value={status}
+            onChange={(event) =>
+              onStatusChange(event.target.value as StatusFilter)
+            }
+            className="min-h-10 rounded-xl border border-border bg-background px-3 text-sm"
+          >
+            {STATUS_FILTERS.map((value) => (
+              <option key={value} value={value}>
+                {labels[value]}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label={m.post_published_at()}
+            value={sortBy}
+            onChange={(event) =>
+              onSortUpdate({ sortBy: event.target.value as SortField })
+            }
+            className="min-h-10 rounded-xl border border-border bg-background px-3 text-sm"
+          >
+            <option value="updatedAt">{m.post_last_updated()}</option>
+            <option value="publishedAt">{m.post_published_at()}</option>
+          </select>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              onSortUpdate({ dir: sortDir === "DESC" ? "ASC" : "DESC" })
+            }
+            aria-label={sortDir === "DESC" ? "降序排列" : "升序排列"}
+          >
+            <ArrowUpDown size={16} />
+            {sortDir === "DESC" ? "↓" : "↑"}
+          </Button>
+          {hasActiveFilters ? (
+            <Button type="button" variant="ghost" onClick={onResetFilters}>
+              {m.admin_posts_clear_filters()}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (

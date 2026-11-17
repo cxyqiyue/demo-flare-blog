@@ -89,8 +89,13 @@ export function planImageProcessing(
     file.size > triggerBytes &&
     options.compressEnabled !== false;
 
-  if (overLimit) return { action: "compress", targetMime: FORMAT_MIME[format === "none" ? "webp" : format] };
-  if (needsConvert) return { action: "convert", targetMime: FORMAT_MIME[format] };
+  if (overLimit)
+    return {
+      action: "compress",
+      targetMime: FORMAT_MIME[format === "none" ? "webp" : format],
+    };
+  if (needsConvert)
+    return { action: "convert", targetMime: FORMAT_MIME[format] };
   return { action: "skip", targetMime: file.type };
 }
 
@@ -119,7 +124,8 @@ function canvasToBlob(
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("canvas toBlob failed"))),
+      (blob) =>
+        blob ? resolve(blob) : reject(new Error("canvas toBlob failed")),
       mime,
       quality,
     );
@@ -127,7 +133,8 @@ function canvasToBlob(
 }
 
 function renameWithExt(fileName: string, mime: string): string {
-  const ext = mime === "image/webp" ? "webp" : mime === "image/jpeg" ? "jpg" : "";
+  const ext =
+    mime === "image/webp" ? "webp" : mime === "image/jpeg" ? "jpg" : "";
   if (!ext) return fileName;
   const base = fileName.replace(/\.[^.]+$/, "");
   return `${base}.${ext}`;
@@ -164,7 +171,11 @@ export async function processImageBeforeUpload(
     let bestBlob: Blob | null = null;
 
     for (let i = 0; i < MAX_ITERATIONS; i += 1) {
-      const canvas = drawToCanvas(bitmap, bitmap.width * scale, bitmap.height * scale);
+      const canvas = drawToCanvas(
+        bitmap,
+        bitmap.width * scale,
+        bitmap.height * scale,
+      );
       const blob = await canvasToBlob(canvas, targetMime, quality);
 
       if (
@@ -199,9 +210,13 @@ export async function processImageBeforeUpload(
       return base;
     }
 
-    const processedFile = new File([bestBlob], renameWithExt(file.name, targetMime), {
-      type: targetMime,
-    });
+    const processedFile = new File(
+      [bestBlob],
+      renameWithExt(file.name, targetMime),
+      {
+        type: targetMime,
+      },
+    );
     return {
       file: processedFile,
       processed: true,

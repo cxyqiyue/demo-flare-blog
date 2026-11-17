@@ -41,6 +41,7 @@ export function useAutoSave({
     publishedAt: number | null;
     pinnedAt: number | null;
     tagIds: string; // Serialize for easy comparison
+    categoryId: number | null;
     skillId: number | null;
     contentRef: PostEditorData["contentJson"];
   } | null>(null);
@@ -57,6 +58,7 @@ export function useAutoSave({
     publishedAt: p.publishedAt ? p.publishedAt.valueOf() : null,
     pinnedAt: p.pinnedAt ? p.pinnedAt.valueOf() : null,
     tagIds: [...p.tagIds].sort().join(","),
+    categoryId: p.categoryId ?? null,
     skillId: p.skillId,
     contentRef: p.contentJson,
   });
@@ -73,6 +75,7 @@ export function useAutoSave({
       prev.publishedAt !== curr.publishedAt ||
       prev.pinnedAt !== curr.pinnedAt ||
       prev.tagIds !== curr.tagIds ||
+      prev.categoryId !== curr.categoryId ||
       prev.skillId !== curr.skillId ||
       prev.contentRef !== curr.contentRef
     );

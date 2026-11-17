@@ -9,7 +9,7 @@ import {
 } from "@/features/announcements/hooks/use-announcement-actions";
 import { announcementsListQuery } from "@/features/announcements/queries";
 import type { Announcement } from "@/lib/db/schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import AnnouncementDeliveriesModal from "./announcement-deliveries-modal";
 
@@ -22,6 +22,49 @@ export function AnnouncementsTable({
 }) {
   const listQuery = useQuery(announcementsListQuery({ limit: 50 }));
   const [viewId, setViewId] = useState<number | null>(null);
+
+  if (isFlare) {
+    return (
+      <div className="space-y-3">
+        {listQuery.isLoading ? (
+          <div className="flex justify-center py-12" aria-busy="true">
+            <Loader2 className="animate-spin text-muted-foreground" />
+          </div>
+        ) : listQuery.isError ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => listQuery.refetch()}
+          >
+            {m.media_grid_refresh()}
+          </Button>
+        ) : listQuery.data?.items.length ? (
+          listQuery.data.items.map((item) => (
+            <AnnouncementRow
+              key={item.id}
+              announcement={item}
+              onView={setViewId}
+              onEdit={onEdit}
+            />
+          ))
+        ) : (
+          <div className="space-y-4 py-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              {m.announcements_list_empty()}
+            </p>
+            <Button type="button" onClick={onNew}>
+              {m.announcements_add_btn()}
+            </Button>
+          </div>
+        )}
+        <AnnouncementDeliveriesModal
+          isOpen={viewId !== null}
+          onClose={() => setViewId(null)}
+          announcementId={viewId}
+        />
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (
@@ -99,8 +142,14 @@ function AnnouncementRow({
   const deleteMutation = useDeleteAnnouncement();
 
   return (
-    <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 px-4 py-4 items-center">
-      <div className="min-w-0">
+    <div
+      className={
+        isFlare
+          ? "flex flex-wrap items-center gap-4 rounded-xl border border-border/60 p-4"
+          : "grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 px-4 py-4 items-center"
+      }
+    >
+      <div className={isFlare ? "min-w-0 flex-1 basis-48" : "min-w-0"}>
         <p className="text-sm font-medium text-foreground truncate">
           {announcement.title}
         </p>
@@ -135,6 +184,7 @@ function AnnouncementRow({
         {announcement.status === "sent" ? (
           <Button
             onClick={() => onView(announcement.id)}
+            aria-label={m.announcements_actions_view_deliveries()}
             variant="ghost"
             className="h-8 w-8 p-0 rounded-none text-muted-foreground hover:text-foreground"
             title={m.announcements_actions_view_deliveries()}
@@ -145,6 +195,7 @@ function AnnouncementRow({
           <>
             <Button
               onClick={() => onEdit(announcement)}
+              aria-label={m.announcements_actions_edit()}
               variant="ghost"
               className="h-8 w-8 p-0 rounded-none text-muted-foreground hover:text-foreground"
               title={m.announcements_actions_edit()}
@@ -153,6 +204,7 @@ function AnnouncementRow({
             </Button>
             <Button
               onClick={() => setConfirmSend(true)}
+              aria-label={m.announcements_actions_send()}
               variant="ghost"
               className="h-8 w-8 p-0 rounded-none text-green-600 dark:text-green-400 hover:text-green-700"
               title={m.announcements_actions_send()}
@@ -163,6 +215,7 @@ function AnnouncementRow({
         )}
         <Button
           onClick={() => setConfirmDelete(true)}
+          aria-label={m.announcements_actions_delete()}
           variant="ghost"
           className="h-8 w-8 p-0 rounded-none text-destructive hover:text-destructive/80"
           title={m.announcements_actions_delete()}

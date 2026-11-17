@@ -14,19 +14,21 @@
  * - 明确判定为成人内容 → 拒绝该次上传，并尽力删除已写入远端的对象。
  */
 
-import type { SystemConfig } from "@/features/config/config.schema";
-import type { ImageModerationChannel } from "@/features/config/config.schema";
+import type {
+  ImageModerationChannel,
+  SystemConfig,
+} from "@/features/config/config.schema";
 import * as ConfigService from "@/features/config/service/config.service";
+import * as DiscordChannelApi from "@/features/image-hosting/channels/discord";
+import * as HuggingFaceChannelApi from "@/features/image-hosting/channels/huggingface";
+import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
+import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
 import type {
   DiscordChannel,
   HuggingFaceChannel,
   TelegramChannel,
   WebDAVChannel,
 } from "@/features/image-hosting/image-hosting.schema";
-import * as DiscordChannelApi from "@/features/image-hosting/channels/discord";
-import * as HuggingFaceChannelApi from "@/features/image-hosting/channels/huggingface";
-import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
-import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
 import {
   deleteS3Objects,
   resolveValidatedS3Config,
@@ -60,7 +62,8 @@ export interface ModerationInput {
   key: string;
 }
 
-function resolveSettings(  config: SystemConfig | undefined,
+function resolveSettings(
+  config: SystemConfig | undefined,
 ): ModerationSettings | null {
   const mod = config?.imageHosting?.moderation;
   if (!mod) return null;
@@ -81,10 +84,7 @@ function toAbsoluteUrl(url: string, origin?: string): string | null {
 
 // ── Workers AI ─────────────────────────────────────────────────
 
-async function moderateWithWorkersAi(
-  env: Env,
-  file: File,
-): Promise<boolean> {
+async function moderateWithWorkersAi(env: Env, file: File): Promise<boolean> {
   const bytes = await file.arrayBuffer();
   const result = (await env.AI.run(WORKERS_AI_MODEL, {
     image: bytes,
@@ -129,9 +129,14 @@ async function moderateWithNsfwJs(
   if (Array.isArray(parsed)) {
     predictions = parsed
       .filter(
-        (p) => typeof p?.className === "string" && typeof p?.probability === "number",
+        (p) =>
+          typeof p?.className === "string" &&
+          typeof p?.probability === "number",
       )
-      .map((p) => ({ className: p.className as string, probability: p.probability as number }));
+      .map((p) => ({
+        className: p.className as string,
+        probability: p.probability as number,
+      }));
   } else if (parsed && typeof parsed === "object") {
     predictions = Object.entries(parsed)
       .filter(([, v]) => typeof v === "number")
@@ -141,7 +146,8 @@ async function moderateWithNsfwJs(
 
   return predictions.some(
     (p) =>
-      NSFW_BLOCK_CLASSES.has(p.className) && p.probability >= NSFW_BLOCK_PROBABILITY,
+      NSFW_BLOCK_CLASSES.has(p.className) &&
+      p.probability >= NSFW_BLOCK_PROBABILITY,
   );
 }
 
@@ -195,10 +201,9 @@ async function deleteUploadedMediaBestEffort(
         break;
       case "webdav":
         if (ih?.webdav?.baseUrl) {
-          await WebDavChannelApi.deleteWebDavPaths(
-            ih.webdav as WebDAVChannel,
-            [key],
-          );
+          await WebDavChannelApi.deleteWebDavPaths(ih.webdav as WebDAVChannel, [
+            key,
+          ]);
         }
         break;
       default:
@@ -266,7 +271,12 @@ export async function enforceImageModeration(
 
     if (!blocked) return ok({ allowed: true });
 
-    await deleteUploadedMediaBestEffort(config, context.env, args.providerLabel, args.key);
+    await deleteUploadedMediaBestEffort(
+      config,
+      context.env,
+      args.providerLabel,
+      args.key,
+    );
     return err({
       reason: "CONTENT_MODERATION_BLOCKED",
       message: m.moderation_upload_blocked(),

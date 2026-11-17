@@ -1,10 +1,10 @@
 import { ArrowLeft, ExternalLink, Loader2, X } from "lucide-react";
 import type React from "react";
-import { m } from "@/paraglide/messages";
 import type {
   AccessGateError,
   AccessGateMode,
 } from "@/components/common/access-gate.types";
+import { m } from "@/paraglide/messages";
 
 export interface GateContentProps {
   mode: AccessGateMode;

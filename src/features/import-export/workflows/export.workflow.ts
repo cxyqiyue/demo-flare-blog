@@ -1,6 +1,7 @@
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import * as CommentRepo from "@/features/comments/data/comments.data";
+import * as TaskProgressRepo from "@/features/import-export/data/task-progress.data";
 import type {
   ExportManifest,
   PostFrontmatter,
@@ -11,7 +12,6 @@ import {
   IMPORT_EXPORT_CACHE_KEYS,
   IMPORT_EXPORT_R2_KEYS,
 } from "@/features/import-export/import-export.schema";
-import * as TaskProgressRepo from "@/features/import-export/data/task-progress.data";
 import { stringifyFrontmatter } from "@/features/import-export/utils/frontmatter";
 import {
   jsonContentToMarkdown,

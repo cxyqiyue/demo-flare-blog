@@ -1,7 +1,7 @@
+import type { JSONContent } from "@tiptap/react";
 import type { ClassValue } from "clsx";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { JSONContent } from "@tiptap/react";
 
 import { m } from "@/paraglide/messages";
 
@@ -114,9 +114,7 @@ export function formatBytes(bytes: number, decimals = 2) {
  */
 export function sanitizeJsonContent(node: JSONContent): JSONContent | null {
   if (node.type === "text") {
-    return typeof node.text === "string" && node.text.length > 0
-      ? node
-      : null;
+    return typeof node.text === "string" && node.text.length > 0 ? node : null;
   }
   if (node.content && Array.isArray(node.content)) {
     const cleaned = node.content

@@ -1,7 +1,6 @@
-import { useRouteContext } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import type { PostsPageProps } from "@/features/theme/contract/pages";
-import { PostItem } from "@/features/theme/themes/flare/components/post-item";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -12,103 +11,178 @@ export function PostsPage({
   tags,
   selectedTag,
   onTagClick,
+  categories = [],
+  selectedCategory,
+  onCategoryClick,
   hasNextPage,
   isFetchingNextPage,
   fetchNextPage,
 }: PostsPageProps) {
-  const { siteConfig } = useRouteContext({ from: "__root__" });
   const [isExpanded, setIsExpanded] = useState(false);
   const hasMoreTags = tags.length > INITIAL_TAG_COUNT;
   const visibleTags = isExpanded ? tags : tags.slice(0, INITIAL_TAG_COUNT);
 
-  // Infinite scroll observer
-  const observerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      { threshold: 0.1, rootMargin: "0px" },
-    );
-
-    if (observerRef.current) {
-      observer.observe(observerRef.current);
+  const years = useMemo(() => {
+    const groups = new Map<string, typeof posts>();
+    for (const post of posts) {
+      const date = post.publishedAt ? new Date(post.publishedAt) : null;
+      const year =
+        date && !Number.isNaN(date.getTime())
+          ? String(date.getUTCFullYear())
+          : "—";
+      const group = groups.get(year) ?? [];
+      group.push(post);
+      groups.set(year, group);
     }
-
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+    return [...groups.entries()].sort(([a], [b]) => b.localeCompare(a));
+  }, [posts]);
 
   return (
     <div className="flare-enter flex w-full flex-col gap-4">
       <section className="flare-surface overflow-hidden">
-        <header className="flex flex-col gap-2 px-5 pb-2 pt-6 md:flex-row md:items-end md:justify-between md:gap-6 md:px-8 md:pt-8">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-[2.5rem]">
-              {m.nav_posts()}
-            </h1>
-            <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-[15px]">
-              {siteConfig.description}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-            <span className="rounded-full bg-muted/60 px-2.5 py-0.5 font-mono tabular-nums">
-              {tags.length}
-            </span>
-            <span>{m.tags_title()}</span>
-          </div>
-        </header>
-
-        <div className="flex flex-wrap items-center gap-2 px-5 py-5 md:px-8">
-          <button
-            onClick={() => onTagClick(undefined)}
-            className={cn("flare-chip")}
-            data-active={!selectedTag}
-          >
-            {m.posts_all()}
-          </button>
-
-          {visibleTags.map((tag) => (
-            <button
-              key={tag.id}
-              onClick={() => onTagClick(tag.name)}
-              className="flare-chip"
-              data-active={selectedTag === tag.name}
+        <h1 className="sr-only">{m.nav_posts()}</h1>
+        {
+          <>
+            <div
+              className="flex flex-wrap items-center gap-2 px-5 pt-5 md:px-8"
+              aria-label="分类"
             >
-              <span>{tag.name}</span>
-              <span className="text-xs tabular-nums opacity-70">
-                {tag.postCount}
+              <span className="mr-2 text-sm font-semibold">分类</span>
+              <button
+                type="button"
+                onClick={() => onCategoryClick?.(undefined)}
+                className="flare-chip"
+                data-active={!selectedCategory}
+                aria-pressed={!selectedCategory}
+              >
+                {m.posts_all()}
+              </button>
+              {categories.map((category) => (
+                <button
+                  type="button"
+                  key={category.id}
+                  onClick={() => onCategoryClick?.(category.name)}
+                  className="flare-chip"
+                  data-active={selectedCategory === category.name}
+                  aria-pressed={selectedCategory === category.name}
+                >
+                  {category.name}
+                  <span className="text-xs tabular-nums opacity-70">
+                    {category.postCount}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 px-5 py-5 md:px-8">
+              <span className="mr-2 text-sm font-semibold">
+                {m.tags_title()}
               </span>
-            </button>
-          ))}
+              <button
+                type="button"
+                onClick={() => onTagClick(undefined)}
+                className={cn("flare-chip")}
+                data-active={!selectedTag}
+                aria-pressed={!selectedTag}
+              >
+                {m.posts_all()}
+              </button>
 
-          {hasMoreTags && (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="flare-chip border-dashed"
-            >
-              {isExpanded
-                ? m.tags_collapse()
-                : `+${tags.length - INITIAL_TAG_COUNT}`}
-            </button>
-          )}
-        </div>
+              {visibleTags.map((tag) => (
+                <button
+                  type="button"
+                  key={tag.id}
+                  onClick={() => onTagClick(tag.name)}
+                  className="flare-chip"
+                  data-active={selectedTag === tag.name}
+                  aria-pressed={selectedTag === tag.name}
+                >
+                  <span>{tag.name}</span>
+                  <span className="text-xs tabular-nums opacity-70">
+                    {tag.postCount}
+                  </span>
+                </button>
+              ))}
 
-        <div className="grid grid-cols-1 gap-4 px-4 py-4 sm:px-6 min-[1200px]:grid-cols-2">
+              {hasMoreTags && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="flare-chip border-dashed"
+                >
+                  {isExpanded
+                    ? m.tags_collapse()
+                    : `+${tags.length - INITIAL_TAG_COUNT}`}
+                </button>
+              )}
+            </div>
+          </>
+        }
+        <div className="space-y-8 px-5 py-6 md:px-8">
           {posts.length === 0 ? (
             <div className="py-20 text-center">
               <p className="text-muted-foreground">{m.posts_no_posts()}</p>
             </div>
           ) : (
-            posts.map((post) => <PostItem key={post.id} post={post} />)
+            years.map(([year, entries]) => (
+              <section key={year} aria-label={year}>
+                <h2 className="mb-4 flex items-center gap-3 text-2xl font-bold tabular-nums">
+                  {year}
+                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    {entries.length}
+                  </span>
+                </h2>
+                <ol>
+                  {entries.map((post) => (
+                    <li
+                      key={post.id}
+                      className="relative border-b border-border/40 last:border-0"
+                    >
+                      <Link
+                        to="/post/$slug"
+                        params={{ slug: post.slug }}
+                        className="group flex items-center gap-3 rounded-lg py-2 transition-colors hover:bg-muted/30 sm:gap-4"
+                      >
+                        <span className="flare-archive-lead" aria-hidden="true">
+                          {Array.from(post.title.trim()).find((character) =>
+                            /[\p{L}\p{N}]/u.test(character),
+                          ) ?? ""}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-base font-semibold leading-7 group-hover:text-primary">
+                            {post.title}
+                          </h3>
+                          <div className="mt-1 flex min-w-0 items-baseline gap-2">
+                            <time
+                              className="shrink-0 text-xs tabular-nums text-muted-foreground"
+                              dateTime={
+                                post.publishedAt
+                                  ? new Date(post.publishedAt).toISOString()
+                                  : undefined
+                              }
+                            >
+                              {post.publishedAt
+                                ? new Date(post.publishedAt)
+                                    .toISOString()
+                                    .slice(5, 10)
+                                    .replace("-", "/")
+                                : "—"}
+                            </time>
+                            <span className="min-w-0 truncate text-xs text-muted-foreground">
+                              {post.tags
+                                ?.map((tag) => `#${tag.name}`)
+                                .join(" ")}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ))
           )}
         </div>
 
-        <div
-          ref={observerRef}
-          className="flex flex-col items-center justify-center gap-4 px-5 py-8"
-        >
+        <div className="flex flex-col items-center justify-center gap-4 px-5 py-8">
           {isFetchingNextPage ? (
             <div className="flex flex-col items-center gap-3 text-muted-foreground">
               <div className="h-1.5 w-1.5 animate-ping rounded-full bg-foreground/70" />
@@ -117,7 +191,13 @@ export function PostsPage({
               </span>
             </div>
           ) : hasNextPage ? (
-            <div className="h-px w-24 bg-border/50" />
+            <button
+              type="button"
+              onClick={() => fetchNextPage()}
+              className="flare-chip"
+            >
+              {m.tags_expand()}
+            </button>
           ) : posts.length > 0 ? (
             <div className="flex items-center gap-4 text-muted-foreground/40">
               <span className="h-px w-12 bg-current" />

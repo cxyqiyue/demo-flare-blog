@@ -73,9 +73,7 @@ export function FuwariCommentSection({
     return !result?.error;
   };
 
-  const handleCreateReply = async (
-    content: JSONContent,
-  ): Promise<boolean> => {
+  const handleCreateReply = async (content: JSONContent): Promise<boolean> => {
     if (!replyTarget) return false;
     const result = await createComment({
       data: {

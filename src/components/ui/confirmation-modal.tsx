@@ -1,8 +1,9 @@
 import { ClientOnly } from "@tanstack/react-router";
 import { Loader2, X } from "lucide-react";
 import type React from "react";
+import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 interface ConfirmationModalProps {
@@ -12,6 +13,7 @@ interface ConfirmationModalProps {
   onSecondaryConfirm?: () => void;
   title: string;
   message: string;
+  children?: React.ReactNode;
   confirmLabel?: string;
   secondaryConfirmLabel?: string;
   isDanger?: boolean;
@@ -25,11 +27,135 @@ const ConfirmationModalInternal: React.FC<ConfirmationModalProps> = ({
   onSecondaryConfirm,
   title,
   message,
+  children,
   confirmLabel = m.common_confirm(),
   secondaryConfirmLabel,
   isDanger = false,
   isLoading = false,
 }) => {
+  const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isFlare || !isOpen) return;
+    const previousFocus = document.activeElement;
+    panelRef.current?.focus();
+    return () => {
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected)
+        previousFocus.focus();
+    };
+  }, [isOpen]);
+
+  if (isFlare) {
+    if (!isOpen) return null;
+    return createPortal(
+      <div
+        className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+        onClick={(event) => {
+          if (event.target === event.currentTarget && !isLoading) onClose();
+        }}
+      >
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-busy={isLoading}
+          tabIndex={-1}
+          className="max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-xl outline-none sm:p-6"
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && !isLoading) {
+              event.stopPropagation();
+              onClose();
+            }
+            if (event.key !== "Tab") return;
+            const controls = Array.from(
+              event.currentTarget.querySelectorAll<HTMLElement>(
+                'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]',
+              ),
+            );
+            const first = controls[0];
+            const last = controls[controls.length - 1];
+            if (!first) {
+              event.preventDefault();
+              return;
+            }
+            if (
+              event.shiftKey &&
+              (document.activeElement === first ||
+                document.activeElement === event.currentTarget)
+            ) {
+              event.preventDefault();
+              last?.focus();
+            } else if (
+              !event.shiftKey &&
+              (document.activeElement === last ||
+                document.activeElement === event.currentTarget)
+            ) {
+              event.preventDefault();
+              first.focus();
+            }
+          }}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <h2 id={titleId} className="text-lg font-semibold">
+              {title}
+            </h2>
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={onClose}
+              aria-label={m.common_close()}
+              className="rounded-lg p-1 text-muted-foreground hover:bg-muted"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-muted-foreground">
+            {message}
+          </p>
+          {children}
+          {isDanger ? (
+            <p className="mt-4 rounded-xl bg-destructive/10 p-3 text-xs text-destructive">
+              {m.common_irreversible()}
+            </p>
+          ) : null}
+          <div className="mt-6 flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={onClose}
+              className="rounded-xl border border-border px-4 py-2 text-sm disabled:opacity-50"
+            >
+              {m.common_cancel()}
+            </button>
+            {onSecondaryConfirm && secondaryConfirmLabel ? (
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={onSecondaryConfirm}
+                className="rounded-xl border border-border px-4 py-2 text-sm disabled:opacity-50"
+              >
+                {secondaryConfirmLabel}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={onConfirm}
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm text-primary-foreground disabled:opacity-50 ${isDanger ? "bg-destructive" : "bg-primary"}`}
+            >
+              {isLoading ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : null}
+              {isLoading ? m.common_processing() : confirmLabel}
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  }
+
   return createPortal(
     <div
       className={`fixed inset-0 z-100 flex items-center justify-center p-4 md:p-6 transition-all duration-300 ${
@@ -128,6 +254,7 @@ const ConfirmationModalInternal: React.FC<ConfirmationModalProps> = ({
           >
             {message}
           </p>
+          {children}
 
           {isDanger && (
             <div

@@ -31,11 +31,16 @@ export const PostSelectSchema = createSelectSchema(PostsTable, {
   .extend({
     author: z.string().nullable(),
     passwordHint: z.string().nullable(),
+    category: z
+      .object({ id: z.number(), name: z.string() })
+      .nullable()
+      .optional(),
   });
 
 /** 管理端专用：在 select 基础上追加解密后的明文访问密码 */
 export const PostAdminSelectSchema = PostSelectSchema.extend({
   password: z.string().nullable(),
+  categoryId: z.number().nullable().optional(),
 });
 export const PostInsertSchema = createInsertSchema(PostsTable);
 export const PostUpdateSchema = createUpdateSchema(PostsTable, {
@@ -51,6 +56,7 @@ export const PostUpdateSchema = createUpdateSchema(PostsTable, {
      * passwordHash/passwordCipher 后落库，明文不外传、不缓存。
      */
     password: z.string().max(512).optional(),
+    categoryId: z.number().int().positive().nullable().optional(),
   });
 
 export const PostItemSchema = PostSelectSchema.omit({
@@ -99,6 +105,7 @@ export const GetPostsCursorInputSchema = z.object({
   cursor: z.number().optional(),
   limit: z.number().optional(),
   tagName: PostTagNameSchema,
+  categoryName: PostTagNameSchema,
   excludePinned: z.boolean().optional(),
 });
 
@@ -243,10 +250,33 @@ export const POSTS_CACHE_KEYS = {
     cursor: number,
     tagName?: string,
     scope: "public" | "admin" = "public",
+    categoryName?: string,
   ) =>
-    tagName === undefined
-      ? (["posts", "list", scope, version, limit, cursor, "all"] as const)
-      : (["posts", "list", scope, version, limit, cursor, "tag", tagName] as const),
+    categoryName !== undefined
+      ? ([
+          "posts",
+          "list",
+          scope,
+          version,
+          limit,
+          cursor,
+          "category",
+          categoryName,
+          "tag",
+          tagName ?? "",
+        ] as const)
+      : tagName === undefined
+        ? (["posts", "list", scope, version, limit, cursor, "all"] as const)
+        : ([
+            "posts",
+            "list",
+            scope,
+            version,
+            limit,
+            cursor,
+            "tag",
+            tagName,
+          ] as const),
   detail: (version: string, slug: string) => [version, "post", slug] as const,
   /** 受限文章的门禁壳（无正文，可公共缓存；正文响应一律 no-store） */
   detailGated: (version: string, slug: string) =>
@@ -254,8 +284,12 @@ export const POSTS_CACHE_KEYS = {
   related: (slug: string, limit?: number) =>
     ["posts", "related-ids", slug, limit] as const,
   syncHash: (id: number) => `post_hash:${id}` as const,
-    publicPage: (version: string, offset: number, limit: number, scope: "public" | "admin" = "public") =>
-      [version, "posts", "page", scope, offset, limit] as const,
+  publicPage: (
+    version: string,
+    offset: number,
+    limit: number,
+    scope: "public" | "admin" = "public",
+  ) => [version, "posts", "page", scope, offset, limit] as const,
   adjacent: (version: string, slug: string) =>
     [version, "post", slug, "adjacent"] as const,
 } as const;

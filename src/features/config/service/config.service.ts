@@ -363,7 +363,9 @@ function resolveFriendLinksConfig(
       ...config?.friendLinks?.siteInfo,
     },
     applyRules:
-      config?.friendLinks?.applyRules ?? DEFAULT_CONFIG.friendLinks?.applyRules ?? [],
+      config?.friendLinks?.applyRules ??
+      DEFAULT_CONFIG.friendLinks?.applyRules ??
+      [],
   };
 }
 
