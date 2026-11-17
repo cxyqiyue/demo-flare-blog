@@ -41,7 +41,9 @@ export const POSTS_KEYS = {
   revisionDetails: ["posts", "revision-detail"] as const,
 
   // Child keys (functions for specific queries)
-  list: (filters: { tagName?: string; limit?: number } = {}) =>
+  list: (
+    filters: { tagName?: string; categoryName?: string; limit?: number } = {},
+  ) =>
     [
       "posts",
       "list",
@@ -83,12 +85,13 @@ export function publicPostsPageQuery(
 }
 
 export function postsInfiniteQueryOptions(
-  filters: { tagName?: string; limit?: number } = {},
+  filters: { tagName?: string; categoryName?: string; limit?: number } = {},
 ) {
   const pageSize = filters.limit ?? 12;
   const tagName = normalizePostTagName(filters.tagName);
+  const categoryName = normalizePostTagName(filters.categoryName);
   return infiniteQueryOptions({
-    queryKey: POSTS_KEYS.list({ ...filters, tagName }),
+    queryKey: POSTS_KEYS.list({ ...filters, tagName, categoryName }),
     queryFn: async ({ pageParam }) => {
       if (isSSR) {
         return await getPostsCursorFn({
@@ -96,6 +99,7 @@ export function postsInfiniteQueryOptions(
             cursor: pageParam,
             limit: pageSize,
             tagName,
+            categoryName,
           },
         });
       }
@@ -104,6 +108,7 @@ export function postsInfiniteQueryOptions(
           cursor: pageParam?.toString(),
           limit: String(pageSize),
           tagName,
+          categoryName,
         },
       });
       if (!res.ok) throw new Error("Failed to fetch posts");

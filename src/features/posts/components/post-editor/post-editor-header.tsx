@@ -1,7 +1,8 @@
 import { Sparkles } from "lucide-react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Button } from "@/components/ui/button";
-import { isFuwari } from "@/lib/theme-mode";
+import { FlareAdminHeader } from "@/features/theme/themes/flare/components/admin/page";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import type { PostEditorData } from "./types";
 
@@ -38,6 +39,47 @@ export function PostEditorHeader({
       return m.editor_header_unpublish();
     return m.editor_header_publish();
   };
+
+  if (isFlare) {
+    return (
+      <FlareAdminHeader
+        title={post.title || m.admin_post_edit_not_found_title()}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onPreview}
+              disabled={!post.hasPublicCache}
+              title={
+                !post.hasPublicCache
+                  ? m.editor_header_preview_unavailable()
+                  : m.editor_header_preview()
+              }
+            >
+              {m.editor_header_preview_btn()}
+            </Button>
+            <Button type="button" variant="outline" onClick={onOpenAi}>
+              <Sparkles size={16} />
+              {m.editor_header_ai_btn()}
+            </Button>
+            <Button
+              type="button"
+              onClick={onProcess}
+              disabled={
+                processState !== "IDLE" ||
+                saveStatus === "SAVING" ||
+                !isPostDirty ||
+                (post.status === "published" && !post.publishedAt)
+              }
+            >
+              {getProcessButtonText()}
+            </Button>
+          </>
+        }
+      />
+    );
+  }
 
   if (isFuwari) {
     const processColor =

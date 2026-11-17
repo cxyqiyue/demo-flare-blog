@@ -8,11 +8,12 @@ import {
 } from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
 import { getOptimizedImageUrl } from "@/features/media/utils/media.utils";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn, formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { useLongPress } from "../hooks/use-long-press";
 import type { MediaDirectoryFile, MediaFolder } from "../types";
+import { FlareMediaList } from "./flare-media-list";
 
 interface MediaGridProps {
   media: Array<MediaDirectoryFile>;
@@ -75,7 +76,9 @@ const FolderCard = memo(
             ? isSelected
               ? "fuwari-card-base border border-(--fuwari-primary) bg-(--fuwari-primary)/5"
               : "fuwari-card-base border border-(--fuwari-input-border) hover:border-(--fuwari-primary)/50"
-            : "rounded-none border",
+            : isFlare
+              ? "rounded-2xl border border-border/60 bg-card shadow-sm hover:border-primary/50"
+              : "rounded-none border",
           isFuwari
             ? undefined
             : isSelected
@@ -106,7 +109,9 @@ const FolderCard = memo(
                   : "bg-foreground border-foreground"
                 : isFuwari
                   ? "rounded-md border-(--fuwari-input-border) bg-(--fuwari-card-bg)/80 backdrop-blur-sm hover:border-(--fuwari-primary)/50"
-                  : "bg-background/80 backdrop-blur-sm border-muted-foreground/50 hover:border-foreground",
+                  : isFlare
+                    ? "rounded-lg border-border bg-background/80 backdrop-blur-sm hover:border-primary"
+                    : "bg-background/80 backdrop-blur-sm border-muted-foreground/50 hover:border-foreground",
             )}
           >
             {isSelected && (
@@ -129,7 +134,9 @@ const FolderCard = memo(
                 "flex items-center justify-center transition-colors",
                 isFuwari
                   ? "w-7 h-7 rounded-lg bg-(--fuwari-card-bg)/80 backdrop-blur-sm fuwari-text-75 hover:text-(--fuwari-primary)"
-                  : "w-6 h-6 bg-background/80 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground",
+                  : isFlare
+                    ? "size-8 rounded-lg bg-background/80 text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                    : "w-6 h-6 bg-background/80 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground",
               )}
             >
               <Pencil size={11} />
@@ -161,7 +168,9 @@ const FolderCard = memo(
             "aspect-square relative overflow-hidden flex items-center justify-center",
             isFuwari
               ? "bg-(--fuwari-btn-regular-bg)"
-              : "bg-muted/20 border-b border-border/30",
+              : isFlare
+                ? "bg-muted/30 border-b border-border/50"
+                : "bg-muted/20 border-b border-border/30",
           )}
         >
           <Folder
@@ -180,13 +189,20 @@ const FolderCard = memo(
         </div>
 
         {/* Info */}
-        <div className={cn("p-3 space-y-1.5", isFuwari ? "" : "bg-background")}>
+        <div
+          className={cn(
+            "p-3 space-y-1.5",
+            isFuwari ? "" : isFlare ? "bg-card" : "bg-background",
+          )}
+        >
           <div
             className={cn(
               "font-medium truncate",
               isFuwari
                 ? "text-sm sm:text-base fuwari-text-90"
-                : "text-[10px] font-mono text-foreground",
+                : isFlare
+                  ? "text-sm font-medium text-foreground"
+                  : "text-[10px] font-mono text-foreground",
             )}
           >
             {folder.name}
@@ -196,7 +212,9 @@ const FolderCard = memo(
               "flex justify-between items-center border-t pt-1.5",
               isFuwari
                 ? "text-xs fuwari-text-50 border-(--fuwari-input-border)"
-                : "text-[9px] text-muted-foreground font-mono tracking-wider uppercase border-border/30",
+                : isFlare
+                  ? "text-xs text-muted-foreground border-border/50"
+                  : "text-[9px] text-muted-foreground font-mono tracking-wider uppercase border-border/30",
             )}
           >
             <span>{m.media_grid_folder()}</span>
@@ -261,7 +279,9 @@ const MediaCard = memo(
               : isLinked
                 ? "fuwari-card-base border border-emerald-500/50 bg-emerald-500/5"
                 : "fuwari-card-base border border-(--fuwari-input-border) hover:border-(--fuwari-primary)/50"
-            : "rounded-none border",
+            : isFlare
+              ? "rounded-2xl border border-border/60 bg-card shadow-sm hover:border-primary/50"
+              : "rounded-none border",
           isFuwari
             ? undefined
             : isSelected
@@ -294,7 +314,9 @@ const MediaCard = memo(
                   : "bg-foreground border-foreground"
                 : isFuwari
                   ? "rounded-md border-(--fuwari-input-border) bg-(--fuwari-card-bg)/80 backdrop-blur-sm hover:border-(--fuwari-primary)/50"
-                  : "bg-background/80 backdrop-blur-sm border-muted-foreground/50 hover:border-foreground",
+                  : isFlare
+                    ? "rounded-lg border-border bg-background/80 backdrop-blur-sm hover:border-primary"
+                    : "bg-background/80 backdrop-blur-sm border-muted-foreground/50 hover:border-foreground",
             )}
           >
             {isSelected && (
@@ -323,7 +345,9 @@ const MediaCard = memo(
             "aspect-square relative overflow-hidden",
             isFuwari
               ? "bg-(--fuwari-btn-regular-bg)"
-              : "bg-muted/20 border-b border-border/30",
+              : isFlare
+                ? "bg-muted/30 border-b border-border/50"
+                : "bg-muted/20 border-b border-border/30",
           )}
         >
           {isImage ? (
@@ -332,13 +356,17 @@ const MediaCard = memo(
                 <div
                   className={cn(
                     "absolute inset-0 flex items-center justify-center animate-pulse",
-                    isFuwari ? "bg-(--fuwari-btn-regular-bg)" : "bg-muted/20",
+                    isFuwari
+                      ? "bg-(--fuwari-btn-regular-bg)"
+                      : isFlare
+                        ? "bg-muted/30"
+                        : "bg-muted/20",
                   )}
                 >
                   <ImageIcon
                     size={20}
                     className={
-                      isFuwari ? "fuwari-text-30" : "text-muted-foreground/30"
+                      isFuwari ? "fuwari-text-30" : "text-muted-foreground/40"
                     }
                   />
                 </div>
@@ -365,13 +393,20 @@ const MediaCard = memo(
         </div>
 
         {/* Info */}
-        <div className={cn("p-3 space-y-1.5", isFuwari ? "" : "bg-background")}>
+        <div
+          className={cn(
+            "p-3 space-y-1.5",
+            isFuwari ? "" : isFlare ? "bg-card" : "bg-background",
+          )}
+        >
           <div
             className={cn(
               "font-medium truncate transition-colors",
               isFuwari
                 ? "text-sm sm:text-base fuwari-text-90"
-                : "text-[10px] font-mono text-foreground group-hover:text-foreground",
+                : isFlare
+                  ? "text-sm font-medium text-foreground group-hover:text-primary"
+                  : "text-[10px] font-mono text-foreground group-hover:text-foreground",
             )}
           >
             {asset.fileName}
@@ -381,7 +416,9 @@ const MediaCard = memo(
               "flex justify-between items-center border-t pt-1.5",
               isFuwari
                 ? "text-xs fuwari-text-50 border-(--fuwari-input-border)"
-                : "text-[9px] text-muted-foreground font-mono tracking-wider uppercase border-border/30",
+                : isFlare
+                  ? "text-xs text-muted-foreground border-border/50"
+                  : "text-[9px] text-muted-foreground font-mono tracking-wider uppercase border-border/30",
             )}
           >
             <span>{formatBytes(asset.sizeInBytes)}</span>
@@ -438,6 +475,26 @@ export function MediaGrid({
   }, [hasMore, isLoadingMore, onLoadMore]);
 
   const selectionModeActive = selectedIds.size > 0;
+
+  if (isFlare)
+    return (
+      <FlareMediaList
+        view="grid"
+        media={media}
+        folders={folders}
+        selectedIds={selectedIds}
+        onToggleSelect={onToggleSelect}
+        onPreview={onPreview}
+        onOpenFolder={onOpenFolder}
+        onRenameFolder={onRenameFolder}
+        onDeleteFolder={onDeleteFolder}
+        onLoadMore={onLoadMore}
+        hasMore={hasMore}
+        isLoadingMore={isLoadingMore}
+        linkedMediaIds={linkedMediaIds}
+        onRefetch={onRefetch}
+      />
+    );
 
   if (media.length === 0 && folders.length === 0) {
     return (

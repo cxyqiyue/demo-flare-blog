@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Editor } from "@/components/tiptap-editor";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
+import { CategorySelect } from "@/features/categories/components/category-select";
 import { markdownToJsonContent } from "@/features/import-export/utils/markdown-parser";
 import { jsonContentToMarkdown } from "@/features/import-export/utils/markdown-serializer";
 import { extensions } from "@/features/posts/editor/config";
@@ -13,7 +14,8 @@ import type { PostRevisionSnapshot } from "@/features/posts/schema/post-revision
 import { generateStrongPassword } from "@/features/posts/utils/post-secret";
 import { tagsAdminQueryOptions } from "@/features/tags/queries";
 import { ContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
-import { isFuwari } from "@/lib/theme-mode";
+import { FlareAdminPanel } from "@/features/theme/themes/flare/components/admin/page";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { AiArticlePanel } from "./ai-article-panel";
@@ -44,6 +46,7 @@ export function PostEditor({
     publishedAt: initialData.publishedAt,
     pinnedAt: initialData.pinnedAt,
     tagIds: initialData.tagIds,
+    categoryId: initialData.categoryId ?? null,
     skillId: initialData.skillId,
     authorId: initialData.authorId,
     author: initialData.author,
@@ -280,6 +283,7 @@ export function PostEditor({
         readTimeInMinutes: number;
         contentJson: PostEditorData["contentJson"];
         tagIds: Array<number>;
+        categoryId?: number | null;
       };
     }) => {
       const hasPublicCache = post.hasPublicCache;
@@ -295,6 +299,7 @@ export function PostEditor({
           : null,
         pinnedAt: post.pinnedAt,
         tagIds: snapshot.tagIds,
+        categoryId: snapshot.categoryId ?? null,
         skillId: post.skillId,
         authorId: post.authorId,
         author: post.author,
@@ -332,6 +337,7 @@ export function PostEditor({
       readTimeInMinutes: post.readTimeInMinutes,
       contentJson: post.contentJson,
       tagIds: [...new Set(post.tagIds)].sort((a, b) => a - b),
+      categoryId: post.categoryId ?? null,
     }),
     [
       post.contentJson,
@@ -341,9 +347,155 @@ export function PostEditor({
       post.status,
       post.summary,
       post.tagIds,
+      post.categoryId,
       post.title,
     ],
   );
+
+  if (isFlare) {
+    return (
+      <div className="min-w-0 space-y-5 pb-12">
+        <ConfirmationModal
+          isOpen={status === "blocked"}
+          onClose={() => reset?.()}
+          onConfirm={() => proceed?.()}
+          title={m.editor_leave_title()}
+          message={m.editor_leave_message()}
+          confirmLabel={m.editor_leave_confirm()}
+        />
+        <PostEditorHeader
+          post={post}
+          saveStatus={saveStatus}
+          processState={processState}
+          isPostDirty={isPostDirty}
+          onPreview={() => {
+            if (post.slug)
+              window.open(
+                `/post/${encodeURIComponent(post.slug)}`,
+                "_blank",
+                "noopener,noreferrer",
+              );
+          }}
+          onProcess={handleProcessData}
+          onOpenAi={() => setIsAiOpen(true)}
+        />
+        <AiArticlePanel
+          editor={editorMode === "wysiwyg" ? editorInstance : null}
+          open={isAiOpen}
+          onClose={() => setIsAiOpen(false)}
+          onApplyTitle={(title) => handlePostChange({ title })}
+          onInsertFallback={handleAiInsertFallback}
+        />
+        <PostEditorHistoryPanel
+          postId={initialData.id}
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          currentSnapshot={currentSnapshot}
+          allTags={allTags}
+          onRestoreApplied={handleRestoreApplied}
+        />
+        <FlareAdminPanel>
+          <div className="mb-5 max-w-sm">
+            <CategorySelect
+              value={post.categoryId ?? null}
+              onChange={(categoryId) => handlePostChange({ categoryId })}
+            />
+          </div>
+          <PostEditorMetadata
+            post={post}
+            isGeneratingSlug={isGeneratingSlug}
+            isCalculatingReadTime={isCalculatingReadTime}
+            isGeneratingSummary={isGeneratingSummary}
+            isGeneratingTags={isGeneratingTags}
+            isGeneratingPassword={isGeneratingPassword}
+            canEditAuthor={canEditAuthor}
+            authorCandidates={authorCandidates}
+            onPostChange={handlePostChange}
+            onGenerateSlug={handleGenerateSlug}
+            onCalculateReadTime={handleCalculateReadTime}
+            onGenerateSummary={handleGenerateSummary}
+            onGenerateTags={handleGenerateTags}
+            onGeneratePassword={handleGeneratePassword}
+          />
+        </FlareAdminPanel>
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_15rem]">
+          <FlareAdminPanel className="min-w-0">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              {(
+                [
+                  { key: "wysiwyg", label: m.editor_mode_wysiwyg() },
+                  { key: "markdown", label: m.editor_mode_markdown() },
+                  { key: "preview", label: m.editor_mode_preview() },
+                ] as const
+              ).map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={editorMode === key}
+                  onClick={() => void handleModeChange(key)}
+                  className={`rounded-xl px-3 py-2 text-sm ${editorMode === key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                >
+                  {label}
+                </button>
+              ))}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setIsHistoryOpen(true)}
+                className="ml-auto"
+              >
+                <History size={15} />
+                {m.editor_history_open()}
+              </Button>
+              {isConverting ? (
+                <span role="status" className="text-xs text-muted-foreground">
+                  {m.editor_markdown_converting()}
+                </span>
+              ) : null}
+            </div>
+            <div className="min-h-[60vh]">
+              {editorMode === "wysiwyg" ? (
+                <Editor
+                  key={editorRenderKey}
+                  extensions={extensions}
+                  content={post.contentJson ?? ""}
+                  onChange={handleContentChange}
+                  onCreated={setEditorInstance}
+                />
+              ) : editorMode === "markdown" ? (
+                <textarea
+                  aria-label={m.editor_mode_markdown()}
+                  value={markdownSource}
+                  onChange={(event) => handleMarkdownChange(event.target.value)}
+                  placeholder={m.editor_markdown_placeholder()}
+                  spellCheck={false}
+                  className="min-h-[60vh] w-full resize-y rounded-xl border border-border bg-background p-4 font-mono text-sm leading-7"
+                />
+              ) : (
+                <div className="flare-md">
+                  <ContentRenderer content={post.contentJson} />
+                </div>
+              )}
+            </div>
+          </FlareAdminPanel>
+          <aside className="min-w-0 self-start xl:sticky xl:top-4">
+            {editorMode === "wysiwyg" && editorInstance ? (
+              <FlareAdminPanel>
+                <EditorTableOfContents editor={editorInstance} />
+              </FlareAdminPanel>
+            ) : null}
+          </aside>
+        </div>
+        <PostEditorStatusBar
+          chars={contentStats.chars}
+          words={contentStats.words}
+          saveStatus={saveStatus}
+          lastSaved={lastSaved}
+        />
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (

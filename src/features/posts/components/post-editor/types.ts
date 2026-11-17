@@ -11,6 +11,7 @@ export interface PostEditorData {
   publishedAt: Date | null;
   pinnedAt: Date | null;
   tagIds: Array<number>;
+  categoryId?: number | null;
   skillId: number | null;
   /** 作者用户 ID（超级管理员可修改归属；普通管理员只读） */
   authorId: string | null;

@@ -40,10 +40,18 @@ describe("extractSumAllRows", () => {
 
   it("returns 0 for empty or malformed payloads", () => {
     expect(
-      extractSumAllRows(wrap([]), "viewer.accounts.0.kvOperationsAdaptiveGroups", "sum.requests"),
+      extractSumAllRows(
+        wrap([]),
+        "viewer.accounts.0.kvOperationsAdaptiveGroups",
+        "sum.requests",
+      ),
     ).toBe(0);
     expect(
-      extractSumAllRows({}, "viewer.accounts.0.kvOperationsAdaptiveGroups", "sum.requests"),
+      extractSumAllRows(
+        {},
+        "viewer.accounts.0.kvOperationsAdaptiveGroups",
+        "sum.requests",
+      ),
     ).toBe(0);
   });
 });
@@ -69,8 +77,14 @@ describe("extractLatestRow", () => {
 
   it("supports a custom dimension path such as r2 datetime buckets", () => {
     const rows = [
-      { dimensions: { datetime: "2026-08-23T00:00:00Z" }, max: { payloadSize: 5 } },
-      { dimensions: { datetime: "2026-08-23T12:00:00Z" }, max: { payloadSize: 42 } },
+      {
+        dimensions: { datetime: "2026-08-23T00:00:00Z" },
+        max: { payloadSize: 5 },
+      },
+      {
+        dimensions: { datetime: "2026-08-23T12:00:00Z" },
+        max: { payloadSize: 42 },
+      },
     ];
     const data = {
       viewer: { accounts: [{ r2StorageAdaptiveGroups: rows }] },

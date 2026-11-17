@@ -18,8 +18,8 @@ export function Footer({ navOptions }: FooterProps) {
   );
 
   return (
-    <footer className="border-t border-border/60 pt-6 pb-2 text-sm text-muted-foreground">
-      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+    <footer className="flare-surface px-5 py-7 text-sm text-muted-foreground md:px-8 md:py-9">
+      <div className="grid gap-7 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-12">
         <div className="space-y-2">
           <div className="text-base font-semibold tracking-tight text-foreground/90">
             {siteConfig.title}
@@ -39,7 +39,10 @@ export function Footer({ navOptions }: FooterProps) {
           </div>
         </div>
 
-        <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 md:justify-end">
+        <nav
+          className="flex flex-wrap content-start items-center gap-x-5 gap-y-3 md:justify-end"
+          aria-label={m.admin_layout_back_to_site()}
+        >
           {navOptions.map((option) => (
             <Link
               key={option.id}

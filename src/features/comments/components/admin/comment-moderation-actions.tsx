@@ -10,7 +10,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import { useAdminComments } from "../../hooks/use-comments";
 
@@ -55,6 +55,77 @@ export const CommentModerationActions = ({
   };
 
   const isLoading = isModerating || isAdminDeleting;
+
+  if (isFlare) {
+    return (
+      <div className="flex flex-wrap justify-end gap-2">
+        {status !== "published" ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isLoading}
+            onClick={() => handleStatusChange("published")}
+          >
+            {m.comments_action_approve()}
+          </Button>
+        ) : null}
+        {status !== "pending" ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isLoading}
+            onClick={() => handleStatusChange("pending")}
+          >
+            {m.comments_action_pending()}
+          </Button>
+        ) : null}
+        {status !== "blocked" ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isLoading}
+            onClick={() => handleStatusChange("blocked")}
+          >
+            {m.comments_action_block()}
+          </Button>
+        ) : null}
+        {status !== "deleted" ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={isLoading}
+            onClick={() => handleStatusChange("deleted")}
+          >
+            {m.comments_action_trash()}
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="text-destructive"
+          disabled={isLoading}
+          onClick={() => setShowDeleteConfirm(true)}
+        >
+          {m.comments_action_destroy()}
+        </Button>
+        <ConfirmationModal
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={confirmDelete}
+          title={m.comments_destroy_modal_title()}
+          message={m.comments_destroy_modal_desc()}
+          confirmLabel={m.comments_destroy_modal_confirm()}
+          isDanger
+          isLoading={isAdminDeleting}
+        />
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (

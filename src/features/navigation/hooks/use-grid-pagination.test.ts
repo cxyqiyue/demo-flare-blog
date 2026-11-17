@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  resolveColumnCount,
-  resolveRowsPerPage,
-} from "./use-grid-pagination";
+import { resolveColumnCount, resolveRowsPerPage } from "./use-grid-pagination";
 
 describe("resolveColumnCount", () => {
   it("returns at least one column even for zero or tiny widths", () => {

@@ -1,5 +1,9 @@
 import type { SystemConfig } from "@/features/config/config.schema";
 import * as ConfigService from "@/features/config/service/config.service";
+import * as DiscordChannelApi from "@/features/image-hosting/channels/discord";
+import * as HuggingFaceChannelApi from "@/features/image-hosting/channels/huggingface";
+import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
+import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
 import type {
   ActiveImageHostingProvider,
   ApiKeyProviderType,
@@ -17,12 +21,14 @@ import {
   IMGBB_API_ENDPOINT,
   TEST_IMAGE_BASE64,
 } from "@/features/image-hosting/image-hosting.schema";
+import { enforceImageModeration } from "@/features/image-hosting/moderation/moderation.service";
 import {
-  type S3UploadConfig,
   resolveValidatedS3Config,
+  type S3UploadConfig,
   uploadToS3,
 } from "@/features/image-hosting/s3/s3-upload";
 import {
+  R2_NATIVE_MAX_MB,
   resolveDiscordMaxBytes,
   resolveFfskyMaxBytes,
   resolveHuggingFaceMaxBytes,
@@ -31,26 +37,20 @@ import {
   resolveS3MaxBytes,
   resolveTelegramMaxBytes,
   resolveWebDavMaxBytes,
-  R2_NATIVE_MAX_MB,
 } from "@/features/image-hosting/size-limits";
-import * as TelegramChannelApi from "@/features/image-hosting/channels/telegram";
-import * as DiscordChannelApi from "@/features/image-hosting/channels/discord";
-import * as HuggingFaceChannelApi from "@/features/image-hosting/channels/huggingface";
-import * as WebDavChannelApi from "@/features/image-hosting/channels/webdav";
+import * as MediaRepo from "@/features/media/data/media.data";
+import * as MediaStorage from "@/features/media/data/media.storage";
 import {
   MAX_FILE_SIZE,
   parseUploadMediaInput,
 } from "@/features/media/media.schema";
-import * as MediaRepo from "@/features/media/data/media.data";
-import * as MediaStorage from "@/features/media/data/media.storage";
-import { getImageDimensions } from "@/features/media/utils/image-dimensions";
 import {
   buildMediaAccessUrl,
   getLinkAccessSettings,
 } from "@/features/media/service/link-access.service";
-import { enforceImageModeration } from "@/features/image-hosting/moderation/moderation.service";
-import { err, ok, type Result } from "@/lib/errors";
+import { getImageDimensions } from "@/features/media/utils/image-dimensions";
 import { getDb } from "@/lib/db";
+import { err, ok, type Result } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
 
 const MIME_EXTENSIONS: Record<string, string> = {
@@ -103,7 +103,8 @@ function resolveR2PathPrefix(
   config: SystemConfig | undefined,
   pathway: "article" | "comment",
 ): string {
-  const base = config?.imageHosting?.r2Native?.pathPrefix?.trim() || "images/blog";
+  const base =
+    config?.imageHosting?.r2Native?.pathPrefix?.trim() || "images/blog";
   return pathway === "article" ? `${base}/articles` : `${base}/comments`;
 }
 
@@ -264,10 +265,7 @@ function getApiKeyProviderFieldInfo(type: string): {
  * API-Key 图床（imgbb/ffsky）没有可管理的远端对象，仅生成一个稳定的
  * 索引键用于 D1 媒体库展示。
  */
-function buildApiKeyTrackingKey(
-  providerType: string,
-  ext: string,
-): string {
+function buildApiKeyTrackingKey(providerType: string, ext: string): string {
   const ts = Date.now();
   let uuid = "";
   try {
@@ -403,7 +401,9 @@ function fileSizeTooLargeError(limitBytes: number): {
   message: string;
 } {
   const limitMb = limitBytes / (1024 * 1024);
-  const limitText = Number.isInteger(limitMb) ? String(limitMb) : limitMb.toFixed(1);
+  const limitText = Number.isInteger(limitMb)
+    ? String(limitMb)
+    : limitMb.toFixed(1);
   return {
     reason: "FILE_TOO_LARGE",
     message: m.image_hosting_file_too_large({ limit: limitText }),
@@ -439,22 +439,27 @@ async function uploadToActiveProvider(
         if (!p.apiKey?.trim()) continue;
 
         const apiKeyLimit =
-          p.type === "imgbb"
-            ? resolveImgbbMaxBytes()
-            : resolveFfskyMaxBytes();
+          p.type === "imgbb" ? resolveImgbbMaxBytes() : resolveFfskyMaxBytes();
         if (apiKeyLimit !== null && file.size > apiKeyLimit) {
           sizeRejected = true;
           continue;
         }
 
-        const { fieldName, defaultEndpoint } = getApiKeyProviderFieldInfo(p.type);
+        const { fieldName, defaultEndpoint } = getApiKeyProviderFieldInfo(
+          p.type,
+        );
         const endpoint =
           p.type === "ffsky"
-            ? (p.apiEndpoint?.trim() || defaultEndpoint)
+            ? p.apiEndpoint?.trim() || defaultEndpoint
             : defaultEndpoint;
 
         const base64 = arrayBufferToBase64(await file.arrayBuffer());
-        const result = await uploadToEndpoint(endpoint, p.apiKey.trim(), base64, fieldName);
+        const result = await uploadToEndpoint(
+          endpoint,
+          p.apiKey.trim(),
+          base64,
+          fieldName,
+        );
         if (result.error) continue;
         return ok({
           url: result.data.url,
@@ -590,9 +595,10 @@ async function trackMediaUpload(
  * 将 Hono 上下文适配为服务层依赖（db + env + executionCtx），
  * 供 /api/image-hosting/upload 等直接挂载的 Hono 路由复用服务层函数。
  */
-export function resolveImageHostingRequestContext(
-  c: { env: Env; executionCtx: ExecutionContext },
-): DbContext & { executionCtx: ExecutionContext } {
+export function resolveImageHostingRequestContext(c: {
+  env: Env;
+  executionCtx: ExecutionContext;
+}): DbContext & { executionCtx: ExecutionContext } {
   return {
     db: getDb(c.env),
     env: c.env,
@@ -630,7 +636,8 @@ export async function uploadForArticle(
   const activeProvider = ih?.activeProvider ?? null;
   // 服务端大小校验与渠道上限对齐（客户端压缩策略同样按渠道上限判断）
   const policy = await getArticleImageHostingConfig(context);
-  const articleLimitBytes = policy.maxImageBytes ?? R2_NATIVE_MAX_MB * 1024 * 1024;
+  const articleLimitBytes =
+    policy.maxImageBytes ?? R2_NATIVE_MAX_MB * 1024 * 1024;
   const { file } = parseUploadMediaInput(formData, m, {
     maxSizeBytes: articleLimitBytes,
   });
@@ -644,7 +651,12 @@ export async function uploadForArticle(
   const finish = async (
     providerLabel: ImageHostingProviderLabel,
     uploaded: { url: string; key: string },
-  ): Promise<Result<ArticleUploadResult, { reason: "IMAGE_HOSTING_UPLOAD_FAILED"; message: string }>> => {
+  ): Promise<
+    Result<
+      ArticleUploadResult,
+      { reason: "IMAGE_HOSTING_UPLOAD_FAILED"; message: string }
+    >
+  > => {
     const moderation = await enforceImageModeration(context, {
       url: uploaded.url,
       file,
@@ -733,7 +745,7 @@ export async function uploadForArticle(
     const { fieldName, defaultEndpoint } = getApiKeyProviderFieldInfo(p.type);
     const endpoint =
       p.type === "ffsky"
-        ? (p.apiEndpoint?.trim() || defaultEndpoint)
+        ? p.apiEndpoint?.trim() || defaultEndpoint
         : defaultEndpoint;
 
     const base64 = arrayBufferToBase64(await file.arrayBuffer());
@@ -830,7 +842,8 @@ export async function uploadCommentImage(
   const activeProvider = ih?.activeProvider ?? null;
   // 服务端大小校验与渠道上限对齐
   const commentPolicy = await getCommentImageHostingConfig(context);
-  const commentLimitBytes = commentPolicy.maxImageBytes ?? R2_NATIVE_MAX_MB * 1024 * 1024;
+  const commentLimitBytes =
+    commentPolicy.maxImageBytes ?? R2_NATIVE_MAX_MB * 1024 * 1024;
   const { file } = parseUploadMediaInput(formData, m, {
     maxSizeBytes: commentLimitBytes,
   });
@@ -839,7 +852,12 @@ export async function uploadCommentImage(
   const finish = async (
     providerLabel: ImageHostingProviderLabel,
     uploaded: { url: string; key: string },
-  ): Promise<Result<{ url: string }, { reason: "COMMENT_IMAGE_UPLOAD_FAILED"; message: string }>> => {
+  ): Promise<
+    Result<
+      { url: string },
+      { reason: "COMMENT_IMAGE_UPLOAD_FAILED"; message: string }
+    >
+  > => {
     const moderation = await enforceImageModeration(context, {
       url: uploaded.url,
       file,
@@ -920,7 +938,7 @@ export async function uploadCommentImage(
     const { fieldName, defaultEndpoint } = getApiKeyProviderFieldInfo(p.type);
     const endpoint =
       p.type === "ffsky"
-        ? (p.apiEndpoint?.trim() || defaultEndpoint)
+        ? p.apiEndpoint?.trim() || defaultEndpoint
         : defaultEndpoint;
 
     const base64 = arrayBufferToBase64(await file.arrayBuffer());
@@ -1073,13 +1091,19 @@ export async function testConnection(
     }
 
     const providerType = input.apiKeyProviderType ?? "imgbb";
-    const { fieldName, defaultEndpoint } = getApiKeyProviderFieldInfo(providerType);
+    const { fieldName, defaultEndpoint } =
+      getApiKeyProviderFieldInfo(providerType);
     const apiEndpoint =
       providerType === "imgbb"
         ? defaultEndpoint
         : input.apiEndpoint?.trim() || defaultEndpoint;
 
-    const result = await uploadToEndpoint(apiEndpoint, apiKey, TEST_IMAGE_BASE64, fieldName);
+    const result = await uploadToEndpoint(
+      apiEndpoint,
+      apiKey,
+      TEST_IMAGE_BASE64,
+      fieldName,
+    );
     if (result.error) {
       return err({
         reason: "IMAGE_HOSTING_TEST_FAILED",
@@ -1215,7 +1239,11 @@ export async function testConnection(
   });
 }
 
-function base64ToFile(base64: string, fileName: string, mimeType: string): File {
+function base64ToFile(
+  base64: string,
+  fileName: string,
+  mimeType: string,
+): File {
   const buffer = base64ToArrayBuffer(base64);
   return new File([buffer], fileName, { type: mimeType });
 }
@@ -1282,7 +1310,9 @@ export async function getCommentImageHostingConfig(
           enabled: true,
           providerCategory: "api-key",
           providerType: activeApiProvider.type,
-          maxImageBytes: resolveApiKeyProviderLimitBytes(activeApiProvider.type),
+          maxImageBytes: resolveApiKeyProviderLimitBytes(
+            activeApiProvider.type,
+          ),
           ...processing,
         };
       }
@@ -1303,7 +1333,10 @@ export async function getCommentImageHostingConfig(
         ...processing,
       };
     }
-    if (provider === "huggingface" && isChannelConfigured(ih.huggingface ?? {})) {
+    if (
+      provider === "huggingface" &&
+      isChannelConfigured(ih.huggingface ?? {})
+    ) {
       return {
         enabled: true,
         providerCategory: "huggingface",

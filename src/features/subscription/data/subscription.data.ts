@@ -78,10 +78,7 @@ export async function listNotificationRecipients(
   return rows.filter((row) => hasUsableEmail(row.email));
 }
 
-const PLACEHOLDER_EMAIL_SUFFIXES = [
-  "@better-auth.local",
-  "@placeholder.local",
-];
+const PLACEHOLDER_EMAIL_SUFFIXES = ["@better-auth.local", "@placeholder.local"];
 
 export function hasUsableEmail(email: string | null | undefined): boolean {
   const trimmed = (email ?? "").trim();
@@ -89,7 +86,5 @@ export function hasUsableEmail(email: string | null | undefined): boolean {
     return false;
   }
   const lowered = trimmed.toLowerCase();
-  return !PLACEHOLDER_EMAIL_SUFFIXES.some((suffix) =>
-    lowered.endsWith(suffix),
-  );
+  return !PLACEHOLDER_EMAIL_SUFFIXES.some((suffix) => lowered.endsWith(suffix));
 }

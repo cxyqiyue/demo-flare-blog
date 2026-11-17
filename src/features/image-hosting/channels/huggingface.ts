@@ -453,10 +453,7 @@ export async function listAllHuggingFacePaths(
     let cursor: string | undefined;
 
     do {
-      const encodedPrefix = prefix
-        .split("/")
-        .map(encodeURIComponent)
-        .join("/");
+      const encodedPrefix = prefix.split("/").map(encodeURIComponent).join("/");
       const url = new URL(
         `${HF_BASE}/api/datasets/${repo}/tree/main${encodedPrefix ? `/${encodedPrefix}` : ""}`,
       );

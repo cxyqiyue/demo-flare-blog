@@ -5,10 +5,7 @@ import { serverEnv } from "@/lib/env/server.env";
  * 这样即使数据库中的 role 被误改 / 未同步，持有 ADMIN_EMAIL 邮箱的账号始终具有超管权限，
  * 无需删除 Workers / D1 重新部署即可恢复。
  */
-export function isSuperAdmin(
-  user: { email: string },
-  env: Env,
-): boolean {
+export function isSuperAdmin(user: { email: string }, env: Env): boolean {
   const { ADMIN_EMAIL } = serverEnv(env);
   return user.email.trim().toLowerCase() === ADMIN_EMAIL.trim().toLowerCase();
 }

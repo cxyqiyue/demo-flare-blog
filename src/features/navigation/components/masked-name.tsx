@@ -14,7 +14,8 @@ export function MaskedName({
   className?: string;
   title?: string;
 }) {
-  const mask = "linear-gradient(to right, black calc(100% - 16px), transparent)";
+  const mask =
+    "linear-gradient(to right, black calc(100% - 16px), transparent)";
   return (
     <span
       title={title}

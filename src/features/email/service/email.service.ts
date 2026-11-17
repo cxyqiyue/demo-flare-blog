@@ -2,7 +2,10 @@ import { type AuthType, WorkerMailer } from "worker-mailer";
 import * as ConfigService from "@/features/config/service/config.service";
 import * as EmailData from "@/features/email/data/email.data";
 import type { TestEmailConnectionInput } from "@/features/email/email.schema";
-import { verifyUnsubscribeToken, generateUnsubscribeToken } from "@/features/email/email.utils";
+import {
+  generateUnsubscribeToken,
+  verifyUnsubscribeToken,
+} from "@/features/email/email.utils";
 import type { EmailUnsubscribeType } from "@/lib/db/schema";
 import { isNotInProduction, serverEnv } from "@/lib/env/server.env";
 import { err, ok } from "@/lib/errors";

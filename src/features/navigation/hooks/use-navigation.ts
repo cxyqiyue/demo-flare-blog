@@ -16,7 +16,7 @@ import {
   updateFolderFn,
   updateSearchEngineFn,
 } from "../api/navigation.admin.api";
-import { navigationAdminDataQuery, NAVIGATION_KEYS } from "../queries";
+import { NAVIGATION_KEYS, navigationAdminDataQuery } from "../queries";
 
 /** 管理后台读取完整导航数据（引擎、文件夹、书签）。ownerId 用于超管查看其它账号。 */
 export function useAdminNavigationData(ownerId?: string) {
@@ -37,8 +37,7 @@ export function useAdminNavigation(ownerId?: string) {
 
   const withOwner = <T extends Record<string, unknown>>(
     data: T,
-  ): T & { ownerId?: string } =>
-    ownerId ? { ...data, ownerId } : data;
+  ): T & { ownerId?: string } => (ownerId ? { ...data, ownerId } : data);
 
   const createEngineMutation = useMutation({
     mutationFn: async (input: Parameters<typeof createSearchEngineFn>[0]) =>

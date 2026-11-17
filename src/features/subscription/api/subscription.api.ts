@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { authMiddleware } from "@/lib/middlewares";
 import * as SubscriptionService from "@/features/subscription/service/subscription.service";
 import { ToggleBlogSubscriptionInputSchema } from "@/features/subscription/subscription.schema";
+import { authMiddleware } from "@/lib/middlewares";
 
 export const getBlogSubscriptionStatusFn = createServerFn({ method: "GET" })
   .middleware([authMiddleware])

@@ -94,6 +94,7 @@ export function usePostActions({
       post.publishedAt?.getTime() !== kvSnapshot.publishedAt?.getTime() ||
       post.pinnedAt?.getTime() !== kvSnapshot.pinnedAt?.getTime() ||
       post.skillId !== kvSnapshot.skillId ||
+      (post.categoryId ?? null) !== (kvSnapshot.categoryId ?? null) ||
       // For content, referential comparison is usually enough since Tiptap
       // returns a new object on change, but we'll stick to it.
       post.contentJson !== kvSnapshot.contentJson ||

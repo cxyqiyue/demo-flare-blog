@@ -9,6 +9,7 @@ import {
 } from "@/features/challenge/service/challenge.service";
 import { makeFullSitePassCookie } from "@/features/challenge/service/fullsite.service";
 import * as ConfigService from "@/features/config/service/config.service";
+import { handleOtpSend } from "@/features/email-otp/api/hono/otp.route";
 import { imageHostingUploadRoute } from "@/features/image-hosting/api/hono/upload.route";
 import { exportDownloadRoute } from "@/features/import-export/api/hono/download.route";
 import { mediaUploadRoute } from "@/features/media/api/hono/upload.route";
@@ -30,7 +31,6 @@ import postsRelatedRoute from "@/features/posts/api/hono/posts.related.route";
 import postsUnlockRoute from "@/features/posts/api/hono/posts.unlock.route";
 import searchRoute from "@/features/search/api/hono/search.route";
 import siteDocumentsRoute from "@/features/site-documents/api/hono/site-documents.route";
-import { handleOtpSend } from "@/features/email-otp/api/hono/otp.route";
 import tagsRoute from "@/features/tags/api/hono/tags.list.route";
 import wechatVerifyRoute from "@/features/wechat-verify/api/hono/wechat-verify.route";
 import { serverEnv } from "@/lib/env/server.env";

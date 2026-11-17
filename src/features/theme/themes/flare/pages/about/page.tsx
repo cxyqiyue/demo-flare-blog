@@ -34,7 +34,10 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
 
   return (
     <div className="flare-enter flex w-full flex-col gap-4">
-      <nav className="flex items-center justify-between px-0.5">
+      <nav
+        className="flare-surface flex flex-wrap items-center justify-between gap-3 p-3"
+        aria-label={m.post_back_to_list()}
+      >
         <button
           onClick={() => navigate({ to: "/posts" })}
           className="flare-chip"

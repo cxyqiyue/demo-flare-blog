@@ -4,9 +4,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import AnnouncementFormModal from "@/features/announcements/components/admin/announcement-form-modal";
 import { AnnouncementsTable } from "@/features/announcements/components/admin/announcements-table";
+import {
+  FlareAdminHeader,
+  FlareAdminPanel,
+} from "@/features/theme/themes/flare/components/admin/page";
 import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
 import type { Announcement } from "@/lib/db/schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/admin/announcements/")({
@@ -34,6 +38,31 @@ function AnnouncementsAdminPage() {
     setEditing(announcement);
     setFormOpen(true);
   };
+
+  if (isFlare) {
+    return (
+      <div className="space-y-5 pb-12">
+        <FlareAdminHeader
+          title={m.announcements_admin_title()}
+          description={m.announcements_admin_tag()}
+          actions={
+            <Button onClick={handleNew}>
+              <Plus size={16} />
+              {m.announcements_add_btn()}
+            </Button>
+          }
+        />
+        <FlareAdminPanel>
+          <AnnouncementsTable onEdit={handleEdit} onNew={handleNew} />
+        </FlareAdminPanel>
+        <AnnouncementFormModal
+          isOpen={formOpen}
+          onClose={() => setFormOpen(false)}
+          announcement={editing}
+        />
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (

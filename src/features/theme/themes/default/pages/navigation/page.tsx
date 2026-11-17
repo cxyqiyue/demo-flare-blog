@@ -125,9 +125,8 @@ export function NavigationPage({
             <p className="-mt-4 text-xs font-mono text-muted-foreground/60">
               {m.navigation_level_summary({
                 folders: state.folders.length,
-                bookmarks: state.bookmarks.filter(
-                  (b) => b.folderId === null,
-                ).length,
+                bookmarks: state.bookmarks.filter((b) => b.folderId === null)
+                  .length,
               })}
             </p>
           )}
@@ -146,7 +145,10 @@ export function NavigationPage({
                     onOpen={() => state.enterFolder(item.folder.id)}
                   />
                 ) : (
-                  <BookmarkCard key={item.bookmark.id} bookmark={item.bookmark} />
+                  <BookmarkCard
+                    key={item.bookmark.id}
+                    bookmark={item.bookmark}
+                  />
                 ),
               )}
             </div>

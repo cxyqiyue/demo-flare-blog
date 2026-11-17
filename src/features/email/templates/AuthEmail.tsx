@@ -29,7 +29,10 @@ export const AuthEmail = ({
         : m.email_otp_register_desc({}, { locale });
 
     return (
-      <EmailLayout locale={locale} previewText={m.email_otp_subject({}, { locale })}>
+      <EmailLayout
+        locale={locale}
+        previewText={m.email_otp_subject({}, { locale })}
+      >
         <h1
           style={{
             fontFamily: '"Playfair Display", "Georgia", serif',

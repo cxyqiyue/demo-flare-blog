@@ -3,8 +3,7 @@ import { getBlogSubscriptionStatusFn } from "@/features/subscription/api/subscri
 
 export const SUBSCRIPTION_KEYS = {
   all: ["subscription"] as const,
-  status: (userId?: string) =>
-    ["subscription", "status", userId] as const,
+  status: (userId?: string) => ["subscription", "status", userId] as const,
 };
 
 export function blogSubscriptionStatusQuery(userId?: string) {

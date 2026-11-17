@@ -1,6 +1,7 @@
 export * from "./about-article.table";
 export * from "./announcements.table";
 export * from "./auth.table";
+export * from "./categories.table";
 export * from "./comments.table";
 export * from "./config.table";
 export * from "./friend-links.table";

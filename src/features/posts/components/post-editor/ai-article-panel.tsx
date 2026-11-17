@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { generateArticleFn } from "@/features/posts/api/posts.admin.api";
 import { ContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -333,8 +333,13 @@ export function AiArticlePanel({
       )}
 
       <aside
+        aria-hidden={!open}
+        inert={!open}
+        aria-label={m.editor_ai_panel_title()}
         className={cn(
           "fixed right-0 top-0 bottom-0 z-100 w-full max-w-xl bg-background border-l border-border/30 shadow-2xl transition-transform duration-500 ease-out flex flex-col",
+          isFlare &&
+            "flare-editor-panel sm:my-3 sm:mr-3 sm:rounded-2xl sm:border",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
@@ -358,6 +363,7 @@ export function AiArticlePanel({
             size="icon"
             onClick={onClose}
             className="rounded-none text-muted-foreground hover:text-foreground"
+            aria-label={m.common_close()}
           >
             <X size={16} />
           </Button>

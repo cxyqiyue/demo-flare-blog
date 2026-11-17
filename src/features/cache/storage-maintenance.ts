@@ -38,7 +38,12 @@ export async function cleanupStorageFallbackTables(
   tasks.push(
     db
       .delete(UsedChallengesTable)
-      .where(lt(UsedChallengesTable.usedAt, new Date(daysAgoUnix(USED_CHALLENGES_KEEP_DAYS) * 1000)))
+      .where(
+        lt(
+          UsedChallengesTable.usedAt,
+          new Date(daysAgoUnix(USED_CHALLENGES_KEEP_DAYS) * 1000),
+        ),
+      )
       .run()
       .catch((err) =>
         console.error(
@@ -53,7 +58,12 @@ export async function cleanupStorageFallbackTables(
   tasks.push(
     db
       .delete(TaskProgressTable)
-      .where(lt(TaskProgressTable.updatedAt, new Date(daysAgoUnix(TASK_PROGRESS_KEEP_DAYS) * 1000)))
+      .where(
+        lt(
+          TaskProgressTable.updatedAt,
+          new Date(daysAgoUnix(TASK_PROGRESS_KEEP_DAYS) * 1000),
+        ),
+      )
       .run()
       .catch((err) =>
         console.error(
@@ -68,7 +78,12 @@ export async function cleanupStorageFallbackTables(
   tasks.push(
     db
       .delete(StorageLogTable)
-      .where(lt(StorageLogTable.createdAt, new Date(daysAgoUnix(STORAGE_LOG_KEEP_DAYS) * 1000)))
+      .where(
+        lt(
+          StorageLogTable.createdAt,
+          new Date(daysAgoUnix(STORAGE_LOG_KEEP_DAYS) * 1000),
+        ),
+      )
       .run()
       .catch((err) =>
         console.error(
@@ -83,7 +98,12 @@ export async function cleanupStorageFallbackTables(
   tasks.push(
     db
       .delete(PostAutoSnapshotThrottleTable)
-      .where(lt(PostAutoSnapshotThrottleTable.queuedAt, new Date(daysAgoUnix(THROTTLE_KEEP_DAYS) * 1000)))
+      .where(
+        lt(
+          PostAutoSnapshotThrottleTable.queuedAt,
+          new Date(daysAgoUnix(THROTTLE_KEEP_DAYS) * 1000),
+        ),
+      )
       .run()
       .catch((err) =>
         console.error(

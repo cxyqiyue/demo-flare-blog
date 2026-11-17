@@ -80,7 +80,10 @@ const friendLinkSiteInfoSchema = z.object({
 
 export const FriendLinksConfigSchema = z.object({
   siteInfo: friendLinkSiteInfoSchema.optional(),
-  applyRules: z.array(applyRuleSchema).max(FRIEND_LINK_APPLY_RULES_MAX).optional(),
+  applyRules: z
+    .array(applyRuleSchema)
+    .max(FRIEND_LINK_APPLY_RULES_MAX)
+    .optional(),
 });
 export type FriendLinksConfig = z.infer<typeof FriendLinksConfigSchema>;
 export type FriendLinkApplyRule = z.infer<typeof applyRuleSchema>;

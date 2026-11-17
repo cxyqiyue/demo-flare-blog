@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   DISCORD_DEFAULT_MAX_MB,
   DISCORD_NITRO_MAX_MB,
+  formatLimitMb,
   IMGBB_DEFAULT_MAX_MB,
   MB,
   R2_NATIVE_MAX_MB,
-  TELEGRAM_DEFAULT_MAX_MB,
-  formatLimitMb,
   resolveDiscordMaxBytes,
   resolveFfskyMaxBytes,
   resolveHuggingFaceMaxBytes,
@@ -15,12 +14,15 @@ import {
   resolveS3MaxBytes,
   resolveTelegramMaxBytes,
   resolveWebDavMaxBytes,
+  TELEGRAM_DEFAULT_MAX_MB,
 } from "./size-limits";
 
 describe("size-limits", () => {
   it("telegram defaults to the Bot API document limit and honors overrides", () => {
     expect(resolveTelegramMaxBytes(null)).toBe(TELEGRAM_DEFAULT_MAX_MB * MB);
-    expect(resolveTelegramMaxBytes(undefined)).toBe(TELEGRAM_DEFAULT_MAX_MB * MB);
+    expect(resolveTelegramMaxBytes(undefined)).toBe(
+      TELEGRAM_DEFAULT_MAX_MB * MB,
+    );
     expect(
       resolveTelegramMaxBytes({ botToken: "t", chatId: "c", proxyUrl: "" }),
     ).toBe(TELEGRAM_DEFAULT_MAX_MB * MB);

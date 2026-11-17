@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { Input } from "@/components/ui/input";
 import type { FriendLinkStatus } from "@/lib/db/schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { CreateFriendLinkInput } from "../../friend-links.schema";
@@ -160,6 +160,125 @@ export const FriendLinkModerationTable = ({
   const allSelected =
     response.items.length > 0 && selectedIds.size === response.items.length;
   const totalPages = Math.ceil(response.total / PAGE_SIZE);
+
+  if (isFlare) {
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/40 p-3">
+          <label className="mr-auto flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={handleSelectAll}
+              aria-label={m.friend_links_batch_selected({
+                count: response.items.length,
+              })}
+            />
+            {m.friend_links_batch_selected({ count: selectedIds.size })}
+          </label>
+          {selectedIds.size ? (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleBatchApprove}
+              >
+                {m.friend_links_batch_approve()}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleBatchReject}
+              >
+                {m.friend_links_batch_reject()}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                {m.friend_links_batch_cancel()}
+              </Button>
+            </>
+          ) : null}
+        </div>
+        {response.items.map((item) => (
+          <article
+            key={item.id}
+            className="min-w-0 space-y-4 rounded-xl border border-border/60 p-4 sm:p-5"
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <Checkbox
+                checked={selectedIds.has(item.id)}
+                onCheckedChange={() => handleSelectOne(item.id)}
+                aria-label={item.siteName}
+              />
+              {item.logoUrl ? (
+                <img
+                  src={item.logoUrl}
+                  alt=""
+                  className="size-9 rounded-xl object-cover"
+                />
+              ) : null}
+              <h2 className="min-w-0 flex-1 break-words font-semibold">
+                {item.siteName}
+              </h2>
+              <StatusBadge status={item.status} />
+            </div>
+            <a
+              href={item.siteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block break-all text-sm text-primary hover:underline"
+            >
+              {item.siteUrl}
+            </a>
+            {item.description ? (
+              <p className="break-words text-sm leading-7">
+                {item.description}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+              <span>{item.user?.name || m.friend_links_admin_added()}</span>
+              <span>{formatDate(item.createdAt)}</span>
+              {item.contactEmail ? (
+                <span className="break-all">{item.contactEmail}</span>
+              ) : null}
+            </div>
+            {item.rejectionReason ? (
+              <p className="break-words rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                {m.friend_link_rejection_reason({
+                  reason: item.rejectionReason,
+                })}
+              </p>
+            ) : null}
+            <FriendLinkActions
+              friendLinkId={item.id}
+              status={item.status}
+              friendLink={item}
+            />
+          </article>
+        ))}
+        <AdminPagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={response.total}
+          itemsPerPage={PAGE_SIZE}
+          currentPageItemCount={response.items.length}
+          onPageChange={(nextPage) =>
+            navigate({
+              search: ((prev: Record<string, unknown>) => ({
+                ...prev,
+                page: nextPage,
+              })) as never,
+            })
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -522,6 +641,90 @@ const FriendLinkActions = ({
   };
 
   const isLoading = isApproving || isRejecting || isUpdating || isAdminDeleting;
+
+  if (isFlare) {
+    return (
+      <>
+        <div className="flex flex-wrap justify-end gap-2">
+          {status !== "approved" ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isLoading}
+              onClick={handleApprove}
+            >
+              {m.friend_links_action_approve()}
+            </Button>
+          ) : null}
+          {status !== "rejected" ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isLoading}
+              onClick={() => setShowRejectModal(true)}
+            >
+              {m.friend_links_action_reject()}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isLoading}
+            onClick={() => setShowEditModal(true)}
+          >
+            {m.friend_links_action_edit()}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="text-destructive"
+            disabled={isLoading}
+            onClick={() => setShowDeleteConfirm(true)}
+          >
+            {m.friend_links_action_destroy()}
+          </Button>
+        </div>
+        <ConfirmationModal
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={confirmDelete}
+          title={m.friend_links_destroy_modal_title()}
+          message={m.friend_links_destroy_modal_desc()}
+          confirmLabel={m.friend_links_destroy_modal_confirm()}
+          isDanger
+          isLoading={isAdminDeleting}
+        />
+        <RejectModal
+          isOpen={showRejectModal}
+          onClose={() => setShowRejectModal(false)}
+          onConfirm={(reason) =>
+            reject(
+              { data: { id: friendLinkId, rejectionReason: reason } },
+              { onSuccess: () => setShowRejectModal(false) },
+            )
+          }
+          isLoading={isRejecting}
+        />
+        <EditModal
+          key={friendLinkId}
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onConfirm={(data) =>
+            update(
+              { data: { id: friendLinkId, ...data } },
+              { onSuccess: () => setShowEditModal(false) },
+            )
+          }
+          isLoading={isUpdating}
+          initialData={friendLink}
+        />
+      </>
+    );
+  }
 
   if (isFuwari) {
     return (

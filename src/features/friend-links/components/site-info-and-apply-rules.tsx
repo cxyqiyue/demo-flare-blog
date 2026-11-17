@@ -23,9 +23,9 @@ function getThemeStyles(): ThemeStyles {
       return {
         header:
           "py-3 text-left font-bold text-base tracking-tight fuwari-text-90",
-        siteInfoCell:
-          "text-sm font-medium fuwari-text-75 break-all",
-        ruleIndex: "w-4 shrink-0 text-right font-bold text-xs fuwari-text-30 leading-6",
+        siteInfoCell: "text-sm font-medium fuwari-text-75 break-all",
+        ruleIndex:
+          "w-4 shrink-0 text-right font-bold text-xs fuwari-text-30 leading-6",
         valueLink:
           "text-sm font-medium fuwari-text-50 hover:text-(--fuwari-primary) transition-colors break-all no-underline",
         valueText: "text-sm font-medium fuwari-text-75 break-all",
@@ -40,7 +40,8 @@ function getThemeStyles(): ThemeStyles {
         header:
           "py-3 text-left font-serif font-medium tracking-tight text-foreground text-base",
         siteInfoCell: "text-sm text-foreground break-all",
-        ruleIndex: "w-4 shrink-0 text-right font-mono text-xs text-muted-foreground/50 leading-6",
+        ruleIndex:
+          "w-4 shrink-0 text-right font-mono text-xs text-muted-foreground/50 leading-6",
         valueLink:
           "text-sm text-muted-foreground hover:text-foreground transition-colors break-all no-underline",
         valueText: "text-sm text-foreground break-all",
@@ -165,9 +166,7 @@ export function SiteInfoAndApplyRules({
               <td className={`w-1/2 py-3 align-top ${styles.divider}`}>
                 {rule ? (
                   <div className="flex gap-2">
-                    <span className={styles.ruleIndex}>
-                      {index + 1}、
-                    </span>
+                    <span className={styles.ruleIndex}>{index + 1}、</span>
                     <div
                       className={styles.siteInfoCell}
                       dangerouslySetInnerHTML={{

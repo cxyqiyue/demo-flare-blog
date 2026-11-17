@@ -1,4 +1,4 @@
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Loader2, Search } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { SearchPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
@@ -33,7 +33,10 @@ export function SearchPage({
           </div>
 
           <div className="space-y-2">
-            <label className="block text-xs font-medium text-muted-foreground">
+            <label
+              htmlFor="flare-search"
+              className="block text-xs font-medium text-muted-foreground"
+            >
               {m.search_input_label()}
             </label>
             <div className="relative">
@@ -43,7 +46,8 @@ export function SearchPage({
               />
               <input
                 ref={inputRef}
-                type="text"
+                id="flare-search"
+                type="search"
                 value={query}
                 onChange={(e) => onQueryChange(e.target.value)}
                 placeholder={m.search_input_label()}
@@ -53,7 +57,16 @@ export function SearchPage({
           </div>
         </div>
 
-        <div className="border-t border-border/50">
+        <div className="border-t border-border/50" aria-busy={isSearching}>
+          {isSearching ? (
+            <div
+              role="status"
+              className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"
+            >
+              <Loader2 size={16} className="animate-spin" />
+              {m.posts_loading()}
+            </div>
+          ) : null}
           {query.trim() !== "" && !isSearching && results.length === 0 ? (
             <div className="px-5 py-16 text-center md:px-8">
               <p className="text-lg text-muted-foreground/70">
@@ -71,23 +84,34 @@ export function SearchPage({
                     onClick={() => onSelectPost(result.post.slug)}
                     className="group flex w-full flex-col gap-2 px-5 py-4 text-left transition-colors hover:bg-muted/30 md:px-8 md:py-5"
                   >
-                    <h2
-                      className="text-lg font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary md:text-xl"
-                      style={{
-                        viewTransitionName: `post-title-${result.post.slug}`,
-                      }}
-                      dangerouslySetInnerHTML={{
-                        __html: result.matches.title || result.post.title,
-                      }}
-                    />
+                    {result.matches.title ? (
+                      <h2
+                        className="text-lg font-semibold text-foreground group-hover:text-primary md:text-xl"
+                        dangerouslySetInnerHTML={{
+                          __html: result.matches.title,
+                        }}
+                      />
+                    ) : (
+                      <h2 className="text-lg font-semibold text-foreground group-hover:text-primary md:text-xl">
+                        {result.post.title}
+                      </h2>
+                    )}
 
-                    <p
-                      className="line-clamp-2 text-sm leading-6 text-muted-foreground"
-                      dangerouslySetInnerHTML={{
-                        __html:
-                          result.matches.summary || result.post.summary || "",
-                      }}
-                    />
+                    {result.matches.contentSnippet || result.matches.summary ? (
+                      <p
+                        className="line-clamp-2 text-sm leading-6 text-muted-foreground"
+                        dangerouslySetInnerHTML={{
+                          __html:
+                            result.matches.contentSnippet ||
+                            result.matches.summary ||
+                            "",
+                        }}
+                      />
+                    ) : (
+                      <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
+                        {result.post.summary}
+                      </p>
+                    )}
 
                     {result.post.tags.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5 pt-1">

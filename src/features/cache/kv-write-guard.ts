@@ -137,10 +137,7 @@ export async function guardedKvPut(
 }
 
 /** KV 删除不受写入配额限制，直接执行 */
-export async function guardedKvDelete(
-  env: Env,
-  key: string,
-): Promise<boolean> {
+export async function guardedKvDelete(env: Env, key: string): Promise<boolean> {
   try {
     await env.KV.delete(key);
     return true;
@@ -209,10 +206,14 @@ async function setAutoDisabled(
       }),
     );
   }
-  await logStorageEvent(env, disabled ? "kv_auto_disabled" : "kv_auto_enabled", {
-    count,
-    limit: KV_WRITE_SAFE_LIMIT,
-  });
+  await logStorageEvent(
+    env,
+    disabled ? "kv_auto_disabled" : "kv_auto_enabled",
+    {
+      count,
+      limit: KV_WRITE_SAFE_LIMIT,
+    },
+  );
 }
 
 /** 当日已用写入次数 +1 */

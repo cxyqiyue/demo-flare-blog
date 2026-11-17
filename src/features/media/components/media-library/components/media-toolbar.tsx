@@ -17,15 +17,15 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { isFuwari } from "@/lib/theme-mode";
-import { cn } from "@/lib/utils";
-import { m } from "@/paraglide/messages";
 import {
   type CopyLinkFormat,
+  formatCopyLink,
   type MediaSortBy,
   type MediaSortDir,
-  formatCopyLink,
 } from "@/features/media/utils/media.utils";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
+import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages";
 import type { MediaFileItem } from "../hooks/use-media-library";
 import { PortalPanel } from "./portal-panel";
 
@@ -267,6 +267,142 @@ export function MediaToolbar({
     }
   };
 
+  if (isFlare) {
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 xl:flex-row">
+          <label className="relative min-w-0 flex-1">
+            <Search
+              size={16}
+              className="absolute left-3 top-3 text-muted-foreground"
+            />
+            <Input
+              type="search"
+              aria-label={m.nav_search()}
+              value={searchQuery}
+              onChange={(event) => onSearchChange(event.target.value)}
+              className="pl-9"
+            />
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                checked={unusedOnly}
+                onChange={(event) => onUnusedOnlyChange(event.target.checked)}
+              />
+              未使用
+            </label>
+            <select
+              aria-label={m.media_sort_label()}
+              value={`${sortBy}:${sortDir}`}
+              onChange={(event) => {
+                const [field, dir] = event.target.value.split(":");
+                onSortChange(field as MediaSortBy, dir as MediaSortDir);
+              }}
+              className="min-h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            >
+              {[
+                { value: "name:asc", label: m.media_sort_name_asc() },
+                { value: "name:desc", label: m.media_sort_name_desc() },
+                { value: "size:asc", label: m.media_sort_size_asc() },
+                { value: "size:desc", label: m.media_sort_size_desc() },
+                { value: "time:asc", label: m.media_sort_time_asc() },
+                { value: "time:desc", label: m.media_sort_time_desc() },
+              ].map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onViewChange(view === "grid" ? "table" : "grid")}
+              aria-label={view === "grid" ? "切换列表视图" : "切换网格视图"}
+            >
+              {view === "grid" ? <List size={17} /> : <LayoutGrid size={17} />}
+            </Button>
+            {onNewFolder ? (
+              <Button type="button" variant="outline" onClick={onNewFolder}>
+                <FolderPlus size={16} />
+                新建文件夹
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/40 p-3">
+          <Button type="button" variant="ghost" size="sm" onClick={onSelectAll}>
+            <CheckSquare size={15} />
+            {selectedCount} / {totalCount}
+          </Button>
+          {selectedCount ? (
+            <>
+              <select
+                aria-label="复制格式"
+                value={copyFormat}
+                onChange={(event) =>
+                  onCopyFormatChange(event.target.value as CopyLinkFormat)
+                }
+                className="min-h-9 rounded-lg border border-border bg-background px-2 text-sm"
+              >
+                {COPY_FORMATS.map((format) => (
+                  <option key={format.value} value={format.value}>
+                    {format.label}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCopyUrls}
+              >
+                <Copy size={15} />
+                复制链接
+              </Button>
+              {onMove ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!canMoveFiles}
+                  onClick={onMove}
+                >
+                  <FolderInput size={15} />
+                  移动
+                </Button>
+              ) : null}
+              {canDelete ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onDelete}
+                  className="text-destructive"
+                >
+                  <Trash2 size={15} />
+                  删除
+                </Button>
+              ) : null}
+            </>
+          ) : null}
+          {searching ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onSearchChange("")}
+            >
+              <X size={15} />
+              {m.admin_posts_clear_filters()}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   if (isFuwari) {
     return (
       <div className="fuwari-card-base p-3 sm:p-4 flex flex-col gap-4">
@@ -481,10 +617,7 @@ export function MediaToolbar({
           onChange={onSortChange}
         />
 
-        <CopyFormatDropdown
-          value={copyFormat}
-          onChange={onCopyFormatChange}
-        />
+        <CopyFormatDropdown value={copyFormat} onChange={onCopyFormatChange} />
 
         <Button
           variant={unusedOnly ? "default" : "outline"}

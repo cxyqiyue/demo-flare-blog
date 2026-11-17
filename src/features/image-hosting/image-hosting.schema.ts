@@ -10,7 +10,8 @@ export const IMAGE_HOSTING_ACTIVE_PROVIDER = [
   "huggingface",
   "webdav",
 ] as const;
-export type ActiveImageHostingProvider = (typeof IMAGE_HOSTING_ACTIVE_PROVIDER)[number];
+export type ActiveImageHostingProvider =
+  (typeof IMAGE_HOSTING_ACTIVE_PROVIDER)[number];
 
 // ── API Key 图床类型 ──────────────────────────────────────────
 export const API_KEY_PROVIDER_TYPES = ["imgbb", "ffsky"] as const;
@@ -96,7 +97,9 @@ export const ImageProcessingSettingsSchema = z.object({
   /** 压缩目标大小（MB，支持小数）；不设置时压缩到触发阈值内 */
   compressTargetMb: z.number().positive().max(4096).optional(),
 });
-export type ImageProcessingSettings = z.infer<typeof ImageProcessingSettingsSchema>;
+export type ImageProcessingSettings = z.infer<
+  typeof ImageProcessingSettingsSchema
+>;
 
 // ── API Key 图床实例 ─────────────────────────────────────────
 export const ApiKeyProviderSchema = z.object({
@@ -156,7 +159,14 @@ export type UploadImageHostingInput = FormData;
 
 // ── 测试连接输入 ─────────────────────────────────────────────
 export const TestImageHostingConnectionInputSchema = z.object({
-  category: z.enum(["s3", "api-key", "telegram", "discord", "huggingface", "webdav"]),
+  category: z.enum([
+    "s3",
+    "api-key",
+    "telegram",
+    "discord",
+    "huggingface",
+    "webdav",
+  ]),
   s3: S3ConnectionConfigSchema.optional(),
   apiKeyProviderType: z.enum(API_KEY_PROVIDER_TYPES).optional(),
   apiKey: z.string().optional(),

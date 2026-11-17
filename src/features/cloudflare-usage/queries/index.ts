@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
-  getCloudflareUsageFn,
   getCloudflareAlertStatusFn,
+  getCloudflareUsageFn,
 } from "../api/cloudflare-usage.api";
 
 export const CF_USAGE_KEYS = {

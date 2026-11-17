@@ -103,7 +103,9 @@ export function isRefererAllowed(
   }
   if (refererHost === selfHost) return true;
 
-  if (settings.ownDomains.some((entry) => hostMatchesEntry(refererHost, entry))) {
+  if (
+    settings.ownDomains.some((entry) => hostMatchesEntry(refererHost, entry))
+  ) {
     return true;
   }
 
@@ -160,7 +162,10 @@ function proxyError(reason: string, message: string): ProxyResolveError {
   return { reason, message };
 }
 
-async function fetchUpstream(url: string, init?: RequestInit): Promise<Result<Response, ProxyResolveError>> {
+async function fetchUpstream(
+  url: string,
+  init?: RequestInit,
+): Promise<Result<Response, ProxyResolveError>> {
   try {
     const upstream = await fetch(url, init);
     if (!upstream.ok || !upstream.body) {
@@ -183,7 +188,9 @@ async function resolveTelegramUpstream(
 ): Promise<Result<Response, ProxyResolveError>> {
   const tg = config?.imageHosting?.telegram;
   if (!tg?.botToken?.trim() || !tg.chatId?.trim()) {
-    return err(proxyError("PROVIDER_NOT_CONFIGURED", "Telegram channel not configured"));
+    return err(
+      proxyError("PROVIDER_NOT_CONFIGURED", "Telegram channel not configured"),
+    );
   }
 
   // 键形如 {messageId}:{fileId}；旧版纯 messageId 键缺少持久 file_id，
@@ -191,7 +198,10 @@ async function resolveTelegramUpstream(
   const { fileId } = TelegramChannelApi.parseTelegramKey(rawKey);
   if (!fileId) {
     return err(
-      proxyError("LEGACY_RECORD", "Legacy record without file_id — please re-upload"),
+      proxyError(
+        "LEGACY_RECORD",
+        "Legacy record without file_id — please re-upload",
+      ),
     );
   }
 
@@ -208,7 +218,9 @@ async function resolveDiscordUpstream(
 ): Promise<Result<Response, ProxyResolveError>> {
   const dc = config?.imageHosting?.discord;
   if (!dc?.botToken?.trim() || !dc.channelId?.trim()) {
-    return err(proxyError("PROVIDER_NOT_CONFIGURED", "Discord channel not configured"));
+    return err(
+      proxyError("PROVIDER_NOT_CONFIGURED", "Discord channel not configured"),
+    );
   }
 
   const [messageId, indexRaw] = key.split(":");
@@ -239,7 +251,8 @@ async function resolveS3Upstream(
   key: string,
 ): Promise<Result<Response, ProxyResolveError>> {
   const cfg = resolveS3ConfigForProxy(config);
-  if (!cfg) return err(proxyError("PROVIDER_NOT_CONFIGURED", "S3 not configured"));
+  if (!cfg)
+    return err(proxyError("PROVIDER_NOT_CONFIGURED", "S3 not configured"));
   // 必须走 SigV4 签名回源：公开读 URL 对私有桶/虚拟主机型端点不可用（502 根因）
   const result = await fetchS3ImageStream(cfg, key);
   if (result.error) {
@@ -254,15 +267,20 @@ async function resolveHuggingFaceUpstream(
 ): Promise<Result<Response, ProxyResolveError>> {
   const hf = config?.imageHosting?.huggingface;
   if (!hf?.repo?.trim()) {
-    return err(proxyError("PROVIDER_NOT_CONFIGURED", "HuggingFace not configured"));
+    return err(
+      proxyError("PROVIDER_NOT_CONFIGURED", "HuggingFace not configured"),
+    );
   }
 
   const headers: HeadersInit = hf.token?.trim()
     ? { Authorization: `Bearer ${hf.token.trim()}` }
     : {};
-  return fetchUpstream(HuggingFaceChannelApi.buildHfResolveUrl(hf.repo.trim(), key), {
-    headers,
-  });
+  return fetchUpstream(
+    HuggingFaceChannelApi.buildHfResolveUrl(hf.repo.trim(), key),
+    {
+      headers,
+    },
+  );
 }
 
 async function resolveWebDavUpstream(
@@ -310,8 +328,15 @@ export async function resolveProxiedMedia(
       return resolveWebDavUpstream(config, key);
     case "r2-native":
     case "r2":
-      return err(proxyError("UNSUPPORTED_PROVIDER", "R2 objects are served via /images/"));
+      return err(
+        proxyError(
+          "UNSUPPORTED_PROVIDER",
+          "R2 objects are served via /images/",
+        ),
+      );
     default:
-      return err(proxyError("UNSUPPORTED_PROVIDER", `Unsupported provider: ${provider}`));
+      return err(
+        proxyError("UNSUPPORTED_PROVIDER", `Unsupported provider: ${provider}`),
+      );
   }
 }

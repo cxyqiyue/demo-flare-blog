@@ -1,6 +1,6 @@
-import { isSuperAdmin } from "@/lib/auth/access";
 import * as AuthRepo from "@/features/auth/data/auth.data";
 import * as ConfigService from "@/features/config/service/config.service";
+import { isSuperAdmin } from "@/lib/auth/access";
 
 export type EnrichedSessionUser = Session["user"] & { isSuperAdmin: boolean };
 export type EnrichedSession = Omit<Session, "user"> & {

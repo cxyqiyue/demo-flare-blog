@@ -1,15 +1,25 @@
-import { ClientOnly } from "@tanstack/react-router";
+import { ClientOnly, useSearch } from "@tanstack/react-router";
 import type { JSONContent } from "@tiptap/react";
-import { Heart, Loader2, MessageCircle, Pencil, Trash2 } from "lucide-react";
-import { lazy, Suspense, useState } from "react";
+import {
+  Heart,
+  Loader2,
+  MessageCircle,
+  Pencil,
+  Share2,
+  Trash2,
+} from "lucide-react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { collectImageUrls } from "@/features/moments/components/moment-editor-config";
 import type { MomentWithStats } from "@/features/moments/moments.schema";
+import { MomentVideoUrlSchema } from "@/features/moments/moments.schema";
 import { cn, formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { renderCommentReact } from "../../components/comments/view/comment-render";
 import { CommentSection } from "../../components/comments/view/comment-section";
+import { MomentVideo } from "./moment-video";
 
 // TipTap 编辑器体积大，且仅在管理员编辑动态时挂载，按需加载
 const MomentEditor = lazy(() =>
@@ -29,6 +39,7 @@ interface MomentCardProps {
     id: number,
     content: JSONContent,
     images: string[],
+    videoUrl?: string | null,
   ) => Promise<boolean>;
 }
 
@@ -52,12 +63,20 @@ export function MomentCard({
   onDelete,
   onUpdate,
 }: MomentCardProps) {
-  const [commentsOpen, setCommentsOpen] = useState(false);
+  const search = useSearch({ strict: false });
+  const [commentsOpen, setCommentsOpen] = useState(
+    Boolean(search.highlightCommentId && search.momentId === moment.id),
+  );
   const [liking, setLiking] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editing, setEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [videoUrl, setVideoUrl] = useState(moment.videoUrl ?? "");
+  useEffect(() => {
+    if (search.highlightCommentId && search.momentId === moment.id)
+      setCommentsOpen(true);
+  }, [search.highlightCommentId, search.momentId, moment.id]);
 
   // 超管可管理所有动态；普通管理员仅可管理自己发布的动态
   const canManage =
@@ -87,10 +106,15 @@ export function MomentCard({
 
   const handleEditSubmit = async (content: JSONContent): Promise<boolean> => {
     if (isSubmitting) return false;
+    const parsed = MomentVideoUrlSchema.safeParse(videoUrl.trim() || null);
+    if (!parsed.success) {
+      toast.error("请输入有效的视频链接");
+      return false;
+    }
     const images = collectImageUrls(content);
     setIsSubmitting(true);
     try {
-      const ok = await onUpdate(moment.id, content, images);
+      const ok = await onUpdate(moment.id, content, images, parsed.data);
       if (ok) setEditing(false);
       return ok;
     } finally {
@@ -101,7 +125,10 @@ export function MomentCard({
   const renderedContent = renderCommentReact(moment.content);
 
   return (
-    <article className="flare-surface-soft overflow-hidden">
+    <article
+      id={`moment-${moment.id}`}
+      className="flare-surface overflow-hidden scroll-mt-24"
+    >
       {/* Header */}
       <header className="flex items-center justify-between gap-4 px-5 md:px-6 pt-5 md:pt-6">
         <div className="flex items-center gap-3 min-w-0">
@@ -136,7 +163,11 @@ export function MomentCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setEditing(true)}
+                onClick={() => {
+                  setVideoUrl(moment.videoUrl ?? "");
+                  setEditing(true);
+                }}
+                aria-label={m.announcements_actions_edit()}
                 className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
               >
                 <Pencil size={14} />
@@ -146,6 +177,7 @@ export function MomentCard({
               variant="ghost"
               size="sm"
               onClick={() => setShowDeleteModal(true)}
+              aria-label={m.announcements_actions_delete()}
               className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
             >
               <Trash2 size={14} />
@@ -161,10 +193,36 @@ export function MomentCard({
             <MomentEditor
               onSubmit={handleEditSubmit}
               isSubmitting={isSubmitting}
-              initialContent={moment.content}
+              initialContent={{
+                type: "doc",
+                content: [
+                  ...(moment.content?.content ?? []),
+                  ...moment.images
+                    .filter(
+                      (src) =>
+                        !collectImageUrls(
+                          moment.content ?? { type: "doc", content: [] },
+                        ).includes(src),
+                    )
+                    .map((src) => ({
+                      type: "image",
+                      attrs: { src },
+                    })),
+                ],
+              }}
+              allowEmpty={Boolean(videoUrl.trim())}
               onCancel={() => setEditing(false)}
             />
           </Suspense>
+          <label className="my-3 flex flex-col gap-2 text-sm">
+            视频链接
+            <input
+              type="url"
+              value={videoUrl}
+              onChange={(event) => setVideoUrl(event.target.value)}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2"
+            />
+          </label>
         </div>
       ) : (
         <div className="px-5 md:px-6 pt-4">
@@ -172,11 +230,11 @@ export function MomentCard({
             <div className="flare-md text-sm md:text-[15px] leading-relaxed text-foreground/90">
               {renderedContent}
             </div>
-          ) : (
+          ) : !moment.videoUrl ? (
             <p className="text-sm text-muted-foreground/60 italic">
               {m.moments_empty_content()}
             </p>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -199,6 +257,12 @@ export function MomentCard({
           ))}
         </div>
       )}
+
+      {moment.videoUrl && !editing ? (
+        <div className="px-5 pt-4 md:px-6">
+          <MomentVideo key={moment.videoUrl} url={moment.videoUrl} />
+        </div>
+      ) : null}
 
       {/* Actions */}
       {!editing && (
@@ -228,6 +292,37 @@ export function MomentCard({
           >
             <MessageCircle size={14} />
             <span className="tabular-nums">{moment.commentCount}</span>
+          </button>
+          <button
+            type="button"
+            className="flare-chip ml-auto"
+            onClick={async () => {
+              const url = new URL(window.location.href);
+              url.search = "";
+              url.searchParams.set("momentId", String(moment.id));
+              url.hash = `moment-${moment.id}`;
+              try {
+                if (navigator.share)
+                  await navigator.share({
+                    title: moment.author?.name ?? m.moments_title(),
+                    url: url.href,
+                  });
+                else {
+                  await navigator.clipboard.writeText(url.href);
+                  toast.success(m.post_share_success());
+                }
+              } catch (error) {
+                if (
+                  !(
+                    error instanceof DOMException && error.name === "AbortError"
+                  )
+                )
+                  toast.error(m.post_share_error());
+              }
+            }}
+          >
+            <Share2 size={14} />
+            {m.post_share()}
           </button>
         </footer>
       )}

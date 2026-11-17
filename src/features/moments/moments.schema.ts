@@ -2,6 +2,17 @@ import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { NullableJsonContentSchema } from "@/features/posts/schema/json-content.schema";
 import { MomentsTable } from "@/lib/db/schema";
+import { resolveMomentVideo } from "./video";
+
+export const MomentVideoUrlSchema = z
+  .string()
+  .max(2000)
+  .refine(
+    (url) => resolveMomentVideo(url) !== null,
+    "请输入 Bilibili、YouTube 或视频文件链接",
+  )
+  .nullable()
+  .optional();
 
 const coercedDate = z.union([z.date(), z.string().pipe(z.coerce.date())]);
 
@@ -10,6 +21,7 @@ export const MomentSelectSchema = createSelectSchema(MomentsTable, {
   updatedAt: coercedDate,
   images: z.array(z.string()),
   content: NullableJsonContentSchema,
+  videoUrl: z.string().nullable().optional(),
 });
 
 export const MomentAuthorSchema = z.object({
@@ -28,12 +40,14 @@ export const MomentWithStatsSchema = MomentSelectSchema.extend({
 // === Admin inputs ===
 
 export const CreateMomentInputSchema = z.object({
+  videoUrl: MomentVideoUrlSchema,
   content: NullableJsonContentSchema,
   images: z.array(z.string().min(1).max(2000)).max(9).default([]),
 });
 export type CreateMomentInput = z.infer<typeof CreateMomentInputSchema>;
 
 export const UpdateMomentInputSchema = z.object({
+  videoUrl: MomentVideoUrlSchema,
   id: z.number(),
   content: NullableJsonContentSchema,
   images: z.array(z.string().min(1).max(2000)).max(9).default([]),

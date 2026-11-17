@@ -35,8 +35,12 @@ import type {
   DashboardResponse,
 } from "@/features/dashboard/dashboard.schema";
 import { dashboardStatsQuery } from "@/features/dashboard/queries";
+import {
+  FlareAdminHeader,
+  FlareAdminPanel,
+} from "@/features/theme/themes/flare/components/admin/page";
 import { useVersionCheck } from "@/features/version/hooks/use-version-check";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { formatBytes, formatTime, formatTimeAgo } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -94,6 +98,168 @@ function DashboardOverview() {
     "30d": m.admin_overview_range_30d(),
     "90d": m.admin_overview_range_90d(),
   };
+
+  if (isFlare) {
+    return (
+      <div className="space-y-5 pb-12">
+        <FlareAdminHeader
+          title={m.admin_overview_heading()}
+          description={lastUpdatedTime || m.admin_overview_status()}
+          actions={
+            <>
+              <select
+                aria-label={m.admin_overview_traffic_title()}
+                value={range}
+                onChange={(event) =>
+                  navigate({
+                    search: (prev: ReturnType<typeof Route.useSearch>) => ({
+                      ...prev,
+                      range: event.target.value as DashboardRange,
+                    }),
+                  })
+                }
+                className="min-h-10 rounded-xl border border-border bg-background px-3 text-sm"
+              >
+                {Object.entries(rangeLabel).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isFetching || refreshDashboardCacheMutation.isPending}
+                onClick={() => refreshDashboardCacheMutation.mutate({})}
+              >
+                <RefreshCw
+                  size={16}
+                  className={isFetching ? "animate-spin" : ""}
+                />
+                {m.admin_overview_refresh()}
+              </Button>
+            </>
+          }
+        />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: m.admin_overview_stat_pending_comments(),
+              value: stats.pendingComments,
+            },
+            {
+              label: m.admin_overview_stat_published_posts(),
+              value: stats.publishedPosts,
+            },
+            {
+              label: m.admin_overview_stat_media_storage(),
+              value: formatBytes(stats.mediaSize),
+            },
+            { label: m.admin_overview_stat_drafts(), value: stats.drafts },
+          ].map((stat) => (
+            <FlareAdminPanel key={stat.label}>
+              <p className="text-sm text-muted-foreground">{stat.label}</p>
+              <p className="mt-3 text-3xl font-semibold tabular-nums">
+                {stat.value}
+              </p>
+            </FlareAdminPanel>
+          ))}
+        </div>
+        <CloudflareUsageDashboard />
+        <FlareAdminPanel>
+          <h2 className="mb-5 text-lg font-semibold">
+            {m.admin_overview_traffic_title()}
+          </h2>
+          {overview ? (
+            <div className="mb-5 grid gap-4 sm:grid-cols-2">
+              <MetricItem
+                label={m.admin_overview_metric_page_views()}
+                value={overview.pageViews.value}
+                prev={overview.pageViews.prev}
+                icon={<Eye size={14} />}
+              />
+              <MetricItem
+                label={m.admin_overview_metric_visitors()}
+                value={overview.visitors.value}
+                prev={overview.visitors.prev}
+                icon={<Users size={14} />}
+              />
+            </div>
+          ) : null}
+          <div className="h-75">
+            {traffic?.length ? (
+              <TrafficChart data={traffic} />
+            ) : (
+              <p className="py-12 text-center text-sm text-muted-foreground">
+                {m.admin_overview_no_traffic()}
+              </p>
+            )}
+          </div>
+        </FlareAdminPanel>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <FlareAdminPanel>
+            <h2 className="mb-4 text-lg font-semibold">
+              {m.admin_overview_top_pages_title()}
+            </h2>
+            <div className="space-y-3">
+              {topPages?.length ? (
+                topPages.slice(0, 5).map((page) => (
+                  <Link
+                    key={page.slug}
+                    to="/post/$slug"
+                    params={{ slug: page.slug }}
+                    className="flex items-center justify-between gap-3 text-sm hover:text-primary"
+                  >
+                    <span className="truncate">{page.title}</span>
+                    <span className="tabular-nums">{page.views}</span>
+                  </Link>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {m.admin_overview_no_top_pages()}
+                </p>
+              )}
+            </div>
+          </FlareAdminPanel>
+          <FlareAdminPanel>
+            <h2 className="mb-4 text-lg font-semibold">
+              {m.admin_overview_activity_title()}
+            </h2>
+            <div className="divide-y divide-border/50">
+              {activities.length ? (
+                activities.map((activity, index) => (
+                  <div
+                    key={`${activity.type}:${index}`}
+                    className="flex flex-wrap items-center justify-between gap-3 py-3"
+                  >
+                    {"link" in activity && activity.link ? (
+                      <Link
+                        to={activity.link}
+                        className="break-words text-sm hover:text-primary"
+                      >
+                        {activity.text}
+                      </Link>
+                    ) : (
+                      <span className="break-words text-sm">
+                        {activity.text}
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {formatTimeAgo(activity.time)}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {m.admin_overview_no_activity()}
+                </p>
+              )}
+            </div>
+          </FlareAdminPanel>
+        </div>
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (

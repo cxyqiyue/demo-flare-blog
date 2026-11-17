@@ -11,8 +11,8 @@ import { useEffect, useRef, useState } from "react";
 import { AdminPagination } from "@/components/admin/admin-pagination";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { formatDate } from "@/lib/utils";
-import { isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import { useAdminUsers } from "../../hooks/use-users";
 import { adminUsersQuery } from "../../queries";
@@ -74,6 +74,33 @@ export const UserManagementTable = ({
   }
 
   const totalPages = Math.ceil(response.total / PAGE_SIZE);
+
+  if (isFlare) {
+    return (
+      <div className="space-y-5">
+        <div className="space-y-3">
+          {response.items.map((item) => (
+            <UserRow key={item.id} item={item} actor={response.currentUser} />
+          ))}
+        </div>
+        <AdminPagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={response.total}
+          itemsPerPage={PAGE_SIZE}
+          currentPageItemCount={response.items.length}
+          onPageChange={(nextPage) =>
+            navigate({
+              search: ((prev: Record<string, unknown>) => ({
+                ...prev,
+                page: nextPage,
+              })) as never,
+            })
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -169,129 +196,227 @@ const UserRow = ({
   return (
     <div
       ref={menuRef}
-      className="group transition-all duration-500 hover:bg-muted/10"
+      className={
+        isFlare
+          ? "rounded-xl border border-border/60 p-4 sm:p-5"
+          : "group transition-all duration-500 hover:bg-muted/10"
+      }
     >
-      {/* Desktop Row */}
-      <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-6 items-center hover:bg-accent/5 transition-colors">
-        <div className="col-span-3 flex items-center gap-3 overflow-hidden min-w-0">
-          <div className="w-8 h-8 rounded-none bg-muted/20 flex items-center justify-center border border-border/30 shrink-0">
-            {item.image ? (
-              <img src={item.image} className="w-full h-full object-cover" />
+      {isFlare ? (
+        <div className="space-y-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary">
+              {item.image ? (
+                <img
+                  src={item.image}
+                  alt=""
+                  className="size-full object-cover"
+                />
+              ) : (
+                item.name.slice(0, 1) || "?"
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="break-words font-semibold">
+                {item.name}
+                {isSelf ? (
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    ({m.users_self()})
+                  </span>
+                ) : null}
+              </p>
+              <p className="break-all text-sm text-muted-foreground">
+                {item.email}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="rounded-lg bg-muted px-2 py-1">
+              {item.isSuperAdmin
+                ? m.users_role_super()
+                : isAdmin
+                  ? m.users_role_admin()
+                  : m.users_role_user()}
+            </span>
+            <span
+              className={`rounded-lg px-2 py-1 ${isBanned ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}
+            >
+              {isBanned ? m.users_status_banned() : m.users_status_active()}
+            </span>
+            <span className="px-2 py-1 text-muted-foreground">
+              {m.users_mobile_comments({ count: item.totalComments })}
+            </span>
+            <span className="px-2 py-1 text-muted-foreground">
+              {formatDate(item.createdAt)}
+            </span>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2 border-t border-border/50 pt-3">
+            {canManage ? (
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isLoading}
+                  onClick={() => setShowRoleModal(true)}
+                >
+                  {isAdmin
+                    ? m.users_action_set_user()
+                    : m.users_action_set_admin()}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isLoading}
+                  onClick={() =>
+                    isBanned ? setShowUnbanModal(true) : setShowBanModal(true)
+                  }
+                  className={isBanned ? "" : "text-destructive"}
+                >
+                  {isBanned ? m.users_action_unban() : m.users_action_ban()}
+                </Button>
+              </>
             ) : (
-              <span className="text-[10px] font-mono">
-                {item.name.slice(0, 1) || "?"}
+              <span className="text-sm text-muted-foreground">
+                {m.users_protected()}
               </span>
             )}
           </div>
-          <div className="min-w-0 space-y-0.5">
-            <div className="text-xs font-serif font-medium truncate">
-              {item.name}
-              {isSelf && (
-                <span className="ml-2 text-[9px] font-mono text-muted-foreground">
-                  ({m.users_self()})
-                </span>
-              )}
-            </div>
-            <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest truncate">
-              {item.email}
-            </div>
-          </div>
         </div>
-
-        <div className="col-span-2">
-          <RoleBadge isSuperAdmin={item.isSuperAdmin} isAdmin={isAdmin} />
-        </div>
-
-        <div className="col-span-2">
-          <StatusBadge isBanned={isBanned} />
-        </div>
-
-        <div className="col-span-1 text-xs font-mono text-muted-foreground">
-          {item.totalComments}
-        </div>
-
-        <div className="col-span-2 text-[10px] font-mono text-muted-foreground">
-          {formatDate(item.createdAt).split(" ")[0]}
-        </div>
-
-        <div className="col-span-2 flex justify-end">
-          <RowActions
-            item={item}
-            canManage={canManage}
-            isOpen={isOpen}
-            setIsOpen={setIsOpen}
-            onRole={() => {
-              setIsOpen(false);
-              setShowRoleModal(true);
-            }}
-            onBan={() => {
-              setIsOpen(false);
-              setShowBanModal(true);
-            }}
-            onUnban={() => {
-              setIsOpen(false);
-              setShowUnbanModal(true);
-            }}
-            isLoading={isLoading}
-          />
-        </div>
-      </div>
-
-      {/* Mobile Row */}
-      <div className="md:hidden p-6 space-y-4">
-        <div className="flex justify-between items-start">
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 rounded-none bg-muted flex items-center justify-center border border-border shrink-0">
-              {item.image ? (
-                <img src={item.image} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-[10px] font-mono">
-                  {item.name.slice(0, 1) || "?"}
-                </span>
-              )}
-            </div>
-            <div>
-              <div className="text-xs font-bold font-serif tracking-tight">
-                {item.name}
+      ) : (
+        <>
+          {/* Desktop Row */}
+          <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-6 items-center hover:bg-accent/5 transition-colors">
+            <div className="col-span-3 flex items-center gap-3 overflow-hidden min-w-0">
+              <div className="w-8 h-8 rounded-none bg-muted/20 flex items-center justify-center border border-border/30 shrink-0">
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-[10px] font-mono">
+                    {item.name.slice(0, 1) || "?"}
+                  </span>
+                )}
               </div>
-              <div className="text-[9px] font-mono text-muted-foreground uppercase">
-                {item.email}
+              <div className="min-w-0 space-y-0.5">
+                <div className="text-xs font-serif font-medium truncate">
+                  {item.name}
+                  {isSelf && (
+                    <span className="ml-2 text-[9px] font-mono text-muted-foreground">
+                      ({m.users_self()})
+                    </span>
+                  )}
+                </div>
+                <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest truncate">
+                  {item.email}
+                </div>
               </div>
             </div>
+
+            <div className="col-span-2">
+              <RoleBadge isSuperAdmin={item.isSuperAdmin} isAdmin={isAdmin} />
+            </div>
+
+            <div className="col-span-2">
+              <StatusBadge isBanned={isBanned} />
+            </div>
+
+            <div className="col-span-1 text-xs font-mono text-muted-foreground">
+              {item.totalComments}
+            </div>
+
+            <div className="col-span-2 text-[10px] font-mono text-muted-foreground">
+              {formatDate(item.createdAt).split(" ")[0]}
+            </div>
+
+            <div className="col-span-2 flex justify-end">
+              <RowActions
+                item={item}
+                canManage={canManage}
+                isOpen={isOpen}
+                setIsOpen={setIsOpen}
+                onRole={() => {
+                  setIsOpen(false);
+                  setShowRoleModal(true);
+                }}
+                onBan={() => {
+                  setIsOpen(false);
+                  setShowBanModal(true);
+                }}
+                onUnban={() => {
+                  setIsOpen(false);
+                  setShowUnbanModal(true);
+                }}
+                isLoading={isLoading}
+              />
+            </div>
           </div>
-          <StatusBadge isBanned={isBanned} />
-        </div>
 
-        <div className="flex items-center gap-3 text-[10px] font-mono text-muted-foreground">
-          <RoleBadge isSuperAdmin={item.isSuperAdmin} isAdmin={isAdmin} />
-          <span>·</span>
-          <span>{m.users_mobile_comments({ count: item.totalComments })}</span>
-          <span>·</span>
-          <span>{formatDate(item.createdAt).split(" ")[0]}</span>
-        </div>
+          {/* Mobile Row */}
+          <div className="md:hidden p-6 space-y-4">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-4">
+                <div className="w-8 h-8 rounded-none bg-muted flex items-center justify-center border border-border shrink-0">
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-[10px] font-mono">
+                      {item.name.slice(0, 1) || "?"}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs font-bold font-serif tracking-tight">
+                    {item.name}
+                  </div>
+                  <div className="text-[9px] font-mono text-muted-foreground uppercase">
+                    {item.email}
+                  </div>
+                </div>
+              </div>
+              <StatusBadge isBanned={isBanned} />
+            </div>
 
-        <div className="flex justify-end pt-4 border-t border-border/30">
-          <RowActions
-            item={item}
-            canManage={canManage}
-            isOpen={isOpen}
-            setIsOpen={setIsOpen}
-            onRole={() => {
-              setIsOpen(false);
-              setShowRoleModal(true);
-            }}
-            onBan={() => {
-              setIsOpen(false);
-              setShowBanModal(true);
-            }}
-            onUnban={() => {
-              setIsOpen(false);
-              setShowUnbanModal(true);
-            }}
-            isLoading={isLoading}
-          />
-        </div>
-      </div>
+            <div className="flex items-center gap-3 text-[10px] font-mono text-muted-foreground">
+              <RoleBadge isSuperAdmin={item.isSuperAdmin} isAdmin={isAdmin} />
+              <span>·</span>
+              <span>
+                {m.users_mobile_comments({ count: item.totalComments })}
+              </span>
+              <span>·</span>
+              <span>{formatDate(item.createdAt).split(" ")[0]}</span>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-border/30">
+              <RowActions
+                item={item}
+                canManage={canManage}
+                isOpen={isOpen}
+                setIsOpen={setIsOpen}
+                onRole={() => {
+                  setIsOpen(false);
+                  setShowRoleModal(true);
+                }}
+                onBan={() => {
+                  setIsOpen(false);
+                  setShowBanModal(true);
+                }}
+                onUnban={() => {
+                  setIsOpen(false);
+                  setShowUnbanModal(true);
+                }}
+                isLoading={isLoading}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Role Modal */}
       <ConfirmationModal
@@ -501,6 +626,35 @@ const BanModal = ({
 }) => {
   const [reason, setReason] = useState("");
 
+  if (isFlare) {
+    return (
+      <ConfirmationModal
+        isOpen={isOpen}
+        onClose={() => {
+          setReason("");
+          onClose();
+        }}
+        onConfirm={() => onConfirm(reason || undefined)}
+        title={m.users_ban_modal_title()}
+        message={m.users_ban_modal_desc({ name: userName })}
+        confirmLabel={m.users_ban_modal_confirm()}
+        isLoading={isLoading}
+      >
+        <label className="mt-4 block space-y-2">
+          <span>{m.users_ban_modal_label()}</span>
+          <textarea
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            maxLength={500}
+            rows={3}
+            placeholder={m.users_ban_modal_placeholder()}
+            className="w-full rounded-xl border border-border bg-background p-3 text-sm"
+          />
+        </label>
+      </ConfirmationModal>
+    );
+  }
+
   if (!isOpen) return null;
 
   return (
@@ -558,7 +712,10 @@ const BanModal = ({
 
 // ============ Fuwari Table ============
 
-function FuwariUserManagementTable({ search, page = 1 }: UserManagementTableProps) {
+function FuwariUserManagementTable({
+  search,
+  page = 1,
+}: UserManagementTableProps) {
   const navigate = routeApi.useNavigate();
   const {
     data: response,
@@ -609,12 +766,18 @@ function FuwariUserManagementTable({ search, page = 1 }: UserManagementTableProp
         <div className="col-span-2 font-bold">{m.users_th_status()}</div>
         <div className="col-span-1 font-bold">{m.users_th_comments()}</div>
         <div className="col-span-2 font-bold">{m.users_th_joined()}</div>
-        <div className="col-span-2 text-right font-bold">{m.users_th_actions()}</div>
+        <div className="col-span-2 text-right font-bold">
+          {m.users_th_actions()}
+        </div>
       </div>
 
       <div>
         {response.items.map((item) => (
-          <FuwariUserRow key={item.id} item={item} actor={response.currentUser} />
+          <FuwariUserRow
+            key={item.id}
+            item={item}
+            actor={response.currentUser}
+          />
         ))}
       </div>
 
@@ -682,7 +845,10 @@ function FuwariUserRow({
         <div className="col-span-3 flex items-center gap-3 overflow-hidden min-w-0">
           <div className="w-9 h-9 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center shrink-0">
             {item.image ? (
-              <img src={item.image} className="w-full h-full object-cover rounded-xl" />
+              <img
+                src={item.image}
+                className="w-full h-full object-cover rounded-xl"
+              />
             ) : (
               <span className="text-sm font-bold text-(--fuwari-primary)">
                 {item.name.slice(0, 1) || "?"}
@@ -747,7 +913,10 @@ function FuwariUserRow({
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-(--fuwari-btn-regular-bg) flex items-center justify-center shrink-0">
               {item.image ? (
-                <img src={item.image} className="w-full h-full object-cover rounded-xl" />
+                <img
+                  src={item.image}
+                  className="w-full h-full object-cover rounded-xl"
+                />
               ) : (
                 <span className="text-sm font-bold text-(--fuwari-primary)">
                   {item.name.slice(0, 1) || "?"}
@@ -874,9 +1043,7 @@ function FuwariRowActions({
 }) {
   if (!canManage) {
     return (
-      <span className="text-xs fuwari-text-30">
-        [ {m.users_protected()} ]
-      </span>
+      <span className="text-xs fuwari-text-30">[ {m.users_protected()} ]</span>
     );
   }
 
@@ -905,9 +1072,7 @@ function FuwariRowActions({
             className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm fuwari-text-75 hover:bg-(--fuwari-btn-plain-bg-hover) hover:text-(--fuwari-primary) transition-colors group"
           >
             <span>
-              {isAdmin
-                ? m.users_action_set_user()
-                : m.users_action_set_admin()}
+              {isAdmin ? m.users_action_set_user() : m.users_action_set_admin()}
             </span>
             <ShieldCheck className="h-4 w-4 opacity-0 group-hover:opacity-100" />
           </button>

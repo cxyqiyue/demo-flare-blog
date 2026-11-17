@@ -3,9 +3,13 @@ import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
+import {
+  FlareAdminHeader,
+  FlareAdminPanel,
+} from "@/features/theme/themes/flare/components/admin/page";
 import { UserManagementTable } from "@/features/users/components/admin/user-management-table";
 import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 const searchSchema = z.object({
@@ -53,6 +57,30 @@ function UsersAdminPage() {
 
     return () => clearTimeout(timer);
   }, [searchInput, navigate, search]);
+
+  if (isFlare) {
+    return (
+      <div className="space-y-5 pb-12">
+        <FlareAdminHeader
+          title={m.users_admin_title()}
+          description={m.users_admin_tag()}
+        />
+        <FlareAdminPanel>
+          <Input
+            type="search"
+            aria-label={m.users_search_placeholder()}
+            placeholder={m.users_search_placeholder()}
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            className="max-w-lg"
+          />
+        </FlareAdminPanel>
+        <FlareAdminPanel>
+          <UserManagementTable search={search} page={page} />
+        </FlareAdminPanel>
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (

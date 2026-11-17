@@ -1,6 +1,6 @@
+import { guessMimeFromName } from "@/features/image-hosting/channels/huggingface";
 import type { WebDAVChannel } from "@/features/image-hosting/image-hosting.schema";
 import { err, ok, type Result } from "@/lib/errors";
-import { guessMimeFromName } from "@/features/image-hosting/channels/huggingface";
 
 /**
  * WebDAV channel client.
@@ -194,7 +194,9 @@ function parseMultiStatus(xml: string): ParsedPropEntry[] {
   const blocks = xml.split(/<[\w-]*:?response\b/i).slice(1);
 
   for (const block of blocks) {
-    const hrefMatch = block.match(/<[\w-]*:?href[^>]*>([^<]+)<\/[\w-]*:?href>/i);
+    const hrefMatch = block.match(
+      /<[\w-]*:?href[^>]*>([^<]+)<\/[\w-]*:?href>/i,
+    );
     if (!hrefMatch) continue;
 
     entries.push({
@@ -206,9 +208,7 @@ function parseMultiStatus(xml: string): ParsedPropEntry[] {
           block.match(/<[\w-]*:?getcontentlength[^>]*>(\d+)</i)?.[1] ?? "0",
           10,
         ) || 0,
-      contentType: block.match(
-        /<[\w-]*:?getcontenttype[^>]*>([^<]+)</i,
-      )?.[1],
+      contentType: block.match(/<[\w-]*:?getcontenttype[^>]*>([^<]+)</i)?.[1],
     });
   }
 
@@ -361,11 +361,7 @@ export async function deleteWebDavPaths(
           method: "DELETE",
           headers: authHeaders(config),
         });
-        if (
-          response.ok ||
-          response.status === 404 ||
-          response.status === 204
-        ) {
+        if (response.ok || response.status === 404 || response.status === 204) {
           continue;
         }
         failed.push(path);
@@ -406,7 +402,9 @@ export async function moveWebDavObject(
   }
 
   try {
-    const parent = toPath.includes("/") ? toPath.slice(0, toPath.lastIndexOf("/")) : "";
+    const parent = toPath.includes("/")
+      ? toPath.slice(0, toPath.lastIndexOf("/"))
+      : "";
     if (parent && config.createDirectory !== false) {
       const ensured = await ensureWebDavFolder(config, parent);
       if (ensured.error) return ensured;
@@ -421,11 +419,7 @@ export async function moveWebDavObject(
       },
     });
 
-    if (
-      !response.ok &&
-      response.status !== 201 &&
-      response.status !== 204
-    ) {
+    if (!response.ok && response.status !== 201 && response.status !== 204) {
       return err({
         reason: "WEBDAV_MOVE_FAILED",
         message: await readErrorText(response),

@@ -26,7 +26,10 @@ export function gravatarHash(email: string): string {
 /** Gravatar 头像基础地址（不含默认参数）。 */
 export function buildGravatarUrl(
   email: string,
-  options: { size?: number; default?: "404" | "identicon" | "mp" | "retro" | "monsterid" | "wavatar" } = {},
+  options: {
+    size?: number;
+    default?: "404" | "identicon" | "mp" | "retro" | "monsterid" | "wavatar";
+  } = {},
 ): string {
   const hash = gravatarHash(email);
   const base = `https://www.gravatar.com/avatar/${hash}`;
@@ -54,7 +57,9 @@ export async function resolveGravatarEmailAvatar(
     if (res.status === 404) {
       return null;
     }
-    return options.size ? buildGravatarUrl(email, { size: options.size }) : buildGravatarUrl(email);
+    return options.size
+      ? buildGravatarUrl(email, { size: options.size })
+      : buildGravatarUrl(email);
   } catch {
     // 网络失败时宁可留空，不影响登录流程。
     return null;

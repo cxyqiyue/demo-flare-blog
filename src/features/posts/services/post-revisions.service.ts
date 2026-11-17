@@ -35,6 +35,7 @@ function toRevisionSnapshot(
     readTimeInMinutes: post.readTimeInMinutes,
     contentJson: post.contentJson,
     tagIds: [...new Set(post.tags.map((tag) => tag.id))].sort((a, b) => a - b),
+    ...(post.categoryId != null ? { categoryId: post.categoryId } : {}),
   };
 }
 
@@ -44,6 +45,7 @@ async function hashSnapshot(snapshot: PostRevisionSnapshot) {
     contentJson: snapshot.contentJson,
     summary: snapshot.summary,
     tagIds: snapshot.tagIds,
+    categoryId: snapshot.categoryId,
     slug: snapshot.slug,
     publishedAt: snapshot.publishedAt,
     readTimeInMinutes: snapshot.readTimeInMinutes,

@@ -36,4 +36,3 @@ export const deleteMomentFn = createServerFn({
     async ({ data, context }) =>
       await MomentService.deleteMoment(context, data),
   );
-

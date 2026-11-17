@@ -1,6 +1,5 @@
-import { serverEnv } from "@/lib/env/server.env";
-import { isNotInProduction } from "@/lib/env/server.env";
 import type { CfService } from "@/features/cloudflare-usage/cloudflare-usage.schema";
+import { isNotInProduction, serverEnv } from "@/lib/env/server.env";
 
 // ── Cloudflare GraphQL Analytics API Client ─────────────────
 // API: https://api.cloudflare.com/client/v4/graphql
@@ -334,7 +333,10 @@ const SERVICE_QUERIES: Record<CfService, ServiceQueryConfig> = {
   kvStorage: {
     query: KV_STORAGE_QUERY,
     datetimeVariables: false,
-    extract: gaugeExtractor(`${ACCOUNTS}.kvStorageAdaptiveGroups`, "max.byteCount"),
+    extract: gaugeExtractor(
+      `${ACCOUNTS}.kvStorageAdaptiveGroups`,
+      "max.byteCount",
+    ),
   },
   queues: {
     query: QUEUES_MESSAGES_QUERY,
@@ -347,7 +349,10 @@ const SERVICE_QUERIES: Record<CfService, ServiceQueryConfig> = {
   workflows: {
     query: WORKFLOWS_INVOCATIONS_QUERY,
     datetimeVariables: true,
-    extract: cumulativeExtractor(`${ACCOUNTS}.workflowsAdaptiveGroups`, "count"),
+    extract: cumulativeExtractor(
+      `${ACCOUNTS}.workflowsAdaptiveGroups`,
+      "count",
+    ),
   },
   workersAi: {
     query: WORKERS_AI_QUERY,
@@ -470,8 +475,7 @@ export async function fetchAllUsage(
         const used = config.extract(data);
         return { service, used } satisfies CfUsageResult;
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : String(error);
+        const message = error instanceof Error ? error.message : String(error);
         console.error(
           JSON.stringify({
             message: "failed to fetch cloudflare usage",

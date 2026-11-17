@@ -22,6 +22,7 @@ export const PostRevisionSnapshotSchema = z.object({
   readTimeInMinutes: z.number().int().min(1),
   contentJson: NullableJsonContentSchema,
   tagIds: z.array(z.number().int()),
+  categoryId: z.number().int().positive().nullable().optional(),
 });
 
 export const PostRevisionSelectSchema = createSelectSchema(PostRevisionsTable, {

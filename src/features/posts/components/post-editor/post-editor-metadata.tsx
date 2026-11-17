@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { SkillSelector } from "@/features/skills/components/skill-selector";
 import { TagSelector } from "@/features/tags/components/tag-selector";
 import { POST_STATUSES } from "@/lib/db/schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { toLocalDateString } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import { FlareEditorMetadata } from "./flare-editor-metadata";
 import type { PostEditorData } from "./types";
 
 const STATUS_LABELS: Record<PostEditorData["status"], () => string> = {
@@ -61,6 +62,26 @@ export function PostEditorMetadata({
       author: candidate?.name ?? null,
     });
   };
+
+  if (isFlare)
+    return (
+      <FlareEditorMetadata
+        post={post}
+        isGeneratingSlug={isGeneratingSlug}
+        isCalculatingReadTime={isCalculatingReadTime}
+        isGeneratingSummary={isGeneratingSummary}
+        isGeneratingTags={isGeneratingTags}
+        isGeneratingPassword={isGeneratingPassword}
+        canEditAuthor={canEditAuthor}
+        authorCandidates={authorCandidates}
+        onPostChange={onPostChange}
+        onGenerateSlug={onGenerateSlug}
+        onCalculateReadTime={onCalculateReadTime}
+        onGenerateSummary={onGenerateSummary}
+        onGenerateTags={onGenerateTags}
+        onGeneratePassword={onGeneratePassword}
+      />
+    );
 
   if (isFuwari) {
     return (

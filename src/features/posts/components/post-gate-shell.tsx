@@ -4,9 +4,9 @@ import AccessGateDialog, {
   type AccessGateError,
   type AccessGateMode,
 } from "@/components/common/access-gate-dialog";
-import { useNavigateBack } from "@/hooks/use-navigate-back";
 import { postBySlugQuery } from "@/features/posts/queries";
 import type { PostWithToc } from "@/features/posts/schema/posts.schema";
+import { useNavigateBack } from "@/hooks/use-navigate-back";
 
 const VERIFY_PASSWORD_URL = "/api/post/verify-password";
 

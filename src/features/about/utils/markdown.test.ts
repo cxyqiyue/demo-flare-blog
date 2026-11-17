@@ -6,9 +6,7 @@ import {
 
 describe("renderMarkdownToHtml (about pipeline)", () => {
   it("renders GFM tables", () => {
-    const html = renderMarkdownToHtml(
-      "| a | b |\n| --- | --- |\n| 1 | 2 |",
-    );
+    const html = renderMarkdownToHtml("| a | b |\n| --- | --- |\n| 1 | 2 |");
     expect(html).toContain("<table>");
     expect(html).toContain("<td>1</td>");
   });

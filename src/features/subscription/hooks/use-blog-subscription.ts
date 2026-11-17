@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { m } from "@/paraglide/messages";
+import { toast } from "sonner";
 import { toggleBlogSubscriptionFn } from "@/features/subscription/api/subscription.api";
 import {
-  SUBSCRIPTION_KEYS,
   blogSubscriptionStatusQuery,
+  SUBSCRIPTION_KEYS,
 } from "@/features/subscription/queries";
-import { toast } from "sonner";
+import { m } from "@/paraglide/messages";
 
 export function useBlogSubscription(userId: string | undefined) {
   const queryClient = useQueryClient();
@@ -74,6 +74,4 @@ export function useBlogSubscription(userId: string | undefined) {
   };
 }
 
-export type UseBlogSubscriptionReturn = ReturnType<
-  typeof useBlogSubscription
->;
+export type UseBlogSubscriptionReturn = ReturnType<typeof useBlogSubscription>;

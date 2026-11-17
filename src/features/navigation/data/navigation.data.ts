@@ -158,8 +158,16 @@ export async function getFoldersWithCount(
   ownerId: string | null,
   includeLegacy = false,
 ) {
-  const ownerCond = ownerScope(BookmarkFoldersTable.ownerId, ownerId, includeLegacy);
-  const bookmarkOwnerCond = ownerScope(BookmarksTable.ownerId, ownerId, includeLegacy);
+  const ownerCond = ownerScope(
+    BookmarkFoldersTable.ownerId,
+    ownerId,
+    includeLegacy,
+  );
+  const bookmarkOwnerCond = ownerScope(
+    BookmarksTable.ownerId,
+    ownerId,
+    includeLegacy,
+  );
   return await db
     .select({
       id: BookmarkFoldersTable.id,

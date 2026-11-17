@@ -6,6 +6,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import theme from "@theme";
 import { useMemo } from "react";
 import { z } from "zod";
+import { categoriesQueryOptions } from "@/features/categories/queries";
 import { siteConfigQuery, siteDomainQuery } from "@/features/config/queries";
 import { postsInfiniteQueryOptions } from "@/features/posts/queries";
 import { PostTagNameSchema } from "@/features/posts/schema/posts.schema";
@@ -19,21 +20,27 @@ const { postsPerPage } = theme.config.posts;
 export const Route = createFileRoute("/_public/posts")({
   validateSearch: z.object({
     tagName: PostTagNameSchema,
+    categoryName: PostTagNameSchema,
   }),
   component: RouteComponent,
   pendingComponent: PostsSkeleton,
-  loaderDeps: ({ search: { tagName } }) => ({ tagName }),
+  loaderDeps: ({ search: { tagName, categoryName } }) => ({
+    tagName,
+    categoryName,
+  }),
   loader: async ({ context, deps }) => {
     const [, , domain, siteConfig] = await Promise.all([
       context.queryClient.prefetchInfiniteQuery(
         postsInfiniteQueryOptions({
           tagName: deps.tagName,
+          categoryName: deps.categoryName,
           limit: postsPerPage,
         }),
       ),
       context.queryClient.prefetchQuery(tagsQueryOptions),
       context.queryClient.ensureQueryData(siteDomainQuery),
       context.queryClient.ensureQueryData(siteConfigQuery),
+      context.queryClient.prefetchQuery(categoriesQueryOptions),
     ]);
 
     return {
@@ -41,6 +48,7 @@ export const Route = createFileRoute("/_public/posts")({
       description: siteConfig.description,
       canonicalHref: buildCanonicalUrl(domain, "/posts", {
         tagName: deps.tagName,
+        categoryName: deps.categoryName,
       }),
     };
   },
@@ -59,14 +67,15 @@ export const Route = createFileRoute("/_public/posts")({
 });
 
 function RouteComponent() {
-  const { tagName } = Route.useSearch();
+  const { tagName, categoryName } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
 
   const { data: tags } = useSuspenseQuery(tagsQueryOptions);
+  const { data: categories } = useSuspenseQuery(categoriesQueryOptions);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useSuspenseInfiniteQuery(
-      postsInfiniteQueryOptions({ tagName, limit: postsPerPage }),
+      postsInfiniteQueryOptions({ tagName, categoryName, limit: postsPerPage }),
     );
 
   const posts = useMemo(() => {
@@ -75,7 +84,7 @@ function RouteComponent() {
 
   const handleTagClick = (clickedTag?: string) => {
     navigate({
-      search: getNextPostTagFilter(tagName, clickedTag),
+      search: { ...getNextPostTagFilter(tagName, clickedTag), categoryName },
       replace: true, // Replace history to avoid back-button clutter
     });
   };
@@ -84,6 +93,17 @@ function RouteComponent() {
     <theme.PostsPage
       posts={posts}
       tags={tags}
+      categories={categories}
+      selectedCategory={categoryName}
+      onCategoryClick={(name) =>
+        navigate({
+          search: {
+            tagName,
+            categoryName: categoryName === name ? undefined : name,
+          },
+          replace: true,
+        })
+      }
       selectedTag={tagName}
       onTagClick={handleTagClick}
       hasNextPage={hasNextPage}

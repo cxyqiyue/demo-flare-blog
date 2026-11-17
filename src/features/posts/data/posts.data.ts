@@ -20,8 +20,14 @@ import {
 } from "@/features/posts/data/helper";
 import type { PostListItem } from "@/features/posts/schema/posts.schema";
 import type { PostStatus, PostVisibility, Tag } from "@/lib/db/schema";
+import {
+  CategoriesTable,
+  PostCategoriesTable,
+  PostsTable,
+  PostTagsTable,
+  TagsTable,
+} from "@/lib/db/schema";
 import { user } from "@/lib/db/schema/auth.table";
-import { PostsTable, PostTagsTable, TagsTable } from "@/lib/db/schema";
 
 const DEFAULT_PAGE_SIZE = 12;
 const DEFAULT_SITEMAP_BATCH_SIZE = 500;
@@ -143,6 +149,7 @@ export async function getPostsCursor(
     limit?: number;
     publicOnly?: boolean;
     tagName?: string;
+    categoryName?: string;
     excludePinned?: boolean;
     /** 列表中允许的可见性；管理员传含 private 的集合，否则默认公开+密码 */
     allowedVisibilities?: Array<PostVisibility>;
@@ -156,12 +163,16 @@ export async function getPostsCursor(
     limit = DEFAULT_PAGE_SIZE,
     publicOnly,
     tagName,
+    categoryName,
     excludePinned,
     allowedVisibilities,
   } = options;
 
   // Build base conditions from helper
-  const baseConditions = buildPostWhereClause({ publicOnly, allowedVisibilities });
+  const baseConditions = buildPostWhereClause({
+    publicOnly,
+    allowedVisibilities,
+  });
 
   // Add cursor condition if provided
   const conditions = [];
@@ -193,6 +204,22 @@ export async function getPostsCursor(
 
   if (tagName) {
     conditions.push(eq(TagsTable.name, tagName));
+  }
+
+  if (categoryName) {
+    conditions.push(
+      inArray(
+        PostsTable.id,
+        db
+          .select({ postId: PostCategoriesTable.postId })
+          .from(PostCategoriesTable)
+          .innerJoin(
+            CategoriesTable,
+            eq(CategoriesTable.id, PostCategoriesTable.publicCategoryId),
+          )
+          .where(eq(CategoriesTable.name, categoryName)),
+      ),
+    );
   }
 
   if (excludePinned) {
@@ -332,7 +359,17 @@ export async function findPostById(db: DB, id: number) {
   // Flatten tags and author
   const tags = post.postTags.map((pt) => pt.tag);
   const { postTags, author, ...rest } = post;
-  return { ...rest, author: author?.name ?? null, tags };
+  const assignment = await db
+    .select({ categoryId: PostCategoriesTable.categoryId })
+    .from(PostCategoriesTable)
+    .where(eq(PostCategoriesTable.postId, id))
+    .get();
+  return {
+    ...rest,
+    author: author?.name ?? null,
+    tags,
+    categoryId: assignment?.categoryId ?? null,
+  };
 }
 
 export async function findPostsByIds(db: DB, ids: Array<number>) {
@@ -423,7 +460,21 @@ export async function findPostBySlug(
   // Flatten tags and author
   const tags = post.postTags.map((pt) => pt.tag);
   const { postTags, author, ...rest } = post;
-  return { ...rest, author: author?.name ?? null, tags };
+  const category = await db
+    .select({ id: CategoriesTable.id, name: CategoriesTable.name })
+    .from(PostCategoriesTable)
+    .innerJoin(
+      CategoriesTable,
+      eq(CategoriesTable.id, PostCategoriesTable.publicCategoryId),
+    )
+    .where(eq(PostCategoriesTable.postId, post.id))
+    .get();
+  return {
+    ...rest,
+    author: author?.name ?? null,
+    tags,
+    category: category ?? null,
+  };
 }
 
 /**

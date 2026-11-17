@@ -92,6 +92,7 @@ function EditPost() {
     contentJson: post.contentJson,
     publishedAt: post.publishedAt,
     tagIds: tags.map((t) => t.id),
+    categoryId: post.categoryId ?? null,
     skillId: post.skillId,
     pinnedAt: post.pinnedAt,
     authorId: post.authorId,

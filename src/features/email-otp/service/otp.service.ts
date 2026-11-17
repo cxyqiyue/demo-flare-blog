@@ -2,14 +2,14 @@ import { hex } from "@better-auth/utils/hex";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { and, eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
+import * as ConfigService from "@/features/config/service/config.service";
+import { AuthEmail } from "@/features/email/templates/AuthEmail";
 import {
   OTP_LENGTH,
   OTP_RESEND_COOLDOWN_MS,
   OTP_TTL_MS,
 } from "@/features/email-otp/otp-constants";
 import { checkEmailAuthRateLimit } from "@/lib/auth/email-rate-limit";
-import * as ConfigService from "@/features/config/service/config.service";
-import { AuthEmail } from "@/features/email/templates/AuthEmail";
 import { account, user, verification } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server.env";
 import type { Locale } from "@/lib/i18n";
@@ -173,7 +173,10 @@ export async function sendOtp(
   // 重发冷却：同一邮箱获得了未过期验证码时，至少间隔 30s
   const identifier = getOtpIdentifier(email, input.purpose);
   const [existingOtp] = await db
-    .select({ createdAt: verification.createdAt, expiresAt: verification.expiresAt })
+    .select({
+      createdAt: verification.createdAt,
+      expiresAt: verification.expiresAt,
+    })
     .from(verification)
     .where(eq(verification.identifier, identifier))
     .limit(1);

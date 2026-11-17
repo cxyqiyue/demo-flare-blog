@@ -1,11 +1,9 @@
 import { toast } from "sonner";
-import {
-  getArticleImageHostingConfigFn,
-} from "@/features/image-hosting/api/image-hosting.api";
+import { getArticleImageHostingConfigFn } from "@/features/image-hosting/api/image-hosting.api";
 import type { ArticleImageHostingConfig } from "@/features/image-hosting/image-hosting.schema";
 import {
-  processImageBeforeUpload,
   type ImageConvertFormat,
+  processImageBeforeUpload,
 } from "@/lib/image-processing";
 import { xhrUpload } from "@/lib/xhr-upload";
 import { m } from "@/paraglide/messages";
@@ -35,7 +33,8 @@ interface ArticleUploadPolicy {
 }
 
 const POLICY_CACHE_TTL_MS = 60_000;
-let policyCache: { value: ArticleUploadPolicy; fetchedAt: number } | null = null;
+let policyCache: { value: ArticleUploadPolicy; fetchedAt: number } | null =
+  null;
 /** 在途的策略请求去重：批量上传首帧并发时只发一次 RPC */
 let inflightPolicyFetch: Promise<ArticleUploadPolicy> | null = null;
 
@@ -63,7 +62,8 @@ export async function fetchArticleUploadPolicy(): Promise<ArticleUploadPolicy> {
 
   inflightPolicyFetch = (async () => {
     try {
-      const config = (await getArticleImageHostingConfigFn()) as ArticleImageHostingConfig;
+      const config =
+        (await getArticleImageHostingConfigFn()) as ArticleImageHostingConfig;
       const value: ArticleUploadPolicy = {
         maxImageBytes: config.maxImageBytes ?? null,
         compressEnabled: config.compressEnabled ?? true,
@@ -128,7 +128,11 @@ export async function uploadEditorImage(
   }
 
   if (hosted.data.mode === "none") {
-    const result = await xhrUpload<{ url: string; width?: number | null; height?: number | null }>({
+    const result = await xhrUpload<{
+      url: string;
+      width?: number | null;
+      height?: number | null;
+    }>({
       url: "/api/media/upload",
       formData,
       onProgress: options?.onProgress,

@@ -51,7 +51,9 @@ describe("processFootnotes", () => {
     expect(refs.length).toBe(2);
     expect(out).toContain('<a href="#fn-1">[1]</a>');
     // 文末区块包含渲染后的正文与回链
-    expect(out).toContain('<li id="fn-1">The definition <strong>body</strong>.');
+    expect(out).toContain(
+      '<li id="fn-1">The definition <strong>body</strong>.',
+    );
     expect(out).toContain('class="footnote-backref" href="#fnref-1"');
     expect(out).toContain("</ol>\n</div>");
     // 原有段落保留
@@ -63,10 +65,12 @@ describe("processFootnotes", () => {
     const md = "A[^b] B[^a]\n\n[^a]: first\n\n[^b]: second";
     const out = processFootnotes(md);
     expect(out.indexOf('id="fn-1"')).toBeLessThan(out.indexOf('id="fn-2"'));
-    expect(out).toContain("<li id=\"fn-1\">first");
-    expect(out).toContain("<li id=\"fn-2\">second");
+    expect(out).toContain('<li id="fn-1">first');
+    expect(out).toContain('<li id="fn-2">second');
     // [^b] 引用指向第二个定义
-    expect(out).toContain('<sup id="fnref-2" class="footnote-ref"><a href="#fn-2">[2]</a></sup>');
+    expect(out).toContain(
+      '<sup id="fnref-2" class="footnote-ref"><a href="#fn-2">[2]</a></sup>',
+    );
   });
 
   it("supports indented continuation lines", () => {

@@ -72,24 +72,24 @@ describe("sortMediaFiles", () => {
     expect(sortMediaFiles(files, "name", "asc").map((f) => f.fileName)).toEqual(
       ["a.png", "b.png", "c.png"],
     );
-    expect(sortMediaFiles(files, "name", "desc").map((f) => f.fileName)).toEqual(
-      ["c.png", "b.png", "a.png"],
-    );
+    expect(
+      sortMediaFiles(files, "name", "desc").map((f) => f.fileName),
+    ).toEqual(["c.png", "b.png", "a.png"]);
   });
 
   it("sorts by size", () => {
-    expect(sortMediaFiles(files, "size", "asc").map((f) => f.sizeInBytes)).toEqual(
-      [100, 200, 300],
-    );
+    expect(
+      sortMediaFiles(files, "size", "asc").map((f) => f.sizeInBytes),
+    ).toEqual([100, 200, 300]);
     expect(
       sortMediaFiles(files, "size", "desc").map((f) => f.sizeInBytes),
     ).toEqual([300, 200, 100]);
   });
 
   it("sorts by time", () => {
-    expect(
-      sortMediaFiles(files, "time", "asc").map((f) => f.fileName),
-    ).toEqual(["c.png", "b.png", "a.png"]);
+    expect(sortMediaFiles(files, "time", "asc").map((f) => f.fileName)).toEqual(
+      ["c.png", "b.png", "a.png"],
+    );
   });
 
   it("always places null dates last", () => {

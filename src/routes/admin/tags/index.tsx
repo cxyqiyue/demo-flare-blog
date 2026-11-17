@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { CategoryManager } from "@/features/categories/components/category-manager";
 import { TagManager } from "@/features/tags/components/tag-manager";
 import { tagsWithCountAdminQueryOptions } from "@/features/tags/queries";
 import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
+import { isFlare } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/admin/tags/")({
@@ -25,5 +27,10 @@ export const Route = createFileRoute("/admin/tags/")({
 });
 
 function TagManagerRoute() {
-  return <TagManager />;
+  return (
+    <div className="space-y-6">
+      {isFlare ? <CategoryManager /> : null}
+      <TagManager />
+    </div>
+  );
 }

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import Dropdown from "@/components/ui/dropdown";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { PostListItem } from "../types";
@@ -30,6 +30,62 @@ export function PostRow({
       params: { id: String(post.id) },
     });
   };
+
+  if (isFlare) {
+    return (
+      <article className="flex min-w-0 flex-wrap items-start gap-4 rounded-xl border border-border/60 bg-card p-4 sm:p-5">
+        <Checkbox
+          checked={selected}
+          onCheckedChange={onSelectChange}
+          aria-label={m.admin_posts_select_post()}
+          className="mt-1"
+        />
+        <div className="min-w-0 flex-1 space-y-2">
+          <button
+            type="button"
+            onClick={handleEdit}
+            className="block text-left text-base font-semibold leading-7 text-foreground hover:text-primary"
+          >
+            <span className="break-words">{post.title}</span>
+          </button>
+          <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
+            {post.summary || m.admin_posts_no_summary()}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={post.status} />
+            <VisibilityBadge
+              visibility={post.visibility}
+              passwordChannel={post.passwordChannel}
+            />
+            <span className="text-xs text-muted-foreground">
+              <ClientOnly fallback="—">{formatDate(post.updatedAt)}</ClientOnly>
+            </span>
+          </div>
+        </div>
+        <div className="flex shrink-0 gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleEdit}
+            aria-label={m.admin_posts_action_edit()}
+          >
+            <Edit3 size={15} />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(post)}
+            aria-label={m.admin_posts_action_delete()}
+            className="text-destructive"
+          >
+            <Trash2 size={15} />
+          </Button>
+        </div>
+      </article>
+    );
+  }
 
   if (isFuwari) {
     return (

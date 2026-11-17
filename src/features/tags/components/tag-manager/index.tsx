@@ -18,7 +18,11 @@ import {
 } from "@/features/tags/queries";
 import type { CreateTagInput } from "@/features/tags/tags.schema";
 import { CreateTagInputSchema } from "@/features/tags/tags.schema";
-import { isFuwari } from "@/lib/theme-mode";
+import {
+  FlareAdminHeader,
+  FlareAdminPanel,
+} from "@/features/theme/themes/flare/components/admin/page";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -120,6 +124,186 @@ export function TagManager() {
       setSortDir("desc");
     }
   };
+
+  if (isFlare) {
+    return (
+      <div className="space-y-5">
+        <FlareAdminHeader
+          title={m.tag_manager_title()}
+          actions={
+            <Button onClick={() => setIsCreating(true)}>
+              <Hash size={16} />
+              {m.tag_manager_new_tag()}
+            </Button>
+          }
+        />
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: m.tag_manager_stat_total(), value: tags.length },
+            {
+              label: m.tag_manager_stat_active(),
+              value: tags.filter((tag) => tag.postCount > 0).length,
+            },
+            {
+              label: m.tag_manager_stat_empty(),
+              value: tags.filter((tag) => tag.postCount === 0).length,
+            },
+          ].map((stat) => (
+            <FlareAdminPanel key={stat.label}>
+              <p className="text-sm text-muted-foreground">{stat.label}</p>
+              <p className="mt-2 text-2xl font-bold tabular-nums">
+                {stat.value}
+              </p>
+            </FlareAdminPanel>
+          ))}
+        </div>
+        <FlareAdminPanel>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label className="relative block sm:max-w-sm sm:flex-1">
+              <Search
+                size={16}
+                className="absolute left-3 top-3 text-muted-foreground"
+              />
+              <Input
+                aria-label={m.tag_manager_search_placeholder()}
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder={m.tag_manager_search_placeholder()}
+                className="pl-9"
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {(["name", "createdAt", "postCount"] as const).map((field) => (
+                <button
+                  type="button"
+                  key={field}
+                  onClick={() => toggleSort(field)}
+                  className="flare-chip"
+                  data-active={sortBy === field}
+                >
+                  <ArrowUpDown size={14} />
+                  {field === "name"
+                    ? m.tags_title()
+                    : field === "postCount"
+                      ? m.nav_posts()
+                      : m.post_published_at()}
+                  {sortBy === field ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+          {isCreating ? (
+            <div className="mt-4">
+              <InlineTagCreateForm
+                isSubmitting={createTagMutation.isPending}
+                onCancel={() => setIsCreating(false)}
+                onSubmit={(name) => createTagMutation.mutate(name)}
+              />
+            </div>
+          ) : null}
+          <div
+            className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+            aria-busy={isLoading}
+          >
+            {filteredTags.map((tag) => (
+              <div
+                key={tag.id}
+                className="min-w-0 rounded-xl border border-border/60 p-4"
+              >
+                {tagToEdit?.id === tag.id ? (
+                  <form
+                    className="space-y-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (tagToEdit.name.trim())
+                        updateTagMutation.mutate({
+                          id: tag.id,
+                          name: tagToEdit.name.trim(),
+                        });
+                    }}
+                  >
+                    <Input
+                      value={tagToEdit.name}
+                      aria-label={m.tags_title()}
+                      onChange={(event) =>
+                        setTagToEdit({ id: tag.id, name: event.target.value })
+                      }
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={updateTagMutation.isPending}
+                      >
+                        <Check size={14} />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setTagToEdit(null)}
+                      >
+                        <X size={14} />
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <h2 className="break-words font-semibold">#{tag.name}</h2>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {m.nav_posts()} · {tag.postCount}
+                    </p>
+                    <div className="mt-4 flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setTagToEdit({ id: tag.id, name: tag.name })
+                        }
+                      >
+                        {m.tag_manager_edit()}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() =>
+                          setTagToDelete({ id: tag.id, name: tag.name })
+                        }
+                      >
+                        {m.tag_manager_delete()}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+          {!isLoading && !filteredTags.length ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              {m.tag_manager_no_match()}
+            </p>
+          ) : null}
+        </FlareAdminPanel>
+        <ConfirmationModal
+          isOpen={Boolean(tagToDelete)}
+          onClose={() => setTagToDelete(null)}
+          onConfirm={() =>
+            tagToDelete && deleteTagMutation.mutate(tagToDelete.id)
+          }
+          title={m.tag_manager_delete_title()}
+          message={
+            tagToDelete
+              ? m.tag_manager_delete_desc({ tagName: tagToDelete.name })
+              : ""
+          }
+          confirmLabel={m.tag_manager_delete_confirm()}
+          isLoading={deleteTagMutation.isPending}
+          isDanger
+        />
+      </div>
+    );
+  }
 
   if (isFuwari) {
     return (

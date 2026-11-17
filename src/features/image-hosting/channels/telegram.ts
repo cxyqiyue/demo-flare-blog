@@ -38,7 +38,9 @@ const TELEGRAM_PHOTO_MAX_BYTES = 10 * MB;
 
 function shouldSendAsPhoto(file: File): boolean {
   return (
-    file.type.startsWith("image/") && file.size > 0 && file.size <= TELEGRAM_PHOTO_MAX_BYTES
+    file.type.startsWith("image/") &&
+    file.size > 0 &&
+    file.size <= TELEGRAM_PHOTO_MAX_BYTES
   );
 }
 
@@ -98,10 +100,13 @@ export async function uploadToTelegramChannel(
     form.append("chat_id", chatId);
     form.append(asPhoto ? "photo" : "document", file);
 
-    const response = await fetch(`${base}/bot${botToken}/${asPhoto ? "sendPhoto" : "sendDocument"}`, {
-      method: "POST",
-      body: form,
-    });
+    const response = await fetch(
+      `${base}/bot${botToken}/${asPhoto ? "sendPhoto" : "sendDocument"}`,
+      {
+        method: "POST",
+        body: form,
+      },
+    );
     const parsed = await parseJsonResponse(response);
 
     if (!parsed?.ok) {
@@ -124,7 +129,9 @@ export async function uploadToTelegramChannel(
     if (asPhoto) {
       const photo = result?.photo as Array<Record<string, unknown>> | undefined;
       fileId =
-        photo && photo.length > 0 ? (photo[photo.length - 1].file_id as string) : undefined;
+        photo && photo.length > 0
+          ? (photo[photo.length - 1].file_id as string)
+          : undefined;
     } else {
       const document = result?.document as Record<string, unknown> | undefined;
       fileId = document?.file_id as string | undefined;
@@ -143,7 +150,9 @@ export async function uploadToTelegramChannel(
     const fileInfo = fileParsed?.result as Record<string, unknown> | undefined;
     const filePath = fileInfo?.file_path as string | undefined;
     const fetchedFileId =
-      typeof fileInfo?.file_id === "string" ? (fileInfo.file_id as string) : fileId;
+      typeof fileInfo?.file_id === "string"
+        ? (fileInfo.file_id as string)
+        : fileId;
     if (!filePath || !fetchedFileId) {
       return err({
         reason: "TELEGRAM_UPLOAD_FAILED",

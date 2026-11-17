@@ -1,5 +1,8 @@
 import { createMiddleware, createServerFn } from "@tanstack/react-start";
-import { getRequestHeader, getRequestHeaders } from "@tanstack/react-start/server";
+import {
+  getRequestHeader,
+  getRequestHeaders,
+} from "@tanstack/react-start/server";
 import { z } from "zod";
 import * as PageviewService from "@/features/pageview/service/pageview.service";
 import {
@@ -9,12 +12,12 @@ import {
   GetPostsCursorInputSchema,
   GetPublicPostsPageInputSchema,
 } from "@/features/posts/schema/posts.schema";
-import * as PostService from "@/features/posts/services/posts.service";
 import {
   extractUnlockTokens,
   isSuperAdminUser,
   UNAUTHENTICATED_VIEWER,
 } from "@/features/posts/services/post-access.service";
+import * as PostService from "@/features/posts/services/posts.service";
 import { getAuth } from "@/lib/auth/auth.server";
 import { dbMiddleware } from "@/lib/middlewares";
 

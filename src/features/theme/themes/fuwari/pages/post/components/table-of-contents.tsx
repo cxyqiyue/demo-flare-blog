@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TableOfContentsItem } from "@/features/posts/utils/toc";
 import { scrollToHeadingWithRetry } from "@/features/posts/utils/scroll-to-heading";
+import type { TableOfContentsItem } from "@/features/posts/utils/toc";
 import { cn } from "@/lib/utils";
 
 export default function TableOfContents({
@@ -212,66 +212,66 @@ export default function TableOfContents({
           className="group relative flex flex-col w-full"
         >
           {visibleHeaders.map((heading, index) => {
-              const text = removeTailingHash(heading.text);
-              const isH1 = heading.level === minDepth;
-              const isH2 = heading.level === minDepth + 1;
-              const isH3 = heading.level === minDepth + 2;
-              const isActive = activeIndices.includes(index);
+            const text = removeTailingHash(heading.text);
+            const isH1 = heading.level === minDepth;
+            const isH2 = heading.level === minDepth + 1;
+            const isH3 = heading.level === minDepth + 2;
+            const isActive = activeIndices.includes(index);
 
-              return (
-                <a
-                  key={heading.id}
-                  href={`#${heading.id}`}
-onClick={(e) => {
-                    e.preventDefault();
-                    const element = document.getElementById(heading.id);
-                    if (element) {
-                      scrollToHeadingWithRetry(element, 80);
-                      navigate({
-                        hash: heading.id,
-                        replace: true,
-                        hashScrollIntoView: false,
-                      });
-                      onNavigate?.();
-                    }
-                  }}
+            return (
+              <a
+                key={heading.id}
+                href={`#${heading.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  const element = document.getElementById(heading.id);
+                  if (element) {
+                    scrollToHeadingWithRetry(element, 80);
+                    navigate({
+                      hash: heading.id,
+                      replace: true,
+                      hashScrollIntoView: false,
+                    });
+                    onNavigate?.();
+                  }
+                }}
+                className={cn(
+                  "px-2 flex gap-2 relative transition w-full min-h-9 rounded-xl py-2 z-10",
+                  "hover:bg-(--fuwari-toc-btn-hover) active:bg-(--fuwari-toc-btn-active)",
+                )}
+              >
+                <div
                   className={cn(
-                    "px-2 flex gap-2 relative transition w-full min-h-9 rounded-xl py-2 z-10",
-                    "hover:bg-(--fuwari-toc-btn-hover) active:bg-(--fuwari-toc-btn-active)",
+                    "transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold",
+                    {
+                      "bg-[oklch(0.89_0.050_var(--fuwari-hue))] dark:bg-(--fuwari-btn-regular-bg) text-(--fuwari-btn-content)":
+                        isH1,
+                      "ml-4": isH2,
+                      "ml-8": isH3,
+                    },
                   )}
                 >
-                  <div
-                    className={cn(
-                      "transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold",
-                      {
-                        "bg-[oklch(0.89_0.050_var(--fuwari-hue))] dark:bg-(--fuwari-btn-regular-bg) text-(--fuwari-btn-content)":
-                          isH1,
-                        "ml-4": isH2,
-                        "ml-8": isH3,
-                      },
-                    )}
-                  >
-                    {isH1 && h1Count++}
-                    {isH2 && (
-                      <div className="transition w-2 h-2 rounded-[0.1875rem] bg-[oklch(0.89_0.050_var(--fuwari-hue))] dark:bg-(--fuwari-btn-regular-bg)"></div>
-                    )}
-                    {isH3 && (
-                      <div className="transition w-1.5 h-1.5 rounded-sm bg-black/5 dark:bg-white/10"></div>
-                    )}
-                  </div>
+                  {isH1 && h1Count++}
+                  {isH2 && (
+                    <div className="transition w-2 h-2 rounded-[0.1875rem] bg-[oklch(0.89_0.050_var(--fuwari-hue))] dark:bg-(--fuwari-btn-regular-bg)"></div>
+                  )}
+                  {isH3 && (
+                    <div className="transition w-1.5 h-1.5 rounded-sm bg-black/5 dark:bg-white/10"></div>
+                  )}
+                </div>
 
-                  <div
-                    className={cn("transition text-sm", {
-                      "fuwari-text-75 font-semibold": isActive,
-                      "fuwari-text-50": !isActive && (isH1 || isH2),
-                      "fuwari-text-30": !isActive && isH3,
-                    })}
-                  >
-                    {text}
-                  </div>
-                </a>
-              );
-            })}
+                <div
+                  className={cn("transition text-sm", {
+                    "fuwari-text-75 font-semibold": isActive,
+                    "fuwari-text-50": !isActive && (isH1 || isH2),
+                    "fuwari-text-30": !isActive && isH3,
+                  })}
+                >
+                  {text}
+                </div>
+              </a>
+            );
+          })}
 
           {/* Active Indicator Backdrop */}
           {headers.length > 0 && (

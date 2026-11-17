@@ -43,7 +43,10 @@ export function createFullSitePass(
  * 校验通行证 cookie 值。
  * 篡改、过期、格式非法均返回 false。
  */
-export function verifyFullSitePass(env: Env, value: string | undefined): boolean {
+export function verifyFullSitePass(
+  env: Env,
+  value: string | undefined,
+): boolean {
   if (!value) return false;
   const [expiryStr, nonce, hmac] = value.split(".");
   if (!expiryStr || !nonce || !hmac) return false;
@@ -65,6 +68,4 @@ export function makeFullSitePassCookie(env: Env): string {
   return `${FULLSITE_PASS_COOKIE}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${FULLSITE_PASS_TTL_SECONDS}`;
 }
 
-export {
-  FULLSITE_CHALLENGE_TTL_SECONDS,
-};
+export { FULLSITE_CHALLENGE_TTL_SECONDS };

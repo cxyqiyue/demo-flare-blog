@@ -6,7 +6,8 @@
    latest flare-stack-blog look: a soft tinted ground, white raised panels,
    a floating glass navigation over a tall first screen. */
 :root {
-  --flare-page-width: 78rem;
+  --flare-toc-width: 15rem;
+  --flare-page-width: 72.375rem;
   --flare-reading-width: 46rem;
   --flare-gutter: 1.25rem;
   --flare-radius-card: 1.25rem;
@@ -165,6 +166,30 @@
 }
 
 /* Main content and identity rail share a stable responsive grid. */
+.flare-post-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 1.5rem;
+}
+.flare-post-toc {
+  display: none;
+}
+.flare-widgets[data-home="true"] {
+  position: static;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+}
+@media (min-width: 1100px) {
+  .flare-post-layout[data-has-toc="true"] {
+    grid-template-columns: minmax(0, 1fr) var(--flare-toc-width);
+  }
+  .flare-post-toc {
+    display: block;
+    position: sticky;
+    top: 6rem;
+    min-width: 0;
+  }
+}
 .flare-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -179,8 +204,101 @@
   min-width: 0;
 }
 
-.flare-widgets {
+.flare-index-widgets {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  min-width: 0;
+}
+
+.flare-home-after,
+.flare-widgets {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.flare-inner-after {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  min-width: 0;
+}
+.flare-profile-widget {
+  min-width: 0;
+}
+.flare-editor-panel {
+  background: var(--flare-surface-elevated);
+  border-color: var(--flare-border);
+  color: hsl(var(--foreground));
+}
+.flare-editor-panel :is(input, textarea, button) {
+  border-radius: 0.75rem;
+}
+.flare-home-after {
+  margin-top: 1.5rem;
+}
+@media (min-width: 1024px) {
+  .flare-index-widgets {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .flare-home-before {
+    grid-column: 1 / -1;
+  }
+  .flare-inner-after {
+    display: flex;
+    flex-direction: column;
+  }
+  .flare-profile-widget {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 1023px) {
+  .flare-home-before {
+    order: 1;
+  }
+  .flare-home-after {
+    order: 2;
+  }
+  .flare-main {
+    order: 0;
+  }
+}
+.flare-index-card {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.875rem 1.25rem;
+  min-width: 0;
+}
+.flare-index-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.flare-index-card > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+@media (max-width: 639px) {
+  .flare-index-widgets {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .flare-index-card {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+.flare-widgets {
+  display: flex;
+  flex-direction: column;
   grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   min-width: 0;
@@ -192,7 +310,56 @@
 
 @media (min-width: 640px) and (max-width: 959px) {
   .flare-widgets {
+    flex-direction: column;
+  }
+}
+
+.flare-home-posts {
+  container-type: inline-size;
+}
+.flare-home-post-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+@container (min-width: 42rem) {
+  .flare-home-post-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+}
+.flare-tile-lead {
+  display: grid;
+  place-items: center;
+  min-height: 7rem;
+  background: radial-gradient(
+    ellipse at top right,
+    hsl(var(--primary) / 0.2),
+    hsl(var(--primary) / 0.05)
+  );
+  color: hsl(var(--primary) / 0.55);
+  font-size: 3rem;
+  font-weight: 800;
+}
+.flare-archive-lead {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 5.25rem;
+  aspect-ratio: 3 / 2;
+  border-radius: 0.75rem;
+  background: radial-gradient(
+    ellipse at top right,
+    hsl(var(--primary) / 0.2),
+    hsl(var(--primary) / 0.05)
+  );
+  color: hsl(var(--primary) / 0.55);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+@media (max-width: 479px) {
+  .flare-archive-lead {
+    width: 4.25rem;
   }
 }
 
@@ -202,8 +369,7 @@
     gap: 1.5rem;
   }
   .flare-widgets {
-    position: sticky;
-    top: 5.5rem;
+    position: static;
   }
 }
 

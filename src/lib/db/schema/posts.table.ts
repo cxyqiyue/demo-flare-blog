@@ -7,8 +7,8 @@ import {
   sqliteTable,
   text,
 } from "drizzle-orm/sqlite-core";
-import { createdAt, id, updatedAt } from "./helper";
 import { user } from "./auth.table";
+import { createdAt, id, updatedAt } from "./helper";
 import { SkillsTable } from "./skills.table";
 
 export const POST_STATUSES = ["draft", "published"] as const;

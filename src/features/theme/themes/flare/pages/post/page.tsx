@@ -33,166 +33,198 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
   }, []);
 
   return (
-    <div className="w-full space-y-4 md:space-y-6 flare-enter">
-      <nav className="flex items-center justify-between gap-2 px-0.5">
-        <button
-          onClick={() => navigate({ to: "/posts" })}
-          className="flare-chip"
+    <div
+      className="flare-post-layout flare-enter"
+      data-has-toc={Boolean(post.toc?.length)}
+    >
+      <div className="min-w-0 space-y-4 md:space-y-6">
+        <nav
+          className="flare-surface flex flex-wrap items-center justify-between gap-2 p-3"
+          aria-label={m.post_back_to_list()}
         >
-          <ArrowLeft size={14} />
-          <span>{m.post_back_to_list()}</span>
-        </button>
-        {session?.user.role === "admin" && !hideAdminEdit && (
-          <Link
-            to="/admin/posts/edit/$id"
-            params={{ id: String(post.id) }}
+          <button
+            onClick={() => navigate({ to: "/posts" })}
             className="flare-chip"
           >
-            <Pencil size={14} />
-            <span>{m.post_edit()}</span>
-          </Link>
-        )}
-      </nav>
+            <ArrowLeft size={14} />
+            <span>{m.post_back_to_list()}</span>
+          </button>
+          {session?.user.role === "admin" && !hideAdminEdit && (
+            <Link
+              to="/admin/posts/edit/$id"
+              params={{ id: String(post.id) }}
+              className="flare-chip"
+            >
+              <Pencil size={14} />
+              <span>{m.post_edit()}</span>
+            </Link>
+          )}
+        </nav>
 
-      <article className="flare-surface">
-        <div className="p-5 md:p-8 lg:p-10 space-y-8 md:space-y-10">
-          <header className="space-y-6 md:space-y-7">
-            <div className="space-y-5">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs md:text-[13px] text-muted-foreground/75">
-                {post.author ? (
-                  <>
-                    <span className="flex items-center gap-1.5">
-                      {m.post_author()}:{" "}
-                      <span className="text-foreground/90">{post.author}</span>
-                    </span>
-                    <span className="opacity-30">/</span>
-                  </>
-                ) : null}
-                <span className="flex items-center gap-1.5">
-                  {m.post_published_at()}:{" "}
-                  <ClientOnly fallback={<span>-</span>}>
-                    {formatDate(post.publishedAt)}
-                  </ClientOnly>
-                </span>
-                <span className="opacity-30">/</span>
-                <span className="flex items-center gap-1.5">
-                  {m.post_last_updated()}:{" "}
-                  <ClientOnly fallback={<span>-</span>}>
-                    {formatDate(post.updatedAt)}
-                  </ClientOnly>
-                </span>
-                <span className="opacity-30">/</span>
-                <span>{m.read_time({ count: post.readTimeInMinutes })}</span>
+        <article className="flare-surface">
+          <div className="p-5 md:p-8 lg:p-10 space-y-8 md:space-y-10">
+            <header className="space-y-6 md:space-y-7">
+              <div className="space-y-5">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs md:text-[13px] text-muted-foreground/75">
+                  {post.author ? (
+                    <>
+                      <span className="flex items-center gap-1.5">
+                        {m.post_author()}:{" "}
+                        <span className="text-foreground/90">
+                          {post.author}
+                        </span>
+                      </span>
+                      <span className="opacity-30">/</span>
+                    </>
+                  ) : null}
+                  <span className="flex items-center gap-1.5">
+                    {m.post_published_at()}:{" "}
+                    <ClientOnly fallback={<span>-</span>}>
+                      {formatDate(post.publishedAt)}
+                    </ClientOnly>
+                  </span>
+                  <span className="opacity-30">/</span>
+                  <span className="flex items-center gap-1.5">
+                    {m.post_last_updated()}:{" "}
+                    <ClientOnly fallback={<span>-</span>}>
+                      {formatDate(post.updatedAt)}
+                    </ClientOnly>
+                  </span>
+                  <span className="opacity-30">/</span>
+                  <span>{m.read_time({ count: post.readTimeInMinutes })}</span>
 
-                {post.tags && post.tags.length > 0 ? (
-                  <>
-                    <span className="opacity-30">/</span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {post.tags.map((tag) => (
-                        <Link
-                          key={tag.id}
-                          to="/posts"
-                          search={{ tagName: tag.name }}
-                          className="hover:text-foreground transition-colors"
-                        >
-                          #{tag.name}
-                        </Link>
-                      ))}
-                    </div>
-                  </>
-                ) : null}
-              </div>
-
-              <h1
-                className="break-words text-2xl font-bold leading-[1.45] text-foreground sm:text-3xl lg:text-4xl"
-                style={{ viewTransitionName: `post-title-${post.slug}` }}
-              >
-                {post.title}
-              </h1>
-            </div>
-
-            {post.summary ? (
-              <div className="space-y-2.5 rounded-xl border border-border/50 bg-muted/25 p-5 md:p-6">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Sparkles className="h-4 w-4" />
-                  <span>{m.post_summary_title()}</span>
+                  {post.category ? (
+                    <Link
+                      to="/posts"
+                      search={{ categoryName: post.category.name }}
+                      className="hover:text-primary"
+                    >
+                      {post.category.name}
+                    </Link>
+                  ) : null}
+                  {post.tags && post.tags.length > 0 ? (
+                    <>
+                      <span className="opacity-30">/</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {post.tags.map((tag) => (
+                          <Link
+                            key={tag.id}
+                            to="/posts"
+                            search={{ tagName: tag.name }}
+                            className="hover:text-foreground transition-colors"
+                          >
+                            #{tag.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
                 </div>
-                <p className="text-base leading-relaxed text-muted-foreground md:text-[17px]">
-                  {post.summary}
-                </p>
-              </div>
-            ) : null}
-          </header>
 
-          {/* Content Layout */}
-          <div className="relative">
-            {post.toc?.length ? (
-              <details className="mb-8 rounded-xl bg-muted/40 p-4">
-                <summary className="cursor-pointer text-sm font-semibold text-foreground">
-                  {m.post_toc()}
-                </summary>
-                <TableOfContents
-                  headers={post.toc}
-                  className="relative top-0 mt-3 w-full max-h-72"
-                />
-              </details>
-            ) : null}
-
-            {/* TOC drawer for small screens */}
-            <TocDrawer headers={post.toc ?? []} />
-
-            <div className="max-w-none min-w-0 text-foreground leading-relaxed">
-              <ContentRenderer content={post.contentJson} />
-
-              <footer className="mt-16 md:mt-20 pt-6 md:pt-8 border-t border-border/30 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
-                <div className="flex items-center gap-3 text-sm text-muted-foreground/70">
-                  <span>{m.post_end_notice()}</span>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    navigator.clipboard
-                      .writeText(window.location.href)
-                      .then(() => {
-                        toast.success(m.post_share_success(), {
-                          description: m.post_share_success_desc(),
-                        });
-                      })
-                      .catch(() => {
-                        toast.error(m.post_share_error(), {
-                          description: m.post_share_error_desc(),
-                        });
-                      });
-                  }}
-                  className="rounded-full gap-2"
+                <h1
+                  className="break-words text-2xl font-bold leading-[1.45] text-foreground sm:text-3xl lg:text-4xl"
+                  style={{ viewTransitionName: `post-title-${post.slug}` }}
                 >
-                  <Share2 size={14} strokeWidth={1.75} />
-                  <span>{m.post_share()}</span>
-                </Button>
-              </footer>
+                  {post.title}
+                </h1>
+              </div>
+
+              {post.summary ? (
+                <div className="space-y-2.5 rounded-xl border border-border/50 bg-muted/25 p-5 md:p-6">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <Sparkles className="h-4 w-4" />
+                    <span>{m.post_summary_title()}</span>
+                  </div>
+                  <p className="text-base leading-relaxed text-muted-foreground md:text-[17px]">
+                    {post.summary}
+                  </p>
+                </div>
+              ) : null}
+            </header>
+
+            {/* Content Layout */}
+            <div className="relative">
+              {/* TOC drawer for small screens */}
+              <TocDrawer headers={post.toc ?? []} />
+
+              <div className="max-w-none min-w-0 text-foreground leading-relaxed">
+                <ContentRenderer content={post.contentJson} />
+
+                <footer className="mt-16 md:mt-20 pt-6 md:pt-8 border-t border-border/30 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground/70">
+                    <span>{m.post_end_notice()}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      if (navigator.share) {
+                        try {
+                          await navigator.share({
+                            title: post.title,
+                            url:
+                              window.location.origin + window.location.pathname,
+                          });
+                        } catch (error) {
+                          if (
+                            !(
+                              error instanceof DOMException &&
+                              error.name === "AbortError"
+                            )
+                          )
+                            toast.error(m.post_share_error());
+                        }
+                        return;
+                      }
+                      navigator.clipboard
+                        .writeText(window.location.href)
+                        .then(() => {
+                          toast.success(m.post_share_success(), {
+                            description: m.post_share_success_desc(),
+                          });
+                        })
+                        .catch(() => {
+                          toast.error(m.post_share_error(), {
+                            description: m.post_share_error_desc(),
+                          });
+                        });
+                    }}
+                    className="rounded-full gap-2"
+                  >
+                    <Share2 size={14} strokeWidth={1.75} />
+                    <span>{m.post_share()}</span>
+                  </Button>
+                </footer>
+              </div>
             </div>
           </div>
+        </article>
 
-          {/* Prev/Next Navigation */}
-          <div className="pt-8 border-t border-border/40">
-            <Suspense fallback={<PostNavigationSkeleton />}>
-              <PostNavigation slug={post.slug} />
-            </Suspense>
-          </div>
-
-          {/* Related Posts */}
-          <div className="pt-8 border-t border-border/40">
-            <Suspense fallback={<RelatedPostsSkeleton />}>
-              <RelatedPosts slug={post.slug} />
-            </Suspense>
-          </div>
-
-          {/* Comments Section */}
-          <div className="pt-10 border-t border-border/30">
-            <CommentSection postId={post.id} />
-          </div>
+        <div className="flare-surface p-5 md:p-8">
+          <Suspense fallback={<PostNavigationSkeleton />}>
+            <PostNavigation slug={post.slug} />
+          </Suspense>
         </div>
-      </article>
+
+        {/* Related Posts */}
+        <div className="flare-surface p-5 md:p-8">
+          <Suspense fallback={<RelatedPostsSkeleton />}>
+            <RelatedPosts slug={post.slug} />
+          </Suspense>
+        </div>
+
+        {/* Comments Section */}
+        <div className="flare-surface p-5 md:p-8">
+          <CommentSection postId={post.id} />
+        </div>
+      </div>
+      {post.toc?.length ? (
+        <aside className="flare-post-toc" aria-label={m.post_toc()}>
+          <TableOfContents
+            headers={post.toc}
+            className="static w-full max-h-[calc(100dvh-8rem)]"
+          />
+        </aside>
+      ) : null}
 
       {/* Back To Top */}
       <div

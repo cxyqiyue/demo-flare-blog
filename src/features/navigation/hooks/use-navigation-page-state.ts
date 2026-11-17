@@ -48,7 +48,9 @@ export function useNavigationPageState(
         .map((folder): NavigationGridItem => ({ kind: "folder", folder }));
       const uncategorized = sortedBookmarks
         .filter((bookmark) => bookmark.folderId === null)
-        .map((bookmark): NavigationGridItem => ({ kind: "bookmark", bookmark }));
+        .map(
+          (bookmark): NavigationGridItem => ({ kind: "bookmark", bookmark }),
+        );
       return [...folders, ...uncategorized];
     }
     return sortedBookmarks

@@ -1,6 +1,8 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import {
+  CategoriesTable,
+  PostCategoriesTable,
   type PostRevisionReason,
   type PostRevisionSnapshot,
   PostRevisionsTable,
@@ -156,6 +158,24 @@ export async function restorePostSnapshot(
     );
   }
 
+  const requestedCategoryId = data.snapshot.categoryId ?? null;
+  const category =
+    requestedCategoryId === null
+      ? null
+      : await db
+          .select({ id: CategoriesTable.id })
+          .from(CategoriesTable)
+          .where(eq(CategoriesTable.id, requestedCategoryId))
+          .get();
+  batchQueries.push(
+    db
+      .insert(PostCategoriesTable)
+      .values({ postId: data.postId, categoryId: category?.id ?? null })
+      .onConflictDoUpdate({
+        target: PostCategoriesTable.postId,
+        set: { categoryId: category?.id ?? null },
+      }),
+  );
   await db.batch(batchQueries);
   return await findPostById(db, data.postId);
 }

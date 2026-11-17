@@ -51,10 +51,14 @@ import { ImageHostingSettingsSection } from "@/features/image-hosting/components
 import { useImageHostingConnection } from "@/features/image-hosting/hooks/use-image-hosting-connection";
 import { OAuthClientsSection } from "@/features/oauth-clients/components/oauth-clients-section";
 import { SubscriptionSettingsSection } from "@/features/subscription/components/subscription-settings-section";
+import {
+  FlareAdminHeader,
+  FlareAdminPanel,
+} from "@/features/theme/themes/flare/components/admin/page";
 import { WebhookSettingsSection } from "@/features/webhook/components/webhook-settings-section";
 import { WechatVerifySettingsSection } from "@/features/wechat-verify/components/wechat-verify-settings-section";
 import { requireSuperAdminRoute } from "@/lib/auth/route-guards";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -265,11 +269,11 @@ function RouteComponent() {
     }
   };
 
-  if (isFuwari) {
+  if (isFuwari || isFlare) {
     if (isLoading) {
       return (
         <div className="flex flex-col gap-4 pb-28">
-          <FuwariSectionSkeleton />
+          {isFlare ? <SectionSkeleton /> : <FuwariSectionSkeleton />}
         </div>
       );
     }
@@ -372,6 +376,102 @@ function RouteComponent() {
         children: <OAuthClientsSection />,
       },
     ];
+
+    if (isFlare) {
+      return (
+        <FormProvider {...methods}>
+          <form
+            ref={formRef}
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-5 pb-24"
+          >
+            <ConfirmationModal
+              isOpen={blockerStatus === "blocked"}
+              onClose={() => resetBlocker?.()}
+              onConfirm={handleSaveAndLeave}
+              onSecondaryConfirm={() => proceed?.()}
+              title={m.settings_unsaved_title()}
+              message={m.settings_unsaved_message()}
+              confirmLabel={m.settings_unsaved_save_and_leave()}
+              secondaryConfirmLabel={m.settings_unsaved_leave()}
+            />
+            <FlareAdminHeader
+              title={m.settings_header_title()}
+              description={m.settings_header_desc()}
+              actions={
+                TAB_SECTION[activeTab] ? (
+                  <Button type="submit" disabled={isSubmitting || !isDirty}>
+                    {isSubmitting ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Check size={16} />
+                    )}
+                    {isSubmitting
+                      ? m.settings_btn_saving()
+                      : m.settings_btn_save()}
+                  </Button>
+                ) : undefined
+              }
+            />
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) => setActiveTab(value as typeof activeTab)}
+              className="grid min-w-0 gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]"
+            >
+              <div
+                ref={tabsScrollRef}
+                className="sticky top-0 z-20 min-w-0 overflow-x-auto rounded-2xl border border-border/60 bg-card p-2 lg:self-start"
+              >
+                <TabsList className="flex w-max gap-1 bg-transparent lg:w-full lg:flex-col lg:items-stretch">
+                  {tabItems.map(({ value, icon: Icon, label }) => (
+                    <TabsTrigger
+                      key={value}
+                      value={value}
+                      className="flex shrink-0 items-center justify-start gap-2 rounded-xl px-3 py-3 text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                    >
+                      <Icon size={16} />
+                      <span>{label}</span>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+              <div className="min-w-0">
+                {tabPanes.map((pane) => (
+                  <TabsContent
+                    key={pane.value}
+                    value={pane.value}
+                    className="m-0"
+                  >
+                    <FlareAdminPanel>
+                      <div className="mb-6 border-b border-border/50 pb-5">
+                        <h2 className="flex items-center gap-2 text-lg font-semibold">
+                          <pane.icon size={19} />
+                          {pane.title}
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          {pane.desc}
+                        </p>
+                      </div>
+                      {pane.children}
+                    </FlareAdminPanel>
+                  </TabsContent>
+                ))}
+              </div>
+            </Tabs>
+            {isDirty && TAB_SECTION[activeTab] ? (
+              <div className="fixed inset-x-4 bottom-4 z-40 flex items-center justify-between gap-4 rounded-2xl border border-border bg-card p-3 shadow-lg sm:hidden">
+                <span className="text-sm">{m.settings_unsaved_title()}</span>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting
+                    ? m.settings_btn_saving()
+                    : m.settings_btn_save()}
+                </Button>
+              </div>
+            ) : null}
+          </form>
+        </FormProvider>
+      );
+    }
 
     return (
       <FormProvider {...methods}>

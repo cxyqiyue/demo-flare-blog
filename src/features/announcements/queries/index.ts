@@ -34,7 +34,11 @@ export function announcementDetailQuery(id: number) {
 
 export function announcementDeliveriesQuery(
   announcementId: number,
-  options: { offset?: number; limit?: number; status?: "pending" | "sent" | "failed" } = {},
+  options: {
+    offset?: number;
+    limit?: number;
+    status?: "pending" | "sent" | "failed";
+  } = {},
 ) {
   const offset = options.offset ?? 0;
   const limit = options.limit ?? 20;

@@ -1,12 +1,18 @@
 import { ClientOnly } from "@tanstack/react-router";
 import type React from "react";
-import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import type {
+  AccessGateError,
+  AccessGateMode,
+} from "@/components/common/access-gate.types";
 import { DefaultGateContent } from "@/components/common/gate-dialog/gate-default";
 import { FuwariGateContent } from "@/components/common/gate-dialog/gate-fuwari";
-import type { AccessGateError, AccessGateMode } from "@/components/common/access-gate.types";
 
-export type { AccessGateError, AccessGateMode } from "@/components/common/access-gate.types";
+export type {
+  AccessGateError,
+  AccessGateMode,
+} from "@/components/common/access-gate.types";
 
 interface AccessGateDialogProps {
   open: boolean;
@@ -91,7 +97,9 @@ function AccessGateDialogInternal({
       role="dialog"
       aria-modal="true"
       className={`fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 transition-all duration-300 ${
-        open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        open
+          ? "opacity-100 pointer-events-auto"
+          : "opacity-0 pointer-events-none"
       }`}
     >
       <div

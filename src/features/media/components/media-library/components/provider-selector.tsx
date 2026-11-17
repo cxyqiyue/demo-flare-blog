@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import type { MediaProvider } from "@/features/media/media.schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { PortalPanel } from "./portal-panel";
 
@@ -43,6 +43,28 @@ export function ProviderSelector({
   const Icon = current ? (PROVIDER_ICONS[current.type] ?? Upload) : Upload;
 
   if (providers.length === 0) return null;
+
+  if (isFlare) {
+    return (
+      <label className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+        <Icon size={16} className="text-muted-foreground" />
+        <select
+          aria-label="存储提供方"
+          value={currentId}
+          onChange={(event) => onSelect(event.target.value)}
+          className="min-h-10 max-w-full rounded-xl border border-border bg-background px-3 text-sm"
+        >
+          {providers.map((provider) => (
+            <option key={provider.id} value={provider.id}>
+              {provider.name}
+              {provider.canList ? " · 可浏览" : ""}
+              {provider.canUpload ? " · 可上传" : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
 
   return (
     <div className="relative">

@@ -1,8 +1,8 @@
 import type { JSONContent } from "@tiptap/react";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { getStaticRenderExtensions } from "@/features/posts/editor/static-extensions";
-import { sanitizeJsonContent } from "@/lib/utils";
 import { buildFuwariNodeMappings } from "@/features/theme/themes/fuwari/components/content/render";
+import { sanitizeJsonContent } from "@/lib/utils";
 
 export function renderCommentReact(content: JSONContent | null) {
   if (!content) return null;

@@ -472,7 +472,9 @@ describe("First-login Navigation seeding", () => {
       "member-admin",
     );
 
-    const data = await adminDataFor(memberSession("member-admin", "member@example.com", "admin"));
+    const data = await adminDataFor(
+      memberSession("member-admin", "member@example.com", "admin"),
+    );
     expect(data.engines.length).toBe(superAdminSource.engines.length);
     expect(data.bookmarks).toHaveLength(0);
     expect(data.folders).toHaveLength(0);
@@ -495,13 +497,17 @@ describe("First-login Navigation seeding", () => {
       { db: ctx.db, env: ctx.env },
       "member-2",
     );
-    const before = await adminDataFor(memberSession("member-2", "member2@example.com", "admin"));
+    const before = await adminDataFor(
+      memberSession("member-2", "member2@example.com", "admin"),
+    );
 
     await NavigationService.seedAdminNavigationOnFirstLogin(
       { db: ctx.db, env: ctx.env },
       "member-2",
     );
-    const after = await adminDataFor(memberSession("member-2", "member2@example.com", "admin"));
+    const after = await adminDataFor(
+      memberSession("member-2", "member2@example.com", "admin"),
+    );
     expect(after.engines.length).toBe(before.engines.length);
   });
 
@@ -518,7 +524,9 @@ describe("First-login Navigation seeding", () => {
       { db: ctx.db, env: ctx.env },
       "plain-user",
     );
-    const data = await adminDataFor(memberSession("plain-user", "plain@example.com", null));
+    const data = await adminDataFor(
+      memberSession("plain-user", "plain@example.com", null),
+    );
     expect(data.engines).toHaveLength(0);
   });
 });

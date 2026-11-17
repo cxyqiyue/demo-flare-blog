@@ -133,9 +133,8 @@ export function NavigationPage({
             <p className="-mt-3 text-xs font-bold fuwari-text-30 transition-colors">
               {m.navigation_level_summary({
                 folders: state.folders.length,
-                bookmarks: state.bookmarks.filter(
-                  (b) => b.folderId === null,
-                ).length,
+                bookmarks: state.bookmarks.filter((b) => b.folderId === null)
+                  .length,
               })}
             </p>
           )}

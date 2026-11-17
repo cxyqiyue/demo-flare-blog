@@ -125,8 +125,7 @@ export async function uploadToDiscordChannel(
     return ok({
       url: attachments[0].url as string,
       messageId,
-      fileName:
-        (attachments[0].filename as string) || file.name || "image.png",
+      fileName: (attachments[0].filename as string) || file.name || "image.png",
       mimeType:
         (attachments[0].content_type as string) ||
         file.type ||
@@ -236,9 +235,7 @@ export async function getDiscordMessageAttachment(
   config: DiscordChannel,
   messageId: string,
   index = 0,
-): Promise<
-  Result<DiscordAttachment, { reason: string; message: string }>
-> {
+): Promise<Result<DiscordAttachment, { reason: string; message: string }>> {
   const botToken = config.botToken?.trim();
   const channelId = config.channelId?.trim();
   if (!botToken || !channelId) {
@@ -262,9 +259,9 @@ export async function getDiscordMessageAttachment(
       });
     }
 
-    const msg = parsed as
-      | { attachments?: Array<Record<string, unknown>> }
-      | null;
+    const msg = parsed as {
+      attachments?: Array<Record<string, unknown>>;
+    } | null;
     const attachment = msg?.attachments?.[index];
     const url = typeof attachment?.url === "string" ? attachment.url : null;
     if (!attachment || !url) {
@@ -280,8 +277,7 @@ export async function getDiscordMessageAttachment(
         (attachment.filename as string) || `discord-${messageId}-${index}`,
       mimeType:
         (attachment.content_type as string) || "application/octet-stream",
-      sizeInBytes:
-        typeof attachment.size === "number" ? attachment.size : 0,
+      sizeInBytes: typeof attachment.size === "number" ? attachment.size : 0,
     });
   } catch (error) {
     return err({

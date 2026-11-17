@@ -10,7 +10,10 @@ import {
 } from "@/features/challenge/service/fullsite.service";
 import { dbMiddleware } from "@/lib/middlewares";
 
-function readCookie(cookieHeader: string | undefined, name: string): string | undefined {
+function readCookie(
+  cookieHeader: string | undefined,
+  name: string,
+): string | undefined {
   if (!cookieHeader) return undefined;
   for (const part of cookieHeader.split(";")) {
     const [key, ...rest] = part.trim().split("=");

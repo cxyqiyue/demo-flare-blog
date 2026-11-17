@@ -34,9 +34,7 @@ describe("isAdmin", () => {
   });
 
   it("allows the ADMIN_EMAIL holder regardless of the stored role (runtime-derived)", () => {
-    expect(
-      isAdmin({ email: "admin@example.com", role: null }, env),
-    ).toBe(true);
+    expect(isAdmin({ email: "admin@example.com", role: null }, env)).toBe(true);
   });
 
   it("denies a regular user", () => {

@@ -1,5 +1,5 @@
 import { ClientOnly, Link } from "@tanstack/react-router";
-import { ArrowUpRight, Eye, Pin, User } from "lucide-react";
+import { Eye, Pin, User } from "lucide-react";
 import { memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PostItem as PostItemType } from "@/features/posts/schema/posts.schema";
@@ -20,10 +20,15 @@ export const PostItem = memo(
         <Link
           to="/post/$slug"
           params={{ slug: post.slug }}
-          className="block h-full p-5 sm:p-6 lg:p-7"
+          className="flex h-full flex-col"
         >
-          <div className="flex h-full flex-col gap-4">
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">
+          <div className="flare-tile-lead" aria-hidden="true">
+            {Array.from(post.title.trim()).find((character) =>
+              /[\p{L}\p{N}]/u.test(character),
+            ) ?? ""}
+          </div>
+          <div className="flex flex-1 flex-col gap-3 p-5">
+            <div className="order-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">
               <time
                 dateTime={post.publishedAt?.toISOString()}
                 className="whitespace-nowrap tabular-nums"
@@ -41,18 +46,7 @@ export const PostItem = memo(
                   </span>
                 </>
               ) : null}
-              {post.tags && post.tags.length > 0 ? (
-                <>
-                  <span className="text-border">·</span>
-                  <div className="flex flex-wrap gap-x-2 gap-y-1">
-                    {post.tags.slice(0, 3).map((tag) => (
-                      <span key={tag.id} className="whitespace-nowrap">
-                        #{tag.name}
-                      </span>
-                    ))}
-                  </div>
-                </>
-              ) : null}
+              <span>{m.read_time({ count: post.readTimeInMinutes })}</span>
               {isLoadingViews ? (
                 <>
                   <span className="text-border">·</span>
@@ -73,7 +67,7 @@ export const PostItem = memo(
             </div>
 
             <h3
-              className="flex items-start gap-2 text-xl font-bold leading-relaxed text-foreground transition-colors duration-200 group-hover:text-primary md:text-2xl"
+              className="order-1 flex items-start gap-2 text-xl font-bold leading-relaxed text-foreground transition-colors duration-200 group-hover:text-primary md:text-2xl"
               style={{ viewTransitionName: `post-title-${post.slug}` }}
             >
               {pinned ? (
@@ -87,15 +81,10 @@ export const PostItem = memo(
             </h3>
 
             {post.summary ? (
-              <p className="line-clamp-3 text-[15px] leading-7 text-muted-foreground">
+              <p className="order-2 line-clamp-3 text-[15px] leading-7 text-muted-foreground">
                 {post.summary}
               </p>
             ) : null}
-            <div className="mt-auto flex justify-end pt-2" aria-hidden="true">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                <ArrowUpRight size={18} />
-              </span>
-            </div>
           </div>
         </Link>
       </article>

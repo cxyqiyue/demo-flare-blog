@@ -6,7 +6,8 @@ import {
   getMediaDirectoryFn,
   listExternalDirectoryFn,
 } from "@/features/media/api/media.api";
-import { isFuwari } from "@/lib/theme-mode";
+import { FlareAdminHeader } from "@/features/theme/themes/flare/components/admin/page";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn, formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import {
@@ -531,36 +532,60 @@ export function MediaLibrary() {
   }
 
   return (
-    <div className="space-y-8 pb-20">
+    <div className={isFlare ? "space-y-5 pb-12" : "space-y-8 pb-20"}>
       {/* Header Section */}
-      <div className="flex justify-between items-end gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000 fill-mode-both border-b border-border/30 pb-6">
-        <div className="space-y-1 min-w-0">
-          <h1 className="text-2xl md:text-3xl font-serif font-medium tracking-tight">
-            {m.media_title()}
-          </h1>
-          <div className="flex items-center gap-2">
-            <p className="text-[10px] md:text-xs font-mono text-muted-foreground uppercase tracking-widest">
-              {m.media_stats_assets({
-                count: mediaItems.length,
-                size: formatBytes(totalMediaSize ?? 0),
-              })}
-            </p>
-          </div>
-        </div>
-        <Button
-          onClick={() => setIsUploadOpen(true)}
-          disabled={uploadDisabled}
-          title={
-            uploadDisabled
-              ? m.media_upload_disabled_by_image_hosting_desc()
-              : undefined
+      {isFlare ? (
+        <FlareAdminHeader
+          title={m.media_title()}
+          description={m.media_stats_assets({
+            count: mediaItems.length,
+            size: formatBytes(totalMediaSize ?? 0),
+          })}
+          actions={
+            <Button
+              onClick={() => setIsUploadOpen(true)}
+              disabled={uploadDisabled}
+              title={
+                uploadDisabled
+                  ? m.media_upload_disabled_by_image_hosting_desc()
+                  : undefined
+              }
+            >
+              <Plus size={16} />
+              {m.media_upload_btn()}
+            </Button>
           }
-          className="h-9 md:h-10 px-4 md:px-6 text-[10px] md:text-[11px] uppercase tracking-[0.2em] font-medium rounded-none gap-2 bg-foreground text-background hover:bg-foreground/90 transition-all border border-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-foreground shrink-0"
-        >
-          <Plus size={14} />
-          <span className="hidden sm:inline">{m.media_upload_btn()}</span>
-        </Button>
-      </div>
+        />
+      ) : (
+        <div className="flex justify-between items-end gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000 fill-mode-both border-b border-border/30 pb-6">
+          <div className="space-y-1 min-w-0">
+            <h1 className="text-2xl md:text-3xl font-serif font-medium tracking-tight">
+              {m.media_title()}
+            </h1>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] md:text-xs font-mono text-muted-foreground uppercase tracking-widest">
+                {m.media_stats_assets({
+                  count: mediaItems.length,
+                  size: formatBytes(totalMediaSize ?? 0),
+                })}
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => setIsUploadOpen(true)}
+            disabled={uploadDisabled}
+            title={
+              uploadDisabled
+                ? m.media_upload_disabled_by_image_hosting_desc()
+                : undefined
+            }
+            className="h-9 md:h-10 px-4 md:px-6 text-[10px] md:text-[11px] uppercase tracking-[0.2em] font-medium rounded-none gap-2 bg-foreground text-background hover:bg-foreground/90 transition-all border border-foreground disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-foreground shrink-0"
+          >
+            <Plus size={14} />
+            <span className="hidden sm:inline">{m.media_upload_btn()}</span>
+          </Button>
+        </div>
+      )}
 
       {/* Provider Selector */}
       <ProviderSelector
@@ -572,7 +597,11 @@ export function MediaLibrary() {
       {/* Breadcrumb */}
       <nav
         aria-label="breadcrumb"
-        className="flex items-center gap-1 flex-wrap text-xs font-mono uppercase tracking-widest"
+        className={
+          isFlare
+            ? "flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card p-3 text-sm"
+            : "flex items-center gap-1 flex-wrap text-xs font-mono uppercase tracking-widest"
+        }
       >
         <button
           type="button"
@@ -609,7 +638,13 @@ export function MediaLibrary() {
         )}
       </nav>
 
-      <div className="animate-in fade-in duration-1000 delay-100 fill-mode-both space-y-8">
+      <div
+        className={
+          isFlare
+            ? "space-y-5 rounded-2xl border border-border/60 bg-card p-4 shadow-sm sm:p-6"
+            : "animate-in fade-in duration-1000 delay-100 fill-mode-both space-y-8"
+        }
+      >
         {/* Toolbar */}
         <MediaToolbar
           searchQuery={searchQuery}

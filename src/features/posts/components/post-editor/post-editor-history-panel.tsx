@@ -18,7 +18,7 @@ import {
 import type { PostRevisionSnapshot } from "@/features/posts/schema/post-revisions.schema";
 import { TAGS_KEYS } from "@/features/tags/queries";
 import { useDelayUnmount } from "@/hooks/use-delay-unmount";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn, formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import {
@@ -457,6 +457,8 @@ function HistoryPanelInternal({
       <aside
         className={cn(
           "fixed inset-y-0 right-0 z-91 flex w-full max-w-full flex-col border-l border-border/40 bg-background/95 shadow-2xl backdrop-blur lg:max-w-[84vw] 2xl:max-w-[80vw] duration-500",
+          isFlare &&
+            "flare-editor-panel sm:m-3 sm:w-[calc(100%-1.5rem)] sm:rounded-2xl sm:border",
           isOpen
             ? "animate-in fade-in slide-in-from-right"
             : "animate-out fade-out slide-out-to-right fill-mode-forwards",
