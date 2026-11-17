@@ -40,9 +40,6 @@ interface CodeBlockProps {
 
 export const CodeBlock = memo(
   ({ code, language, highlightedHtml }: CodeBlockProps) => {
-    const fallback = `<pre class="shiki font-mono text-sm leading-relaxed whitespace-pre-wrap text-foreground bg-transparent! p-0 m-0 border-0"><code>${code}</code></pre>`;
-    const html = highlightedHtml || fallback;
-
     const [copied, setCopied] = useState(false);
 
     // Helper to get display label
@@ -53,15 +50,19 @@ export const CodeBlock = memo(
         : LANGUAGE_MAP[normalizedLanguage] || language
       : m.common_plain_text();
 
-    const handleCopy = () => {
-      navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    const handleCopy = async () => {
+      try {
+        await navigator.clipboard.writeText(code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        setCopied(false);
+      }
     };
 
     return (
-      <div className="my-12 group relative max-w-full">
-        <div className="relative rounded-sm overflow-hidden border border-zinc-200/40 dark:border-zinc-800/40 hover:border-zinc-300/60 dark:hover:border-zinc-700/60 transition-colors duration-500">
+      <div className="my-6 group relative min-w-0 max-w-full">
+        <div className="relative rounded-xl overflow-hidden border border-border/60 bg-muted/25">
           {/* Minimal Header */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-200/10 dark:border-zinc-800/10 bg-zinc-100 dark:bg-zinc-800 select-none rounded-t-sm">
             <div className="flex items-center gap-4">
@@ -89,10 +90,16 @@ export const CodeBlock = memo(
           {/* Code Area */}
           <div className="relative p-0 overflow-x-auto custom-scrollbar rounded-b-sm">
             <div className="text-sm font-mono leading-relaxed transition-opacity duration-300">
-              <div
-                className="[&>pre]:p-6 [&>pre]:m-0 [&>pre]:min-w-full [&>pre]:w-fit [&>pre]:rounded-b-sm [&>pre>code]:p-0"
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
+              {highlightedHtml ? (
+                <div
+                  className="[&>pre]:p-6 [&>pre]:m-0 [&>pre]:min-w-full [&>pre]:w-fit [&>pre]:rounded-b-sm [&>pre>code]:p-0"
+                  dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+                />
+              ) : (
+                <pre className="m-0 w-fit min-w-full whitespace-pre p-4 sm:p-6">
+                  <code>{code}</code>
+                </pre>
+              )}
             </div>
           </div>
         </div>

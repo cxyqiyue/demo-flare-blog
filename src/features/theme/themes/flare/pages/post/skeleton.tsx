@@ -34,7 +34,10 @@ export function PostPageSkeleton() {
   return (
     <div className="w-full space-y-4 md:space-y-6">
       <nav className="flex items-center justify-between px-0.5">
-        <button onClick={() => navigate({ to: "/posts" })} className="flare-chip">
+        <button
+          onClick={() => navigate({ to: "/posts" })}
+          className="flare-chip"
+        >
           <ArrowLeft size={14} />
           <span>{m.post_back_to_list()}</span>
         </button>

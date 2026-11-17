@@ -1,5 +1,5 @@
 import { ClientOnly, Link } from "@tanstack/react-router";
-import { Eye, Pin, User } from "lucide-react";
+import { ArrowUpRight, Eye, Pin, User } from "lucide-react";
 import { memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PostItem as PostItemType } from "@/features/posts/schema/posts.schema";
@@ -16,13 +16,13 @@ interface PostItemProps {
 export const PostItem = memo(
   ({ post, pinned, views, isLoadingViews }: PostItemProps) => {
     return (
-      <article className="group border-b border-border/40 last:border-0">
+      <article className="flare-post-card flare-surface group relative overflow-hidden">
         <Link
           to="/post/$slug"
           params={{ slug: post.slug }}
-          className="block rounded-xl px-3 py-5 transition-colors duration-200 hover:bg-muted/35 md:px-4 md:py-6 -mx-1 md:-mx-2"
+          className="block h-full p-5 sm:p-6 lg:p-7"
         >
-          <div className="flex flex-col gap-2 md:gap-2.5">
+          <div className="flex h-full flex-col gap-4">
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">
               <time
                 dateTime={post.publishedAt?.toISOString()}
@@ -73,7 +73,7 @@ export const PostItem = memo(
             </div>
 
             <h3
-              className="flex items-start gap-2 text-lg font-semibold leading-snug tracking-tight text-foreground transition-colors duration-200 group-hover:text-foreground/75 md:text-xl"
+              className="flex items-start gap-2 text-xl font-bold leading-relaxed text-foreground transition-colors duration-200 group-hover:text-primary md:text-2xl"
               style={{ viewTransitionName: `post-title-${post.slug}` }}
             >
               {pinned ? (
@@ -83,14 +83,19 @@ export const PostItem = memo(
                   strokeWidth={1.75}
                 />
               ) : null}
-              <span className="line-clamp-2">{post.title}</span>
+              <span className="line-clamp-3 break-words">{post.title}</span>
             </h3>
 
             {post.summary ? (
-              <p className="mt-0.5 line-clamp-2 max-w-3xl text-sm leading-6 text-muted-foreground md:text-[15px] md:leading-7">
+              <p className="line-clamp-3 text-[15px] leading-7 text-muted-foreground">
                 {post.summary}
               </p>
             ) : null}
+            <div className="mt-auto flex justify-end pt-2" aria-hidden="true">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                <ArrowUpRight size={18} />
+              </span>
+            </div>
           </div>
         </Link>
       </article>

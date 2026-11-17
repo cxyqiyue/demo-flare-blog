@@ -27,7 +27,8 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
     const handleScroll = () => {
       setShowBackToTop(window.scrollY > 400);
     };
-    window.addEventListener("scroll", handleScroll);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -103,7 +104,7 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
               </div>
 
               <h1
-                className="text-3xl md:text-5xl lg:text-[3.2rem] font-semibold leading-[1.12] tracking-tight text-foreground"
+                className="break-words text-2xl font-bold leading-[1.45] text-foreground sm:text-3xl lg:text-4xl"
                 style={{ viewTransitionName: `post-title-${post.slug}` }}
               >
                 {post.title}
@@ -125,17 +126,22 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
 
           {/* Content Layout */}
           <div className="relative">
-            {/* Floating TOC for Large Screens */}
-            <aside className="hidden xl:block absolute left-full ml-12 top-0 h-full">
-              <div className="sticky top-32 w-60">
-                <TableOfContents headers={post.toc ?? []} />
-              </div>
-            </aside>
+            {post.toc?.length ? (
+              <details className="mb-8 rounded-xl bg-muted/40 p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-foreground">
+                  {m.post_toc()}
+                </summary>
+                <TableOfContents
+                  headers={post.toc}
+                  className="relative top-0 mt-3 w-full max-h-72"
+                />
+              </details>
+            ) : null}
 
             {/* TOC drawer for small screens */}
             <TocDrawer headers={post.toc ?? []} />
 
-            <main className="max-w-none min-w-0 overflow-x-clip text-foreground leading-relaxed">
+            <div className="max-w-none min-w-0 text-foreground leading-relaxed">
               <ContentRenderer content={post.contentJson} />
 
               <footer className="mt-16 md:mt-20 pt-6 md:pt-8 border-t border-border/30 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
@@ -164,18 +170,18 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
                   <span>{m.post_share()}</span>
                 </Button>
               </footer>
-            </main>
+            </div>
           </div>
 
           {/* Prev/Next Navigation */}
-          <div className="pt-16 border-t border-border/40">
+          <div className="pt-8 border-t border-border/40">
             <Suspense fallback={<PostNavigationSkeleton />}>
               <PostNavigation slug={post.slug} />
             </Suspense>
           </div>
 
           {/* Related Posts */}
-          <div className="pt-24 border-t border-border/40">
+          <div className="pt-8 border-t border-border/40">
             <Suspense fallback={<RelatedPostsSkeleton />}>
               <RelatedPosts slug={post.slug} />
             </Suspense>
@@ -198,15 +204,13 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
       >
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="group flex flex-col items-center gap-1.5"
+          aria-label={m.post_back_to_top()}
+          className="flare-surface group flex h-11 w-11 items-center justify-center rounded-full"
         >
           <ArrowUp
             size={16}
             className="text-muted-foreground/60 group-hover:text-foreground group-hover:-translate-y-1 transition-all duration-300"
           />
-          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground/40 group-hover:text-foreground transition-colors duration-300">
-            {m.post_back_to_top()}
-          </span>
         </button>
       </div>
 

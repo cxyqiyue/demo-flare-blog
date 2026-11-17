@@ -22,6 +22,7 @@ function isFocusedPath(pathname: string) {
   return (
     pathname.startsWith("/search") ||
     pathname.startsWith("/friend-links/submit") ||
+    pathname.startsWith("/submit-friend-link") ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
@@ -32,11 +33,8 @@ function isFocusedPath(pathname: string) {
   );
 }
 
-/**
- * The two sidebar widgets. On the home page they lead the content as one slim
- * strip; on every other page they follow it, as the reference site does.
- */
-function SidebarWidgets({ place }: { place: "before" | "after" }) {
+/** Public identity and tags stay in the right rail on wide screens. */
+function SidebarWidgets() {
   const { siteConfig } = useRouteContext({ from: "__root__" });
   const { data: tags } = useQuery(tagsQueryOptions);
 
@@ -48,22 +46,24 @@ function SidebarWidgets({ place }: { place: "before" | "after" }) {
   const topTags = (tags ?? []).slice(0, 24);
 
   return (
-    <div className="flare-widgets" data-place={place}>
-      <section className="flare-widget flare-surface flex flex-col gap-4 p-5">
-        <div className="flex items-center gap-4">
+    <aside className="flare-widgets" aria-label={m.tags_title()}>
+      <section className="flare-widget flare-profile flare-surface flex flex-col gap-4 p-6">
+        <div className="flex flex-col items-center gap-4 text-center">
           {avatar ? (
             <img
               src={avatar}
               alt={siteConfig.author || siteConfig.title}
-              className="h-14 w-14 shrink-0 rounded-2xl border border-border/50 bg-muted/30 object-cover"
+              className="h-24 w-24 shrink-0 rounded-full border-4 border-background bg-muted/30 object-cover shadow-sm"
+              width={96}
+              height={96}
             />
           ) : (
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-border/50 bg-muted/40 text-muted-foreground">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-muted/40 text-muted-foreground">
               <UserRound size={20} />
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-semibold tracking-tight text-foreground">
+            <p className="break-words text-xl font-bold text-foreground">
               {siteConfig.author || siteConfig.title}
             </p>
             {siteConfig.tagline || siteConfig.description ? (
@@ -74,7 +74,7 @@ function SidebarWidgets({ place }: { place: "before" | "after" }) {
           </div>
         </div>
         {socialLinks.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             {socialLinks.map((link: SocialLink, i: number) => {
               const preset =
                 link.platform === "custom"
@@ -111,7 +111,7 @@ function SidebarWidgets({ place }: { place: "before" | "after" }) {
         <div className="flex items-center justify-between gap-3">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Hash size={15} className="text-muted-foreground" />
-            {m.posts_tags_filter?.() ?? "Tags"}
+            {m.tags_title()}
           </h2>
           <Link
             to="/posts"
@@ -143,7 +143,7 @@ function SidebarWidgets({ place }: { place: "before" | "after" }) {
           <p className="text-sm text-muted-foreground/70">—</p>
         )}
       </section>
-    </div>
+    </aside>
   );
 }
 
@@ -215,14 +215,14 @@ function HeroIntroduction() {
       <button
         type="button"
         className="mt-8 inline-flex h-10 w-10 items-center justify-center rounded-full text-white ring-1 ring-inset ring-white/30 backdrop-blur-md transition hover:bg-white/15"
-        aria-label={m.common_open_menu?.() ?? "Scroll to content"}
+        aria-label={m.home_latest_posts()}
         onClick={() =>
-          window.scrollTo({
-            top: Math.max(
-              0,
-              window.innerHeight * (BANNER_HEIGHT_HOME / 100) - 88,
-            ),
-            behavior: "smooth",
+          document.getElementById("flare-content")?.scrollIntoView({
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+              .matches
+              ? "instant"
+              : "smooth",
+            block: "start",
           })
         }
       >
@@ -252,8 +252,8 @@ export function PublicLayout({
   const bannerImage =
     siteConfig.theme?.flare?.homeBg || siteConfig.theme?.fuwari?.homeBg || "";
 
-  const showWidgets = !focused && !isPost;
-  const isReadingPage = isPost || pathname.startsWith("/friend-links/submit");
+  const showWidgets = !focused && !pathname.startsWith("/navigation");
+  const isReadingPage = pathname.startsWith("/submit-friend-link");
   const pageInsetClass = useMemo(
     () =>
       cn(
@@ -318,17 +318,20 @@ export function PublicLayout({
       </section>
 
       <div
+        id="flare-content"
         className={cn("flare-body", pageInsetClass, "pb-10 md:pb-14")}
         style={{ marginTop: `calc(${bannerHeightVh}svh - ${bodyOverlap})` }}
       >
-        <div className="flare-layout">
-          {isHome && showWidgets ? <SidebarWidgets place="before" /> : null}
-
+        <div
+          className="flare-layout"
+          data-sidebar={showWidgets}
+          data-reading={isPost}
+        >
           <main className="flare-main" data-shell-region="main">
             {children}
           </main>
 
-          {!isHome && showWidgets ? <SidebarWidgets place="after" /> : null}
+          {showWidgets ? <SidebarWidgets /> : null}
         </div>
 
         <div className="mt-8 md:mt-10" data-shell-region="footer">

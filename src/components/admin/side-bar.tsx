@@ -464,7 +464,6 @@ function FlareSidebar({
   isMobileSidebarOpen,
   closeMobileSidebar,
   user,
-  onSignOut,
   onConfirmSignOut,
 }: FuwariSidebarProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -554,7 +553,7 @@ function FlareSidebar({
             </span>
           </div>
           <button
-            onClick={onSignOut}
+            onClick={() => setShowLogoutConfirm(true)}
             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
             title={m.admin_sidebar_logout()}
           >

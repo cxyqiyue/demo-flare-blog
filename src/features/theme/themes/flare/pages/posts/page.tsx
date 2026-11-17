@@ -56,7 +56,7 @@ export function PostsPage({
             <span className="rounded-full bg-muted/60 px-2.5 py-0.5 font-mono tabular-nums">
               {tags.length}
             </span>
-            <span>{m.posts_tags_filter()}</span>
+            <span>{m.tags_title()}</span>
           </div>
         </header>
 
@@ -95,7 +95,7 @@ export function PostsPage({
           )}
         </div>
 
-        <div className="border-t border-border/50 px-2 md:px-4">
+        <div className="grid grid-cols-1 gap-4 px-4 py-4 sm:px-6 min-[1200px]:grid-cols-2">
           {posts.length === 0 ? (
             <div className="py-20 text-center">
               <p className="text-muted-foreground">{m.posts_no_posts()}</p>

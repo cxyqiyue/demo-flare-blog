@@ -47,7 +47,9 @@ export function PostNavigation({ slug }: PostNavigationProps) {
             <span className="text-xs text-muted-foreground">
               {m.post_next()}
             </span>
-            <span className="truncate text-foreground/90 font-medium">{next.title}</span>
+            <span className="truncate text-foreground/90 font-medium">
+              {next.title}
+            </span>
           </span>
           <ChevronRight
             size={16}

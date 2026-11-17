@@ -1,7 +1,7 @@
 import type { JSONContent } from "@tiptap/react";
 import { useMemo } from "react";
-import { renderReact } from "@/features/theme/themes/default/components/content/render";
 import { cn, sanitizeJsonContent } from "@/lib/utils";
+import { renderReact } from "./render";
 
 interface ContentRendererProps {
   content: JSONContent | null;
@@ -23,5 +23,9 @@ export function ContentRenderer({ content, className }: ContentRendererProps) {
     return null;
   }
 
-  return <div className={cn("ProseMirror", className)}>{renderedContent}</div>;
+  return (
+    <div className={cn("ProseMirror flare-content", className)}>
+      {renderedContent}
+    </div>
+  );
 }

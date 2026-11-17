@@ -6,7 +6,7 @@
    latest flare-stack-blog look: a soft tinted ground, white raised panels,
    a floating glass navigation over a tall first screen. */
 :root {
-  --flare-page-width: 70rem;
+  --flare-page-width: 78rem;
   --flare-reading-width: 46rem;
   --flare-gutter: 1.25rem;
   --flare-radius-card: 1.25rem;
@@ -84,6 +84,7 @@
 
 .flare-shell {
   position: relative;
+  display: flow-root;
   min-height: 100vh;
   color: hsl(var(--foreground));
   background: var(--flare-ground);
@@ -163,13 +164,12 @@
   background: rgb(255 255 255 / 0.14);
 }
 
-/* ── Page layout ───────────────────────────────────────────────────────────
-   One centred column. On the home page the sidebar cards lead the content as
-   a single slim strip; elsewhere they follow it, as in the reference. */
+/* Main content and identity rail share a stable responsive grid. */
 .flare-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 1.25rem;
 }
 
 .flare-main {
@@ -180,8 +180,8 @@
 }
 
 .flare-widgets {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   min-width: 0;
 }
@@ -190,37 +190,147 @@
   min-width: 0;
 }
 
-@media (max-width: 1023px) {
-  .flare-layout > .flare-widgets {
-    order: 2;
+@media (min-width: 640px) and (max-width: 959px) {
+  .flare-widgets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .flare-layout[data-sidebar="true"] {
+    grid-template-columns: minmax(0, 1fr) 17rem;
+    gap: 1.5rem;
+  }
+  .flare-widgets {
+    position: sticky;
+    top: 5.5rem;
+  }
+}
+
+@media (max-width: 639px) {
+  :root {
+    --flare-radius-card: 1rem;
+  }
+  .flare-body {
+    padding-inline: 0.875rem;
+  }
+  .flare-hero {
+    bottom: 5rem;
+  }
+  .flare-widgets {
     margin-top: 0.25rem;
   }
 }
 
-@media (min-width: 1024px) {
-  .flare-widgets[data-place="before"] {
-    order: -1;
-    gap: 1px;
-    overflow: hidden;
-    border-radius: var(--flare-radius-card);
-    background: var(--flare-border);
-    box-shadow: var(--flare-shadow);
+.flare-body {
+  scroll-margin-top: 5.5rem;
+}
+.flare-content {
+  font-size: 1rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.flare-content :is(h1, h2, h3, h4) {
+  font-weight: 700;
+  line-height: 1.55;
+  margin-block: 1.75em 0.75em;
+  scroll-margin-top: 6rem;
+}
+.flare-content h1 {
+  font-size: clamp(1.65rem, 3vw, 2.25rem);
+}
+.flare-content h2 {
+  font-size: clamp(1.4rem, 2.5vw, 1.85rem);
+}
+.flare-content h3 {
+  font-size: 1.25rem;
+}
+.flare-content p {
+  margin-block: 1em;
+}
+.flare-content :is(ul, ol) {
+  padding-left: 1.5em;
+  margin-block: 1em;
+}
+.flare-content ul {
+  list-style: disc;
+}
+.flare-content ol {
+  list-style: decimal;
+}
+.flare-content li {
+  margin-block: 0.4em;
+}
+.flare-content a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.flare-content blockquote {
+  margin-block: 1.5em;
+  border-left: 3px solid hsl(var(--primary));
+  padding: 0.75em 1em;
+  background: var(--flare-accent-soft);
+  border-radius: 0 0.75rem 0.75rem 0;
+}
+.flare-content :is(img, video, iframe) {
+  max-width: 100%;
+}
+.flare-content :is(pre, .shiki) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.flare-content :not(pre) > code {
+  border-radius: 0.3rem;
+  padding: 0.15em 0.35em;
+  background: var(--flare-tonal-bg);
+  font-size: 0.9em;
+}
+.flare-content ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+.flare-content ul[data-type="taskList"] > li {
+  display: flex;
+  align-items: start;
+  gap: 0.6rem;
+}
+.flare-content ul[data-type="taskList"] > li > label {
+  flex-shrink: 0;
+  margin-top: 0.3rem;
+}
+.flare-content ul[data-type="taskList"] > li > div {
+  min-width: 0;
+}
+.flare-content ul[data-type="taskList"] > li p {
+  margin: 0;
+}
+.flare-main > *,
+.flare-widget {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.flare-post-card {
+  transition:
+    box-shadow 200ms ease,
+    transform 200ms var(--flare-ease);
+}
+@media (hover: hover) {
+  .flare-post-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px -16px rgb(15 23 42 / 0.25);
   }
-
-  .flare-widgets[data-place="before"] > .flare-widget {
-    flex: 1 1 28rem;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    background: var(--flare-surface-elevated);
-  }
-
-  .flare-widgets[data-place="before"] > .flare-widget + .flare-widget {
-    border-left: 1px solid var(--flare-border);
-  }
-
-  .flare-widgets[data-place="after"] > .flare-widget {
-    flex: 1 1 24rem;
+}
+.flare-shell :is(a, button, input, textarea):focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 4px;
+}
+html {
+  scroll-padding-top: 5.5rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }
 
@@ -401,6 +511,9 @@
   .flare-enter {
     animation: none;
   }
+  .flare-post-card {
+    transition: none;
+  }
 }
 
 @layer base {
@@ -417,7 +530,7 @@
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
 
-    --primary: 240 10% 3.9%;
+    --primary: 221 65% 44%;
     --primary-foreground: 0 0% 98%;
 
     --secondary: 240 4.8% 95.9%;
@@ -454,8 +567,8 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 10% 3.9%;
+    --primary: 217 85% 72%;
+    --primary-foreground: 224 30% 10%;
 
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;

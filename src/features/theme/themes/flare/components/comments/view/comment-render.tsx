@@ -1,8 +1,8 @@
 import type { JSONContent } from "@tiptap/react";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { getStaticRenderExtensions } from "@/features/posts/editor/static-extensions";
-import { buildDefaultNodeMappings } from "@/features/theme/themes/default/components/content/render";
 import { sanitizeJsonContent } from "@/lib/utils";
+import { buildFlareNodeMappings } from "../../content/render";
 
 export function renderCommentReact(content: JSONContent | null) {
   if (!content) return null;
@@ -10,7 +10,7 @@ export function renderCommentReact(content: JSONContent | null) {
   if (!safe) return null;
 
   // 复用文章节点映射，但评论图片使用更紧凑的展示样式
-  const { image: _postImage, ...mappings } = buildDefaultNodeMappings();
+  const { image: _postImage, ...mappings } = buildFlareNodeMappings();
 
   return renderToReactElement({
     extensions: getStaticRenderExtensions(),

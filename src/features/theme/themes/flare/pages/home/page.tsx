@@ -21,8 +21,8 @@ export function HomePage({
   return (
     <div className="flare-enter flex w-full flex-col gap-4">
       {posts.length > 0 ? (
-        <section className="flare-surface overflow-hidden">
-          <div className="flex items-center justify-between gap-3 border-b border-border/50 px-5 py-4 md:px-8 md:py-5">
+        <section className="flex flex-col gap-4">
+          <div className="flare-surface flex items-center justify-between gap-3 px-5 py-4 md:px-6">
             <h2 className="text-base font-semibold tracking-tight text-foreground md:text-lg">
               {m.home_latest_posts()}
             </h2>
@@ -31,7 +31,7 @@ export function HomePage({
             </span>
           </div>
 
-          <div className="px-2 md:px-4">
+          <div className="grid grid-cols-1 gap-4 min-[1200px]:grid-cols-2">
             {posts.map((post) => (
               <PostItem
                 key={post.id}
