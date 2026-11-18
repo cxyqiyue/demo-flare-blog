@@ -274,9 +274,6 @@
   margin-top: 1.5rem;
   min-width: 0;
 }
-.flare-profile-widget {
-  min-width: 0;
-}
 .flare-editor-panel {
   background: var(--flare-surface-elevated);
   border-color: var(--flare-border);
@@ -299,9 +296,6 @@
     display: flex;
     flex-direction: column;
   }
-  .flare-profile-widget {
-    grid-column: 1 / -1;
-  }
 }
 @media (max-width: 1023px) {
   .flare-home-before {
@@ -316,7 +310,7 @@
 }
 .flare-index-card {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 1rem;
   padding: 0.875rem 1.25rem;
   min-width: 0;
@@ -326,6 +320,7 @@
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
+  min-height: 2.75rem;
   font-size: 0.875rem;
   font-weight: 600;
 }
@@ -335,6 +330,11 @@
   gap: 0.5rem;
   min-width: 0;
   width: 100%;
+  align-items: center;
+  min-height: 2.75rem;
+}
+.flare-index-card:has(.flare-chip-row[data-expanded="true"]),
+.flare-chip-row[data-expanded="true"] {
   align-items: start;
 }
 .flare-chip-list {
@@ -350,6 +350,14 @@
 .flare-chip-row[data-expanded="true"] .flare-chip-list > li {
   overflow-x: auto;
 }
+.flare-chip-list[data-measured="false"] > li {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+.flare-chip-list[data-measured="false"] + .flare-chip-toggle {
+  visibility: hidden;
+}
 .flare-chip-list > li {
   min-width: 0;
   max-width: 100%;
@@ -357,10 +365,9 @@
   flex-shrink: 0;
 }
 .flare-chip-list > li > span {
-  display: inline-flex;
+  display: flex;
   width: max-content;
   white-space: nowrap;
-  vertical-align: middle;
 }
 .flare-chip-list > li[data-clipped="true"],
 .flare-chip-toggle[data-unused="true"] {
@@ -388,8 +395,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .flare-index-card {
-    flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.625rem;
+    padding-inline: 0.875rem;
   }
 }
 
@@ -426,9 +433,12 @@
   }
 }
 .flare-tile-lead {
+  position: relative;
+  overflow: hidden;
   display: grid;
   place-items: center;
   min-height: 7rem;
+  height: clamp(8rem, 29vw, 13rem);
   background: radial-gradient(
     ellipse at top right,
     hsl(var(--primary) / 0.2),
@@ -439,6 +449,8 @@
   font-weight: 800;
 }
 .flare-archive-lead {
+  position: relative;
+  overflow: hidden;
   display: grid;
   place-items: center;
   flex: none;

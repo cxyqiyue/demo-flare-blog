@@ -148,8 +148,8 @@ export async function getPostsCursor(
   return await EdgeCacheService.getVersionedJson(
     context,
     "posts:list",
-    (version) =>
-      POSTS_CACHE_KEYS.list(
+    (version) => [
+      ...POSTS_CACHE_KEYS.list(
         version,
         data.limit ?? 10,
         data.cursor ?? 0,
@@ -157,6 +157,8 @@ export async function getPostsCursor(
         isAdminViewer ? "admin" : "public",
         categoryName,
       ),
+      "first-image",
+    ],
     PostListResponseSchema,
     fetcher,
     {

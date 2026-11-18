@@ -55,6 +55,40 @@ describe("Posts Integration", () => {
   };
 
   describe("Post CRUD", () => {
+    it("exposes the first published image as a privacy-safe post-list cover", async () => {
+      const { id } = await PostService.createEmptyPost(adminContext);
+      await updatePost({
+        id,
+        data: {
+          title: "Post with an image cover",
+          slug: "post-with-an-image-cover",
+          status: "published",
+          publishedAt: new Date(),
+          contentJson: {
+            type: "doc",
+            content: [
+              { type: "paragraph", content: [{ type: "text", text: "Intro" }] },
+              {
+                type: "image",
+                attrs: { src: "https://images.example/first.webp" },
+              },
+              {
+                type: "image",
+                attrs: { src: "https://images.example/second.webp" },
+              },
+            ],
+          },
+        },
+      });
+      await waitForBackgroundTasks(adminContext.executionCtx);
+      const result = await PostService.getPublicPostsPage(createTestContext(), {
+        limit: 12,
+      });
+      expect(result.items.find((post) => post.id === id)?.coverImage).toBe(
+        "https://images.example/first.webp",
+      );
+    });
+
     it("should create an empty draft post", async () => {
       const { id } = await PostService.createEmptyPost(adminContext);
       expect(id).toBeDefined();
@@ -380,7 +414,7 @@ describe("Posts Integration", () => {
       const publicContext = createTestContext();
       await createPublishedPost("Fresh Post", "fresh-post");
       await publicContext.env.KV.put(
-        POSTS_CACHE_KEYS.list("v0", 10, 0).join(":"),
+        [...POSTS_CACHE_KEYS.list("v0", 10, 0), "first-image"].join(":"),
         JSON.stringify({ items: [], nextCursor: null }),
       );
       vi.spyOn(publicContext.env.KV, "get").mockRejectedValueOnce(

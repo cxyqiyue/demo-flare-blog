@@ -85,27 +85,33 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
                 </div>
                 {post.category || post.tags?.length ? (
                   <div className="text-sm text-muted-foreground">
-                    <CollapsibleChips>
+                    <div className="space-y-2">
                       {post.category ? (
-                        <Link
-                          to="/posts"
-                          search={{ categoryName: post.category.name }}
-                          className="flare-chip"
-                        >
-                          {post.category.name}
-                        </Link>
+                        <CollapsibleChips>
+                          <Link
+                            to="/posts"
+                            search={{ categoryName: post.category.name }}
+                            className="flare-chip"
+                          >
+                            {post.category.name}
+                          </Link>
+                        </CollapsibleChips>
                       ) : null}
-                      {post.tags?.map((tag) => (
-                        <Link
-                          key={tag.id}
-                          to="/posts"
-                          search={{ tagName: tag.name }}
-                          className="flare-chip"
-                        >
-                          #{tag.name}
-                        </Link>
-                      ))}
-                    </CollapsibleChips>
+                      {post.tags?.length ? (
+                        <CollapsibleChips>
+                          {post.tags.map((tag) => (
+                            <Link
+                              key={tag.id}
+                              to="/posts"
+                              search={{ tagName: tag.name }}
+                              className="flare-chip"
+                            >
+                              #{tag.name}
+                            </Link>
+                          ))}
+                        </CollapsibleChips>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
 

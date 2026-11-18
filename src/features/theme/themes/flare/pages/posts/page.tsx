@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { PostsPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
 import { CollapsibleChips } from "../../components/collapsible-chips";
+import { PostCover } from "../../components/post-cover";
 
 export function PostsPage({
   posts,
@@ -90,11 +91,11 @@ export function PostsPage({
                         params={{ slug: post.slug }}
                         className="group flex h-full min-h-28 items-center gap-3 rounded-xl border border-border/60 bg-(--flare-surface-soft) p-3 transition-colors hover:border-primary/40 hover:bg-primary/5 sm:gap-4 sm:p-4"
                       >
-                        <span className="flare-archive-lead" aria-hidden="true">
-                          {Array.from(post.title.trim()).find((character) =>
-                            /[\p{L}\p{N}]/u.test(character),
-                          ) ?? ""}
-                        </span>
+                        <PostCover
+                          src={post.coverImage}
+                          title={post.title}
+                          className="flare-archive-lead"
+                        />
                         <div className="min-w-0 flex-1">
                           <h3 className="line-clamp-2 break-words text-base font-semibold leading-7 transition-colors group-hover:text-primary">
                             {post.title}

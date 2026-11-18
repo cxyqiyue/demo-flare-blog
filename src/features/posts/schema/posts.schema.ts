@@ -63,6 +63,7 @@ export const PostItemSchema = PostSelectSchema.omit({
   contentJson: true,
 }).extend({
   tags: z.array(TagSelectSchema).optional(),
+  coverImage: z.string().nullable().optional(),
 });
 export const PostListResponseSchema = z.object({
   items: z.array(PostItemSchema),
@@ -236,6 +237,7 @@ export type PostListItem = Omit<
   "contentJson" | "publicContentJson" | "passwordHash" | "passwordCipher"
 > & {
   tags?: Array<Tag>;
+  coverImage?: string | null;
   /** 作者昵称（由 authorId 关联 user 表实时派生） */
   author: string | null;
 };
@@ -256,7 +258,7 @@ export const POSTS_CACHE_KEYS = {
     categoryName !== undefined
       ? ([
           "posts",
-          "list",
+          "list-with-cover",
           scope,
           version,
           limit,
@@ -267,10 +269,18 @@ export const POSTS_CACHE_KEYS = {
           tagName ?? "",
         ] as const)
       : tagName === undefined
-        ? (["posts", "list", scope, version, limit, cursor, "all"] as const)
+        ? ([
+            "posts",
+            "list-with-cover",
+            scope,
+            version,
+            limit,
+            cursor,
+            "all",
+          ] as const)
         : ([
             "posts",
-            "list",
+            "list-with-cover",
             scope,
             version,
             limit,
@@ -292,7 +302,15 @@ export const POSTS_CACHE_KEYS = {
     scope: "public" | "admin" = "public",
     paginatePinned = false,
   ) =>
-    [version, "posts", "page", scope, offset, limit, paginatePinned] as const,
+    [
+      version,
+      "posts",
+      "page-with-cover",
+      scope,
+      offset,
+      limit,
+      paginatePinned,
+    ] as const,
   adjacent: (version: string, slug: string) =>
     [version, "post", slug, "adjacent"] as const,
 } as const;
