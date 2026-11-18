@@ -1,6 +1,6 @@
 import type { JSONContent, Editor as TiptapEditor } from "@tiptap/react";
 import { Check, Loader2, Sparkles, Wand2, X, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,6 @@ import { ContentRenderer as FlareContentRenderer } from "@/features/theme/themes
 import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
-import { useFlarePanel } from "./use-flare-panel";
 
 const ContentRenderer = isFlare ? FlareContentRenderer : DefaultContentRenderer;
 
@@ -33,7 +32,19 @@ export function AiArticlePanel({
   onApplyTitle,
   onInsertFallback,
 }: AiArticlePanelProps) {
-  const panelRef = useFlarePanel(open, onClose);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const body = dialog.ownerDocument.body;
+    const previousOverflow = body.style.overflow;
+    dialog.showModal();
+    body.style.overflow = "hidden";
+    return () => {
+      dialog.close();
+      body.style.overflow = previousOverflow;
+    };
+  }, [open]);
   const [outline, setOutline] = useState("");
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState("");
@@ -93,480 +104,463 @@ export function AiArticlePanel({
     onClose();
   };
 
-  if (isFuwari) {
-    return (
-      <>
-        {open && (
-          <div
-            className="fixed inset-0 z-90 bg-black/30 backdrop-blur-sm dark:bg-black/50 animate-in fade-in duration-300"
-            onClick={onClose}
-          />
-        )}
-
-        <aside
-          className={cn(
-            "fixed right-0 top-0 bottom-0 z-100 w-full max-w-xl fuwari-card-base shadow-2xl transition-[transform,opacity] duration-500 ease-out flex flex-col",
-            open ? "translate-x-0 opacity-100" : "invisible opacity-0",
-          )}
-          aria-hidden={!open}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-(--fuwari-input-border) px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-(--fuwari-btn-regular-bg) p-2">
-                <Sparkles
-                  size={16}
-                  strokeWidth={1.5}
-                  className="text-(--fuwari-primary)"
-                />
-              </div>
-              <div>
-                <p className="text-base font-bold fuwari-text-90">
-                  {m.editor_ai_panel_title()}
-                </p>
-                <p className="text-sm fuwari-text-50">
-                  {m.editor_ai_panel_eyebrow()}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="rounded-lg"
-            >
-              <X size={16} strokeWidth={1.5} />
-            </Button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-6 space-y-6">
-            {/* Outline */}
-            <div className="space-y-2">
-              <label
-                htmlFor="ai-outline"
-                className="text-sm font-bold fuwari-text-75"
-              >
-                {m.editor_ai_outline_label()}
-              </label>
-              <Textarea
-                id="ai-outline"
-                value={outline}
-                onChange={(e) => {
-                  setOutline(e.target.value);
-                  handleInputChange();
-                }}
-                placeholder={m.editor_ai_outline_ph()}
-                rows={8}
-              />
-            </div>
-
-            {/* Optional fields */}
-            <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
-              <div className="space-y-2">
-                <label
-                  htmlFor="ai-title"
-                  className="text-sm font-bold fuwari-text-75"
-                >
-                  {m.editor_ai_title_label()}
-                </label>
-                <Input
-                  id="ai-title"
-                  value={title}
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                    handleInputChange();
-                  }}
-                  placeholder={m.editor_ai_title_ph()}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label
-                  htmlFor="ai-language"
-                  className="text-sm font-bold fuwari-text-75"
-                >
-                  {m.editor_ai_language_label()}
-                </label>
-                <Input
-                  id="ai-language"
-                  value={language}
-                  onChange={(e) => {
-                    setLanguage(e.target.value);
-                    handleInputChange();
-                  }}
-                  placeholder={m.editor_ai_language_ph()}
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <label
-                  htmlFor="ai-tone"
-                  className="text-sm font-bold fuwari-text-75"
-                >
-                  {m.editor_ai_tone_label()}
-                </label>
-                <Input
-                  id="ai-tone"
-                  value={tone}
-                  onChange={(e) => {
-                    setTone(e.target.value);
-                    handleInputChange();
-                  }}
-                  placeholder={m.editor_ai_tone_ph()}
-                />
-              </div>
-            </div>
-
-            {/* Generate button */}
-            <Button
-              type="button"
-              onClick={handleGenerate}
-              disabled={!canGenerate}
-              className="w-full h-11 gap-2"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  {m.editor_ai_generating()}
-                </>
-              ) : (
-                <>
-                  <Wand2 size={14} strokeWidth={1.5} />
-                  {m.editor_ai_generate_btn()}
-                </>
-              )}
-            </Button>
-
-            {/* Result */}
-            {generated && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <div className="flex items-center justify-between border-b border-(--fuwari-input-border) pb-3">
-                  <div className="flex items-center gap-4">
-                    <p className="text-sm font-bold fuwari-text-75">
-                      {m.editor_ai_result_label()}
-                    </p>
-                    <div className="flex items-center gap-1 rounded-lg bg-(--fuwari-btn-regular-bg) p-1">
-                      <button
-                        type="button"
-                        onClick={() => setViewMode("preview")}
-                        className={
-                          "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors " +
-                          (viewMode === "preview"
-                            ? "bg-(--fuwari-primary) text-white"
-                            : "fuwari-text-50 hover:text-(--fuwari-primary)")
-                        }
-                      >
-                        {m.editor_ai_view_preview()}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setViewMode("markdown")}
-                        className={
-                          "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors " +
-                          (viewMode === "markdown"
-                            ? "bg-(--fuwari-primary) text-white"
-                            : "fuwari-text-50 hover:text-(--fuwari-primary)")
-                        }
-                      >
-                        {m.editor_ai_view_markdown()}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm fuwari-text-50">
-                      {generated.markdown.length} {m.editor_ai_result_chars()}
-                    </span>
-                  </div>
-                </div>
-
-                {viewMode === "markdown" ? (
-                  <pre className="max-h-80 overflow-y-auto custom-scrollbar whitespace-pre-wrap break-words rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-input-bg) p-4 font-mono text-xs leading-6 fuwari-text-90">
-                    {generated.markdown}
-                  </pre>
-                ) : (
-                  <div className="max-h-96 overflow-y-auto custom-scrollbar rounded-xl border border-(--fuwari-input-border) px-6 py-6">
-                    <ContentRenderer content={generated.content} />
-                  </div>
-                )}
-
-                <label className="flex cursor-pointer items-center gap-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={fillTitle}
-                    onChange={(e) => setFillTitle(e.target.checked)}
-                    className="h-4 w-4 rounded-md accent-(--fuwari-primary)"
-                  />
-                  <span className="text-sm fuwari-text-50">
-                    {m.editor_ai_fill_title()}
-                  </span>
-                </label>
-
-                <div className="flex items-center gap-3 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setGenerated(null)}
-                    className="h-11 flex-1 gap-2 fuwari-text-50"
-                  >
-                    <XCircle size={14} strokeWidth={1.5} />
-                    {m.editor_ai_discard()}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleInsert}
-                    className="h-11 flex-1 gap-2"
-                  >
-                    <Check size={14} strokeWidth={1.5} />
-                    {m.editor_ai_insert_btn()}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </aside>
-      </>
-    );
-  }
+  if (!open) return null;
 
   return (
-    <>
-      {open && (
-        <div
-          className="fixed inset-0 z-90 bg-black/30 animate-in fade-in duration-300"
-          onClick={onClose}
-        />
-      )}
-
-      <aside
-        ref={panelRef}
-        tabIndex={isFlare ? -1 : undefined}
-        role={isFlare ? "dialog" : undefined}
-        aria-modal={isFlare ? true : undefined}
-        aria-hidden={!open}
-        inert={!open}
-        aria-label={m.editor_ai_panel_title()}
-        className={cn(
-          "fixed right-0 top-0 bottom-0 z-100 w-full max-w-xl bg-background border-l border-border/30 shadow-2xl transition-transform duration-500 ease-out flex flex-col",
-          isFlare &&
-            "flare-editor-panel sm:my-3 sm:mr-3 sm:rounded-2xl sm:border",
-          open ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/30 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-sm bg-muted/40 p-2">
-              <Sparkles size={16} className="text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                {m.editor_ai_panel_title()}
-              </p>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                {m.editor_ai_panel_eyebrow()}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="rounded-none text-muted-foreground hover:text-foreground"
-            aria-label={m.common_close()}
-          >
-            <X size={16} />
-          </Button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-6 space-y-8">
-          {/* Outline */}
-          <div className="space-y-3">
-            <label
-              htmlFor="ai-outline"
-              className="text-sm text-muted-foreground"
-            >
-              {m.editor_ai_outline_label()}
-            </label>
-            <Textarea
-              id="ai-outline"
-              value={outline}
-              onChange={(e) => {
-                setOutline(e.target.value);
-                handleInputChange();
-              }}
-              placeholder={m.editor_ai_outline_ph()}
-              rows={8}
-              className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-4 text-sm leading-relaxed text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
-            />
-          </div>
-
-          {/* Optional fields */}
-          <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2">
-            <div className="space-y-3">
-              <label
-                htmlFor="ai-title"
-                className="text-sm text-muted-foreground"
-              >
-                {m.editor_ai_title_label()}
-              </label>
-              <Input
-                id="ai-title"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  handleInputChange();
-                }}
-                placeholder={m.editor_ai_title_ph()}
-                className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-4 text-sm transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <label
-                htmlFor="ai-language"
-                className="text-sm text-muted-foreground"
-              >
-                {m.editor_ai_language_label()}
-              </label>
-              <Input
-                id="ai-language"
-                value={language}
-                onChange={(e) => {
-                  setLanguage(e.target.value);
-                  handleInputChange();
-                }}
-                placeholder={m.editor_ai_language_ph()}
-                className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-4 text-sm transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
-              />
-            </div>
-
-            <div className="space-y-3 md:col-span-2">
-              <label
-                htmlFor="ai-tone"
-                className="text-sm text-muted-foreground"
-              >
-                {m.editor_ai_tone_label()}
-              </label>
-              <Input
-                id="ai-tone"
-                value={tone}
-                onChange={(e) => {
-                  setTone(e.target.value);
-                  handleInputChange();
-                }}
-                placeholder={m.editor_ai_tone_ph()}
-                className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-4 text-sm transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
-              />
-            </div>
-          </div>
-
-          {/* Generate button */}
-          <Button
-            type="button"
-            onClick={handleGenerate}
-            disabled={!canGenerate}
-            className="w-full h-11 rounded-none bg-foreground text-background hover:bg-foreground/90 transition-all font-mono text-[11px] uppercase tracking-[0.2em] disabled:opacity-40"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 size={14} className="mr-3 animate-spin" />
-                {m.editor_ai_generating()}
-              </>
-            ) : (
-              <>
-                <Wand2 size={14} className="mr-3" />
-                {m.editor_ai_generate_btn()}
-              </>
-            )}
-          </Button>
-
-          {/* Result */}
-          {generated && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="flex items-center justify-between border-b border-border/30 pb-3">
-                <div className="flex items-center gap-4">
-                  <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
-                    {m.editor_ai_result_label()}
+    <dialog
+      ref={dialogRef}
+      aria-label={m.editor_ai_panel_title()}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-hidden bg-transparent p-3 text-foreground backdrop:bg-black/50 sm:p-6"
+    >
+      <div className="pointer-events-none flex h-full items-center justify-center">
+        {isFuwari ? (
+          <div className="pointer-events-auto flex max-h-full min-w-0 w-full max-w-2xl flex-col overflow-hidden fuwari-card-base shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-(--fuwari-input-border) px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-(--fuwari-btn-regular-bg) p-2">
+                  <Sparkles
+                    size={16}
+                    strokeWidth={1.5}
+                    className="text-(--fuwari-primary)"
+                  />
+                </div>
+                <div>
+                  <p className="text-base font-bold fuwari-text-90">
+                    {m.editor_ai_panel_title()}
                   </p>
-                  <div className="flex items-center gap-1">
-                    <button
+                  <p className="text-sm fuwari-text-50">
+                    {m.editor_ai_panel_eyebrow()}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="rounded-lg"
+                aria-label={m.common_close()}
+              >
+                <X size={16} strokeWidth={1.5} />
+              </Button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar px-4 py-4 space-y-6 sm:px-6 sm:py-6">
+              {/* Outline */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="ai-outline"
+                  className="text-sm font-bold fuwari-text-75"
+                >
+                  {m.editor_ai_outline_label()}
+                </label>
+                <Textarea
+                  id="ai-outline"
+                  value={outline}
+                  onChange={(e) => {
+                    setOutline(e.target.value);
+                    handleInputChange();
+                  }}
+                  placeholder={m.editor_ai_outline_ph()}
+                  rows={8}
+                />
+              </div>
+
+              {/* Optional fields */}
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="ai-title"
+                    className="text-sm font-bold fuwari-text-75"
+                  >
+                    {m.editor_ai_title_label()}
+                  </label>
+                  <Input
+                    id="ai-title"
+                    value={title}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      handleInputChange();
+                    }}
+                    placeholder={m.editor_ai_title_ph()}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="ai-language"
+                    className="text-sm font-bold fuwari-text-75"
+                  >
+                    {m.editor_ai_language_label()}
+                  </label>
+                  <Input
+                    id="ai-language"
+                    value={language}
+                    onChange={(e) => {
+                      setLanguage(e.target.value);
+                      handleInputChange();
+                    }}
+                    placeholder={m.editor_ai_language_ph()}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label
+                    htmlFor="ai-tone"
+                    className="text-sm font-bold fuwari-text-75"
+                  >
+                    {m.editor_ai_tone_label()}
+                  </label>
+                  <Input
+                    id="ai-tone"
+                    value={tone}
+                    onChange={(e) => {
+                      setTone(e.target.value);
+                      handleInputChange();
+                    }}
+                    placeholder={m.editor_ai_tone_ph()}
+                  />
+                </div>
+              </div>
+
+              {/* Generate button */}
+              <Button
+                type="button"
+                onClick={handleGenerate}
+                disabled={!canGenerate}
+                className="w-full h-11 gap-2"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    {m.editor_ai_generating()}
+                  </>
+                ) : (
+                  <>
+                    <Wand2 size={14} strokeWidth={1.5} />
+                    {m.editor_ai_generate_btn()}
+                  </>
+                )}
+              </Button>
+
+              {/* Result */}
+              {generated && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-(--fuwari-input-border) pb-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-bold fuwari-text-75">
+                        {m.editor_ai_result_label()}
+                      </p>
+                      <div className="flex items-center gap-1 rounded-lg bg-(--fuwari-btn-regular-bg) p-1">
+                        <button
+                          type="button"
+                          onClick={() => setViewMode("preview")}
+                          className={
+                            "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors " +
+                            (viewMode === "preview"
+                              ? "bg-(--fuwari-primary) text-white"
+                              : "fuwari-text-50 hover:text-(--fuwari-primary)")
+                          }
+                        >
+                          {m.editor_ai_view_preview()}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setViewMode("markdown")}
+                          className={
+                            "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors " +
+                            (viewMode === "markdown"
+                              ? "bg-(--fuwari-primary) text-white"
+                              : "fuwari-text-50 hover:text-(--fuwari-primary)")
+                          }
+                        >
+                          {m.editor_ai_view_markdown()}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm fuwari-text-50">
+                        {generated.markdown.length} {m.editor_ai_result_chars()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {viewMode === "markdown" ? (
+                    <pre className="max-h-80 overflow-y-auto custom-scrollbar whitespace-pre-wrap break-words rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-input-bg) p-4 font-mono text-xs leading-6 fuwari-text-90">
+                      {generated.markdown}
+                    </pre>
+                  ) : (
+                    <div className="max-h-96 overflow-y-auto custom-scrollbar rounded-xl border border-(--fuwari-input-border) px-6 py-6">
+                      <ContentRenderer content={generated.content} />
+                    </div>
+                  )}
+
+                  <label className="flex cursor-pointer items-center gap-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={fillTitle}
+                      onChange={(e) => setFillTitle(e.target.checked)}
+                      className="h-4 w-4 rounded-md accent-(--fuwari-primary)"
+                    />
+                    <span className="text-sm fuwari-text-50">
+                      {m.editor_ai_fill_title()}
+                    </span>
+                  </label>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button
                       type="button"
-                      onClick={() => setViewMode("preview")}
-                      className={cn(
-                        "px-2 py-1 text-[9px] font-mono uppercase tracking-widest transition-colors",
-                        viewMode === "preview"
-                          ? "bg-foreground text-background"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
+                      variant="outline"
+                      onClick={() => setGenerated(null)}
+                      className="h-11 flex-1 gap-2 fuwari-text-50"
                     >
-                      {m.editor_ai_view_preview()}
-                    </button>
-                    <button
+                      <XCircle size={14} strokeWidth={1.5} />
+                      {m.editor_ai_discard()}
+                    </Button>
+                    <Button
                       type="button"
-                      onClick={() => setViewMode("markdown")}
-                      className={cn(
-                        "px-2 py-1 text-[9px] font-mono uppercase tracking-widest transition-colors",
-                        viewMode === "markdown"
-                          ? "bg-foreground text-background"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
+                      onClick={handleInsert}
+                      className="h-11 flex-1 gap-2"
                     >
-                      {m.editor_ai_view_markdown()}
-                    </button>
+                      <Check size={14} strokeWidth={1.5} />
+                      {m.editor_ai_insert_btn()}
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] text-muted-foreground">
-                    {generated.markdown.length} {m.editor_ai_result_chars()}
-                  </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div
+            className={cn(
+              "pointer-events-auto flex max-h-full min-w-0 w-full max-w-2xl flex-col overflow-hidden border border-border bg-background shadow-2xl",
+              isFlare && "flare-editor-panel rounded-2xl",
+            )}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3 border-b border-border/30 px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <div className="rounded-sm bg-muted/40 p-2">
+                  <Sparkles size={16} className="text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {m.editor_ai_panel_title()}
+                  </p>
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                    {m.editor_ai_panel_eyebrow()}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="size-11 shrink-0 text-muted-foreground hover:text-foreground"
+                aria-label={m.common_close()}
+              >
+                <X size={16} />
+              </Button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar px-4 py-4 space-y-6 sm:px-6 sm:py-6">
+              {/* Outline */}
+              <div className="space-y-3">
+                <label
+                  htmlFor="ai-outline"
+                  className="text-sm text-muted-foreground"
+                >
+                  {m.editor_ai_outline_label()}
+                </label>
+                <Textarea
+                  id="ai-outline"
+                  value={outline}
+                  onChange={(e) => {
+                    setOutline(e.target.value);
+                    handleInputChange();
+                  }}
+                  placeholder={m.editor_ai_outline_ph()}
+                  rows={8}
+                  className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-4 text-sm leading-relaxed text-foreground transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
+                />
+              </div>
+
+              {/* Optional fields */}
+              <div className="grid grid-cols-1 gap-x-8 gap-y-6 md:grid-cols-2">
+                <div className="space-y-3">
+                  <label
+                    htmlFor="ai-title"
+                    className="text-sm text-muted-foreground"
+                  >
+                    {m.editor_ai_title_label()}
+                  </label>
+                  <Input
+                    id="ai-title"
+                    value={title}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      handleInputChange();
+                    }}
+                    placeholder={m.editor_ai_title_ph()}
+                    className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-4 text-sm transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label
+                    htmlFor="ai-language"
+                    className="text-sm text-muted-foreground"
+                  >
+                    {m.editor_ai_language_label()}
+                  </label>
+                  <Input
+                    id="ai-language"
+                    value={language}
+                    onChange={(e) => {
+                      setLanguage(e.target.value);
+                      handleInputChange();
+                    }}
+                    placeholder={m.editor_ai_language_ph()}
+                    className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-4 text-sm transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
+                  />
+                </div>
+
+                <div className="space-y-3 md:col-span-2">
+                  <label
+                    htmlFor="ai-tone"
+                    className="text-sm text-muted-foreground"
+                  >
+                    {m.editor_ai_tone_label()}
+                  </label>
+                  <Input
+                    id="ai-tone"
+                    value={tone}
+                    onChange={(e) => {
+                      setTone(e.target.value);
+                      handleInputChange();
+                    }}
+                    placeholder={m.editor_ai_tone_ph()}
+                    className="w-full rounded-none border border-border/30 bg-muted/10 px-4 py-4 text-sm transition-all focus-visible:border-border/60 focus-visible:ring-1 focus-visible:ring-foreground/10"
+                  />
                 </div>
               </div>
 
-              {viewMode === "markdown" ? (
-                <pre className="max-h-80 overflow-y-auto custom-scrollbar whitespace-pre-wrap break-words border border-border/20 bg-muted/10 p-4 text-xs leading-6 text-foreground/80">
-                  {generated.markdown}
-                </pre>
-              ) : (
-                <div className="max-h-96 overflow-y-auto custom-scrollbar border border-border/20 bg-muted/5 px-6 py-6">
-                  <ContentRenderer content={generated.content} />
+              {/* Generate button */}
+              <Button
+                type="button"
+                onClick={handleGenerate}
+                disabled={!canGenerate}
+                className="w-full h-11 rounded-none bg-foreground text-background hover:bg-foreground/90 transition-all font-mono text-[11px] uppercase tracking-[0.2em] disabled:opacity-40"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 size={14} className="mr-3 animate-spin" />
+                    {m.editor_ai_generating()}
+                  </>
+                ) : (
+                  <>
+                    <Wand2 size={14} className="mr-3" />
+                    {m.editor_ai_generate_btn()}
+                  </>
+                )}
+              </Button>
+
+              {/* Result */}
+              {generated && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/30 pb-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">
+                        {m.editor_ai_result_label()}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setViewMode("preview")}
+                          className={cn(
+                            "px-2 py-1 text-[9px] font-mono uppercase tracking-widest transition-colors",
+                            viewMode === "preview"
+                              ? "bg-foreground text-background"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          {m.editor_ai_view_preview()}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setViewMode("markdown")}
+                          className={cn(
+                            "px-2 py-1 text-[9px] font-mono uppercase tracking-widest transition-colors",
+                            viewMode === "markdown"
+                              ? "bg-foreground text-background"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          {m.editor_ai_view_markdown()}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        {generated.markdown.length} {m.editor_ai_result_chars()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {viewMode === "markdown" ? (
+                    <pre className="max-h-80 overflow-y-auto custom-scrollbar whitespace-pre-wrap break-words border border-border/20 bg-muted/10 p-4 text-xs leading-6 text-foreground/80">
+                      {generated.markdown}
+                    </pre>
+                  ) : (
+                    <div className="max-h-96 overflow-y-auto custom-scrollbar border border-border/20 bg-muted/5 px-6 py-6">
+                      <ContentRenderer content={generated.content} />
+                    </div>
+                  )}
+
+                  <label className="flex cursor-pointer items-center gap-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={fillTitle}
+                      onChange={(e) => setFillTitle(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded-none border-border/60 accent-foreground"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {m.editor_ai_fill_title()}
+                    </span>
+                  </label>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setGenerated(null)}
+                      className="h-11 flex-1 rounded-none border-border/50 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
+                    >
+                      <XCircle size={12} className="mr-2" />
+                      {m.editor_ai_discard()}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleInsert}
+                      className="h-11 flex-1 rounded-none bg-foreground text-background hover:bg-foreground/90 font-mono text-[10px] uppercase tracking-widest"
+                    >
+                      <Check size={12} className="mr-2" />
+                      {m.editor_ai_insert_btn()}
+                    </Button>
+                  </div>
                 </div>
               )}
-
-              <label className="flex cursor-pointer items-center gap-3 py-2">
-                <input
-                  type="checkbox"
-                  checked={fillTitle}
-                  onChange={(e) => setFillTitle(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded-none border-border/60 accent-foreground"
-                />
-                <span className="text-xs text-muted-foreground">
-                  {m.editor_ai_fill_title()}
-                </span>
-              </label>
-
-              <div className="flex items-center gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setGenerated(null)}
-                  className="h-11 flex-1 rounded-none border-border/50 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
-                >
-                  <XCircle size={12} className="mr-2" />
-                  {m.editor_ai_discard()}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleInsert}
-                  className="h-11 flex-1 rounded-none bg-foreground text-background hover:bg-foreground/90 font-mono text-[10px] uppercase tracking-widest"
-                >
-                  <Check size={12} className="mr-2" />
-                  {m.editor_ai_insert_btn()}
-                </Button>
-              </div>
             </div>
-          )}
-        </div>
-      </aside>
-    </>
+          </div>
+        )}
+      </div>
+    </dialog>
   );
 }
