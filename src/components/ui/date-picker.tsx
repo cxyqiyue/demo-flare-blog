@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 
@@ -141,6 +141,17 @@ const DatePicker: React.FC<DatePickerProps> = ({
 
     return slots;
   };
+
+  if (isFlare)
+    return (
+      <input
+        type="date"
+        aria-label={m.common_select_date()}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={`min-h-11 w-full min-w-0 rounded-xl border border-border bg-card px-3 py-2 text-base text-foreground focus-visible:outline-2 focus-visible:outline-primary sm:text-sm ${className}`}
+      />
+    );
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>

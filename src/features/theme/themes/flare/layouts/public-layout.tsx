@@ -1,6 +1,5 @@
 import { useLocation, useRouteContext } from "@tanstack/react-router";
 import { UserRound } from "lucide-react";
-import { useMemo } from "react";
 import {
   resolveSocialHref,
   SOCIAL_PLATFORMS,
@@ -8,6 +7,8 @@ import {
 } from "@/features/config/utils/social-platforms";
 import type { PublicLayoutProps } from "@/features/theme/contract/layouts";
 import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages";
+import { BackToTop } from "../components/back-to-top";
 import { Footer } from "./footer";
 import { IndexWidgets, LatestMoments } from "./index-widgets";
 import { Navbar } from "./navbar";
@@ -42,7 +43,7 @@ function ProfileWidget() {
   );
 
   return (
-    <aside className="flare-profile-widget" aria-label="作者资料">
+    <aside className="flare-profile-widget" aria-label={m.profile_title()}>
       <section className="flare-surface flex flex-col gap-4 p-6">
         <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
           {avatar ? (
@@ -127,17 +128,12 @@ export function PublicLayout({
     siteConfig.theme?.flare?.homeBg || siteConfig.theme?.fuwari?.homeBg || "";
 
   const showWidgets = !focused && !pathname.startsWith("/navigation");
-  const isReadingPage = pathname.startsWith("/submit-friend-link");
-  const pageInsetClass = useMemo(
-    () =>
-      cn(
-        "mx-auto w-full px-5 md:px-6",
-        isReadingPage
-          ? "max-w-[min(var(--flare-reading-width),calc(100%-2rem))] md:max-w-[var(--flare-reading-width)]"
-          : "max-w-[var(--flare-page-width)]",
-      ),
-    [isReadingPage],
-  );
+  const isReadingPage =
+    isPost ||
+    pathname === "/about" ||
+    pathname.startsWith("/submit-friend-link");
+  const pageInsetClass =
+    "mx-auto w-full max-w-[var(--flare-page-width)] px-4 md:px-6";
 
   const bodyOverlap = isHome ? "-1.5rem" : "2.5rem";
 
@@ -193,7 +189,7 @@ export function PublicLayout({
         <div
           className="flare-layout"
           data-sidebar={false}
-          data-reading={isPost}
+          data-reading={isReadingPage}
         >
           {isHome ? (
             <div className="flare-home-before">
@@ -217,7 +213,8 @@ export function PublicLayout({
           ) : null}
         </div>
 
-        <div className="mt-8 md:mt-10" data-shell-region="footer">
+        <BackToTop />
+        <div className="relative z-45 mt-8 md:mt-10" data-shell-region="footer">
           <Footer navOptions={navOptions} />
         </div>
       </div>

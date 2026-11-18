@@ -8,7 +8,7 @@ import { DefaultThemeSettings } from "@/features/config/components/themes/defaul
 import { FlareThemeSettings } from "@/features/config/components/themes/flare-theme-settings";
 import { FuwariThemeSettings } from "@/features/config/components/themes/fuwari-theme-settings";
 import type { SystemConfig } from "@/features/config/config.schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 function ThemeSettingsContent() {
@@ -36,12 +36,32 @@ function SectionShell({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border border-border/30 bg-background/50 overflow-hidden">
-      <div className="p-8 space-y-2 border-b border-border/20">
+    <section
+      className={
+        isFlare
+          ? "min-w-0 overflow-hidden rounded-xl border border-border/60 bg-card"
+          : "border border-border/30 bg-background/50 overflow-hidden"
+      }
+    >
+      <div
+        className={
+          isFlare
+            ? "space-y-2 border-b border-border/50 p-4 sm:p-5"
+            : "p-8 space-y-2 border-b border-border/20"
+        }
+      >
         <h3 className="text-lg font-medium text-foreground">{title}</h3>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
-      <div className="p-8 grid gap-8 md:grid-cols-2">{children}</div>
+      <div
+        className={
+          isFlare
+            ? "grid min-w-0 gap-5 p-4 sm:p-5 min-[1200px]:grid-cols-2"
+            : "p-8 grid gap-8 md:grid-cols-2"
+        }
+      >
+        {children}
+      </div>
     </section>
   );
 }

@@ -19,8 +19,22 @@ export function TocDrawer({
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (isOpen) dialog.showModal();
-    else dialog.close();
+    if (!isOpen) {
+      dialog.close();
+      return;
+    }
+    const overflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = "hidden";
+    const wide = () => {
+      if (window.innerWidth >= 1280) setIsOpen(false);
+    };
+    window.addEventListener("resize", wide);
+    return () => {
+      dialog.close();
+      document.body.style.overflow = overflow;
+      window.removeEventListener("resize", wide);
+    };
   }, [isOpen]);
 
   if (headers.length === 0) return null;
@@ -34,7 +48,7 @@ export function TocDrawer({
         onClick={() => setIsOpen(true)}
         aria-label={m.post_toc()}
         title={m.post_toc()}
-        className="fixed bottom-24 right-6 md:right-8 z-40 flex items-center justify-center w-11 h-11 rounded-full flare-surface text-muted-foreground hover:text-foreground transition-all active:scale-95 min-[1100px]:hidden"
+        className="flare-toc-trigger fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] right-4 md:right-6 z-40 flex items-center justify-center w-11 h-11 rounded-full flare-surface text-muted-foreground hover:text-foreground transition-all active:scale-95 min-[1280px]:hidden"
       >
         <List className="w-5 h-5" strokeWidth={1.5} />
       </button>
@@ -58,7 +72,7 @@ export function TocDrawer({
             type="button"
             onClick={close}
             aria-label={m.post_toc_close()}
-            className="p-1.5 -mr-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <X size={18} strokeWidth={1.5} />
           </button>

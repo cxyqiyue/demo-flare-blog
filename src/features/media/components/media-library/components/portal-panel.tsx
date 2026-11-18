@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { isFlare } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 
 interface PortalPanelProps {
@@ -34,6 +35,8 @@ export function PortalPanel({
 }: PortalPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<PanelPosition | null>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
 
   const measure = useCallback(() => {
     const trigger = triggerRef.current;
@@ -41,7 +44,10 @@ export function PortalPanel({
     if (!trigger || !panel) return;
     const triggerRect = trigger.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
-    const width = Math.max(minWidth, triggerRect.width, panelRect.width);
+    const desiredWidth = Math.max(minWidth, triggerRect.width, panelRect.width);
+    const width = isFlare
+      ? Math.min(desiredWidth, window.innerWidth - 16)
+      : desiredWidth;
 
     const gap = 6;
     const margin = 8;
@@ -59,12 +65,41 @@ export function PortalPanel({
 
   useEffect(() => {
     const panel = panelRef.current;
+    const previousFocus = isFlare ? document.activeElement : null;
     measure();
 
+    if (isFlare)
+      panel?.querySelector<HTMLElement>("button:not(:disabled)")?.focus();
     const onResize = () => measure();
     const onScroll = () => measure();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (!isFlare || !panel || !panel.contains(document.activeElement)) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        closeRef.current();
+        if (triggerRef.current?.isConnected) triggerRef.current.focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const controls = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'button:not(:disabled),input:not(:disabled),[tabindex="0"]',
+        ),
+      ).filter((element) => element.getClientRects().length > 0);
+      const first = controls[0];
+      const last = controls.at(-1);
+      if (!first) {
+        event.preventDefault();
+        return;
+      }
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
 
     window.addEventListener("resize", onResize);
@@ -82,6 +117,13 @@ export function PortalPanel({
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("keydown", onKeyDown);
       observer?.disconnect();
+      if (
+        isFlare &&
+        !triggerRef.current?.isConnected &&
+        previousFocus instanceof HTMLElement &&
+        previousFocus.isConnected
+      )
+        previousFocus.focus();
     };
   }, [measure, onClose]);
 
@@ -94,12 +136,15 @@ export function PortalPanel({
       />
       <div
         ref={panelRef}
-        role="listbox"
+        role={isFlare ? "group" : "listbox"}
+        data-flare-popover={isFlare ? "true" : undefined}
         className={cn("fixed z-[120]", !position && "invisible", className)}
         style={{
           top: position?.top ?? 0,
           left: position?.left ?? 0,
           width: position?.width ?? "auto",
+          maxHeight: isFlare ? "calc(100dvh - 16px)" : undefined,
+          overflowY: isFlare ? "auto" : undefined,
         }}
       >
         {children}

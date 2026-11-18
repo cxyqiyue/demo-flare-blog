@@ -12,13 +12,18 @@ export function PostNavigation({ slug }: PostNavigationProps) {
   const { data } = useSuspenseQuery(adjacentPostsQuery(slug));
   const { previous, next } = data;
 
+  if (!previous && !next) return null;
+
   return (
-    <nav className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+    <nav
+      aria-label={m.post_navigation_aria_label()}
+      className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm"
+    >
       {previous ? (
         <Link
           to="/post/$slug"
           params={{ slug: previous.slug }}
-          className="group flex items-center gap-3 min-w-0 flare-surface-soft px-4 py-3 hover:bg-muted/30 transition-colors"
+          className="group flex min-h-24 min-w-0 items-center gap-3 flare-surface px-5 py-4 transition-colors hover:bg-muted/30"
         >
           <ChevronLeft
             size={16}
@@ -28,26 +33,24 @@ export function PostNavigation({ slug }: PostNavigationProps) {
             <span className="text-xs text-muted-foreground">
               {m.post_prev()}
             </span>
-            <span className="truncate text-foreground/90 font-medium">
+            <span className="line-clamp-2 break-words text-foreground/90 font-medium">
               {previous.title}
             </span>
           </span>
         </Link>
-      ) : (
-        <div className="hidden md:block" />
-      )}
+      ) : null}
 
       {next ? (
         <Link
           to="/post/$slug"
           params={{ slug: next.slug }}
-          className="group flex items-center justify-end gap-3 min-w-0 flare-surface-soft px-4 py-3 hover:bg-muted/30 transition-colors md:col-start-2"
+          className="group flex min-h-24 min-w-0 items-center justify-end gap-3 flare-surface px-5 py-4 transition-colors hover:bg-muted/30 sm:col-start-2"
         >
           <span className="flex flex-col gap-0.5 min-w-0 text-right">
             <span className="text-xs text-muted-foreground">
               {m.post_next()}
             </span>
-            <span className="truncate text-foreground/90 font-medium">
+            <span className="line-clamp-2 break-words text-foreground/90 font-medium">
               {next.title}
             </span>
           </span>
@@ -56,9 +59,7 @@ export function PostNavigation({ slug }: PostNavigationProps) {
             className="shrink-0 text-muted-foreground group-hover:translate-x-0.5 transition-transform"
           />
         </Link>
-      ) : (
-        <div className="hidden md:block" />
-      )}
+      ) : null}
     </nav>
   );
 }

@@ -28,7 +28,7 @@ export function ForgotPasswordForm({ form }: ForgotPasswordFormProps) {
           id="email"
           type="email"
           {...register("email")}
-          className="h-11 rounded-lg border border-border/60 bg-background/60 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border"
+          className="h-11 rounded-lg border border-border/60 bg-background/60 px-3 text-base md:text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border"
           placeholder={m.login_email_placeholder()}
         />
         {errors.email && (

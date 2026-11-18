@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 
 interface DropdownOption {
   label: string;
@@ -39,6 +39,22 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (isFlare)
+    return (
+      <select
+        aria-label={selectedOption?.label || "选择选项"}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={`min-h-11 min-w-0 max-w-full rounded-xl border border-border bg-card px-3 py-2 text-base text-foreground focus-visible:outline-2 focus-visible:outline-primary sm:text-sm ${className}`}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    );
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>

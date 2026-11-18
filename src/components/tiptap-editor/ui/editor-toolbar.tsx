@@ -27,6 +27,7 @@ import {
   Undo,
 } from "lucide-react";
 import type React from "react";
+import { isFlare } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 interface EditorToolbarProps {
@@ -54,12 +55,16 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
   <button
     onClick={onClick}
     className={clsx(
-      "h-8 w-8 shrink-0 flex items-center justify-center transition-colors duration-200 group relative rounded-none",
+      isFlare
+        ? "h-11 w-11 shrink-0 flex items-center justify-center rounded-lg transition-colors focus-visible:outline-2 focus-visible:outline-primary"
+        : "h-8 w-8 shrink-0 flex items-center justify-center transition-colors duration-200 group relative rounded-none",
       isActive
         ? "bg-foreground text-background"
         : "text-muted-foreground hover:text-foreground hover:bg-muted/20",
     )}
     title={label}
+    aria-label={isFlare ? label : undefined}
+    aria-pressed={isFlare ? isActive : undefined}
     type="button"
   >
     <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />

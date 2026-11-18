@@ -13,8 +13,9 @@ import { extensions } from "@/features/posts/editor/config";
 import type { PostRevisionSnapshot } from "@/features/posts/schema/post-revisions.schema";
 import { generateStrongPassword } from "@/features/posts/utils/post-secret";
 import { tagsAdminQueryOptions } from "@/features/tags/queries";
-import { ContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
+import { ContentRenderer as DefaultContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
 import { FlareAdminPanel } from "@/features/theme/themes/flare/components/admin/page";
+import { ContentRenderer as FlareContentRenderer } from "@/features/theme/themes/flare/components/content/content-renderer";
 import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -23,6 +24,9 @@ import { EditorTableOfContents } from "./editor-table-of-contents";
 import { useAutoSave, usePostActions } from "./hooks";
 import { PostEditorHeader } from "./post-editor-header";
 import { PostEditorHistoryPanel } from "./post-editor-history-panel";
+
+const ContentRenderer = isFlare ? FlareContentRenderer : DefaultContentRenderer;
+
 import { PostEditorMetadata } from "./post-editor-metadata";
 import { PostEditorStatusBar } from "./post-editor-status-bar";
 import type { PostEditorData, PostEditorProps } from "./types";
@@ -354,7 +358,7 @@ export function PostEditor({
 
   if (isFlare) {
     return (
-      <div className="min-w-0 space-y-5 pb-12">
+      <div className="flare-post-editor min-w-0 space-y-5 pb-12">
         <ConfirmationModal
           isOpen={status === "blocked"}
           onClose={() => reset?.()}
@@ -418,7 +422,7 @@ export function PostEditor({
             onGeneratePassword={handleGeneratePassword}
           />
         </FlareAdminPanel>
-        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_15rem]">
+        <div className="grid min-w-0 gap-5 min-[1600px]:grid-cols-[minmax(0,1fr)_14rem]">
           <FlareAdminPanel className="min-w-0">
             <div className="mb-4 flex flex-wrap items-center gap-2">
               {(

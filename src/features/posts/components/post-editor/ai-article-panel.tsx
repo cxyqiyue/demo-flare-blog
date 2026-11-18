@@ -6,10 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { generateArticleFn } from "@/features/posts/api/posts.admin.api";
-import { ContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
+import { ContentRenderer as DefaultContentRenderer } from "@/features/theme/themes/default/components/content/content-renderer";
+import { ContentRenderer as FlareContentRenderer } from "@/features/theme/themes/flare/components/content/content-renderer";
 import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import { useFlarePanel } from "./use-flare-panel";
+
+const ContentRenderer = isFlare ? FlareContentRenderer : DefaultContentRenderer;
 
 interface AiArticlePanelProps {
   editor: TiptapEditor | null;
@@ -29,6 +33,7 @@ export function AiArticlePanel({
   onApplyTitle,
   onInsertFallback,
 }: AiArticlePanelProps) {
+  const panelRef = useFlarePanel(open, onClose);
   const [outline, setOutline] = useState("");
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState("");
@@ -333,6 +338,10 @@ export function AiArticlePanel({
       )}
 
       <aside
+        ref={panelRef}
+        tabIndex={isFlare ? -1 : undefined}
+        role={isFlare ? "dialog" : undefined}
+        aria-modal={isFlare ? true : undefined}
         aria-hidden={!open}
         inert={!open}
         aria-label={m.editor_ai_panel_title()}

@@ -1,12 +1,14 @@
 import type * as React from "react";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 
 // Fuwari cards mirror the public theme: a soft rounded white surface
 // floating on the tinted page canvas, with a faint hairline for depth.
-const cardShell = isFuwari
-  ? "fuwari-card-base"
-  : "border border-border/30 bg-card text-card-foreground";
+const cardShell = isFlare
+  ? "min-w-0 rounded-2xl border border-border/70 bg-card text-card-foreground shadow-(--flare-shadow-sm)"
+  : isFuwari
+    ? "fuwari-card-base"
+    : "border border-border/30 bg-card text-card-foreground";
 
 function Card({
   ref,
@@ -49,9 +51,11 @@ function CardTitle({
     <h3
       ref={ref}
       className={cn(
-        isFuwari
-          ? "text-lg font-bold tracking-tight fuwari-text-90"
-          : "text-lg font-serif font-medium tracking-tight",
+        isFlare
+          ? "break-words text-lg font-semibold tracking-tight"
+          : isFuwari
+            ? "text-lg font-bold tracking-tight fuwari-text-90"
+            : "text-lg font-serif font-medium tracking-tight",
         className,
       )}
       {...props}

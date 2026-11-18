@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { createTagFn } from "@/features/tags/api/tags.api";
 import { TAGS_KEYS, tagsAdminQueryOptions } from "@/features/tags/queries";
 import type { Tag } from "@/lib/db/schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -196,6 +196,106 @@ export function TagSelector({
 
   // Only show loading if we are fetching tags for the FIRST time and have no data
   const isInitialLoading = isTagsLoading && tags.length === 0;
+
+  if (isFlare)
+    return (
+      <div
+        ref={containerRef}
+        className="space-y-3 rounded-xl border border-border bg-card p-3"
+      >
+        <input
+          ref={inputRef}
+          type="search"
+          aria-label={m.tag_selector_search_placeholder()}
+          value={searchTerm}
+          disabled={disabled || isInitialLoading}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          onKeyDown={(event) => {
+            if (!event.nativeEvent.isComposing) handleKeyDown(event);
+          }}
+          placeholder={m.tag_selector_search_placeholder()}
+          className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 text-base focus-visible:outline-2 focus-visible:outline-primary sm:text-sm"
+        />
+        {selectedTags.length ? (
+          <div
+            className="flex flex-wrap gap-2"
+            aria-label={m.editor_meta_tags()}
+          >
+            {selectedTags.map((tag) => (
+              <span
+                key={tag.id}
+                className="inline-flex max-w-full items-center rounded-full border border-primary/30 bg-primary/10 pl-3 text-sm text-primary"
+              >
+                <span className="min-w-0 break-words">#{tag.name}</span>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => toggleTag(tag.id)}
+                  aria-label={m.tag_remove({ name: tag.name })}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-destructive/10 hover:text-destructive focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
+                >
+                  <X size={16} />
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+        {isInitialLoading ? (
+          <p
+            role="status"
+            className="flex items-center gap-2 text-sm text-muted-foreground"
+          >
+            <Loader2 size={16} className="animate-spin" />
+            {m.posts_loading()}
+          </p>
+        ) : isError ? (
+          <p role="alert" className="text-sm text-destructive">
+            {m.tag_selector_load_fail()}
+          </p>
+        ) : (
+          <div className="flex max-h-52 flex-wrap gap-2 overflow-y-auto overscroll-contain">
+            {availableTags.map((tag) => (
+              <button
+                type="button"
+                key={tag.id}
+                disabled={disabled}
+                aria-pressed={value.includes(tag.id)}
+                onClick={() => toggleTag(tag.id)}
+                className={`flex min-h-11 max-w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm ${value.includes(tag.id) ? "border-primary/40 bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}
+              >
+                <span className="break-words">{tag.name}</span>
+                {value.includes(tag.id) ? (
+                  <Check size={14} className="shrink-0" />
+                ) : null}
+              </button>
+            ))}
+            {!availableTags.length && !searchTerm ? (
+              <p className="text-sm text-muted-foreground">
+                {m.tag_selector_empty()}
+              </p>
+            ) : null}
+          </div>
+        )}
+        {searchTerm.trim() &&
+        !tags.some(
+          (tag) => tag.name.toLowerCase() === searchTerm.trim().toLowerCase(),
+        ) ? (
+          <button
+            type="button"
+            disabled={disabled || createTagMutation.isPending || isError}
+            onClick={() => createTagMutation.mutate(searchTerm.trim())}
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-primary hover:bg-primary/10"
+          >
+            {createTagMutation.isPending ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Plus size={16} />
+            )}
+            {m.tag_selector_create_action({ searchTerm: searchTerm.trim() })}
+          </button>
+        ) : null}
+      </div>
+    );
 
   return (
     <div className="relative group" ref={containerRef}>

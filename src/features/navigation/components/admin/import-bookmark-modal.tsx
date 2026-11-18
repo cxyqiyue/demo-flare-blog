@@ -7,10 +7,11 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FlareDialog } from "@/components/ui/flare-dialog";
 import { useAdminNavigation } from "@/features/navigation/hooks/use-navigation";
 import type { ImportBookmarksFormValues } from "@/features/navigation/navigation.schema";
 import { importBookmarksInputSchema } from "@/features/navigation/navigation.schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -121,6 +122,70 @@ const ImportBookmarkModalInternal = ({
   };
 
   if (!isOpen) return null;
+
+  if (isFlare)
+    return (
+      <FlareDialog
+        open={isOpen}
+        onClose={onClose}
+        title={m.navigation_admin_import_title()}
+        description={m.navigation_admin_import_desc()}
+        busy={isImporting}
+      >
+        <form onSubmit={handleSubmit(handleConfirm)} className="space-y-5">
+          <label className="block space-y-3 rounded-xl border border-dashed border-border p-4 text-sm font-medium">
+            <span className="flex items-center gap-2">
+              <FileUp size={18} />
+              {m.navigation_admin_import_select_file()}
+            </span>
+            <input
+              type="file"
+              accept="text/html,.html"
+              onChange={(event) =>
+                void handleFile(event.target.files?.[0] ?? null)
+              }
+              className="block w-full min-w-0 text-sm file:mr-3 file:min-h-11 file:rounded-lg file:border-0 file:bg-muted file:px-3 file:text-foreground"
+              disabled={isImporting}
+            />
+            {fileName ? (
+              <span className="block break-all text-muted-foreground">
+                {fileName}
+              </span>
+            ) : null}
+          </label>
+          {parseError ? (
+            <p role="alert" className="text-sm text-destructive">
+              {parseError}
+            </p>
+          ) : null}
+          {parsed.length ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              {m.navigation_admin_import_preview({ count: parsed.length })}
+            </p>
+          ) : null}
+          <label className="flex min-h-11 items-center gap-3 text-sm">
+            <Checkbox {...register("replace")} />
+            <span>{m.navigation_admin_import_replace()}</span>
+          </label>
+          <div className="flex flex-wrap justify-end gap-2 border-t border-border/60 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isImporting}
+            >
+              {m.friend_links_batch_cancel()}
+            </Button>
+            <Button type="submit" disabled={isImporting || !parsed.length}>
+              {isImporting ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : null}
+              {m.navigation_admin_import_btn()}
+            </Button>
+          </div>
+        </form>
+      </FlareDialog>
+    );
 
   if (isFuwari) {
     return createPortal(

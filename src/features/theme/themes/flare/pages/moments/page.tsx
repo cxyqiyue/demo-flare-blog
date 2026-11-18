@@ -26,7 +26,7 @@ export function MomentsPage({
 
   return (
     <div className="flare-enter flex w-full flex-col gap-4">
-      <section className="flare-surface overflow-hidden">
+      <section className="min-w-0 space-y-4 md:space-y-5">
         <header className="space-y-2 px-5 pb-5 pt-6 md:px-8 md:pt-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-[2.5rem]">
             {m.moments_title()}
@@ -58,7 +58,7 @@ export function MomentsPage({
           </div>
         ) : null}
 
-        <div className="border-t border-border/50 px-4 py-5 md:px-8 md:py-6">
+        <div className="min-w-0">
           <div className="space-y-4 md:space-y-5">
             {moments.length === 0 ? (
               <div className="py-16 text-center">

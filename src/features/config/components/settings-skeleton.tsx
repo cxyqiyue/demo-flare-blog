@@ -1,4 +1,35 @@
+import { isFlare } from "@/lib/theme-mode";
+
 export function SectionSkeleton() {
+  if (isFlare)
+    return (
+      <div
+        className="min-w-0 space-y-5 animate-pulse"
+        aria-busy="true"
+        aria-label="加载设置"
+      >
+        <div className="flex flex-wrap justify-between gap-3">
+          <div className="h-8 w-40 rounded-xl bg-muted" />
+          <div className="h-11 w-28 rounded-xl bg-muted" />
+        </div>
+        <div className="flex gap-2 overflow-hidden rounded-2xl border border-border bg-card p-3">
+          {[1, 2, 3, 4].map((key) => (
+            <div key={key} className="h-11 w-28 shrink-0 rounded-xl bg-muted" />
+          ))}
+        </div>
+        <div className="space-y-6 rounded-2xl border border-border bg-card p-4 sm:p-6">
+          <div className="h-6 w-36 rounded-lg bg-muted" />
+          <div className="grid gap-5 min-[1200px]:grid-cols-2">
+            {[1, 2, 3, 4].map((key) => (
+              <div key={key} className="space-y-3">
+                <div className="h-4 w-24 rounded-lg bg-muted" />
+                <div className="h-11 w-full rounded-xl bg-muted" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   return (
     <div className="space-y-12 animate-pulse">
       {/* Header Skeleton */}

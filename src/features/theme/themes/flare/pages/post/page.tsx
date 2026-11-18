@@ -1,8 +1,10 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, ArrowUp, Pencil, Share2, Sparkles } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { Pencil, Share2, Sparkles } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { sessionQuery } from "@/features/auth/queries";
 import { PostGateShell } from "@/features/posts/components/post-gate-shell";
 import type { PostPageProps } from "@/features/theme/contract/pages";
 import { ContentRenderer } from "@/features/theme/themes/flare/components/content/content-renderer";
@@ -19,18 +21,18 @@ import TableOfContents from "./components/table-of-contents";
 import { TocDrawer } from "./components/toc-drawer";
 
 export function PostPage({ post, hideAdminEdit }: PostPageProps) {
-  const navigate = useNavigate();
-  const { data: session } = authClient.useSession();
-  const [showBackToTop, setShowBackToTop] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowBackToTop(window.scrollY > 400);
-    };
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const { data: authSession } = authClient.useSession();
+  const { data: session } = useQuery({
+    ...sessionQuery,
+    enabled: Boolean(authSession?.user) && !hideAdminEdit,
+  });
+  const canEdit =
+    !hideAdminEdit &&
+    Boolean(authSession?.user && authSession.user.id === session?.user.id) &&
+    Boolean(
+      session?.user.isSuperAdmin ||
+        (session?.user.role === "admin" && session.user.id === post.authorId),
+    );
 
   return (
     <div
@@ -38,29 +40,6 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
       data-has-toc={Boolean(post.toc?.length)}
     >
       <div className="min-w-0 space-y-4 md:space-y-6">
-        <nav
-          className="flare-surface flex flex-wrap items-center justify-between gap-2 p-3"
-          aria-label={m.post_back_to_list()}
-        >
-          <button
-            onClick={() => navigate({ to: "/posts" })}
-            className="flare-chip"
-          >
-            <ArrowLeft size={14} />
-            <span>{m.post_back_to_list()}</span>
-          </button>
-          {session?.user.role === "admin" && !hideAdminEdit && (
-            <Link
-              to="/admin/posts/edit/$id"
-              params={{ id: String(post.id) }}
-              className="flare-chip"
-            >
-              <Pencil size={14} />
-              <span>{m.post_edit()}</span>
-            </Link>
-          )}
-        </nav>
-
         <article className="flare-surface">
           <div className="p-5 md:p-8 lg:p-10 space-y-8 md:space-y-10">
             <header className="space-y-6 md:space-y-7">
@@ -92,6 +71,16 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
                   </span>
                   <span className="opacity-30">/</span>
                   <span>{m.read_time({ count: post.readTimeInMinutes })}</span>
+                  {canEdit ? (
+                    <Link
+                      to="/admin/posts/edit/$id"
+                      params={{ id: String(post.id) }}
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-primary transition-colors hover:bg-primary/10"
+                    >
+                      <Pencil size={14} />
+                      {m.post_edit()}
+                    </Link>
+                  ) : null}
 
                   {post.category ? (
                     <Link
@@ -150,10 +139,7 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
               <div className="max-w-none min-w-0 text-foreground leading-relaxed">
                 <ContentRenderer content={post.contentJson} />
 
-                <footer className="mt-16 md:mt-20 pt-6 md:pt-8 border-t border-border/30 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground/70">
-                    <span>{m.post_end_notice()}</span>
-                  </div>
+                <footer className="mt-8 flex justify-center border-t border-border/50 pt-6 md:mt-10">
                   <Button
                     variant="outline"
                     onClick={async () => {
@@ -199,18 +185,13 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
           </div>
         </article>
 
-        <div className="flare-surface p-5 md:p-8">
-          <Suspense fallback={<PostNavigationSkeleton />}>
-            <PostNavigation slug={post.slug} />
-          </Suspense>
-        </div>
+        <Suspense fallback={<PostNavigationSkeleton />}>
+          <PostNavigation slug={post.slug} />
+        </Suspense>
 
-        {/* Related Posts */}
-        <div className="flare-surface p-5 md:p-8">
-          <Suspense fallback={<RelatedPostsSkeleton />}>
-            <RelatedPosts slug={post.slug} />
-          </Suspense>
-        </div>
+        <Suspense fallback={<RelatedPostsSkeleton />}>
+          <RelatedPosts slug={post.slug} />
+        </Suspense>
 
         {/* Comments Section */}
         <div className="flare-surface p-5 md:p-8">
@@ -219,32 +200,14 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
       </div>
       {post.toc?.length ? (
         <aside className="flare-post-toc" aria-label={m.post_toc()}>
-          <TableOfContents
-            headers={post.toc}
-            className="static w-full max-h-[calc(100dvh-8rem)]"
-          />
+          <div className="sticky top-24">
+            <TableOfContents
+              headers={post.toc}
+              className="static w-full max-h-[calc(100dvh-10rem)]"
+            />
+          </div>
         </aside>
       ) : null}
-
-      {/* Back To Top */}
-      <div
-        className={`fixed bottom-8 right-8 z-40 transition-all duration-700 ${
-          showBackToTop
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-10 pointer-events-none"
-        }`}
-      >
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          aria-label={m.post_back_to_top()}
-          className="flare-surface group flex h-11 w-11 items-center justify-center rounded-full"
-        >
-          <ArrowUp
-            size={16}
-            className="text-muted-foreground/60 group-hover:text-foreground group-hover:-translate-y-1 transition-all duration-300"
-          />
-        </button>
-      </div>
 
       {/* 受限文章门禁：未解锁时以毛玻璃遮罩覆盖全页，不泄露正文 */}
       <PostGateShell post={post} />

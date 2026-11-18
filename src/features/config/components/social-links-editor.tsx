@@ -7,7 +7,7 @@ import {
   SOCIAL_PLATFORM_KEYS,
   SOCIAL_PLATFORMS,
 } from "@/features/config/utils/social-platforms";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 export function SocialLinksEditor() {
@@ -27,7 +27,13 @@ export function SocialLinksEditor() {
               key={field.id}
               className="fuwari-card-base p-4 space-y-3 bg-(--fuwari-btn-regular-bg)"
             >
-              <div className="flex items-start gap-2 sm:gap-3">
+              <div
+                className={
+                  isFlare
+                    ? "flex flex-wrap items-start gap-3"
+                    : "flex items-start gap-2 sm:gap-3"
+                }
+              >
                 <select
                   {...register(`site.social.${index}.platform`)}
                   className="shrink-0 h-9 min-w-25 sm:min-w-30 rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-card-bg) px-3 text-sm fuwari-text-90 focus:outline-none focus:border-(--fuwari-primary)/50"
@@ -100,10 +106,20 @@ export function SocialLinksEditor() {
             key={field.id}
             className="flex flex-col gap-3 p-4 border border-border/30 rounded-lg bg-background/30"
           >
-            <div className="flex items-start gap-2 sm:gap-3">
+            <div
+              className={
+                isFlare
+                  ? "flex flex-wrap items-start gap-3"
+                  : "flex items-start gap-2 sm:gap-3"
+              }
+            >
               <select
                 {...register(`site.social.${index}.platform`)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm shrink-0 min-w-25 sm:min-w-30"
+                className={
+                  isFlare
+                    ? "min-h-11 max-w-full shrink-0 rounded-xl border border-border bg-card px-3 text-base sm:text-sm"
+                    : "h-9 rounded-md border border-input bg-background px-3 text-sm shrink-0 min-w-25 sm:min-w-30"
+                }
               >
                 {SOCIAL_PLATFORM_KEYS.map((key) => (
                   <option key={key} value={key}>
@@ -124,7 +140,12 @@ export function SocialLinksEditor() {
               <button
                 type="button"
                 onClick={() => remove(index)}
-                className="h-9 w-9 flex items-center justify-center shrink-0 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted/50"
+                aria-label="移除社交链接"
+                className={
+                  isFlare
+                    ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    : "h-9 w-9 flex items-center justify-center shrink-0 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted/50"
+                }
               >
                 <Trash2 size={16} />
               </button>

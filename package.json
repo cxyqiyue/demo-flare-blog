@@ -21,7 +21,7 @@
     "format": "biome format --write",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile .cache/typecheck.tsbuildinfo",
     "check": "biome check --write && bun typecheck",
-    "i18n:compile": "bun paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
+    "i18n:compile": "bun scripts/compile-messages.ts",
     "i18n:verify": "bun scripts/verify-translations.ts",
     "i18n:prune-unused": "bun scripts/prune-unused-translations.ts",
     "wrangler:prepare": "bun scripts/prepare-wrangler-config.ts",

@@ -309,6 +309,48 @@
   border-color: hsl(var(--ring) / 0.35);
 }
 
+.flare-post-editor > .flare-admin-page-header {
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  padding: 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid var(--flare-border);
+  background: var(--flare-surface);
+}
+.flare-admin-bookmark-grid > :is(div, a) {
+  width: 100%;
+  min-width: 0;
+}
+@media (min-width: 640px) {
+  .flare-admin-bookmark-grid > :is(div, a) {
+    width: 11rem;
+  }
+}
+.flare-post-editor .tableWrapper {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.flare-editor-panel {
+  max-height: calc(100dvh - 1.5rem);
+  overflow-wrap: anywhere;
+}
+.flare-editor-panel :is(h2, h3) {
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+.flare-editor-panel :is(input, textarea, select) {
+  min-width: 0;
+  max-width: 100%;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+}
+@media (max-width: 639px) {
+  .flare-editor-panel {
+    max-height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
 .flare-admin-drawer {
   animation: flare-admin-drawer-in 0.32s var(--flare-ease) both;
 }

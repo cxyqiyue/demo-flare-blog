@@ -38,7 +38,10 @@ export function FriendLinkCard({ link }: FriendLinkCardProps) {
           <h3 className="font-medium text-foreground tracking-tight truncate group-hover:text-foreground/85 transition-colors">
             {link.siteName}
           </h3>
-          <span className="text-xs text-muted-foreground/50 hidden sm:block truncate shrink-0">
+          <span
+            title={displayUrl}
+            className="hidden min-w-0 max-w-[45%] truncate text-xs text-muted-foreground/50 sm:block"
+          >
             {displayUrl}
           </span>
         </div>

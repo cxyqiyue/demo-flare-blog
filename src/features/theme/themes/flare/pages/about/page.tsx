@@ -1,13 +1,10 @@
-import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, FileQuestion, Pencil } from "lucide-react";
+import { FileQuestion, Pencil } from "lucide-react";
 import { MarkdownContent } from "@/features/about/components/markdown-content";
 import type { AboutPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
 import { CommentSection } from "../../components/comments/view/comment-section";
 
 export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
-  const navigate = useNavigate();
-
   if (!article) {
     return (
       <div className="w-full flare-enter">
@@ -34,31 +31,24 @@ export function AboutPage({ article, isAdmin, onStartEdit }: AboutPageProps) {
 
   return (
     <div className="flare-enter flex w-full flex-col gap-4">
-      <nav
-        className="flare-surface flex flex-wrap items-center justify-between gap-3 p-3"
-        aria-label={m.post_back_to_list()}
-      >
-        <button
-          onClick={() => navigate({ to: "/posts" })}
-          className="flare-chip"
-        >
-          <ArrowLeft size={14} />
-          <span>{m.post_back_to_list()}</span>
-        </button>
-        {isAdmin ? (
-          <button type="button" onClick={onStartEdit} className="flare-chip">
-            <Pencil size={14} />
-            <span>{m.about_edit()}</span>
-          </button>
-        ) : null}
-      </nav>
-
       <article className="flare-surface p-5 md:p-8 lg:p-10 space-y-8">
-        {article.title ? (
-          <header>
-            <h1 className="break-words text-2xl sm:text-3xl lg:text-4xl font-bold leading-relaxed text-foreground">
-              {article.title}
-            </h1>
+        {article.title || isAdmin ? (
+          <header className="flex flex-wrap items-start justify-between gap-3">
+            {article.title ? (
+              <h1 className="min-w-0 flex-1 break-words text-2xl sm:text-3xl lg:text-4xl font-bold leading-relaxed text-foreground">
+                {article.title}
+              </h1>
+            ) : null}
+            {isAdmin ? (
+              <button
+                type="button"
+                onClick={onStartEdit}
+                className="flare-chip shrink-0"
+              >
+                <Pencil size={14} />
+                <span>{m.about_edit()}</span>
+              </button>
+            ) : null}
           </header>
         ) : null}
         <div className="max-w-none min-w-0 text-foreground leading-relaxed">

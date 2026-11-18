@@ -41,7 +41,7 @@ export function Footer({ navOptions }: FooterProps) {
 
         <nav
           className="flex flex-wrap content-start items-center gap-x-5 gap-y-3 md:justify-end"
-          aria-label={m.admin_layout_back_to_site()}
+          aria-label={m.footer_navigation()}
         >
           {navOptions.map((option) => (
             <Link

@@ -8,10 +8,7 @@ export const CommentSectionSkeleton = ({
 }) => {
   return (
     <section
-      className={cn(
-        "space-y-12 mt-24 pt-12 border-t border-border/20 animate-in fade-in duration-700",
-        className,
-      )}
+      className={cn("space-y-8 animate-in fade-in duration-500", className)}
     >
       <header className="flex items-center justify-between">
         <div className="space-y-2">

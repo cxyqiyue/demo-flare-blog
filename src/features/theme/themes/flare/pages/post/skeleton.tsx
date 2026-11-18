@@ -1,12 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { useParams } from "@tanstack/react-router";
 import { POSTS_KEYS } from "@/features/posts/queries";
 import type { PostListItem } from "@/features/posts/schema/posts.schema";
-import { m } from "@/paraglide/messages";
 
 export function PostPageSkeleton() {
-  const navigate = useNavigate();
   const { slug } = useParams({ from: "/_public/post/$slug" });
   const queryClient = useQueryClient();
 
@@ -33,16 +30,6 @@ export function PostPageSkeleton() {
 
   return (
     <div className="w-full space-y-4 md:space-y-6">
-      <nav className="flex items-center justify-between px-0.5">
-        <button
-          onClick={() => navigate({ to: "/posts" })}
-          className="flare-chip"
-        >
-          <ArrowLeft size={14} />
-          <span>{m.post_back_to_list()}</span>
-        </button>
-      </nav>
-
       <article className="flare-surface overflow-hidden">
         <div className="p-5 md:p-8 lg:p-10 space-y-8">
           <header className="space-y-5">
@@ -53,7 +40,7 @@ export function PostPageSkeleton() {
             </div>
             {cachedPost ? (
               <h1
-                className="text-4xl md:text-5xl lg:text-6xl font-serif font-medium leading-[1.1] tracking-tight text-foreground"
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-[1.45] text-foreground"
                 style={{ viewTransitionName: `post-title-${cachedPost.slug}` }}
               >
                 {cachedPost.title}

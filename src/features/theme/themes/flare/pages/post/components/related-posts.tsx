@@ -21,12 +21,12 @@ export function RelatedPosts({ slug }: RelatedPostsProps) {
   }
 
   return (
-    <section className="space-y-4 animate-in fade-in duration-500">
+    <section className="flare-surface space-y-4 p-5 md:p-8 animate-in fade-in duration-500">
       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
         <span>{m.post_related_posts()}</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
         {posts.map((post) => (
           <Link
             key={post.id}
@@ -64,13 +64,13 @@ export function RelatedPosts({ slug }: RelatedPostsProps) {
 
 export function RelatedPostsSkeleton() {
   return (
-    <div className="space-y-8">
+    <div className="flare-surface space-y-6 p-5 md:p-8" aria-hidden="true">
       <div className="flex items-center gap-2 text-muted-foreground/60 font-medium text-xs uppercase tracking-widest">
         <span className="opacity-50">///</span>
         <Skeleton className="h-3 w-16" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {[1, 2, 3].map((i) => (
           <div key={i} className="space-y-3">
             <Skeleton className="h-3 w-24 opacity-60" />

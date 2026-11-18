@@ -23,7 +23,7 @@ export function RegisterForm({ form }: RegisterFormProps) {
   const isIdle = registerStep === "IDLE";
 
   const inputClassName =
-    "h-11 rounded-lg border border-border/60 bg-background/60 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border";
+    "h-11 rounded-lg border border-border/60 bg-background/60 px-3 text-base md:text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

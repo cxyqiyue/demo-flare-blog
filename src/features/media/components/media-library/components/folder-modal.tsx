@@ -3,8 +3,9 @@ import { FolderPlus, Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { FlareDialog } from "@/components/ui/flare-dialog";
 import { Input } from "@/components/ui/input";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 interface FolderModalProps {
@@ -48,6 +49,63 @@ function FolderModalInternal({
     if (!clean || isSubmitting) return;
     onSubmit(clean);
   };
+
+  if (isFlare)
+    return (
+      <FlareDialog
+        open={isOpen}
+        onClose={onClose}
+        title={
+          mode === "create"
+            ? m.media_folder_create_title()
+            : m.media_folder_rename_title()
+        }
+        busy={isSubmitting}
+      >
+        <form
+          className="space-y-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+          }}
+        >
+          {parentLabel ? (
+            <p className="break-all text-sm text-muted-foreground">
+              {parentLabel}
+            </p>
+          ) : null}
+          <label className="block space-y-2 text-sm font-medium">
+            <span>{m.media_folder_name_placeholder()}</span>
+            <Input
+              ref={inputRef}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              disabled={isSubmitting}
+            />
+          </label>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isSubmitting}
+              onClick={onClose}
+            >
+              {m.media_folder_btn_cancel()}
+            </Button>
+            <Button type="submit" disabled={isSubmitting || !name.trim()}>
+              {isSubmitting ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <FolderPlus size={16} />
+              )}
+              {mode === "create"
+                ? m.media_folder_create_btn()
+                : m.media_folder_rename_btn()}
+            </Button>
+          </div>
+        </form>
+      </FlareDialog>
+    );
 
   if (isFuwari) {
     return createPortal(

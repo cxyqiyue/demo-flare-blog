@@ -182,10 +182,12 @@ export function FlareEditorMetadata(
           </label>
         </div>
       ) : null}
-      <label className="block space-y-2 text-sm font-medium">
-        <span>{m.editor_meta_slug()}</span>
-        <div className="flex gap-2">
+      <div className="space-y-2 text-sm font-medium">
+        <label htmlFor="flare-post-slug">{m.editor_meta_slug()}</label>
+        <div className="flex flex-wrap gap-2">
           <Input
+            id="flare-post-slug"
+            className="min-w-0 flex-1 basis-48"
             value={post.slug}
             onChange={(event) => onPostChange({ slug: event.target.value })}
           />
@@ -198,7 +200,7 @@ export function FlareEditorMetadata(
             {m.editor_meta_auto_generate()}
           </Button>
         </div>
-      </label>
+      </div>
       <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-sm font-medium">{m.editor_meta_tags()}</span>
@@ -224,9 +226,9 @@ export function FlareEditorMetadata(
           onChange={(skillId) => onPostChange({ skillId })}
         />
       </div>
-      <label className="block space-y-2 text-sm font-medium">
-        <span className="flex flex-wrap items-center justify-between gap-2">
-          {m.editor_meta_summary()}
+      <div className="space-y-2 text-sm font-medium">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label htmlFor="flare-post-summary">{m.editor_meta_summary()}</label>
           <Button
             type="button"
             size="sm"
@@ -236,14 +238,15 @@ export function FlareEditorMetadata(
           >
             {m.editor_meta_auto_generate()}
           </Button>
-        </span>
+        </div>
         <textarea
+          id="flare-post-summary"
           value={post.summary}
           onChange={(event) => onPostChange({ summary: event.target.value })}
           rows={4}
-          className="w-full resize-y rounded-xl border border-border bg-background p-3 text-sm leading-7"
+          className="w-full resize-y rounded-xl border border-border bg-card p-3 text-base leading-7 focus-visible:outline-2 focus-visible:outline-primary sm:text-sm"
         />
-      </label>
+      </div>
     </div>
   );
 }

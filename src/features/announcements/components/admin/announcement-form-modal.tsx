@@ -3,6 +3,7 @@ import { Loader2, X } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { FlareDialog } from "@/components/ui/flare-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -10,7 +11,7 @@ import {
   useUpdateAnnouncement,
 } from "@/features/announcements/hooks/use-announcement-actions";
 import type { Announcement } from "@/lib/db/schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 interface AnnouncementFormModalProps {
@@ -83,6 +84,86 @@ function AnnouncementFormModalInternal({
       onClose();
     }
   };
+
+  if (isFlare)
+    return (
+      <FlareDialog
+        open={isOpen}
+        onClose={onClose}
+        title={
+          isEdit ? m.announcements_edit_title() : m.announcements_create_title()
+        }
+        busy={isSubmitting}
+        className="max-w-2xl"
+      >
+        <form
+          className="space-y-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSubmit();
+          }}
+        >
+          <label className="block space-y-2 text-sm font-medium">
+            <span>{m.announcements_create_label_title()}</span>
+            <Input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              aria-invalid={!!titleError}
+            />
+            {titleError ? (
+              <span className="block text-sm text-destructive">
+                {titleError}
+              </span>
+            ) : null}
+          </label>
+          <label className="block space-y-2 text-sm font-medium">
+            <span>{m.announcements_create_label_subject()}</span>
+            <Input
+              value={subject}
+              onChange={(event) => setSubject(event.target.value)}
+              aria-invalid={!!subjectError}
+            />
+            {subjectError ? (
+              <span className="block text-sm text-destructive">
+                {subjectError}
+              </span>
+            ) : null}
+          </label>
+          <label className="block space-y-2 text-sm font-medium">
+            <span>{m.announcements_create_label_body()}</span>
+            <Textarea
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              rows={10}
+              placeholder="<p>"
+              aria-invalid={!!bodyError}
+              className="font-mono"
+            />
+            {bodyError ? (
+              <span className="block text-sm text-destructive">
+                {bodyError}
+              </span>
+            ) : null}
+          </label>
+          <div className="flex flex-wrap justify-end gap-2 border-t border-border/60 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              {m.announcements_create_cancel()}
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : null}
+              {m.announcements_create_submit()}
+            </Button>
+          </div>
+        </form>
+      </FlareDialog>
+    );
 
   if (isFuwari) {
     return createPortal(

@@ -43,13 +43,16 @@ interface MomentCardProps {
   ) => Promise<boolean>;
 }
 
-function MomentImage({ src }: { src: string }) {
+function MomentImage({ src, single }: { src: string; single: boolean }) {
   return (
     <img
       src={src}
       alt=""
       loading="lazy"
-      className="w-full h-full object-cover rounded-sm border border-border/40"
+      className={cn(
+        "w-full rounded-sm border border-border/40",
+        single ? "h-auto max-h-[32rem] object-contain" : "h-full object-cover",
+      )}
     />
   );
 }
@@ -108,7 +111,7 @@ export function MomentCard({
     if (isSubmitting) return false;
     const parsed = MomentVideoUrlSchema.safeParse(videoUrl.trim() || null);
     if (!parsed.success) {
-      toast.error("请输入有效的视频链接");
+      toast.error(m.moments_video_invalid_url());
       return false;
     }
     const images = collectImageUrls(content);
@@ -215,12 +218,14 @@ export function MomentCard({
             />
           </Suspense>
           <label className="my-3 flex flex-col gap-2 text-sm">
-            视频链接
+            <span>{m.moments_video_input_label()}</span>
             <input
               type="url"
               value={videoUrl}
               onChange={(event) => setVideoUrl(event.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2"
+              placeholder={m.moments_video_input_placeholder()}
+              className="min-h-11 w-full rounded-xl border border-border bg-card px-3 py-2 text-base sm:text-sm"
+              aria-label={m.moments_video_input_label()}
             />
           </label>
         </div>
@@ -252,7 +257,7 @@ export function MomentCard({
         >
           {moment.images.map((src, i) => (
             <div key={i} className="min-h-0">
-              <MomentImage src={src} />
+              <MomentImage src={src} single={moment.images.length === 1} />
             </div>
           ))}
         </div>
@@ -266,7 +271,7 @@ export function MomentCard({
 
       {/* Actions */}
       {!editing && (
-        <footer className="flex items-center gap-4 px-5 md:px-6 pb-5 pt-4 border-t border-border/30 mt-5">
+        <footer className="flex flex-wrap items-center gap-2 sm:gap-4 px-5 md:px-6 pb-5 pt-4 border-t border-border/30 mt-5">
           <button
             type="button"
             onClick={handleToggleLike}

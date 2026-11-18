@@ -1,31 +1,27 @@
 import { Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { ArrowDown, X } from "lucide-react";
+import { useMemo } from "react";
 import type { PostsPageProps } from "@/features/theme/contract/pages";
-import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
-
-export const INITIAL_TAG_COUNT = 8;
 
 export function PostsPage({
   posts,
-  tags,
   selectedTag,
-  onTagClick,
-  categories = [],
   selectedCategory,
+  onTagClick,
   onCategoryClick,
   hasNextPage,
   isFetchingNextPage,
   fetchNextPage,
 }: PostsPageProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const hasMoreTags = tags.length > INITIAL_TAG_COUNT;
-  const visibleTags = isExpanded ? tags : tags.slice(0, INITIAL_TAG_COUNT);
-
   const years = useMemo(() => {
     const groups = new Map<string, typeof posts>();
-    for (const post of posts) {
-      const date = post.publishedAt ? new Date(post.publishedAt) : null;
+    const sorted = [...posts].sort(
+      (a, b) =>
+        (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0),
+    );
+    for (const post of sorted) {
+      const date = post.publishedAt;
       const year =
         date && !Number.isNaN(date.getTime())
           ? String(date.getUTCFullYear())
@@ -34,95 +30,51 @@ export function PostsPage({
       group.push(post);
       groups.set(year, group);
     }
-    return [...groups.entries()].sort(([a], [b]) => b.localeCompare(a));
+    return [...groups.entries()];
   }, [posts]);
 
   return (
-    <div className="flare-enter flex w-full flex-col gap-4">
-      <section className="flare-surface overflow-hidden">
-        <h1 className="sr-only">{m.nav_posts()}</h1>
-        {
-          <>
-            <div
-              className="flex flex-wrap items-center gap-2 px-5 pt-5 md:px-8"
-              aria-label="分类"
+    <div className="flare-enter flare-archive flex w-full flex-col gap-4">
+      <h1 className="sr-only">{m.nav_posts()}</h1>
+      {selectedCategory || selectedTag ? (
+        <div
+          className="flex flex-wrap items-center gap-2 text-sm"
+          aria-label={m.search_filter_current()}
+        >
+          {selectedCategory ? (
+            <button
+              type="button"
+              className="flare-chip min-h-10"
+              onClick={() => onCategoryClick?.(undefined)}
+              aria-label={m.search_filter_clear_category({
+                name: selectedCategory,
+              })}
             >
-              <span className="mr-2 text-sm font-semibold">分类</span>
-              <button
-                type="button"
-                onClick={() => onCategoryClick?.(undefined)}
-                className="flare-chip"
-                data-active={!selectedCategory}
-                aria-pressed={!selectedCategory}
-              >
-                {m.posts_all()}
-              </button>
-              {categories.map((category) => (
-                <button
-                  type="button"
-                  key={category.id}
-                  onClick={() => onCategoryClick?.(category.name)}
-                  className="flare-chip"
-                  data-active={selectedCategory === category.name}
-                  aria-pressed={selectedCategory === category.name}
-                >
-                  {category.name}
-                  <span className="text-xs tabular-nums opacity-70">
-                    {category.postCount}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-2 px-5 py-5 md:px-8">
-              <span className="mr-2 text-sm font-semibold">
-                {m.tags_title()}
-              </span>
-              <button
-                type="button"
-                onClick={() => onTagClick(undefined)}
-                className={cn("flare-chip")}
-                data-active={!selectedTag}
-                aria-pressed={!selectedTag}
-              >
-                {m.posts_all()}
-              </button>
-
-              {visibleTags.map((tag) => (
-                <button
-                  type="button"
-                  key={tag.id}
-                  onClick={() => onTagClick(tag.name)}
-                  className="flare-chip"
-                  data-active={selectedTag === tag.name}
-                  aria-pressed={selectedTag === tag.name}
-                >
-                  <span>{tag.name}</span>
-                  <span className="text-xs tabular-nums opacity-70">
-                    {tag.postCount}
-                  </span>
-                </button>
-              ))}
-
-              {hasMoreTags && (
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="flare-chip border-dashed"
-                >
-                  {isExpanded
-                    ? m.tags_collapse()
-                    : `+${tags.length - INITIAL_TAG_COUNT}`}
-                </button>
-              )}
-            </div>
-          </>
-        }
-        <div className="space-y-8 px-5 py-6 md:px-8">
-          {posts.length === 0 ? (
-            <div className="py-20 text-center">
-              <p className="text-muted-foreground">{m.posts_no_posts()}</p>
-            </div>
-          ) : (
-            years.map(([year, entries]) => (
+              {selectedCategory}
+              <X size={14} />
+            </button>
+          ) : null}
+          {selectedTag ? (
+            <button
+              type="button"
+              className="flare-chip min-h-10"
+              onClick={() => onTagClick(undefined)}
+              aria-label={m.search_filter_clear_tag({ name: selectedTag })}
+            >
+              #{selectedTag}
+              <X size={14} />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      <section className="flare-surface p-4 sm:p-6 md:p-8">
+        {posts.length === 0 ? (
+          <p className="py-16 text-center text-muted-foreground">
+            {m.posts_no_posts()}
+          </p>
+        ) : (
+          <div className="space-y-8">
+            {years.map(([year, entries]) => (
               <section key={year} aria-label={year}>
                 <h2 className="mb-4 flex items-center gap-3 text-2xl font-bold tabular-nums">
                   {year}
@@ -130,16 +82,13 @@ export function PostsPage({
                     {entries.length}
                   </span>
                 </h2>
-                <ol>
+                <ol className="flare-archive-grid">
                   {entries.map((post) => (
-                    <li
-                      key={post.id}
-                      className="relative border-b border-border/40 last:border-0"
-                    >
+                    <li key={post.id} className="min-w-0">
                       <Link
                         to="/post/$slug"
                         params={{ slug: post.slug }}
-                        className="group flex items-center gap-3 rounded-lg py-2 transition-colors hover:bg-muted/30 sm:gap-4"
+                        className="group flex h-full min-h-28 items-center gap-3 rounded-xl border border-border/60 bg-(--flare-surface-soft) p-3 transition-colors hover:border-primary/40 hover:bg-primary/5 sm:gap-4 sm:p-4"
                       >
                         <span className="flare-archive-lead" aria-hidden="true">
                           {Array.from(post.title.trim()).find((character) =>
@@ -147,65 +96,44 @@ export function PostsPage({
                           ) ?? ""}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <h3 className="truncate text-base font-semibold leading-7 group-hover:text-primary">
+                          <h3 className="line-clamp-2 break-words text-base font-semibold leading-7 transition-colors group-hover:text-primary">
                             {post.title}
                           </h3>
-                          <div className="mt-1 flex min-w-0 items-baseline gap-2">
-                            <time
-                              className="shrink-0 text-xs tabular-nums text-muted-foreground"
-                              dateTime={
-                                post.publishedAt
-                                  ? new Date(post.publishedAt).toISOString()
-                                  : undefined
-                              }
-                            >
-                              {post.publishedAt
-                                ? new Date(post.publishedAt)
-                                    .toISOString()
-                                    .slice(5, 10)
-                                    .replace("-", "/")
-                                : "—"}
-                            </time>
-                            <span className="min-w-0 truncate text-xs text-muted-foreground">
-                              {post.tags
-                                ?.map((tag) => `#${tag.name}`)
-                                .join(" ")}
-                            </span>
-                          </div>
+                          <time
+                            className="mt-2 block text-sm tabular-nums text-muted-foreground"
+                            dateTime={post.publishedAt?.toISOString()}
+                          >
+                            {post.publishedAt
+                              ? post.publishedAt
+                                  .toISOString()
+                                  .slice(0, 10)
+                                  .replaceAll("-", "/")
+                              : "—"}
+                          </time>
                         </div>
                       </Link>
                     </li>
                   ))}
                 </ol>
               </section>
-            ))
-          )}
-        </div>
-
-        <div className="flex flex-col items-center justify-center gap-4 px-5 py-8">
-          {isFetchingNextPage ? (
-            <div className="flex flex-col items-center gap-3 text-muted-foreground">
-              <div className="h-1.5 w-1.5 animate-ping rounded-full bg-foreground/70" />
-              <span className="text-xs uppercase tracking-[0.2em]">
-                {m.posts_loading()}
-              </span>
-            </div>
-          ) : hasNextPage ? (
+            ))}
+          </div>
+        )}
+        <div className="flex justify-center pt-6" aria-live="polite">
+          {hasNextPage ? (
             <button
               type="button"
-              onClick={() => fetchNextPage()}
-              className="flare-chip"
+              disabled={isFetchingNextPage}
+              onClick={fetchNextPage}
+              className="flare-chip min-h-11 px-5 disabled:opacity-50"
             >
-              {m.tags_expand()}
+              <ArrowDown size={16} />
+              {isFetchingNextPage ? m.posts_loading() : m.tags_expand()}
             </button>
           ) : posts.length > 0 ? (
-            <div className="flex items-center gap-4 text-muted-foreground/40">
-              <span className="h-px w-12 bg-current" />
-              <span className="text-sm text-muted-foreground/70">
-                {m.posts_end()}
-              </span>
-              <span className="h-px w-12 bg-current" />
-            </div>
+            <p className="py-2 text-sm text-muted-foreground">
+              {m.posts_end()}
+            </p>
           ) : null}
         </div>
       </section>

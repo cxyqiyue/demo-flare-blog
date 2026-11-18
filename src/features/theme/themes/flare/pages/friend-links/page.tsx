@@ -52,7 +52,10 @@ export function FriendLinksPage({
                 {m.friend_links_join_desc()}
               </p>
             </div>
-            <Link to="/submit-friend-link" className="flare-chip">
+            <Link
+              to="/submit-friend-link"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:self-center"
+            >
               <span>{m.friend_links_apply()}</span>
               <ArrowUpRight size={14} />
             </Link>
