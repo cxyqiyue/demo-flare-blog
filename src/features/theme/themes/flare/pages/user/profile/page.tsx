@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Loader2, Terminal } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ProfilePageProps } from "@/features/theme/contract/pages";
@@ -21,19 +21,13 @@ export function ProfilePage({
   return (
     <div className="flex flex-col w-full space-y-4 md:space-y-6">
       <section className={sectionClassName}>
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="space-y-2">
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-              {m.profile_settings()}
-            </h1>
-            <p className="text-sm md:text-base text-muted-foreground leading-7">
-              {m.profile_settings_desc()}
-            </p>
-          </div>
-          <Link to="/" className="flare-chip w-fit">
-            <Terminal size={14} />
-            {m.profile_back_home()}
-          </Link>
+        <div className="space-y-2">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+            {m.profile_settings()}
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground leading-7">
+            {m.profile_settings_desc()}
+          </p>
         </div>
 
         <div className="flex items-center gap-4 sm:gap-5 pt-1">

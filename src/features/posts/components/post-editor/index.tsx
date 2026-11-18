@@ -403,6 +403,7 @@ export function PostEditor({
             <CategorySelect
               value={post.categoryId ?? null}
               onChange={(categoryId) => handlePostChange({ categoryId })}
+              canCreate={canEditAuthor}
             />
           </div>
           <PostEditorMetadata

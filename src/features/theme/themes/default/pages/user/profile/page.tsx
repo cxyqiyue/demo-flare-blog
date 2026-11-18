@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Loader2, Terminal } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ProfilePageProps } from "@/features/theme/contract/pages";
@@ -18,24 +18,12 @@ export function ProfilePage({
     <div className="flex flex-col w-full max-w-3xl mx-auto px-6 md:px-0 py-12 md:py-20 space-y-20">
       {/* Header Section */}
       <header className="space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
-          <div className="space-y-6">
-            <h1 className="text-4xl md:text-5xl font-serif font-medium tracking-tight text-foreground flex items-center gap-4">
-              {m.profile_settings()}
-            </h1>
-            <div className="space-y-4 max-w-2xl text-base md:text-lg text-muted-foreground font-light leading-relaxed">
-              <p>{m.profile_settings_desc()}</p>
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <Link
-              to="/"
-              className="text-sm font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
-            >
-              <Terminal size={14} />
-              {m.profile_back_home()}
-            </Link>
+        <div className="space-y-6">
+          <h1 className="text-4xl md:text-5xl font-serif font-medium tracking-tight text-foreground flex items-center gap-4">
+            {m.profile_settings()}
+          </h1>
+          <div className="space-y-4 max-w-2xl text-base md:text-lg text-muted-foreground font-light leading-relaxed">
+            <p>{m.profile_settings_desc()}</p>
           </div>
         </div>
       </header>
