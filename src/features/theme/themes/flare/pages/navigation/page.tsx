@@ -72,7 +72,8 @@ export function NavigationPage({
                 value={state.query}
                 onChange={(e) => state.setQuery(e.target.value)}
                 placeholder={m.navigation_search_placeholder()}
-                className="h-11 min-w-0 flex-1 rounded-full border border-border/60 bg-background/70 px-4 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/30"
+                aria-label={m.navigation_search_placeholder()}
+                className="h-11 min-w-0 flex-1 rounded-full border border-border/60 bg-background/70 px-4 text-base md:text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring/30"
               />
               <button
                 type="submit"

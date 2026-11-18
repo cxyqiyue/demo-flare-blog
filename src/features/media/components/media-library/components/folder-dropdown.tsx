@@ -11,7 +11,7 @@ import {
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { MediaFolder } from "../types";
@@ -106,7 +106,11 @@ export function FolderDropdown({
   const rowClass = (active: boolean) =>
     cn(
       "flex items-center gap-2 w-full px-3 py-2 text-left transition-all",
-      isFuwari ? "rounded-lg text-sm" : "text-xs font-mono",
+      isFlare
+        ? "min-h-11 rounded-lg text-sm"
+        : isFuwari
+          ? "rounded-lg text-sm"
+          : "text-xs font-mono",
       active
         ? isFuwari
           ? "bg-(--fuwari-primary)/10 text-(--fuwari-primary) font-semibold"
@@ -132,12 +136,15 @@ export function FolderDropdown({
         ref={triggerRef}
         type="button"
         disabled={disabled}
+        aria-expanded={isFlare ? isOpen : undefined}
         onClick={isOpen ? () => setIsOpen(false) : openPanel}
         className={cn(
           "w-full flex items-center gap-2 transition-colors",
-          isFuwari
-            ? "fuwari-btn-regular rounded-xl px-3 py-2.5 hover:border-(--fuwari-primary)/50"
-            : "border border-border/30 bg-muted/5 px-3 py-2 hover:bg-muted/10 disabled:opacity-40",
+          isFlare
+            ? "min-h-11 min-w-0 rounded-xl border border-border bg-card px-3 py-2 hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-40"
+            : isFuwari
+              ? "fuwari-btn-regular rounded-xl px-3 py-2.5 hover:border-(--fuwari-primary)/50"
+              : "border border-border/30 bg-muted/5 px-3 py-2 hover:bg-muted/10 disabled:opacity-40",
         )}
       >
         <FolderPlus
@@ -151,9 +158,11 @@ export function FolderDropdown({
         <span
           className={cn(
             "truncate flex-1 text-left",
-            isFuwari
-              ? "text-sm fuwari-text-75"
-              : "text-xs font-mono text-muted-foreground",
+            isFlare
+              ? "text-sm text-foreground"
+              : isFuwari
+                ? "text-sm fuwari-text-75"
+                : "text-xs font-mono text-muted-foreground",
           )}
         >
           {labelPrefix}: {valueLabel}
@@ -175,9 +184,11 @@ export function FolderDropdown({
           minWidth={240}
           className={cn(
             "max-h-64 overflow-y-auto custom-scrollbar",
-            isFuwari
-              ? "fuwari-card-base p-1.5 shadow-lg animate-in fade-in-0 zoom-in-95"
-              : "border border-border/30 bg-background shadow-md",
+            isFlare
+              ? "rounded-xl border border-border bg-card p-1.5 text-foreground shadow-xl"
+              : isFuwari
+                ? "fuwari-card-base p-1.5 shadow-lg animate-in fade-in-0 zoom-in-95"
+                : "border border-border/30 bg-background shadow-md",
           )}
         >
           {/* 面包屑导航标题 */}
@@ -326,6 +337,7 @@ export function FolderDropdown({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") submitCreate();
                   if (e.key === "Escape") {
+                    if (isFlare) e.stopPropagation();
                     setCreateOpen(false);
                     setCreateName("");
                   }

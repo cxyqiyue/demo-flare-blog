@@ -13,7 +13,7 @@ import type {
   CreateSearchEngineFormValues,
   NavigationPublicData,
 } from "@/features/navigation/navigation.schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 type Engine = NavigationPublicData["engines"][number];
@@ -32,14 +32,20 @@ export function EngineManager({ ownerId }: { ownerId?: string }) {
 
   const handleSetDefault = async (id: number) => {
     setBusyId(id);
-    await setDefaultEngine({ data: { id } });
-    setBusyId(null);
+    try {
+      await setDefaultEngine({ data: { id } });
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const handleToggleEnabled = async (engine: Engine) => {
     setBusyId(engine.id);
-    await updateEngine({ data: { id: engine.id, enabled: !engine.enabled } });
-    setBusyId(null);
+    try {
+      await updateEngine({ data: { id: engine.id, enabled: !engine.enabled } });
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const handleSubmit = async (
@@ -122,14 +128,24 @@ export function EngineManager({ ownerId }: { ownerId?: string }) {
       <div className="flex justify-end">
         <Button
           onClick={() => setShowAdd(true)}
-          className="rounded-none bg-foreground text-background hover:bg-foreground/90 font-mono text-xs uppercase tracking-widest gap-2"
+          className={
+            isFlare
+              ? "gap-2"
+              : "rounded-none bg-foreground text-background hover:bg-foreground/90 font-mono text-xs uppercase tracking-widest gap-2"
+          }
         >
           <Plus size={14} />
           {m.navigation_admin_add_engine()}
         </Button>
       </div>
 
-      <div className="border border-border/30 divide-y divide-border/30">
+      <div
+        className={
+          isFlare
+            ? "overflow-hidden rounded-2xl border border-border bg-card divide-y divide-border/60"
+            : "border border-border/30 divide-y divide-border/30"
+        }
+      >
         {isPending ? (
           <div className="py-16 flex justify-center">
             <Loader2 className="animate-spin text-muted-foreground" size={24} />
@@ -271,6 +287,71 @@ function EngineRow({
       </div>
     );
   }
+
+  if (isFlare)
+    return (
+      <div className="flex flex-wrap items-center gap-3 p-4">
+        <div className="min-w-0 flex-1 basis-48">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="break-words text-base font-semibold">
+              {engine.name}
+            </span>
+            {engine.isDefault ? (
+              <span className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
+                {m.navigation_admin_engine_default()}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 break-all text-sm text-muted-foreground">
+            {engine.urlTemplate}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {busy ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <>
+              {!engine.isDefault ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onSetDefault}
+                >
+                  {m.navigation_admin_engine_set_default()}
+                </Button>
+              ) : null}
+              <label className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm">
+                <Checkbox
+                  checked={engine.enabled}
+                  onCheckedChange={onToggleEnabled}
+                />
+                <span>{m.navigation_field_enabled()}</span>
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onEdit}
+                aria-label={m.navigation_admin_edit()}
+              >
+                <Pencil size={16} />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onDelete}
+                aria-label={m.navigation_admin_delete()}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 size={16} />
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    );
 
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-3 group hover:bg-muted/40 transition-colors">

@@ -4,7 +4,8 @@ import type React from "react";
 import { useRef } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { isFuwari } from "@/lib/theme-mode";
+import { FlareDialog } from "@/components/ui/flare-dialog";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import type { MediaFolder, UploadItem } from "../types";
@@ -92,6 +93,155 @@ function UploadModalInternal({
       loadFolders={loadFolders}
     />
   ) : null;
+
+  if (isFlare)
+    return (
+      <FlareDialog
+        open={isOpen}
+        onClose={onClose}
+        title={m.media_upload_modal_title()}
+      >
+        <div className="space-y-5">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleInputChange}
+            className="hidden"
+            multiple
+          />
+          <input
+            type="file"
+            ref={folderInputRef}
+            onChange={handleFolderInputChange}
+            className="hidden"
+            multiple
+            // @ts-expect-error webkitdirectory is supported by desktop browsers.
+            webkitdirectory=""
+          />
+          {folderSelector}
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => folderInputRef.current?.click()}
+              className="w-full"
+            >
+              <FolderInput size={16} />
+              {m.media_upload_btn_choose_folder()}
+            </Button>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {m.media_upload_folder_preserve_hint()}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            className={cn(
+              "flex min-h-40 w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-6 text-center focus-visible:outline-2 focus-visible:outline-primary",
+              isDragging
+                ? "border-primary bg-primary/10"
+                : "border-border bg-muted/30 hover:border-primary/50",
+            )}
+          >
+            <span className="text-base font-medium">
+              {isDragging
+                ? m.media_upload_drop_release()
+                : m.media_upload_drop_here()}
+            </span>
+            <span className="text-sm leading-6 text-muted-foreground">
+              {limitMb !== null
+                ? m.media_upload_support_any_file_limited({
+                    limit: String(limitMb),
+                  })
+                : m.media_upload_support_any_file()}
+            </span>
+            {limitMb !== null ? (
+              <span className="text-sm text-destructive">
+                {m.media_upload_oversize_hint()}
+              </span>
+            ) : null}
+          </button>
+          {queue.length ? (
+            <section
+              className="space-y-3"
+              aria-label={m.media_upload_queue({ count: queue.length })}
+            >
+              <h3 className="text-sm font-semibold">
+                {m.media_upload_queue({ count: queue.length })}
+              </h3>
+              <ul className="space-y-3">
+                {queue.map((item) => (
+                  <li
+                    key={item.id}
+                    className="space-y-2 rounded-xl border border-border p-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2 text-sm">
+                      <span className="min-w-0 flex-1 break-all font-medium">
+                        {item.name}
+                      </span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {item.size}
+                      </span>
+                    </div>
+                    <progress
+                      max={100}
+                      value={item.progress}
+                      aria-label={item.name}
+                      className="block h-2 w-full overflow-hidden rounded-full accent-primary"
+                    />
+                    <p
+                      className={cn(
+                        "flex items-center gap-2 text-sm",
+                        item.status === "ERROR"
+                          ? "text-destructive"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {item.status === "UPLOADING" ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : null}
+                      {item.status === "COMPLETE"
+                        ? m.media_upload_status_complete()
+                        : item.status === "ERROR"
+                          ? m.media_upload_status_error()
+                          : item.status === "UPLOADING"
+                            ? m.media_upload_status_uploading()
+                            : m.media_upload_status_waiting()}
+                    </p>
+                    {item.log ? (
+                      <p className="break-words text-sm leading-6 text-muted-foreground">
+                        {item.log.replace(/^>\s*/, "")}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          <div className="flex flex-wrap justify-end gap-2 border-t border-border/60 pt-4">
+            {queue.length > 0 && !isAllComplete ? (
+              <Button type="button" variant="outline" onClick={onClose}>
+                {m.media_upload_btn_background()}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              onClick={onClose}
+              variant={isAllComplete && hasErrors ? "destructive" : "default"}
+            >
+              {isAllComplete
+                ? hasErrors
+                  ? m.media_upload_btn_confirm_errors()
+                  : m.media_upload_btn_complete()
+                : m.media_upload_btn_cancel()}
+            </Button>
+          </div>
+        </div>
+      </FlareDialog>
+    );
 
   if (isFuwari) {
     return createPortal(

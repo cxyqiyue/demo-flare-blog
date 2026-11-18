@@ -4,9 +4,10 @@ import { Loader2, RefreshCw, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FlareDialog } from "@/components/ui/flare-dialog";
 import { useResendAnnouncement } from "@/features/announcements/hooks/use-announcement-actions";
 import { announcementDeliveriesQuery } from "@/features/announcements/queries";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 interface AnnouncementDeliveriesModalProps {
@@ -40,6 +41,88 @@ function AnnouncementDeliveriesModalInternal({
 
   const deliveryStats = deliveriesQuery.data?.deliveryStats ?? null;
   const deliveries = deliveriesQuery.data?.items ?? [];
+
+  if (isFlare)
+    return (
+      <FlareDialog
+        open={isOpen}
+        onClose={onClose}
+        title={m.announcements_detail_title()}
+        className="max-w-3xl"
+      >
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">
+            {m.announcements_delivery_total({
+              count: deliveryStats?.total ?? 0,
+            })}
+          </Badge>
+          <Badge variant="secondary">
+            {m.announcements_delivery_sent({ count: deliveryStats?.sent ?? 0 })}
+          </Badge>
+          <Badge variant="destructive">
+            {m.announcements_delivery_failed({
+              count: deliveryStats?.failed ?? 0,
+            })}
+          </Badge>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleResend}
+            disabled={resendMutation.isPending}
+            className="sm:ml-auto"
+          >
+            {resendMutation.isPending ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <RefreshCw size={16} />
+            )}
+            {m.announcements_actions_resend()}
+          </Button>
+        </div>
+        {deliveriesQuery.isLoading ? (
+          <p role="status" className="flex justify-center py-12">
+            <Loader2 size={20} className="animate-spin" />
+          </p>
+        ) : deliveriesQuery.isError ? (
+          <p role="alert" className="py-6 text-sm text-destructive">
+            投递记录加载失败，请关闭后重试。
+          </p>
+        ) : !deliveries.length ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">
+            {m.announcements_empty_detail()}
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {deliveries.map((delivery) => (
+              <li
+                key={delivery.id}
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-4"
+              >
+                <div className="min-w-0 flex-1 basis-44">
+                  <p className="break-words text-sm font-medium">
+                    {delivery.userName ?? "—"}
+                  </p>
+                  <p className="mt-1 break-all text-sm text-muted-foreground">
+                    {delivery.email}
+                  </p>
+                </div>
+                <Badge
+                  variant={
+                    delivery.status === "failed" ? "destructive" : "secondary"
+                  }
+                >
+                  {delivery.status === "sent"
+                    ? m.announcements_status_sent()
+                    : delivery.status === "failed"
+                      ? m.announcements_status_failed()
+                      : m.announcements_status_pending()}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </FlareDialog>
+    );
 
   if (isFuwari) {
     return createPortal(

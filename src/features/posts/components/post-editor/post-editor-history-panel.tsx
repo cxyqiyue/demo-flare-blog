@@ -30,6 +30,7 @@ import {
 } from "./post-editor-history.shared";
 import { PostEditorHistoryList } from "./post-editor-history-list";
 import { PostEditorHistoryPreview } from "./post-editor-history-preview";
+import { useFlarePanel } from "./use-flare-panel";
 
 interface PostEditorHistoryPanelProps {
   postId: number;
@@ -73,6 +74,7 @@ function HistoryPanelInternal({
   allTags,
   onRestoreApplied,
 }: PostEditorHistoryPanelProps) {
+  const panelRef = useFlarePanel(isOpen, onClose);
   const queryClient = useQueryClient();
   const [selectedRevisionId, setSelectedRevisionId] = useState<number | null>(
     null,
@@ -455,6 +457,11 @@ function HistoryPanelInternal({
 
       {/* Panel */}
       <aside
+        ref={panelRef}
+        tabIndex={isFlare ? -1 : undefined}
+        role={isFlare ? "dialog" : undefined}
+        aria-modal={isFlare ? true : undefined}
+        aria-label={m.editor_history_title()}
         className={cn(
           "fixed inset-y-0 right-0 z-91 flex w-full max-w-full flex-col border-l border-border/40 bg-background/95 shadow-2xl backdrop-blur lg:max-w-[84vw] 2xl:max-w-[80vw] duration-500",
           isFlare &&

@@ -5,7 +5,7 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import { ArrowUpRight, Menu, Settings } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { SideBar } from "@/components/admin/side-bar";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import Toaster from "@/components/ui/toaster";
@@ -48,7 +48,10 @@ export const Route = createFileRoute("/admin")({
 
 function AdminLayout() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const closeMobileSidebar = () => setIsMobileSidebarOpen(false);
+  const closeMobileSidebar = useCallback(
+    () => setIsMobileSidebarOpen(false),
+    [],
+  );
 
   if (isFuwari) {
     return (
@@ -138,6 +141,7 @@ function AdminLayout() {
               </Link>
               <Link
                 to="/"
+                aria-label={m.admin_layout_back_to_site()}
                 className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border/70 bg-(--flare-surface) px-3 text-sm font-medium text-muted-foreground shadow-[0_1px_2px_rgb(15_23_42/0.05)] transition-colors hover:text-foreground"
               >
                 <span className="hidden sm:inline">

@@ -37,6 +37,9 @@ export const CommentSection = ({
       : momentId != null
         ? { momentId }
         : { postId };
+  const redirectTo = useRouterState({
+    select: (state) => state.location.href,
+  });
   const { rootId, highlightCommentId } = useRouterState({
     select: (state) =>
       (state.location.search as {
@@ -149,10 +152,7 @@ export const CommentSection = ({
 
   return (
     <section
-      className={cn(
-        "space-y-8 mt-12 pt-8 border-t border-border/30 animate-in fade-in duration-500",
-        className,
-      )}
+      className={cn("space-y-8 animate-in fade-in duration-500", className)}
     >
       <header className="flex items-center justify-between">
         <div className="space-y-1">
@@ -171,15 +171,17 @@ export const CommentSection = ({
           />
         </div>
       ) : (
-        <div className="py-10 flex flex-col items-center justify-center gap-4 text-center flare-surface-soft">
+        <div className="flex flex-col items-center justify-center gap-4 rounded-2xl py-10 text-center text-card-foreground [background:var(--flare-surface-soft)] [border:1px_solid_var(--flare-border)]">
           <p className="text-sm text-muted-foreground">
             {m.comments_join_discussion()}
           </p>
-          <Link to="/login">
-            <Button variant="outline" className="rounded-full">
-              <LogIn size={14} className="mr-2 opacity-80" />
-              {m.comments_login()}
-            </Button>
+          <Link
+            to="/login"
+            search={{ redirectTo }}
+            className="flare-chip min-h-11 px-4"
+          >
+            <LogIn size={14} className="opacity-80" />
+            {m.comments_login()}
           </Link>
         </div>
       )}
@@ -206,10 +208,11 @@ export const CommentSection = ({
           {hasNextPage && (
             <div className="flex justify-center pt-8">
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => fetchNextPage()}
                 disabled={isFetchingNextPage}
-                className="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-bold border-border hover:bg-foreground hover:text-background transition-all"
+                className="min-h-11 px-5 text-sm font-medium transition-all"
               >
                 {isFetchingNextPage
                   ? m.comments_loading()

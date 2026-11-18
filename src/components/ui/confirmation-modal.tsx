@@ -38,8 +38,19 @@ const ConfirmationModalInternal: React.FC<ConfirmationModalProps> = ({
   useEffect(() => {
     if (!isFlare || !isOpen) return;
     const previousFocus = document.activeElement;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const siblings = Array.from(document.body.children).filter(
+      (element): element is HTMLElement =>
+        element instanceof HTMLElement &&
+        !element.contains(panelRef.current) &&
+        !element.inert,
+    );
+    for (const sibling of siblings) sibling.inert = true;
     panelRef.current?.focus();
     return () => {
+      document.body.style.overflow = overflow;
+      for (const sibling of siblings) sibling.inert = false;
       if (previousFocus instanceof HTMLElement && previousFocus.isConnected)
         previousFocus.focus();
     };
@@ -70,7 +81,7 @@ const ConfirmationModalInternal: React.FC<ConfirmationModalProps> = ({
             if (event.key !== "Tab") return;
             const controls = Array.from(
               event.currentTarget.querySelectorAll<HTMLElement>(
-                'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]',
+                'a[href], button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]',
               ),
             );
             const first = controls[0];
@@ -105,7 +116,7 @@ const ConfirmationModalInternal: React.FC<ConfirmationModalProps> = ({
               disabled={isLoading}
               onClick={onClose}
               aria-label={m.common_close()}
-              className="rounded-lg p-1 text-muted-foreground hover:bg-muted"
+              className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted disabled:opacity-50"
             >
               <X size={20} />
             </button>

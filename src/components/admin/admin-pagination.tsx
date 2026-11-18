@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 
 interface AdminPaginationProps {
@@ -82,11 +82,20 @@ export function AdminPagination({
         })}
       </div>
 
-      <div className="flex items-center gap-2 max-w-full overflow-x-auto overscroll-x-contain">
+      <div
+        className={
+          isFlare
+            ? "flex max-w-full flex-wrap items-center justify-center gap-2 overflow-x-auto overscroll-x-contain sm:justify-end"
+            : "flex items-center gap-2 max-w-full overflow-x-auto overscroll-x-contain"
+        }
+        role="navigation"
+        aria-label={m.pagination_page({ page: currentPage, pages: totalPages })}
+      >
         {/* Previous Button */}
         <Button
           variant={isFuwari ? "secondary" : "outline"}
-          size={isFuwari ? "sm" : "icon"}
+          size={isFuwari || isFlare ? "sm" : "icon"}
+          aria-label={m.pagination_prev()}
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
           className={
@@ -120,8 +129,13 @@ export function AdminPagination({
                 </div>
               ) : (
                 <Button
-                  variant={isFuwari ? "ghost" : "ghost"}
-                  size={isFuwari ? "sm" : "sm"}
+                  variant="ghost"
+                  size="sm"
+                  aria-current={currentPage === pageNumber ? "page" : undefined}
+                  aria-label={m.pagination_page({
+                    page: pageNumber,
+                    pages: totalPages,
+                  })}
                   onClick={() => onPageChange(pageNumber)}
                   className={
                     isFuwari
@@ -147,7 +161,8 @@ export function AdminPagination({
         {/* Next Button */}
         <Button
           variant={isFuwari ? "secondary" : "outline"}
-          size={isFuwari ? "sm" : "icon"}
+          size={isFuwari || isFlare ? "sm" : "icon"}
+          aria-label={m.pagination_next()}
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
           className={

@@ -1,13 +1,15 @@
 import type { VariantProps } from "class-variance-authority";
 import { cva } from "class-variance-authority";
 import type * as React from "react";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  isFuwari
-    ? "inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none"
-    : "inline-flex items-center border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider transition-colors focus:outline-none",
+  isFlare
+    ? "inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-xs font-medium leading-4 transition-colors"
+    : isFuwari
+      ? "inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none"
+      : "inline-flex items-center border px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider transition-colors focus:outline-none",
   {
     variants: {
       variant: {

@@ -3,7 +3,8 @@ import { FolderInput, Loader2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { isFuwari } from "@/lib/theme-mode";
+import { FlareDialog } from "@/components/ui/flare-dialog";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { m } from "@/paraglide/messages";
 import type { MediaFolder } from "../types";
 import { FolderDropdown } from "./folder-dropdown";
@@ -56,6 +57,57 @@ function MoveModalInternal({
     if (!canSubmit) return;
     await onSubmit(targetFolder);
   };
+
+  if (isFlare)
+    return (
+      <FlareDialog
+        open={isOpen}
+        onClose={onClose}
+        title={m.media_move_modal_title()}
+        description={m.media_move_modal_summary({ count: fileCount })}
+        busy={isSubmitting}
+      >
+        <div className="space-y-5">
+          {skippedFolderCount > 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {m.media_move_modal_skip_folders({ count: skippedFolderCount })}
+            </p>
+          ) : null}
+          <FolderDropdown
+            value={targetFolder}
+            folders={folders}
+            labelPrefix={m.media_move_modal_target_label()}
+            onChange={setTargetFolder}
+            onCreateFolder={onCreateFolder}
+            isCreatingFolder={isCreatingFolder}
+            startFolder={startFolder}
+            loadFolders={loadFolders}
+          />
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              {m.media_folder_btn_cancel()}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void submit()}
+              disabled={!canSubmit}
+            >
+              {isSubmitting ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <FolderInput size={16} />
+              )}
+              {m.media_move_modal_confirm_btn()}
+            </Button>
+          </div>
+        </div>
+      </FlareDialog>
+    );
 
   if (isFuwari) {
     return createPortal(

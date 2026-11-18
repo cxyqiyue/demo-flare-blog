@@ -43,7 +43,7 @@ export function HomePage({
             ))}
           </div>
 
-          <div className="px-5 pb-5 pt-1 md:px-8">
+          <div className="pt-2">
             <Pagination
               page={page}
               total={total}

@@ -45,6 +45,7 @@ import {
   DEFAULT_CONFIG,
 } from "@/features/config/config.schema";
 import { useSystemSetting } from "@/features/config/hooks/use-system-setting";
+import { sectionSaveState } from "@/features/config/utils/section-save-state";
 import { EmailServiceSection } from "@/features/email/components/email-service-section";
 import { useEmailConnection } from "@/features/email/hooks/use-email-connection";
 import { ImageHostingSettingsSection } from "@/features/image-hosting/components/image-hosting-settings-section";
@@ -176,7 +177,8 @@ function RouteComponent() {
   const {
     reset,
     handleSubmit,
-    formState: { isSubmitting, isDirty },
+    formState: { isSubmitting, isDirty, dirtyFields },
+    getValues,
   } = methods;
 
   // Block navigation when there are unsaved changes
@@ -192,7 +194,7 @@ function RouteComponent() {
   // 同步 settings 到 form
   useEffect(() => {
     if (settings) {
-      reset(settings);
+      reset(settings, isFlare ? { keepDirtyValues: true } : undefined);
     }
   }, [settings, reset]);
 
@@ -253,8 +255,22 @@ function RouteComponent() {
         } as UpdateSystemConfigSectionInput,
       });
       toast.success(m.settings_toast_save_success());
-      // Reset dirty state with new values
-      reset(data);
+      if (isFlare) {
+        // Advance only the saved section's baseline; other sections stay dirty.
+        const baseline = methods.formState.defaultValues ?? DEFAULT_CONFIG;
+        const state = sectionSaveState(
+          baseline as SystemConfig,
+          data,
+          getValues(),
+          section,
+        );
+        reset(state.defaults);
+        for (const [key, value] of state.edits) {
+          methods.setValue(key, value, { shouldDirty: true });
+        }
+      } else {
+        reset(data);
+      }
       saveSucceededRef.current = true;
     } catch {
       toast.error(m.settings_toast_save_error());
@@ -263,10 +279,36 @@ function RouteComponent() {
 
   const handleSaveAndLeave = async () => {
     saveSucceededRef.current = false;
-    await handleSubmit(onSubmit)();
-    if (saveSucceededRef.current) {
-      proceed?.();
+    if (isFlare) {
+      await handleSubmit(async (data) => {
+        try {
+          for (const section of new Set(Object.values(TAB_SECTION))) {
+            if (!section || !dirtyFields[section]) continue;
+            await saveSettingsSection({
+              data: {
+                section,
+                data: data[section],
+              } as UpdateSystemConfigSectionInput,
+            });
+          }
+          const current = getValues();
+          reset(data);
+          let hasNewEdits = false;
+          for (const key of Object.keys(current) as Array<keyof SystemConfig>) {
+            if (JSON.stringify(current[key]) !== JSON.stringify(data[key])) {
+              methods.setValue(key, current[key], { shouldDirty: true });
+              hasNewEdits = true;
+            }
+          }
+          saveSucceededRef.current = !hasNewEdits;
+        } catch {
+          toast.error(m.settings_toast_save_error());
+        }
+      })();
+    } else {
+      await handleSubmit(onSubmit)();
     }
+    if (saveSucceededRef.current) proceed?.();
   };
 
   if (isFuwari || isFlare) {
@@ -383,7 +425,7 @@ function RouteComponent() {
           <form
             ref={formRef}
             onSubmit={handleSubmit(onSubmit)}
-            className="space-y-5 pb-24"
+            className="flare-settings space-y-5 pb-24"
           >
             <ConfirmationModal
               isOpen={blockerStatus === "blocked"}
@@ -416,13 +458,13 @@ function RouteComponent() {
             <Tabs
               value={activeTab}
               onValueChange={(value) => setActiveTab(value as typeof activeTab)}
-              className="grid min-w-0 gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]"
+              className="grid min-w-0 gap-5 min-[1440px]:grid-cols-[13rem_minmax(0,1fr)]"
             >
               <div
                 ref={tabsScrollRef}
                 className="sticky top-0 z-20 min-w-0 overflow-x-auto rounded-2xl border border-border/60 bg-card p-2 lg:self-start"
               >
-                <TabsList className="flex w-max gap-1 bg-transparent lg:w-full lg:flex-col lg:items-stretch">
+                <TabsList className="flex w-max gap-1 bg-transparent min-[1440px]:w-full min-[1440px]:flex-col min-[1440px]:items-stretch">
                   {tabItems.map(({ value, icon: Icon, label }) => (
                     <TabsTrigger
                       key={value}
@@ -459,7 +501,7 @@ function RouteComponent() {
               </div>
             </Tabs>
             {isDirty && TAB_SECTION[activeTab] ? (
-              <div className="fixed inset-x-4 bottom-4 z-40 flex items-center justify-between gap-4 rounded-2xl border border-border bg-card p-3 shadow-lg sm:hidden">
+              <div className="sticky bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3 shadow-lg">
                 <span className="text-sm">{m.settings_unsaved_title()}</span>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting

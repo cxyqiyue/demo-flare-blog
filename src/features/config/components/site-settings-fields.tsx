@@ -1,6 +1,6 @@
 import { type FieldPath, useController, useFormContext } from "react-hook-form";
 import type { SystemConfig } from "@/features/config/config.schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 
 export function Field({
@@ -16,6 +16,25 @@ export function Field({
   readOnly?: boolean;
   children: React.ReactNode;
 }) {
+  if (isFlare)
+    return (
+      <label className="block min-w-0 space-y-2">
+        <span className="block text-sm font-medium">{label}</span>
+        {hint ? (
+          <span className="block text-sm leading-6 text-muted-foreground">
+            {hint}
+          </span>
+        ) : null}
+        <span className={cn("block min-w-0", readOnly && "opacity-70")}>
+          {children}
+        </span>
+        {error ? (
+          <span role="alert" className="block text-sm text-destructive">
+            {error}
+          </span>
+        ) : null}
+      </label>
+    );
   if (isFuwari) {
     return (
       <label className="block space-y-2">

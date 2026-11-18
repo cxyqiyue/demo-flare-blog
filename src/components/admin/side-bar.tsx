@@ -16,7 +16,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
@@ -468,10 +468,40 @@ function FlareSidebar({
 }: FuwariSidebarProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const drawerRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = drawerRef.current;
+    if (!dialog) return;
+    if (!isMobileSidebarOpen) {
+      dialog.close();
+      return;
+    }
+    const previous = document.activeElement;
+    const overflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = "hidden";
+    const wide = () => {
+      if (window.innerWidth >= 1024) closeMobileSidebar();
+    };
+    window.addEventListener("resize", wide);
+    return () => {
+      dialog.close();
+      document.body.style.overflow = overflow;
+      window.removeEventListener("resize", wide);
+      if (previous instanceof HTMLElement && previous.isConnected)
+        previous.focus();
+    };
+  }, [isMobileSidebarOpen, closeMobileSidebar]);
 
   const handleConfirmLogout = async () => {
     setIsLoggingOut(true);
-    await onConfirmSignOut();
+    try {
+      await onConfirmSignOut();
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutConfirm(false);
+    }
   };
 
   const sidebarContent = (
@@ -566,17 +596,20 @@ function FlareSidebar({
 
   return (
     <>
-      {isMobileSidebarOpen ? (
-        <>
-          <div
-            className="fixed inset-0 z-60 bg-black/25 backdrop-blur-sm lg:hidden dark:bg-black/45"
-            onClick={closeMobileSidebar}
-          />
-          <div className="flare-admin-drawer fixed inset-y-0 left-0 z-70 flex w-[min(18rem,86vw)] flex-col bg-(--flare-ground) px-3 py-4 shadow-2xl lg:hidden">
-            {sidebarContent}
-          </div>
-        </>
-      ) : null}
+      <dialog
+        ref={drawerRef}
+        aria-label={m.admin_sidebar_close_navigation()}
+        onCancel={closeMobileSidebar}
+        onClose={closeMobileSidebar}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) closeMobileSidebar();
+        }}
+        className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none border-0 bg-transparent p-0 text-foreground backdrop:bg-black/35 backdrop:backdrop-blur-sm lg:hidden"
+      >
+        <div className="flare-admin-drawer flex h-full w-[min(18rem,86vw)] flex-col bg-(--flare-ground) px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl">
+          {sidebarContent}
+        </div>
+      </dialog>
 
       <aside className="hidden shrink-0 flex-col px-3 py-4 lg:sticky lg:top-0 lg:z-30 lg:flex lg:h-screen lg:w-64">
         {sidebarContent}

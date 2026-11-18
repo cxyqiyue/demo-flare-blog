@@ -2,11 +2,12 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { ClientOnly } from "@tanstack/react-router";
 import { Loader2, X } from "lucide-react";
 import type { ComponentProps } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FlareDialog } from "@/components/ui/flare-dialog";
 import { Input } from "@/components/ui/input";
 import type {
   CreateBookmarkFormValues,
@@ -19,7 +20,7 @@ import {
   createFolderInputSchema,
   createSearchEngineInputSchema,
 } from "@/features/navigation/navigation.schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -40,6 +41,17 @@ const ModalShellInternal = ({
   onClose,
   children,
 }: ModalShellProps) => {
+  if (isFlare)
+    return (
+      <FlareDialog
+        open={isOpen}
+        onClose={onClose}
+        title={title}
+        description={description}
+      >
+        {children}
+      </FlareDialog>
+    );
   if (!isOpen) return null;
 
   return createPortal(
@@ -114,24 +126,31 @@ function ModalField({
   error?: string;
   inputProps: ComponentProps<typeof Input>;
 }) {
+  const id = useId();
   return (
     <div className="space-y-1.5">
       <label
+        htmlFor={isFlare ? id : undefined}
         className={cn(
-          isFuwari
-            ? "text-sm font-bold fuwari-text-75"
-            : "text-xs font-mono text-muted-foreground uppercase tracking-wider",
+          isFlare
+            ? "text-sm font-medium text-foreground"
+            : isFuwari
+              ? "text-sm font-bold fuwari-text-75"
+              : "text-xs font-mono text-muted-foreground uppercase tracking-wider",
         )}
       >
         {label}
       </label>
       <Input
         {...inputProps}
+        id={isFlare ? id : inputProps.id}
         placeholder={placeholder}
         className={
-          isFuwari
+          isFlare
             ? "w-full"
-            : "bg-transparent border-0 border-b border-border/50 text-base px-0 rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all shadow-none h-auto py-1.5 placeholder:text-muted-foreground/30"
+            : isFuwari
+              ? "w-full"
+              : "bg-transparent border-0 border-b border-border/50 text-base px-0 rounded-none focus-visible:ring-0 focus-visible:border-foreground transition-all shadow-none h-auto py-1.5 placeholder:text-muted-foreground/30"
         }
       />
       {error && (

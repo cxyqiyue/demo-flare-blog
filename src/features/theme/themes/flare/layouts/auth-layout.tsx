@@ -1,23 +1,34 @@
-import type { AuthLayoutProps } from "@/features/theme/contract/layouts";
+import { Link } from "@tanstack/react-router";
+import type {
+  AuthLayoutProps,
+  NavOption,
+} from "@/features/theme/contract/layouts";
 import { m } from "@/paraglide/messages";
+import { PublicLayout } from "./public-layout";
 
-export function AuthLayout({ onBack, children }: AuthLayoutProps) {
+export function AuthLayout({ children }: AuthLayoutProps) {
+  const navOptions: NavOption[] = [
+    { id: "navigation", to: "/navigation", label: m.nav_navigation() },
+    { id: "home", to: "/", label: m.nav_home() },
+    { id: "posts", to: "/posts", label: m.nav_posts() },
+    { id: "moments", to: "/moments", label: m.nav_moments() },
+    { id: "friend-links", to: "/friend-links", label: m.nav_friend_links() },
+    { id: "about", to: "/about", label: m.nav_about() },
+  ];
   return (
-    <div className="flare-shell min-h-screen w-full flex flex-col bg-(--flare-ground) relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(900px_360px_at_50%_-10%,hsl(var(--muted)/0.35),transparent_70%)]" />
-      <header className="h-16 flex items-center px-4 md:px-8">
-        <button onClick={onBack} type="button" className="flare-chip">
-          ← {m.auth_layout_back_home()}
-        </button>
-      </header>
-
-      <main className="flex-1 flex flex-col justify-center items-center p-4 md:p-8">
-        <div className="w-full max-w-md flare-surface p-6 md:p-8 flare-enter">
-          {children}
+    <PublicLayout
+      navOptions={navOptions}
+      isSessionLoading={false}
+      logout={async () => {}}
+    >
+      <div className="mx-auto w-full max-w-md space-y-4 flare-enter">
+        <section className="flare-surface p-6 sm:p-8">{children}</section>
+        <div className="text-center">
+          <Link to="/" className="flare-chip min-h-11">
+            {m.auth_layout_back_home()}
+          </Link>
         </div>
-      </main>
-
-      <footer className="h-10" />
-    </div>
+      </div>
+    </PublicLayout>
   );
 }

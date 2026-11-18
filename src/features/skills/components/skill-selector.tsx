@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronDown, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { skillsAdminQueryOptions } from "@/features/skills/queries";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -31,6 +31,25 @@ export function SkillSelector({ value, onChange }: SkillSelectorProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (isFlare)
+    return (
+      <select
+        aria-label={m.editor_meta_skill()}
+        value={value ?? ""}
+        onChange={(event) =>
+          onChange(event.target.value ? Number(event.target.value) : null)
+        }
+        className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-card px-3 py-2 text-base focus-visible:outline-2 focus-visible:outline-primary sm:text-sm"
+      >
+        <option value="">{m.editor_skill_none()}</option>
+        {skills.map((skill) => (
+          <option key={skill.id} value={skill.id}>
+            {skill.name}
+          </option>
+        ))}
+      </select>
+    );
 
   return (
     <div className="relative group" ref={containerRef}>

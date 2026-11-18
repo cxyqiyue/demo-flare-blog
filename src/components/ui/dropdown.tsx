@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 
 interface DropdownItem {
@@ -42,7 +42,47 @@ const Dropdown: React.FC<DropdownProps> = ({
   }, []);
 
   return (
-    <div className={cn("relative inline-block", className)} ref={dropdownRef}>
+    <div
+      className={cn("relative inline-block", className)}
+      ref={dropdownRef}
+      onKeyDown={
+        isFlare
+          ? (event) => {
+              if (event.key === "Escape") {
+                setIsOpen(false);
+                dropdownRef.current
+                  ?.querySelector<HTMLElement>("button")
+                  ?.focus();
+              }
+              if (
+                !["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key) ||
+                !isOpen
+              )
+                return;
+              const buttons = Array.from(
+                dropdownRef.current?.querySelectorAll<HTMLButtonElement>(
+                  '[role="menuitem"]',
+                ) ?? [],
+              );
+              if (!buttons.length) return;
+              event.preventDefault();
+              const index = buttons.indexOf(
+                document.activeElement as HTMLButtonElement,
+              );
+              const next =
+                event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? buttons.length - 1
+                    : (index +
+                        (event.key === "ArrowUp" ? -1 : 1) +
+                        buttons.length) %
+                      buttons.length;
+              buttons[next]?.focus();
+            }
+          : undefined
+      }
+    >
       <div onClick={() => setIsOpen(!isOpen)} className="cursor-pointer">
         {trigger}
       </div>
@@ -50,23 +90,29 @@ const Dropdown: React.FC<DropdownProps> = ({
       {isOpen && (
         <div
           className={cn(
-            isFuwari
-              ? "fuwari-card-base absolute top-full mt-2 w-48 p-1.5 z-50 max-h-80 overflow-y-auto custom-scrollbar shadow-lg animate-in fade-in zoom-in-95 duration-200"
-              : "absolute top-full mt-2 w-40 bg-popover border border-border/30 z-50 py-1 animate-in fade-in duration-200",
+            isFlare
+              ? "absolute top-full z-50 mt-2 max-h-[min(24rem,60dvh)] w-52 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-border bg-card p-1.5 shadow-xl"
+              : isFuwari
+                ? "fuwari-card-base absolute top-full mt-2 w-48 p-1.5 z-50 max-h-80 overflow-y-auto custom-scrollbar shadow-lg animate-in fade-in zoom-in-95 duration-200"
+                : "absolute top-full mt-2 w-40 bg-popover border border-border/30 z-50 py-1 animate-in fade-in duration-200",
             align === "right" ? "right-0" : "left-0",
           )}
         >
           {items.map((item, index) => (
             <button
               key={index}
+              type={isFlare ? "button" : undefined}
+              role={isFlare ? "menuitem" : undefined}
               onClick={() => {
                 item.onClick();
                 setIsOpen(false);
               }}
               className={cn(
-                isFuwari
-                  ? "w-full text-left px-3 py-2 text-sm transition-colors rounded-lg flex items-center gap-2"
-                  : "w-full text-left px-3 py-2 text-[9px] font-mono uppercase tracking-widest transition-colors flex items-center gap-2",
+                isFlare
+                  ? "flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-primary"
+                  : isFuwari
+                    ? "w-full text-left px-3 py-2 text-sm transition-colors rounded-lg flex items-center gap-2"
+                    : "w-full text-left px-3 py-2 text-[9px] font-mono uppercase tracking-widest transition-colors flex items-center gap-2",
                 item.danger
                   ? "text-destructive hover:bg-destructive/10"
                   : item.isActive

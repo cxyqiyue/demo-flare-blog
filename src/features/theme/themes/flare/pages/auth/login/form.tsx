@@ -26,7 +26,7 @@ export function LoginForm({ form, isEmailConfigured }: LoginFormProps) {
   const otpLocked = !isIdle;
 
   const inputClassName =
-    "h-11 rounded-lg border border-border/60 bg-background/60 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border";
+    "h-11 rounded-lg border border-border/60 bg-background/60 px-3 text-base md:text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -67,7 +67,6 @@ export function LoginForm({ form, isEmailConfigured }: LoginFormProps) {
                 {isEmailConfigured && (
                   <Link
                     to="/forgot-password"
-                    tabIndex={-1}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {m.login_forgot_password()}
@@ -132,7 +131,7 @@ export function LoginForm({ form, isEmailConfigured }: LoginFormProps) {
               maxLength={6}
               {...register("otp")}
               className="h-12 rounded-lg border border-border/60 bg-background/60 px-3 text-center text-lg font-mono tracking-[0.4em] shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border"
-              placeholder="000000"
+              placeholder="••••••"
               disabled={isSubmitting || loginStep === "SUCCESS"}
             />
             {errors.otp && (

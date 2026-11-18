@@ -15,7 +15,7 @@ export function ProfilePage({
   logout,
 }: ProfilePageProps) {
   const inputClassName =
-    "h-10 rounded-lg border border-border/60 bg-background/60 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border";
+    "h-10 rounded-lg border border-border/60 bg-background/60 px-3 text-base md:text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border";
   const sectionClassName = "flare-surface p-5 md:p-7 space-y-5";
 
   return (
@@ -75,10 +75,14 @@ export function ProfilePage({
         </h3>
         <form onSubmit={profileForm.handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground/90">
+            <label
+              htmlFor="profile-name"
+              className="text-sm font-medium text-foreground/90"
+            >
               {m.profile_name()}
             </label>
             <Input
+              id="profile-name"
               {...profileForm.register("name")}
               className={inputClassName}
             />
@@ -90,13 +94,17 @@ export function ProfilePage({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground/90">
+            <label
+              htmlFor="profile-image"
+              className="text-sm font-medium text-foreground/90"
+            >
               {m.profile_avatar_url()}
             </label>
             <Input
+              id="profile-image"
               {...profileForm.register("image")}
               className={inputClassName}
-              placeholder="https://..."
+              placeholder={m.profile_avatar_url_placeholder()}
             />
             {profileForm.errors.image && (
               <span className="text-xs text-destructive">
@@ -129,7 +137,7 @@ export function ProfilePage({
           <h3 className="text-lg font-semibold text-foreground">
             {m.profile_preferences()}
           </h3>
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-border/50 bg-background/40 p-4">
+          <div className="flex flex-col items-start gap-4 rounded-xl border border-border/50 bg-background/40 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1 min-w-0">
               <span className="text-sm font-medium text-foreground block">
                 {m.profile_email_notify()}
@@ -160,7 +168,7 @@ export function ProfilePage({
         <h3 className="text-lg font-semibold text-foreground">
           {m.profile_subscription_title()}
         </h3>
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-border/50 bg-background/40 p-4">
+        <div className="flex flex-col items-start gap-4 rounded-xl border border-border/50 bg-background/40 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1 min-w-0">
             <span className="text-sm font-medium text-foreground block">
               {m.profile_subscription_label()}
@@ -197,10 +205,14 @@ export function ProfilePage({
           </h3>
           <form onSubmit={passwordForm.handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground/90">
+              <label
+                htmlFor="profile-current-password"
+                className="text-sm font-medium text-foreground/90"
+              >
                 {m.profile_current_password()}
               </label>
               <Input
+                id="profile-current-password"
                 type="password"
                 {...passwordForm.register("currentPassword")}
                 className={inputClassName}
@@ -213,10 +225,14 @@ export function ProfilePage({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground/90">
+              <label
+                htmlFor="profile-new-password"
+                className="text-sm font-medium text-foreground/90"
+              >
                 {m.profile_new_password()}
               </label>
               <Input
+                id="profile-new-password"
                 type="password"
                 {...passwordForm.register("newPassword")}
                 className={inputClassName}
@@ -229,10 +245,14 @@ export function ProfilePage({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground/90">
+              <label
+                htmlFor="profile-confirm-password"
+                className="text-sm font-medium text-foreground/90"
+              >
                 {m.profile_confirm_password()}
               </label>
               <Input
+                id="profile-confirm-password"
                 type="password"
                 {...passwordForm.register("confirmPassword")}
                 className={inputClassName}

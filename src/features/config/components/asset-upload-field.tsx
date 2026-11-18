@@ -1,11 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Upload } from "lucide-react";
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { uploadSiteAssetFn } from "@/features/config/api/config.api";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -42,6 +43,7 @@ export function AssetUploadField({
 }: AssetUploadFieldProps) {
   const { register, setValue, watch } = useFormContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const id = useId();
 
   const value = watch(name);
   const previewUrl = getPreviewUrl(value);
@@ -73,6 +75,78 @@ export function AssetUploadField({
   };
 
   const isUploading = uploadMutation.isPending;
+
+  if (isFlare)
+    return (
+      <div className="min-w-0 space-y-2">
+        <label htmlFor={id} className="block text-sm font-medium">
+          {label}
+        </label>
+        {hint ? (
+          <p
+            id={`${id}-hint`}
+            className="text-sm leading-6 text-muted-foreground"
+          >
+            {hint}
+          </p>
+        ) : null}
+        <div className="flex flex-wrap items-start gap-2">
+          <Input
+            {...register(name)}
+            id={id}
+            readOnly={readOnly}
+            aria-invalid={!!error}
+            aria-describedby={hint ? `${id}-hint` : undefined}
+            placeholder={placeholder ?? `/images/asset/${assetPath}`}
+            className={cn(
+              "min-w-0 flex-1 basis-48",
+              error && "border-destructive",
+            )}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={accept}
+            onChange={handleFileChange}
+            className="hidden"
+            disabled={isUploading}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isUploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {isUploading ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Upload size={16} />
+            )}
+            {isUploading
+              ? m.settings_asset_uploading()
+              : m.settings_asset_upload_btn()}
+          </Button>
+        </div>
+        {previewUrl ? (
+          <div className="h-14 w-14 overflow-hidden rounded-xl border border-border bg-muted/30">
+            <img
+              key={previewUrl}
+              src={previewUrl}
+              alt={label}
+              className="h-full w-full object-contain"
+              onError={(event) => {
+                event.currentTarget.style.visibility = "hidden";
+              }}
+            />
+          </div>
+        ) : null}
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    );
 
   if (isFuwari) {
     return (

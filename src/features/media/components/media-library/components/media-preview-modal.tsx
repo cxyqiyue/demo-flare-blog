@@ -19,6 +19,7 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { FlareDialog } from "@/components/ui/flare-dialog";
 import { Input } from "@/components/ui/input";
 import { getLinkedPostsFn } from "@/features/media/api/media.api";
 import type {
@@ -31,7 +32,7 @@ import {
   formatCopyLink,
 } from "@/features/media/utils/media.utils";
 import { useDelayUnmount } from "@/hooks/use-delay-unmount";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn, formatBytes } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { FolderDropdown } from "./folder-dropdown";
@@ -177,6 +178,226 @@ export function MediaPreviewModal({
   });
 
   if (!shouldRender || !activeAsset) return null;
+
+  if (isFlare)
+    return (
+      <FlareDialog
+        open={isMounted}
+        onClose={onClose}
+        title={activeAsset.fileName}
+        busy={isSaving || isMoving || isDeleting}
+        className="max-w-5xl"
+      >
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="flex min-h-44 min-w-0 items-center justify-center rounded-xl border border-border bg-muted/30 p-3">
+            {activeAsset.mimeType.startsWith("image/") ? (
+              <img
+                src={activeAsset.url}
+                alt={activeAsset.fileName}
+                className="max-h-[55dvh] max-w-full rounded-lg object-contain"
+              />
+            ) : activeAsset.mimeType.startsWith("video/") ? (
+              <video
+                controls
+                preload="metadata"
+                src={activeAsset.url}
+                className="max-h-[55dvh] max-w-full"
+              />
+            ) : activeAsset.mimeType.startsWith("audio/") ? (
+              <audio
+                controls
+                preload="metadata"
+                src={activeAsset.url}
+                className="w-full"
+              />
+            ) : (
+              <FileText size={56} className="text-muted-foreground" />
+            )}
+          </div>
+          <div className="min-w-0 space-y-5">
+            {isEditing ? (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleSaveName();
+                }}
+                className="space-y-3"
+              >
+                <Input
+                  value={editName}
+                  onChange={(event) => setEditName(event.target.value)}
+                  aria-label={activeAsset.fileName}
+                  autoFocus
+                  disabled={isSaving}
+                />
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="submit"
+                    disabled={isSaving || !editName.trim()}
+                    aria-label="保存名称"
+                  >
+                    {isSaving ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Check size={16} />
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsEditing(false)}
+                    disabled={isSaving}
+                  >
+                    {m.common_cancel()}
+                  </Button>
+                </div>
+              </form>
+            ) : onUpdateName ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+              >
+                <Pencil size={16} />
+                重命名
+              </Button>
+            ) : null}
+            <dl className="grid min-w-0 grid-cols-2 gap-4 text-sm">
+              <div>
+                <dt className="text-muted-foreground">
+                  {m.media_preview_size()}
+                </dt>
+                <dd className="mt-1 font-medium">
+                  {formatBytes(activeAsset.sizeInBytes)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {m.media_preview_format()}
+                </dt>
+                <dd className="mt-1 break-all font-medium">
+                  {activeAsset.mimeType}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {m.media_preview_dimensions()}
+                </dt>
+                <dd className="mt-1 font-medium">
+                  {activeAsset.width && activeAsset.height
+                    ? `${activeAsset.width} × ${activeAsset.height}`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {m.media_preview_created()}
+                </dt>
+                <dd className="mt-1 font-medium">
+                  {activeAsset.createdAt
+                    ? new Date(activeAsset.createdAt).toLocaleDateString()
+                    : "—"}
+                </dd>
+              </div>
+            </dl>
+            <section className="space-y-2 border-t border-border/60 pt-4">
+              <h3 className="text-sm font-semibold">
+                {m.media_preview_linked({ count: linkedPosts.length })}
+              </h3>
+              {linkedPosts.length ? (
+                linkedPosts.map((post) => (
+                  <Link
+                    key={post.id}
+                    to="/admin/posts/edit/$id"
+                    params={{ id: String(post.id) }}
+                    className="block break-words rounded-lg border border-border p-3 text-sm hover:bg-muted"
+                  >
+                    {post.title}
+                  </Link>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {m.media_preview_no_links()}
+                </p>
+              )}
+            </section>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                {m.media_preview_asset_key()}
+              </p>
+              <code className="block break-all rounded-lg bg-muted p-3 text-sm">
+                {activeAsset.key}
+              </code>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={`${activeAsset.url}${activeAsset.url.includes("?") ? "&" : "?"}original=true`}
+                download={activeAsset.fileName}
+                target="_blank"
+                rel="noreferrer"
+                className={buttonVariants({ variant: "outline" })}
+              >
+                <Download size={16} />
+                {m.media_preview_btn_download()}
+              </a>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void handleCopyLink()}
+              >
+                <Copy size={16} />
+                {m.media_preview_btn_copy()}
+              </Button>
+            </div>
+            {onMove ? (
+              <div className="space-y-3">
+                <FolderDropdown
+                  value={targetFolder}
+                  folders={folders}
+                  labelPrefix={m.media_move_modal_target_label()}
+                  onChange={setTargetFolder}
+                  onCreateFolder={onCreateFolder}
+                  isCreatingFolder={isCreatingFolder}
+                  startFolder={startFolder}
+                  loadFolders={loadFolders}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleMove()}
+                  disabled={isMoving || targetFolder === currentFolder}
+                >
+                  {isMoving ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <FolderInput size={16} />
+                  )}
+                  {m.media_move_btn()}
+                </Button>
+              </div>
+            ) : null}
+            {onDelete ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void handleDelete()}
+                disabled={
+                  isDeleting || linkedPosts.length > 0 || activeAsset.isLinked
+                }
+                className="text-destructive hover:text-destructive"
+              >
+                {isDeleting ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Trash2 size={16} />
+                )}
+                {m.media_preview_btn_delete()}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </FlareDialog>
+    );
 
   if (isFuwari) {
     return (

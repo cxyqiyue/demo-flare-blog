@@ -1,36 +1,30 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { m } from "@/paraglide/messages";
 
 export function HomePageSkeleton() {
   return (
-    <div className="flex w-full flex-col">
-      <section className="flare-surface overflow-hidden">
-        <div className="flex items-center justify-between gap-3 border-b border-border/50 px-5 py-4 md:px-8 md:py-5">
-          <Skeleton className="h-5 w-28" />
-          <Skeleton className="h-5 w-10 rounded-full" />
-        </div>
-        <div className="px-2 md:px-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="border-b border-border/40 px-3 py-5 last:border-0 md:px-4 md:py-6"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="h-3 w-16" />
-                  <Skeleton className="h-3 w-20" />
-                </div>
-                <Skeleton className="h-7 w-3/4" />
-                <Skeleton className="h-4 w-full max-w-2xl" />
-                <Skeleton className="h-4 w-5/6 max-w-xl" />
-              </div>
+    <div
+      className="flare-home-posts w-full space-y-4"
+      aria-busy="true"
+      aria-label={m.page_loading_posts()}
+    >
+      <div className="flare-home-post-grid" aria-hidden="true">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="flare-surface overflow-hidden">
+            <Skeleton className="h-28 w-full rounded-none" />
+            <div className="space-y-4 p-5">
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-3 w-1/2" />
             </div>
-          ))}
-        </div>
-        <div className="px-5 pb-5 pt-1 md:px-8">
-          <Skeleton className="h-9 w-48 rounded-full" />
-        </div>
-      </section>
+          </div>
+        ))}
+      </div>
+      <div aria-hidden="true">
+        <Skeleton className="h-20 w-full rounded-2xl" />
+      </div>
     </div>
   );
 }

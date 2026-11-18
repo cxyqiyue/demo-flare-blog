@@ -1,6 +1,6 @@
 import { Link, useLocation, useRouteContext } from "@tanstack/react-router";
 import { LogOut, Menu, Search, UserIcon, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NavOption, UserInfo } from "@/features/theme/contract/layouts";
@@ -27,6 +27,8 @@ export function Navbar({
   const pathname = useLocation({ select: (l) => l.pathname });
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const onScroll = () => {
@@ -50,10 +52,25 @@ export function Navbar({
   useEffect(() => {
     if (!open) return;
     const dismiss = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    const outside = (event: PointerEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const wide = () => {
+      if (window.innerWidth >= 1200) setOpen(false);
     };
     window.addEventListener("keydown", dismiss);
-    return () => window.removeEventListener("keydown", dismiss);
+    document.addEventListener("pointerdown", outside);
+    window.addEventListener("resize", wide);
+    return () => {
+      window.removeEventListener("keydown", dismiss);
+      document.removeEventListener("pointerdown", outside);
+      window.removeEventListener("resize", wide);
+    };
   }, [open]);
 
   const brand = useMemo(
@@ -74,6 +91,7 @@ export function Navbar({
 
   return (
     <header
+      ref={headerRef}
       className="flare-nav mx-auto transition-[max-width] duration-300 motion-reduce:transition-none"
       style={{ maxWidth: scrolled ? "68rem" : "100%" }}
       data-on-banner={onBanner ? "true" : "false"}
@@ -115,12 +133,13 @@ export function Navbar({
 
         <nav
           className="hidden items-center gap-1 min-[1200px]:flex"
-          aria-label="Main"
+          aria-label={m.main_navigation()}
         >
           {navOptions.map((option) => (
             <Link
               key={option.id}
               to={option.to}
+              activeOptions={{ exact: option.to === "/" }}
               className="flare-nav-link"
               activeProps={{ "data-status": "active" }}
             >
@@ -153,6 +172,7 @@ export function Navbar({
                     : "ring-border/60 hover:ring-border",
                 )}
                 title={user.name}
+                aria-label={m.profile_title()}
               >
                 {user.image ? (
                   <img
@@ -189,6 +209,7 @@ export function Navbar({
           </div>
 
           <button
+            ref={menuButtonRef}
             type="button"
             className={cn(iconButton, "min-[1200px]:hidden")}
             onClick={() => setOpen((v) => !v)}
@@ -211,6 +232,7 @@ export function Navbar({
               <Link
                 key={option.id}
                 to={option.to}
+                activeOptions={{ exact: option.to === "/" }}
                 className="rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/85 transition-colors hover:bg-muted/60 hover:text-foreground"
                 activeProps={{ className: "bg-muted/70 text-foreground" }}
               >

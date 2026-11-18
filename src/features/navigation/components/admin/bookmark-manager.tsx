@@ -35,7 +35,7 @@ import type {
   CreateFolderFormValues,
   NavigationPublicData,
 } from "@/features/navigation/navigation.schema";
-import { isFuwari } from "@/lib/theme-mode";
+import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 
@@ -322,7 +322,7 @@ export function BookmarkManager({ ownerId }: { ownerId?: string }) {
             <>
               <div
                 ref={folderGrid.containerRef}
-                className="flex flex-wrap content-start gap-2"
+                className="flare-admin-bookmark-grid flex flex-wrap content-start gap-2"
               >
                 {folderPaging.paged.map((folder) => (
                   <AdminFolderCard
@@ -402,7 +402,7 @@ export function BookmarkManager({ ownerId }: { ownerId?: string }) {
           <div className="flex flex-col gap-4">
             <div
               ref={bookmarkGrid.containerRef}
-              className="flex flex-wrap content-start gap-2"
+              className="flare-admin-bookmark-grid flex flex-wrap content-start gap-2"
             >
               {bookmarkPaging.paged.map((bookmark) => (
                 <AdminBookmarkCard
@@ -497,18 +497,26 @@ export function BookmarkManager({ ownerId }: { ownerId?: string }) {
   return (
     <div className="space-y-6">
       {/* Toolbar */}
-      <div className="flex justify-end gap-3">
+      <div className="flex flex-wrap justify-end gap-3">
         <Button
           variant="outline"
           onClick={() => setShowImport(true)}
-          className="rounded-none font-mono text-xs uppercase tracking-widest gap-2"
+          className={
+            isFlare
+              ? "gap-2"
+              : "rounded-none font-mono text-xs uppercase tracking-widest gap-2"
+          }
         >
           <FileUp size={14} />
           {m.navigation_admin_import()}
         </Button>
         <Button
           onClick={() => setBookmarkModal({ open: true, editing: null })}
-          className="rounded-none bg-foreground text-background hover:bg-foreground/90 font-mono text-xs uppercase tracking-widest gap-2"
+          className={
+            isFlare
+              ? "gap-2"
+              : "rounded-none bg-foreground text-background hover:bg-foreground/90 font-mono text-xs uppercase tracking-widest gap-2"
+          }
         >
           <Plus size={14} />
           {m.navigation_admin_add_bookmark()}
@@ -562,7 +570,7 @@ export function BookmarkManager({ ownerId }: { ownerId?: string }) {
           <>
             <div
               ref={folderGrid.containerRef}
-              className="flex flex-wrap content-start gap-2"
+              className="flare-admin-bookmark-grid flex flex-wrap content-start gap-2"
             >
               {folderPaging.paged.map((folder) => (
                 <AdminFolderCard
@@ -739,6 +747,18 @@ function FilterChip({
   onClick: () => void;
   label: string;
 }) {
+  if (isFlare)
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        className="flare-chip min-h-11"
+        data-active={active}
+      >
+        {label}
+      </button>
+    );
   if (isFuwari) {
     return (
       <button
@@ -807,6 +827,63 @@ function AdminFolderCard({
   onEdit,
   onDelete,
 }: AdminFolderCardProps) {
+  if (isFlare)
+    return (
+      <div
+        className={cn(
+          "flex w-44 min-w-0 flex-col gap-2 rounded-xl border bg-card p-3",
+          selected || active
+            ? "border-primary/60 bg-primary/5"
+            : "border-border",
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={onSelectToggle}
+            aria-label={`选择：${folder.name}`}
+          />
+          <button
+            type="button"
+            onClick={onOpen}
+            title={folder.name}
+            className="min-h-11 min-w-0 flex-1 break-words text-left text-sm font-medium"
+          >
+            {folder.name}
+          </button>
+        </div>
+        <div className="flex items-center justify-between gap-1">
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {folder.bookmarkCount}
+          </span>
+          {busy ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <div className="flex gap-1">
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={onEdit}
+                aria-label={`${m.navigation_admin_edit()}：${folder.name}`}
+              >
+                <Pencil size={16} />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={onDelete}
+                aria-label={`${m.navigation_admin_delete()}：${folder.name}`}
+                className="text-destructive"
+              >
+                <Trash2 size={16} />
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   if (isFuwari) {
     return (
       <div
@@ -969,6 +1046,88 @@ function AdminBookmarkCard({
   onDelete,
 }: AdminBookmarkCardProps) {
   const favicon = useFaviconSource(getHostname(bookmark.url));
+
+  if (isFlare)
+    return (
+      <div
+        className={cn(
+          "flex w-44 min-w-0 flex-col gap-2 rounded-xl border bg-card p-3",
+          selected ? "border-primary/60 bg-primary/5" : "border-border",
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={onSelect}
+            aria-label={`选择：${bookmark.name}`}
+          />
+          {renaming !== undefined ? (
+            <input
+              aria-label={m.navigation_admin_rename()}
+              autoFocus
+              value={renaming}
+              onChange={(event) => onRenameChange(event.target.value)}
+              onBlur={onRenameCommit}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                  event.preventDefault();
+                  event.currentTarget.blur();
+                } else if (event.key === "Escape") {
+                  event.preventDefault();
+                  onRenameCancel();
+                }
+              }}
+              className="min-h-11 min-w-0 flex-1 rounded-lg border border-primary bg-background px-2 text-base"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={onRenameStart}
+              title={m.navigation_admin_rename()}
+              className="min-h-11 min-w-0 flex-1 break-words text-left text-sm font-medium"
+            >
+              {bookmark.name}
+            </button>
+          )}
+        </div>
+        <a
+          href={bookmark.url}
+          target="_blank"
+          rel="noreferrer"
+          className="min-w-0 truncate rounded-lg text-xs text-primary hover:underline"
+          title={bookmark.url}
+        >
+          {getHostname(bookmark.url)}
+        </a>
+        <div className="flex justify-end gap-1">
+          {busy ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={onEdit}
+                aria-label={`${m.navigation_admin_edit()}：${bookmark.name}`}
+              >
+                <Pencil size={16} />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={onDelete}
+                aria-label={`${m.navigation_admin_delete()}：${bookmark.name}`}
+                className="text-destructive"
+              >
+                <Trash2 size={16} />
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    );
 
   if (isFuwari) {
     return (

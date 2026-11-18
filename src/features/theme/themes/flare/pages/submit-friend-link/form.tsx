@@ -11,16 +11,20 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
   const { register, errors, handleSubmit, isSubmitting } = form;
 
   const inputClassName =
-    "h-10 rounded-lg border border-border/60 bg-background/60 px-3 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border";
+    "h-10 rounded-lg border border-border/60 bg-background/60 px-3 text-base md:text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-border";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2 md:col-span-1">
-          <label className="text-sm font-medium text-foreground/90">
+          <label
+            htmlFor="friend-link-site-name"
+            className="text-sm font-medium text-foreground/90"
+          >
             {m.friend_link_field_site_name()} *
           </label>
           <Input
+            id="friend-link-site-name"
             {...register("siteName")}
             className={inputClassName}
             placeholder={m.friend_link_placeholder_site_name_default()}
@@ -33,10 +37,14 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
         </div>
 
         <div className="space-y-2 md:col-span-1">
-          <label className="text-sm font-medium text-foreground/90">
+          <label
+            htmlFor="friend-link-site-url"
+            className="text-sm font-medium text-foreground/90"
+          >
             {m.friend_link_field_site_url()} *
           </label>
           <Input
+            id="friend-link-site-url"
             {...register("siteUrl")}
             className={inputClassName}
             placeholder={m.friend_link_placeholder_site_url()}
@@ -50,10 +58,14 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground/90">
+        <label
+          htmlFor="friend-link-description"
+          className="text-sm font-medium text-foreground/90"
+        >
           {m.friend_link_field_description_default()}
         </label>
         <Input
+          id="friend-link-description"
           {...register("description")}
           className={inputClassName}
           placeholder={m.friend_link_placeholder_description_default()}
@@ -67,10 +79,14 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground/90">
+          <label
+            htmlFor="friend-link-logo-url"
+            className="text-sm font-medium text-foreground/90"
+          >
             {m.friend_link_field_logo_url_default()}
           </label>
           <Input
+            id="friend-link-logo-url"
             {...register("logoUrl")}
             className={inputClassName}
             placeholder={m.friend_link_placeholder_site_url()}
@@ -83,10 +99,14 @@ export function FriendLinkSubmitForm({ form }: FriendLinkSubmitFormProps) {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground/90">
+          <label
+            htmlFor="friend-link-contact-email"
+            className="text-sm font-medium text-foreground/90"
+          >
             {m.friend_link_field_contact_email()} *
           </label>
           <Input
+            id="friend-link-contact-email"
             {...register("contactEmail")}
             className={inputClassName}
             placeholder={m.friend_link_placeholder_contact_email_default()}
