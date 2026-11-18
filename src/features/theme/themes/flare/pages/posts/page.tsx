@@ -3,6 +3,7 @@ import { ArrowDown, X } from "lucide-react";
 import { useMemo } from "react";
 import type { PostsPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
+import { CollapsibleChips } from "../../components/collapsible-chips";
 
 export function PostsPage({
   posts,
@@ -37,34 +38,33 @@ export function PostsPage({
     <div className="flare-enter flare-archive flex w-full flex-col gap-4">
       <h1 className="sr-only">{m.nav_posts()}</h1>
       {selectedCategory || selectedTag ? (
-        <div
-          className="flex flex-wrap items-center gap-2 text-sm"
-          aria-label={m.search_filter_current()}
-        >
-          {selectedCategory ? (
-            <button
-              type="button"
-              className="flare-chip min-h-10"
-              onClick={() => onCategoryClick?.(undefined)}
-              aria-label={m.search_filter_clear_category({
-                name: selectedCategory,
-              })}
-            >
-              {selectedCategory}
-              <X size={14} />
-            </button>
-          ) : null}
-          {selectedTag ? (
-            <button
-              type="button"
-              className="flare-chip min-h-10"
-              onClick={() => onTagClick(undefined)}
-              aria-label={m.search_filter_clear_tag({ name: selectedTag })}
-            >
-              #{selectedTag}
-              <X size={14} />
-            </button>
-          ) : null}
+        <div className="text-sm" aria-label={m.search_filter_current()}>
+          <CollapsibleChips>
+            {selectedCategory ? (
+              <button
+                type="button"
+                className="flare-chip min-h-10"
+                onClick={() => onCategoryClick?.(undefined)}
+                aria-label={m.search_filter_clear_category({
+                  name: selectedCategory,
+                })}
+              >
+                {selectedCategory}
+                <X size={14} />
+              </button>
+            ) : null}
+            {selectedTag ? (
+              <button
+                type="button"
+                className="flare-chip min-h-10"
+                onClick={() => onTagClick(undefined)}
+                aria-label={m.search_filter_clear_tag({ name: selectedTag })}
+              >
+                #{selectedTag}
+                <X size={14} />
+              </button>
+            ) : null}
+          </CollapsibleChips>
         </div>
       ) : null}
       <section className="flare-surface p-4 sm:p-6 md:p-8">

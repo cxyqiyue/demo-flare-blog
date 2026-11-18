@@ -3,6 +3,7 @@ import { ArrowLeft, Loader2, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { SearchPageProps } from "@/features/theme/contract/pages";
 import { m } from "@/paraglide/messages";
+import { CollapsibleChips } from "../../components/collapsible-chips";
 
 export function SearchPage({
   query,
@@ -132,7 +133,7 @@ export function SearchPage({
           {visibleResults.length > 0 ? (
             <ul className="divide-y divide-border/50">
               {visibleResults.map((result) => (
-                <li key={result.post.id}>
+                <li key={result.post.id} className="min-w-0">
                   <Link
                     to="/post/$slug"
                     params={{ slug: result.post.slug }}
@@ -166,9 +167,10 @@ export function SearchPage({
                         {result.post.summary}
                       </p>
                     )}
-
-                    {result.post.tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
+                  </Link>
+                  {result.post.tags.length > 0 ? (
+                    <div className="px-5 pb-3 md:px-8">
+                      <CollapsibleChips>
                         {result.post.tags.map((tag) => (
                           <span
                             key={tag}
@@ -177,9 +179,9 @@ export function SearchPage({
                             {tag}
                           </span>
                         ))}
-                      </div>
-                    ) : null}
-                  </Link>
+                      </CollapsibleChips>
+                    </div>
+                  ) : null}
                 </li>
               ))}
             </ul>

@@ -6,7 +6,7 @@ import { siteDomainQuery } from "@/features/config/queries";
 import { publicPostsPageQuery } from "@/features/posts/queries";
 import { buildCanonicalUrl, canonicalLink } from "@/lib/seo";
 
-const { postsPerPage } = theme.config.home;
+const { postsPerPage, paginatePinned } = theme.config.home;
 
 const searchSchema = z.object({
   page: z.coerce.number().int().min(1).optional().catch(undefined),
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_public/")({
     const offset = (deps.page - 1) * postsPerPage;
     const [, domain] = await Promise.all([
       context.queryClient.ensureQueryData(
-        publicPostsPageQuery({ offset, limit: postsPerPage }),
+        publicPostsPageQuery({ offset, limit: postsPerPage, paginatePinned }),
       ),
       context.queryClient.ensureQueryData(siteDomainQuery),
     ]);
@@ -42,7 +42,7 @@ function HomeRoute() {
   const offset = (currentPage - 1) * postsPerPage;
 
   const { data: pageData } = useSuspenseQuery(
-    publicPostsPageQuery({ offset, limit: postsPerPage }),
+    publicPostsPageQuery({ offset, limit: postsPerPage, paginatePinned }),
   );
 
   const handlePageChange = (nextPage: number) => {

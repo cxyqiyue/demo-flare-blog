@@ -687,6 +687,40 @@ describe("Posts Integration", () => {
       expect(page2.hasNextPage).toBe(false);
     });
 
+    it("counts pinned posts toward the page limit without skipping regular posts", async () => {
+      const [, postBId, postCId] = await seedPinnedScenario();
+      await updatePost({
+        id: postBId,
+        data: { pinnedAt: new Date("2026-02-02T00:00:00Z") },
+      });
+      await updatePost({
+        id: postCId,
+        data: { pinnedAt: new Date("2026-02-01T00:00:00Z") },
+      });
+      await waitForBackgroundTasks(adminContext.executionCtx);
+
+      const context = createTestContext();
+      const first = await PostService.getPublicPostsPage(context, {
+        offset: 0,
+        limit: 2,
+        paginatePinned: "true",
+      });
+      const last = await PostService.getPublicPostsPage(context, {
+        offset: 2,
+        limit: 2,
+        paginatePinned: "true",
+      });
+
+      expect(first.items.map((post) => post.slug)).toEqual([
+        "pinned-post-b",
+        "pinned-post-c",
+      ]);
+      expect(first.total).toBe(3);
+      expect(first.hasNextPage).toBe(true);
+      expect(last.items.map((post) => post.slug)).toEqual(["pinned-post-a"]);
+      expect(last.hasNextPage).toBe(false);
+    });
+
     it("should invalidate the home page list cache when the pin changes", async () => {
       const [, postBId] = await seedPinnedScenario();
 

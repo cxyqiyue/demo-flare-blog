@@ -11,6 +11,7 @@ import { ContentRenderer } from "@/features/theme/themes/flare/components/conten
 import { authClient } from "@/lib/auth/auth.client";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import { CollapsibleChips } from "../../components/collapsible-chips";
 import { CommentSection } from "../../components/comments/view/comment-section";
 import {
   PostNavigation,
@@ -81,34 +82,32 @@ export function PostPage({ post, hideAdminEdit }: PostPageProps) {
                       {m.post_edit()}
                     </Link>
                   ) : null}
-
-                  {post.category ? (
-                    <Link
-                      to="/posts"
-                      search={{ categoryName: post.category.name }}
-                      className="hover:text-primary"
-                    >
-                      {post.category.name}
-                    </Link>
-                  ) : null}
-                  {post.tags && post.tags.length > 0 ? (
-                    <>
-                      <span className="opacity-30">/</span>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {post.tags.map((tag) => (
-                          <Link
-                            key={tag.id}
-                            to="/posts"
-                            search={{ tagName: tag.name }}
-                            className="hover:text-foreground transition-colors"
-                          >
-                            #{tag.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </>
-                  ) : null}
                 </div>
+                {post.category || post.tags?.length ? (
+                  <div className="text-sm text-muted-foreground">
+                    <CollapsibleChips>
+                      {post.category ? (
+                        <Link
+                          to="/posts"
+                          search={{ categoryName: post.category.name }}
+                          className="flare-chip"
+                        >
+                          {post.category.name}
+                        </Link>
+                      ) : null}
+                      {post.tags?.map((tag) => (
+                        <Link
+                          key={tag.id}
+                          to="/posts"
+                          search={{ tagName: tag.name }}
+                          className="flare-chip"
+                        >
+                          #{tag.name}
+                        </Link>
+                      ))}
+                    </CollapsibleChips>
+                  </div>
+                ) : null}
 
                 <h1
                   className="break-words text-2xl font-bold leading-[1.45] text-foreground sm:text-3xl lg:text-4xl"

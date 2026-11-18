@@ -1,14 +1,10 @@
 import { useLocation, useRouteContext } from "@tanstack/react-router";
 import { UserRound } from "lucide-react";
-import {
-  resolveSocialHref,
-  SOCIAL_PLATFORMS,
-  type SocialLink,
-} from "@/features/config/utils/social-platforms";
 import type { PublicLayoutProps } from "@/features/theme/contract/layouts";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { BackToTop } from "../components/back-to-top";
+import { SocialLinks } from "../components/social-links";
 import { Footer } from "./footer";
 import { IndexWidgets, LatestMoments } from "./index-widgets";
 import { Navbar } from "./navbar";
@@ -38,9 +34,6 @@ function ProfileWidget() {
 
   const avatar =
     siteConfig.theme?.flare?.avatar || siteConfig.theme?.fuwari?.avatar || "";
-  const socialLinks = siteConfig.social.filter((link: SocialLink) =>
-    Boolean(link.url),
-  );
 
   return (
     <aside className="flare-profile-widget" aria-label={m.profile_title()}>
@@ -70,38 +63,7 @@ function ProfileWidget() {
             ) : null}
           </div>
         </div>
-        {socialLinks.length > 0 ? (
-          <div className="flex flex-wrap justify-center gap-2">
-            {socialLinks.map((link: SocialLink, i: number) => {
-              const preset =
-                link.platform === "custom"
-                  ? null
-                  : SOCIAL_PLATFORMS[link.platform];
-              const Icon = preset?.icon;
-              const label = preset?.label ?? link.label ?? link.platform;
-              const href = resolveSocialHref(link.platform, link.url);
-              return (
-                <a
-                  key={`${link.platform}-${i}`}
-                  href={href}
-                  target={link.platform === "email" ? undefined : "_blank"}
-                  rel={link.platform === "email" ? undefined : "noreferrer"}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-background/60 text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
-                  aria-label={label}
-                  title={label}
-                >
-                  {Icon ? (
-                    <Icon size={15} strokeWidth={1.75} />
-                  ) : link.icon ? (
-                    <img src={link.icon} alt={label} className="h-4 w-4" />
-                  ) : (
-                    <UserRound size={14} />
-                  )}
-                </a>
-              );
-            })}
-          </div>
-        ) : null}
+        <SocialLinks links={siteConfig.social} className="justify-center" />
       </section>
     </aside>
   );
@@ -202,8 +164,8 @@ export function PublicLayout({
 
           {isHome ? (
             <div className="flare-home-after">
-              <ProfileWidget />
               <LatestMoments />
+              <ProfileWidget />
             </div>
           ) : showWidgets ? (
             <div className="flare-inner-after">

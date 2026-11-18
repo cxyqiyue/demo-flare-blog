@@ -751,11 +751,12 @@ export async function getPublicPostsPage(
     limit?: number;
     /** 列表中允许的可见性；管理员传含 private 的集合，否则默认公开+密码 */
     allowedVisibilities?: Array<PostVisibility>;
+    paginatePinned?: boolean;
   } = {},
 ): Promise<{
   items: Array<PostListItem>;
   total: number;
-  regularCount: number;
+  pageItemCount: number;
 }> {
   const offset = options.offset ?? 0;
   const limit = Math.min(options.limit ?? 10, 50);
@@ -764,21 +765,24 @@ export async function getPublicPostsPage(
     publicOnly: true,
     allowedVisibilities: options.allowedVisibilities,
   });
-  const regularWhereClause = and(
-    publicWhereClause,
-    sql`${PostsTable.pinnedAt} IS NULL`,
-  );
+  const pageWhereClause = options.paginatePinned
+    ? publicWhereClause
+    : and(publicWhereClause, sql`${PostsTable.pinnedAt} IS NULL`);
 
-  const [regularPosts, totalRows] = await Promise.all([
+  const [pagePosts, totalRows] = await Promise.all([
     db
       .select(PUBLIC_PAGE_COLUMNS)
       .from(PostsTable)
       .leftJoin(user, eq(PostsTable.authorId, user.id))
-      .where(regularWhereClause)
-      .orderBy(desc(PostsTable.publishedAt), desc(PostsTable.id))
+      .where(pageWhereClause)
+      .orderBy(
+        desc(PostsTable.pinnedAt),
+        desc(PostsTable.publishedAt),
+        desc(PostsTable.id),
+      )
       .limit(limit)
       .offset(offset),
-    db.select({ count: count() }).from(PostsTable).where(regularWhereClause),
+    db.select({ count: count() }).from(PostsTable).where(pageWhereClause),
   ]);
 
   const total = totalRows[0]?.count ?? 0;
@@ -787,7 +791,7 @@ export async function getPublicPostsPage(
 
   // Pinned posts are prepended to the first page only; they are excluded from
   // the regular list above so they don't occupy a timestamp slot.
-  if (offset === 0) {
+  if (!options.paginatePinned && offset === 0) {
     const pinnedPosts = await db
       .select(PUBLIC_PAGE_COLUMNS)
       .from(PostsTable)
@@ -797,7 +801,7 @@ export async function getPublicPostsPage(
     items.push(...pinnedPosts);
   }
 
-  items.push(...regularPosts);
+  items.push(...pagePosts);
 
   if (items.length > 0) {
     const postIds = items.map((p) => p.id);
@@ -826,7 +830,7 @@ export async function getPublicPostsPage(
     });
   }
 
-  return { items, total, regularCount: regularPosts.length };
+  return { items, total, pageItemCount: pagePosts.length };
 }
 
 /**

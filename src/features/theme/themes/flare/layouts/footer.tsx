@@ -1,11 +1,7 @@
 import { ClientOnly, Link, useRouteContext } from "@tanstack/react-router";
-import type { SiteConfig } from "@/features/config/site-config.schema";
-import {
-  resolveSocialHref,
-  SOCIAL_PLATFORMS,
-} from "@/features/config/utils/social-platforms";
 import type { NavOption } from "@/features/theme/contract/layouts";
 import { m } from "@/paraglide/messages";
+import { SocialLinks } from "../components/social-links";
 
 interface FooterProps {
   navOptions: Array<NavOption>;
@@ -13,9 +9,6 @@ interface FooterProps {
 
 export function Footer({ navOptions }: FooterProps) {
   const { siteConfig } = useRouteContext({ from: "__root__" });
-  const socialLinks = siteConfig.social.filter(
-    (link: SiteConfig["social"][number]) => link.url,
-  );
 
   return (
     <footer className="flare-surface px-5 py-7 text-sm text-muted-foreground md:px-8 md:py-9">
@@ -39,38 +32,23 @@ export function Footer({ navOptions }: FooterProps) {
           </div>
         </div>
 
-        <nav
-          className="flex flex-wrap content-start items-center gap-x-5 gap-y-3 md:justify-end"
-          aria-label={m.footer_navigation()}
-        >
-          {navOptions.map((option) => (
-            <Link
-              key={option.id}
-              to={option.to}
-              className="text-[13px] transition-colors hover:text-foreground"
-            >
-              {option.label}
-            </Link>
-          ))}
-          {socialLinks.map((link: SiteConfig["social"][number], i: number) => {
-            const href = resolveSocialHref(link.platform, link.url);
-            const label =
-              link.platform !== "custom"
-                ? SOCIAL_PLATFORMS[link.platform].label
-                : (link.label ?? "");
-            return (
-              <a
-                key={`${link.platform}-${i}`}
-                href={href}
-                target={link.platform === "email" ? undefined : "_blank"}
-                rel={link.platform === "email" ? undefined : "noreferrer"}
-                className="text-[13px] transition-colors hover:text-foreground"
+        <div className="min-w-0 md:justify-self-end">
+          <nav
+            className="flex flex-wrap items-center gap-x-4 gap-y-1"
+            aria-label={m.footer_navigation()}
+          >
+            {navOptions.map((option) => (
+              <Link
+                key={option.id}
+                to={option.to}
+                className="inline-flex min-h-11 items-center text-[13px] transition-colors hover:text-foreground"
               >
-                {label}
-              </a>
-            );
-          })}
-        </nav>
+                {option.label}
+              </Link>
+            ))}
+          </nav>
+          <SocialLinks links={siteConfig.social} className="-ml-3" />
+        </div>
       </div>
     </footer>
   );

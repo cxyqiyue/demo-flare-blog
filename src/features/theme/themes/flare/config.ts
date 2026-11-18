@@ -2,7 +2,8 @@ import type { ThemeConfig } from "@/features/theme/contract/config";
 
 export const config: ThemeConfig = {
   home: {
-    postsPerPage: 5,
+    postsPerPage: 6,
+    paginatePinned: true,
     popularPostsLimit: 5,
   },
   posts: {
