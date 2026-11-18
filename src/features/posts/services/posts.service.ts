@@ -357,6 +357,7 @@ export async function getPublicPostsPage(
 ): Promise<PublicPostsPageResponse> {
   const offset = data.offset ?? 0;
   const limit = Math.min(data.limit ?? 10, 50);
+  const paginatePinned = data.paginatePinned === "true";
   const isAdminViewer = context.viewer?.isAdmin === true;
   const allowedVisibilities = isAdminViewer
     ? ADMIN_LIST_VISIBILITIES
@@ -371,15 +372,17 @@ export async function getPublicPostsPage(
         offset,
         limit,
         isAdminViewer ? "admin" : "public",
+        paginatePinned,
       ),
     PublicPostsPageResponseSchema,
     async () => {
-      const { items, total, regularCount } = await PostRepo.getPublicPostsPage(
+      const { items, total, pageItemCount } = await PostRepo.getPublicPostsPage(
         context.db,
         {
           offset,
           limit,
           allowedVisibilities,
+          paginatePinned,
         },
       );
       return {
@@ -387,7 +390,7 @@ export async function getPublicPostsPage(
         total,
         offset,
         limit,
-        hasNextPage: offset + regularCount < total,
+        hasNextPage: offset + pageItemCount < total,
         hasPrevPage: offset > 0,
       };
     },

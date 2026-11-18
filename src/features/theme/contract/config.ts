@@ -8,6 +8,8 @@ export interface ThemeConfig {
   home: {
     /** 首页最近更新的文章数量（每页） */
     postsPerPage: number;
+    /** Count pinned posts toward each page's limit. */
+    paginatePinned?: boolean;
     /** 首页热门文章数量 */
     popularPostsLimit: number;
   };

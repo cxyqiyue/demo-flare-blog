@@ -163,6 +163,8 @@
   "tags_title": "标签",
   "tags_collapse": "收起",
   "tags_expand": "展开更多",
+  "flare_chips_more": "更多",
+  "flare_recent_moments": "最近动态",
   "profile_avatar_label": "返回首页",
   "footer_copyright": "© {year} {author}. All Rights Reserved.",
   "footer_powered_by": "Powered by",

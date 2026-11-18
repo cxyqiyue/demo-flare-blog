@@ -65,18 +65,21 @@ export const POSTS_KEYS = {
 };
 
 export function publicPostsPageQuery(
-  filters: { offset?: number; limit?: number } = {},
+  filters: { offset?: number; limit?: number; paginatePinned?: boolean } = {},
 ) {
   const offset = filters.offset ?? 0;
   const limit = filters.limit ?? 10;
+  const paginatePinned = filters.paginatePinned ? ("true" as const) : undefined;
   return queryOptions({
-    queryKey: [...POSTS_KEYS.publicPage, offset, limit],
+    queryKey: [...POSTS_KEYS.publicPage, offset, limit, paginatePinned],
     queryFn: async () => {
       if (isSSR) {
-        return await getPublicPostsPageFn({ data: { offset, limit } });
+        return await getPublicPostsPageFn({
+          data: { offset, limit, paginatePinned },
+        });
       }
       const res = await apiClient.posts.page.$get({
-        query: { offset: String(offset), limit: String(limit) },
+        query: { offset: String(offset), limit: String(limit), paginatePinned },
       });
       if (!res.ok) throw new Error("Failed to fetch posts page");
       return PublicPostsPageResponseSchema.parse(await res.json());

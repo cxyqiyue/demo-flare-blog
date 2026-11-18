@@ -122,6 +122,7 @@ export const FindRelatedPostsInputSchema = z.object({
 export const GetPublicPostsPageInputSchema = z.object({
   offset: z.number().int().min(0).optional(),
   limit: z.number().int().min(1).max(50).optional(),
+  paginatePinned: z.literal("true").optional(),
 });
 
 export const PublicPostsPageResponseSchema = z.object({
@@ -289,7 +290,9 @@ export const POSTS_CACHE_KEYS = {
     offset: number,
     limit: number,
     scope: "public" | "admin" = "public",
-  ) => [version, "posts", "page", scope, offset, limit] as const,
+    paginatePinned = false,
+  ) =>
+    [version, "posts", "page", scope, offset, limit, paginatePinned] as const,
   adjacent: (version: string, slug: string) =>
     [version, "post", slug, "adjacent"] as const,
 } as const;
