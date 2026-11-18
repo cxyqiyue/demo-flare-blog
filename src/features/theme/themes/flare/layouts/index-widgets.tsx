@@ -18,7 +18,10 @@ export function IndexWidgets() {
       className="flare-index-widgets"
       aria-label={`${m.categories_title()}、${m.tags_title()}`}
     >
-      <section className="flare-surface flare-index-card">
+      <section
+        className="flare-surface flare-index-card"
+        aria-label={m.categories_title()}
+      >
         <h2>
           <FolderOpen size={16} />
           {m.categories_title()}
@@ -49,7 +52,10 @@ export function IndexWidgets() {
           </span>
         )}
       </section>
-      <section className="flare-surface flare-index-card">
+      <section
+        className="flare-surface flare-index-card"
+        aria-label={m.tags_title()}
+      >
         <h2>
           <Hash size={16} />
           {m.tags_title()}

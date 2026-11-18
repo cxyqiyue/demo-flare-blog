@@ -1,10 +1,7 @@
 import { useLocation, useRouteContext } from "@tanstack/react-router";
-import { UserRound } from "lucide-react";
 import type { PublicLayoutProps } from "@/features/theme/contract/layouts";
 import { cn } from "@/lib/utils";
-import { m } from "@/paraglide/messages";
 import { BackToTop } from "../components/back-to-top";
-import { SocialLinks } from "../components/social-links";
 import { Footer } from "./footer";
 import { IndexWidgets, LatestMoments } from "./index-widgets";
 import { Navbar } from "./navbar";
@@ -25,47 +22,6 @@ function isFocusedPath(pathname: string) {
     pathname.startsWith("/reset-password") ||
     pathname.startsWith("/verify-email") ||
     pathname.startsWith("/unsubscribe")
-  );
-}
-
-/** The writer's identity is its own placement region. */
-function ProfileWidget() {
-  const { siteConfig } = useRouteContext({ from: "__root__" });
-
-  const avatar =
-    siteConfig.theme?.flare?.avatar || siteConfig.theme?.fuwari?.avatar || "";
-
-  return (
-    <aside className="flare-profile-widget" aria-label={m.profile_title()}>
-      <section className="flare-surface flex flex-col gap-4 p-6">
-        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-          {avatar ? (
-            <img
-              src={avatar}
-              alt={siteConfig.author || siteConfig.title}
-              className="h-24 w-24 shrink-0 rounded-full border-4 border-background bg-muted/30 object-cover shadow-sm"
-              width={96}
-              height={96}
-            />
-          ) : (
-            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-muted/40 text-muted-foreground">
-              <UserRound size={20} />
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="break-words text-xl font-bold text-foreground">
-              {siteConfig.author || siteConfig.title}
-            </p>
-            {siteConfig.tagline || siteConfig.description ? (
-              <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted-foreground">
-                {siteConfig.tagline || siteConfig.description}
-              </p>
-            ) : null}
-          </div>
-        </div>
-        <SocialLinks links={siteConfig.social} className="justify-center" />
-      </section>
-    </aside>
   );
 }
 
@@ -165,11 +121,9 @@ export function PublicLayout({
           {isHome ? (
             <div className="flare-home-after">
               <LatestMoments />
-              <ProfileWidget />
             </div>
           ) : showWidgets ? (
             <div className="flare-inner-after">
-              <ProfileWidget />
               <IndexWidgets />
             </div>
           ) : null}

@@ -19,6 +19,7 @@ import {
   buildPostWhereClause,
 } from "@/features/posts/data/helper";
 import type { PostListItem } from "@/features/posts/schema/posts.schema";
+import { firstPostImage } from "@/features/posts/utils/first-image";
 import type { PostStatus, PostVisibility, Tag } from "@/lib/db/schema";
 import {
   CategoriesTable,
@@ -84,32 +85,16 @@ export async function getPosts(
   }
 
   const posts = await db
-    .select({
-      id: PostsTable.id,
-      title: PostsTable.title,
-      summary: PostsTable.summary,
-      readTimeInMinutes: PostsTable.readTimeInMinutes,
-      slug: PostsTable.slug,
-      status: PostsTable.status,
-      visibility: PostsTable.visibility,
-      passwordChannel: PostsTable.passwordChannel,
-      passwordHint: PostsTable.passwordHint,
-      publishedAt: PostsTable.publishedAt,
-      pinnedAt: PostsTable.pinnedAt,
-      skillId: PostsTable.skillId,
-      authorId: PostsTable.authorId,
-      author: user.name,
-      createdAt: PostsTable.createdAt,
-      updatedAt: PostsTable.updatedAt,
-      publicContentRenderVersion: PostsTable.publicContentRenderVersion,
-    })
+    .select(POST_LIST_COLUMNS)
     .from(PostsTable)
     .leftJoin(user, eq(PostsTable.authorId, user.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .limit(Math.min(limit, 50))
     .offset(offset)
     .orderBy(orderByClause);
-  return posts;
+  const items = posts as Array<PostListItem>;
+  if (filters.publicOnly) return await addPublicCoverImages(db, items);
+  return items;
 }
 
 export async function getPostsCount(
@@ -227,25 +212,7 @@ export async function getPostsCursor(
   }
 
   let query = db
-    .select({
-      id: PostsTable.id,
-      title: PostsTable.title,
-      summary: PostsTable.summary,
-      readTimeInMinutes: PostsTable.readTimeInMinutes,
-      slug: PostsTable.slug,
-      status: PostsTable.status,
-      visibility: PostsTable.visibility,
-      passwordChannel: PostsTable.passwordChannel,
-      passwordHint: PostsTable.passwordHint,
-      publishedAt: PostsTable.publishedAt,
-      pinnedAt: PostsTable.pinnedAt,
-      skillId: PostsTable.skillId,
-      authorId: PostsTable.authorId,
-      author: user.name,
-      createdAt: PostsTable.createdAt,
-      updatedAt: PostsTable.updatedAt,
-      publicContentRenderVersion: PostsTable.publicContentRenderVersion,
-    })
+    .select(POST_LIST_COLUMNS)
     .from(PostsTable)
     .leftJoin(user, eq(PostsTable.authorId, user.id))
     .$dynamic();
@@ -263,7 +230,11 @@ export async function getPostsCursor(
 
   // Check if there's a next page
   const hasMore = itemsWithPotentialNext.length > limit;
-  const items = itemsWithPotentialNext.slice(0, limit) as Array<PostListItem>;
+  const listItems = itemsWithPotentialNext.slice(
+    0,
+    limit,
+  ) as Array<PostListItem>;
+  const items = listItems;
 
   // Fetch tags for all items
   if (items.length > 0) {
@@ -296,7 +267,10 @@ export async function getPostsCursor(
 
   const nextCursor = hasMore ? (items[items.length - 1]?.id ?? null) : null;
 
-  return { items, nextCursor };
+  return {
+    items: publicOnly ? await addPublicCoverImages(db, items) : items,
+    nextCursor,
+  };
 }
 
 export async function getPublishedPostsForSitemapBatch(
@@ -718,7 +692,7 @@ export async function getPublicPostsByIds(db: DB, ids: Array<number>) {
   return posts;
 }
 
-const PUBLIC_PAGE_COLUMNS = {
+const POST_LIST_COLUMNS = {
   id: PostsTable.id,
   title: PostsTable.title,
   summary: PostsTable.summary,
@@ -737,6 +711,43 @@ const PUBLIC_PAGE_COLUMNS = {
   updatedAt: PostsTable.updatedAt,
   publicContentRenderVersion: PostsTable.publicContentRenderVersion,
 } as const;
+
+async function addPublicCoverImages(
+  db: DB,
+  posts: Array<PostListItem>,
+): Promise<Array<PostListItem>> {
+  const ids = posts
+    .filter(
+      (post) => post.status === "published" && post.visibility === "public",
+    )
+    .map((post) => post.id);
+  if (ids.length === 0)
+    return posts.map((post) => ({ ...post, coverImage: null }));
+
+  const rows = await db
+    .select({
+      id: PostsTable.id,
+      content:
+        sql`coalesce(${PostsTable.publicContentJson}, ${PostsTable.contentJson})`.mapWith(
+          PostsTable.contentJson,
+        ),
+    })
+    .from(PostsTable)
+    .where(
+      and(
+        inArray(PostsTable.id, ids),
+        eq(PostsTable.status, "published"),
+        eq(PostsTable.visibility, "public"),
+      ),
+    );
+  const covers = new Map(
+    rows.map(({ id, content }) => [id, firstPostImage(content)]),
+  );
+  return posts.map((post) => ({
+    ...post,
+    coverImage: covers.get(post.id) ?? null,
+  }));
+}
 
 /**
  * Offset-based pagination for public posts (home page).
@@ -771,7 +782,7 @@ export async function getPublicPostsPage(
 
   const [pagePosts, totalRows] = await Promise.all([
     db
-      .select(PUBLIC_PAGE_COLUMNS)
+      .select(POST_LIST_COLUMNS)
       .from(PostsTable)
       .leftJoin(user, eq(PostsTable.authorId, user.id))
       .where(pageWhereClause)
@@ -787,13 +798,13 @@ export async function getPublicPostsPage(
 
   const total = totalRows[0]?.count ?? 0;
 
-  const items = [] as Array<PostListItem>;
+  let items = [] as Array<PostListItem>;
 
   // Pinned posts are prepended to the first page only; they are excluded from
   // the regular list above so they don't occupy a timestamp slot.
   if (!options.paginatePinned && offset === 0) {
     const pinnedPosts = await db
-      .select(PUBLIC_PAGE_COLUMNS)
+      .select(POST_LIST_COLUMNS)
       .from(PostsTable)
       .leftJoin(user, eq(PostsTable.authorId, user.id))
       .where(and(publicWhereClause, isNotNull(PostsTable.pinnedAt)))
@@ -830,6 +841,7 @@ export async function getPublicPostsPage(
     });
   }
 
+  items = await addPublicCoverImages(db, items);
   return { items, total, pageItemCount: pagePosts.length };
 }
 

@@ -17,7 +17,8 @@ export function CollapsibleChips({ children }: { children: ReactNode }) {
   const list = useRef<HTMLUListElement>(null);
   const more = useRef<HTMLButtonElement>(null);
   const [expanded, setExpanded] = useState(false);
-  const [visible, setVisible] = useState(1);
+  const [visible, setVisible] = useState(0);
+  const [measured, setMeasured] = useState(false);
 
   useLayoutEffect(() => {
     if (!row.current || !list.current || !more.current) return;
@@ -26,6 +27,8 @@ export function CollapsibleChips({ children }: { children: ReactNode }) {
     const button = more.current;
     const measure = () => {
       const gap = Number.parseFloat(getComputedStyle(chips).columnGap) || 0;
+      const itemGap =
+        Number.parseFloat(getComputedStyle(container).columnGap) || 0;
       // The inner span keeps its natural width even when its chip is clipped.
       const widths = Array.from(
         chips.children,
@@ -35,9 +38,11 @@ export function CollapsibleChips({ children }: { children: ReactNode }) {
       const all = widths.reduce((sum, value) => sum + value + gap, -gap);
       if (all <= width) {
         setVisible(widths.length);
+        setMeasured(true);
         return;
       }
-      const available = width - button.getBoundingClientRect().width - gap;
+      const available =
+        width - button.getBoundingClientRect().width - itemGap - gap;
       let used = 0;
       let count = 0;
       for (const chip of widths) {
@@ -46,6 +51,7 @@ export function CollapsibleChips({ children }: { children: ReactNode }) {
         count += 1;
       }
       setVisible(count);
+      setMeasured(true);
     };
     const observer = new ResizeObserver(measure);
     observer.observe(container);
@@ -61,7 +67,12 @@ export function CollapsibleChips({ children }: { children: ReactNode }) {
 
   return (
     <div ref={row} className="flare-chip-row" data-expanded={showAll}>
-      <ul ref={list} id={id} className="flare-chip-list">
+      <ul
+        ref={list}
+        id={id}
+        className="flare-chip-list"
+        data-measured={measured}
+      >
         {items.map((item, index) => (
           <li
             key={isValidElement(item) ? (item.key ?? index) : index}

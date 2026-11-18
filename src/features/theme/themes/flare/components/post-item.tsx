@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { PostItem as PostItemType } from "@/features/posts/schema/posts.schema";
 import { formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import { PostCover } from "./post-cover";
 
 interface PostItemProps {
   post: PostItemType;
@@ -22,11 +23,11 @@ export const PostItem = memo(
           params={{ slug: post.slug }}
           className="flex h-full flex-col"
         >
-          <div className="flare-tile-lead" aria-hidden="true">
-            {Array.from(post.title.trim()).find((character) =>
-              /[\p{L}\p{N}]/u.test(character),
-            ) ?? ""}
-          </div>
+          <PostCover
+            src={post.coverImage}
+            title={post.title}
+            className="flare-tile-lead"
+          />
           <div className="flex flex-1 flex-col gap-3 p-5">
             <div className="order-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">
               <time
