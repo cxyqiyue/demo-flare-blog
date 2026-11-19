@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { SystemConfig } from "@/features/config/config.schema";
+import type { TelegramChat } from "@/features/webhook/api/telegram";
 import { useWebhookConnection } from "@/features/webhook/hooks/use-webhook-connection";
 import type { NotificationWebhookEventType } from "@/features/webhook/webhook.schema";
 import { isFuwari } from "@/lib/theme-mode";
@@ -17,6 +18,9 @@ export function WebhookSettingsSection() {
   const [visibleSecrets, setVisibleSecrets] = useState<Record<number, boolean>>(
     {},
   );
+  const [telegramChats, setTelegramChats] = useState<
+    Record<string, TelegramChat[]>
+  >({});
   const {
     register,
     control,
@@ -25,7 +29,13 @@ export function WebhookSettingsSection() {
     getValues,
     formState: { errors },
   } = useFormContext<SystemConfig>();
-  const { testWebhook, isTesting, testingEndpointId } = useWebhookConnection();
+  const {
+    testWebhook,
+    isTesting,
+    testingEndpointId,
+    listTelegramChats,
+    isFindingChats,
+  } = useWebhookConnection();
   const { fields, append, remove } = useFieldArray({
     control,
     name: "notification.webhooks",
@@ -62,24 +72,20 @@ export function WebhookSettingsSection() {
     });
   };
 
-  const handleTypeChange = (endpointIndex: number, type: string) => {
-    const current = webhookFields[endpointIndex];
-
-    if (type === "wecom") {
-      setValue(`notification.webhooks.${endpointIndex}.secret`, "", {
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true,
-      });
-    } else if (type === "generic" && !current?.secret?.trim()) {
-      setValue(
-        `notification.webhooks.${endpointIndex}.secret`,
-        crypto.randomUUID(),
-        {
-          shouldDirty: true,
-          shouldTouch: true,
-          shouldValidate: true,
-        },
+  const handleFindTelegramChats = async (endpointIndex: number) => {
+    const token = getValues(`notification.webhooks.${endpointIndex}.botToken`);
+    if (!token?.trim()) return;
+    try {
+      const chats = await listTelegramChats({ data: { token } });
+      const endpointId = webhookFields[endpointIndex]?.id;
+      if (!endpointId) return;
+      setTelegramChats((current) => ({ ...current, [endpointId]: chats }));
+      if (chats.length === 0) toast.info(m.settings_webhook_chats_empty());
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : m.settings_webhook_toast_test_fail(),
       );
     }
   };
@@ -206,7 +212,21 @@ export function WebhookSettingsSection() {
                     onToggleSecretVisibility={() =>
                       toggleSecretVisibility(index)
                     }
-                    onTypeChange={(type) => handleTypeChange(index, type)}
+                    chats={telegramChats[endpoint.id] ?? []}
+                    hasSearchedChats={endpoint.id in telegramChats}
+                    isFindingChats={isFindingChats}
+                    onFindChats={() => handleFindTelegramChats(index)}
+                    onSelectChat={(chatId) =>
+                      setValue(
+                        `notification.webhooks.${index}.chatId`,
+                        chatId,
+                        {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true,
+                        },
+                      )
+                    }
                     onToggleEvent={(eventType, checked) =>
                       toggleEvent(index, eventType, checked)
                     }
@@ -225,7 +245,7 @@ export function WebhookSettingsSection() {
       <WebhookDocPanel />
 
       <div className="border border-border/30 bg-background/50 overflow-hidden divide-y divide-border/20">
-        <div className="p-8 space-y-8">
+        <div className="space-y-6 p-4 sm:p-6 md:space-y-8 md:p-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-4">
               <div className="p-2 bg-muted/40 rounded-sm">
@@ -317,7 +337,21 @@ export function WebhookSettingsSection() {
                     onToggleSecretVisibility={() =>
                       toggleSecretVisibility(index)
                     }
-                    onTypeChange={(type) => handleTypeChange(index, type)}
+                    chats={telegramChats[endpoint.id] ?? []}
+                    hasSearchedChats={endpoint.id in telegramChats}
+                    isFindingChats={isFindingChats}
+                    onFindChats={() => handleFindTelegramChats(index)}
+                    onSelectChat={(chatId) =>
+                      setValue(
+                        `notification.webhooks.${index}.chatId`,
+                        chatId,
+                        {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true,
+                        },
+                      )
+                    }
                     onToggleEvent={(eventType, checked) =>
                       toggleEvent(index, eventType, checked)
                     }

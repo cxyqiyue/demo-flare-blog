@@ -105,6 +105,9 @@ export const testCloudflareAlertWebhookFn = createServerFn({
             type: endpoint.type ?? "generic",
             url: endpoint.url,
             secret: endpoint.secret,
+            botToken: endpoint.botToken,
+            chatId: endpoint.chatId,
+            template: endpoint.template,
             event: createNotificationExampleEvent(resolvedEventType, (k) =>
               getWebhookExampleLabel(k, { locale }),
             ),

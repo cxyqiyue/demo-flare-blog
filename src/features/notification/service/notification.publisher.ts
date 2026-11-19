@@ -67,8 +67,11 @@ async function enqueueWebhookNotification(
         data: {
           endpointId: endpoint.id,
           type: endpoint.type ?? "generic",
-          url: endpoint.url,
+          url: endpoint.type === "telegram" ? "" : endpoint.url.trim(),
           secret: endpoint.secret,
+          botToken: endpoint.botToken,
+          chatId: endpoint.chatId,
+          template: endpoint.template,
           event,
         },
       }),

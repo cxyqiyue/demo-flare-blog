@@ -25,8 +25,11 @@ export const webhookMessageSchema = z.object({
   data: z.object({
     endpointId: z.string(),
     type: webhookTypeSchema.default("generic"),
-    url: z.url(),
+    url: z.union([z.url(), z.literal("")]),
     secret: z.string().optional(),
+    botToken: z.string().optional(),
+    chatId: z.string().optional(),
+    template: z.string().optional(),
     event: notificationEventSchema,
   }),
 });

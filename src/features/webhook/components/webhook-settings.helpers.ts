@@ -23,6 +23,9 @@ export function createWebhookEndpoint(): {
   url: string;
   enabled: boolean;
   secret: string;
+  botToken: string;
+  chatId: string;
+  template: string;
   events: Array<NotificationWebhookEventType>;
 } {
   return {
@@ -32,6 +35,9 @@ export function createWebhookEndpoint(): {
     url: "",
     enabled: true,
     secret: crypto.randomUUID(),
+    botToken: "",
+    chatId: "",
+    template: "",
     events: [
       ...NOTIFICATION_WEBHOOK_EVENTS,
     ] satisfies Array<NotificationWebhookEventType>,
