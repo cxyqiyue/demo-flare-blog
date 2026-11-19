@@ -192,10 +192,21 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
       await step.do("notify subscribers", async () => {
         const p = await fetchPost(this.env, postId);
         if (!p || p.status !== "published") return;
+        const contentHash = await calculatePostHash({
+          title: p.title,
+          contentJson: p.contentJson,
+          summary: p.summary,
+          tagIds: p.tags.map((t) => t.id),
+          categoryId: p.categoryId,
+          slug: p.slug,
+          publishedAt: p.publishedAt,
+          pinnedAt: p.pinnedAt,
+          readTimeInMinutes: p.readTimeInMinutes,
+        });
 
         await SubscriptionService.notifySubscribersOfNewPost(
           { db: getDb(this.env), env: this.env },
-          { id: p.id, title: p.title, slug: p.slug },
+          { id: p.id, title: p.title, slug: p.slug, contentHash },
         );
       });
     }

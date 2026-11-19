@@ -2,6 +2,7 @@ import { ClientOnly } from "@tanstack/react-router";
 import type { JSONContent } from "@tiptap/react";
 import { Heart, Loader2, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
+import { ZoomableContentImage } from "@/components/content/zoomable-content-image";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { collectImageUrls } from "@/features/moments/components/moment-editor-config";
@@ -34,10 +35,9 @@ interface MomentCardProps {
 
 function MomentImage({ src }: { src: string }) {
   return (
-    <img
+    <ZoomableContentImage
       src={src}
       alt=""
-      loading="lazy"
       className="w-full h-full object-cover rounded-sm border border-border/40"
     />
   );
@@ -98,10 +98,15 @@ export function MomentCard({
     }
   };
 
-  const renderedContent = renderCommentReact(moment.content);
+  const renderedContent = renderCommentReact(moment.content, {
+    zoomableImages: true,
+  });
 
   return (
-    <article className="group border border-border/20 bg-background/50 transition-colors hover:border-border/40">
+    <article
+      id={`moment-${moment.id}`}
+      className="group scroll-mt-24 border border-border/20 bg-background/50 transition-colors hover:border-border/40"
+    >
       {/* Header */}
       <header className="flex items-center justify-between gap-4 px-6 pt-6">
         <div className="flex items-center gap-3">

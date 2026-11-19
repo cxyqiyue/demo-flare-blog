@@ -8,9 +8,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_CONFIG } from "@/features/config/config.schema";
 import * as ConfigRepo from "@/features/config/data/config.data";
 import * as SubscriptionService from "@/features/subscription/service/subscription.service";
-import { BlogSubscriptionsTable } from "@/lib/db/schema";
+import {
+  BlogSubscriptionsTable,
+  MomentsTable,
+  PostNotificationsTable,
+} from "@/lib/db/schema";
 
 const POST = { id: 101, title: "Hello World", slug: "hello-world" };
+const MOMENT = {
+  id: 201,
+  content: {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: "Hello from a moment" }],
+      },
+    ],
+  },
+  images: [],
+  videoUrl: null,
+};
 
 function getEnqueuedRecipients(
   context: ReturnType<typeof createAdminTestContext>,
@@ -64,6 +82,10 @@ describe("SubscriptionService", () => {
     } as typeof DEFAULT_CONFIG);
   }
 
+  async function seedMoment() {
+    await context.db.insert(MomentsTable).values(MOMENT).run();
+  }
+
   beforeEach(async () => {
     context = createAdminTestContext();
     await seedUser(context.db, context.session.user);
@@ -98,6 +120,20 @@ describe("SubscriptionService", () => {
 
       expect(second.data).toEqual({ recipients: 0, skipped: true });
       expect(getEnqueuedRecipients(context)).toHaveLength(1);
+    });
+
+    it("does not resend posts already notified before content hashes existed", async () => {
+      await context.db
+        .insert(PostNotificationsTable)
+        .values({ postId: POST.id });
+
+      const result = await SubscriptionService.notifySubscribersOfNewPost(
+        context,
+        POST,
+      );
+
+      expect(result.data).toEqual({ recipients: 0, skipped: true });
+      expect(getEnqueuedRecipients(context)).toHaveLength(0);
     });
 
     it("all-user mode overrides individual preferences but still excludes banned and placeholder emails", async () => {
@@ -146,6 +182,65 @@ describe("SubscriptionService", () => {
       expect(firstCall.data.html).toContain(
         'href="https://example.com/post/hello-world"',
       );
+    });
+  });
+
+  describe("notifySubscribersOfUpdatedMoment", () => {
+    it("notifies subscribers with the moment link and preview, deduping unchanged content", async () => {
+      await seedMoment();
+      const result = await SubscriptionService.notifySubscribersOfUpdatedMoment(
+        context,
+        MOMENT,
+      );
+
+      expect(result.error).toBeNull();
+      expect(result.data).toEqual({ recipients: 1, skipped: false });
+      expect(getEnqueuedRecipients(context)).toEqual(["u1@example.org"]);
+
+      const firstCall = vi.mocked(context.env.QUEUE.send).mock.calls[0][0] as {
+        data: { subject: string; html: string };
+      };
+      expect(firstCall.data.subject).toMatch(/Moment update|动态更新/);
+      expect(firstCall.data.html).toContain(
+        "https://example.com/moments?momentId=201#moment-201",
+      );
+      expect(firstCall.data.html).toContain("Hello from a moment");
+
+      const duplicate =
+        await SubscriptionService.notifySubscribersOfUpdatedMoment(
+          context,
+          MOMENT,
+        );
+      expect(duplicate.data).toEqual({ recipients: 0, skipped: true });
+      expect(getEnqueuedRecipients(context)).toHaveLength(1);
+    });
+
+    it("sends another notification when the moment content changes", async () => {
+      await seedMoment();
+      await SubscriptionService.notifySubscribersOfUpdatedMoment(
+        context,
+        MOMENT,
+      );
+      const editedMoment = {
+        ...MOMENT,
+        content: {
+          ...MOMENT.content,
+          content: [
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Edited moment" }],
+            },
+          ],
+        },
+      };
+
+      const result = await SubscriptionService.notifySubscribersOfUpdatedMoment(
+        context,
+        editedMoment,
+      );
+
+      expect(result.data).toEqual({ recipients: 1, skipped: false });
+      expect(getEnqueuedRecipients(context)).toHaveLength(2);
     });
   });
 

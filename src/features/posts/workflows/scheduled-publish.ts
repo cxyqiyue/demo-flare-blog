@@ -1,6 +1,7 @@
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import { toUTCMidnight } from "@/features/posts/utils/date";
+import { calculatePostHash } from "@/features/posts/utils/sync";
 import {
   fetchPost,
   invalidatePostCaches,
@@ -42,9 +43,20 @@ export class ScheduledPublishWorkflow extends WorkflowEntrypoint<Env, Params> {
 
     await step.do("notify subscribers", async () => {
       if (post.visibility !== "public") return;
+      const contentHash = await calculatePostHash({
+        title: post.title,
+        contentJson: post.contentJson,
+        summary: post.summary,
+        tagIds: post.tags.map((tag) => tag.id),
+        categoryId: post.categoryId,
+        slug: post.slug,
+        publishedAt: post.publishedAt,
+        pinnedAt: post.pinnedAt,
+        readTimeInMinutes: post.readTimeInMinutes,
+      });
       await SubscriptionService.notifySubscribersOfNewPost(
         { db: getDb(this.env), env: this.env },
-        { id: post.id, title: post.title, slug: post.slug },
+        { id: post.id, title: post.title, slug: post.slug, contentHash },
       );
     });
   }

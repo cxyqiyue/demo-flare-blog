@@ -1,6 +1,7 @@
 import type { JSONContent } from "@tiptap/react";
 import * as CacheService from "@/features/cache/cache.service";
 import * as EdgeCacheService from "@/features/cache/edge-cache.service";
+import * as SubscriptionService from "@/features/subscription/service/subscription.service";
 import { isSuperAdmin } from "@/lib/auth/access";
 import { err, ok, type Result } from "@/lib/errors";
 import { purgeCDNCache } from "@/lib/invalidate";
@@ -161,6 +162,7 @@ export async function createMoment(
   });
 
   await invalidateCache(context);
+  scheduleMomentNotification(context, moment);
 
   return ok(moment);
 }
@@ -190,8 +192,34 @@ export async function updateMoment(
   });
 
   await invalidateCache(context);
+  if (updated) scheduleMomentNotification(context, updated);
 
   return ok(updated);
+}
+
+function scheduleMomentNotification(
+  context: DbContext & { executionCtx: ExecutionContext },
+  moment: {
+    id: number;
+    content: JSONContent | null;
+    images: string[];
+    videoUrl: string | null;
+  },
+) {
+  context.executionCtx.waitUntil(
+    SubscriptionService.notifySubscribersOfUpdatedMoment(
+      { db: context.db, env: context.env },
+      moment,
+    ).catch((error: unknown) => {
+      console.error(
+        JSON.stringify({
+          event: "moment_subscription_notify_failed",
+          momentId: moment.id,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }),
+  );
 }
 
 export async function deleteMoment(
