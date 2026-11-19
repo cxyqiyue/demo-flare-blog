@@ -71,19 +71,22 @@ export function NavigationPage({
             e.preventDefault();
             state.submitSearch();
           }}
-          className="flex gap-2.5"
+          role="search"
+          className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-stretch gap-2 sm:gap-3"
         >
           <input
             ref={searchInputRef}
             type="text"
+            enterKeyHint="search"
             value={state.query}
             onChange={(e) => state.setQuery(e.target.value)}
             placeholder={m.navigation_search_placeholder()}
-            className="flex-1 min-w-0 h-12 px-4 rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-input-bg) focus:outline-none focus:border-(--fuwari-primary)/50 focus:ring-1 focus:ring-(--fuwari-primary)/20 transition-all fuwari-text-90 text-sm placeholder:text-(--fuwari-text-30)"
+            aria-label={m.navigation_search_placeholder()}
+            className="block h-12 min-h-12 w-full min-w-0 px-4 rounded-xl border border-(--fuwari-input-border) bg-(--fuwari-input-bg) focus:outline-none focus:border-(--fuwari-primary)/50 focus:ring-1 focus:ring-(--fuwari-primary)/20 transition-all fuwari-text-90 text-base md:text-sm placeholder:text-(--fuwari-text-50)"
           />
           <button
             type="submit"
-            className="fuwari-btn-primary shrink-0 h-12 px-7 text-sm font-bold rounded-xl gap-2 active:scale-95 transition-all"
+            className="fuwari-btn-primary h-12 min-h-12 whitespace-nowrap px-4 sm:px-7 text-sm font-bold rounded-xl gap-2 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--fuwari-primary) focus-visible:ring-offset-2"
           >
             <Search className="w-4 h-4" />
             {m.navigation_search_btn()}
