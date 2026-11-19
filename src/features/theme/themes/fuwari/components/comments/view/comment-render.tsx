@@ -32,12 +32,14 @@ export function renderCommentReact(
             (attrs.alt && attrs.alt !== "null" ? attrs.alt : null) ||
             "comment image";
 
-          const className = "max-w-full h-auto rounded-xl my-2";
+          const className =
+            "mx-auto my-2 block h-auto max-h-[32rem] max-w-full rounded-xl";
           return options.zoomableImages ? (
             <ZoomableContentImage
               src={attrs.src}
               alt={alt}
               className={className}
+              containerClassName="mx-auto w-fit"
             />
           ) : (
             <img

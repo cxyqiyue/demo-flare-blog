@@ -2329,6 +2329,7 @@
   "moments_video_invalid_url": "请输入有效的视频链接。",
   "moments_video_unavailable": "视频暂时无法播放。",
   "moments_video_open_original": "打开原视频",
+  "moments_video_open_page": "打开视频页面",
   "moments_video_play": "播放视频",
   "moments_video_aria_label": "动态视频",
   "moments_comment_aria_label": "动态摘要",

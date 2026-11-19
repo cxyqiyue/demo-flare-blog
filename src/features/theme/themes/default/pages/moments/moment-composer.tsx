@@ -1,6 +1,8 @@
 import type { JSONContent } from "@tiptap/react";
 import { lazy, Suspense, useState } from "react";
 import { collectImageUrls } from "@/features/moments/components/moment-editor-config";
+import { MomentVideoField } from "@/features/moments/components/moment-video-field";
+import { MomentVideoUrlSchema } from "@/features/moments/moments.schema";
 import { m } from "@/paraglide/messages";
 
 // TipTap 编辑器体积大，且仅在管理员展开发布框时挂载，按需加载
@@ -11,22 +13,33 @@ const MomentEditor = lazy(() =>
 );
 
 interface MomentComposerProps {
-  onCreate: (content: JSONContent, images: string[]) => Promise<boolean>;
+  onCreate: (
+    content: JSONContent,
+    images: string[],
+    videoUrl?: string | null,
+  ) => Promise<boolean>;
 }
 
 export function MomentComposer({ onCreate }: MomentComposerProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoError, setVideoError] = useState(false);
 
   const handleSubmit = async (content: JSONContent): Promise<boolean> => {
     if (isSubmitting) return false;
+    const parsed = MomentVideoUrlSchema.safeParse(videoUrl.trim() || null);
+    setVideoError(!parsed.success);
+    if (!parsed.success) return false;
     const images = collectImageUrls(content);
-    if (content.content?.length === 0 && images.length === 0) {
+    if (content.content?.length === 0 && images.length === 0 && !parsed.data) {
       return false;
     }
 
     setIsSubmitting(true);
     try {
-      return await onCreate(content, images);
+      const ok = await onCreate(content, images, parsed.data);
+      if (ok) setVideoUrl("");
+      return ok;
     } finally {
       setIsSubmitting(false);
     }
@@ -42,8 +55,20 @@ export function MomentComposer({ onCreate }: MomentComposerProps) {
       </div>
 
       <Suspense fallback={null}>
-        <MomentEditor onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+        <MomentEditor
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          allowEmpty={Boolean(videoUrl.trim())}
+        />
       </Suspense>
+      <MomentVideoField
+        value={videoUrl}
+        onChange={(value) => {
+          setVideoUrl(value);
+          setVideoError(false);
+        }}
+        error={videoError}
+      />
     </div>
   );
 }

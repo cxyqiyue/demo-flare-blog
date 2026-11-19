@@ -1,6 +1,7 @@
 import type { JSONContent } from "@tiptap/react";
 import { lazy, Suspense, useState } from "react";
 import { collectImageUrls } from "@/features/moments/components/moment-editor-config";
+import { MomentVideoField } from "@/features/moments/components/moment-video-field";
 import { MomentVideoUrlSchema } from "@/features/moments/moments.schema";
 import { m } from "@/paraglide/messages";
 
@@ -60,23 +61,14 @@ export function MomentComposer({ onCreate }: MomentComposerProps) {
           allowEmpty={Boolean(videoUrl.trim())}
         />
       </Suspense>
-      <label className="flex flex-col gap-2 text-sm">
-        <span>{m.moments_video_input_label()}</span>
-        <input
-          type="url"
-          value={videoUrl}
-          onChange={(event) => setVideoUrl(event.target.value)}
-          placeholder={m.moments_video_input_placeholder()}
-          className="w-full rounded-xl border border-border bg-background px-3 py-2"
-          aria-invalid={videoError}
-          aria-label={m.moments_video_input_label()}
-        />
-      </label>
-      {videoError ? (
-        <p role="alert" className="text-sm text-destructive">
-          {m.moments_video_invalid_url()}
-        </p>
-      ) : null}
+      <MomentVideoField
+        value={videoUrl}
+        onChange={(value) => {
+          setVideoUrl(value);
+          setVideoError(false);
+        }}
+        error={videoError}
+      />
     </div>
   );
 }

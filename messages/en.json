@@ -2337,6 +2337,7 @@
   "moments_video_invalid_url": "Please enter a valid video URL.",
   "moments_video_unavailable": "This video is temporarily unavailable.",
   "moments_video_open_original": "Open original video",
+  "moments_video_open_page": "Open video page",
   "moments_video_play": "Play video",
   "moments_video_aria_label": "Moment video",
   "moments_comment_aria_label": "Moments summary",

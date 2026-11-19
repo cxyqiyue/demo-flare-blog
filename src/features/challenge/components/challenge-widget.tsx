@@ -15,12 +15,9 @@ export function ChallengeWidget({
 
   if (!c.active) return null;
 
-  // 验证通过后整个卡片隐藏，界面恢复为未开启人机验证时的样子
-  if (c.verified) return null;
-
   if (mode === "turnstile") {
     return (
-      <div className="flex justify-center">
+      <div className={c.verified ? "hidden" : "flex justify-center"}>
         <div className="w-full max-w-sm rounded-md border border-border/30 bg-background/80 px-5 py-4 shadow-sm">
           <div className="flex items-center gap-3">
             <span
@@ -41,13 +38,15 @@ export function ChallengeWidget({
               </p>
             </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-3 flex justify-center">
             <TurnstileInner turnstileProps={turnstileProps} />
           </div>
         </div>
       </div>
     );
   }
+
+  if (c.verified) return null;
 
   return (
     <div className="flex justify-center">

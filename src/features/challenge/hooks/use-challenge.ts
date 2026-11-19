@@ -145,7 +145,7 @@ export function useChallenge({ action, config }: UseChallengeOptions) {
 
   const handleTurnstileExpire = useCallback(() => {
     baseTurnstile.reset();
-  }, [baseTurnstile]);
+  }, [baseTurnstile.reset]);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();

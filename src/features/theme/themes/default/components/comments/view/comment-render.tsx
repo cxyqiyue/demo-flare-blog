@@ -33,12 +33,13 @@ export function renderCommentReact(
             "comment image";
 
           const className =
-            "max-w-full h-auto rounded-sm my-2 border border-border/40";
+            "mx-auto my-2 block h-auto max-h-[32rem] max-w-full rounded-sm border border-border/40";
           return options.zoomableImages ? (
             <ZoomableContentImage
               src={attrs.src}
               alt={alt}
               className={className}
+              containerClassName="mx-auto w-fit"
             />
           ) : (
             <img

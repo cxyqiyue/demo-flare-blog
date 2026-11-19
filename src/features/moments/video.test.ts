@@ -38,6 +38,27 @@ describe("moment video addresses", () => {
       resolveMomentVideo("https://cdn.example.com/movie.mp4?token=abc")?.kind,
     ).toBe("direct");
   });
+  it("resolves Fireshare pages to their poster and MP4 stream", () => {
+    const pageUrl =
+      "https://video.dukda.com/w/23906f7594f93a67460c24c466e1605d";
+    expect(
+      CreateMomentInputSchema.parse({ content: null, videoUrl: pageUrl })
+        .videoUrl,
+    ).toBe(pageUrl);
+    const video = resolveMomentVideo(pageUrl);
+    expect(video).toEqual({
+      kind: "hosted",
+      src: "https://video.dukda.com/_content/derived/23906f7594f93a67460c24c466e1605d/23906f7594f93a67460c24c466e1605d-720p.mp4",
+      pageUrl: "https://video.dukda.com/w/23906f7594f93a67460c24c466e1605d",
+      poster:
+        "https://video.dukda.com/_content/derived/23906f7594f93a67460c24c466e1605d/poster.jpg",
+    });
+  });
+  it("does not accept unrelated video.dukda.com paths", () => {
+    expect(
+      resolveMomentVideo("https://video.dukda.com/watch/not-a-video-id"),
+    ).toBeNull();
+  });
   it("rejects executable schemes, spoofed hosts and arbitrary pages", () => {
     for (const url of [
       "javascript:alert(1)",
