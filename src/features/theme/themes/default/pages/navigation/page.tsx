@@ -67,19 +67,22 @@ export function NavigationPage({
             e.preventDefault();
             state.submitSearch();
           }}
-          className="flex gap-2"
+          role="search"
+          className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-stretch gap-2 sm:gap-3"
         >
           <input
             ref={searchInputRef}
             type="text"
+            enterKeyHint="search"
             value={state.query}
             onChange={(e) => state.setQuery(e.target.value)}
             placeholder={m.navigation_search_placeholder()}
-            className="flex-1 min-w-0 h-11 bg-transparent border border-border/50 px-4 text-sm text-foreground placeholder:text-muted-foreground/30 focus:border-foreground/60 focus:outline-none transition-colors"
+            aria-label={m.navigation_search_placeholder()}
+            className="block h-12 min-h-12 w-full min-w-0 bg-transparent border border-border/50 px-4 text-base md:text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-foreground/60 focus:outline-none transition-colors"
           />
           <button
             type="submit"
-            className="h-11 px-6 bg-foreground text-background text-sm font-mono hover:bg-foreground/90 transition-colors whitespace-nowrap shrink-0"
+            className="inline-flex h-12 min-h-12 items-center justify-center px-4 sm:px-6 bg-foreground text-background text-sm font-mono hover:bg-foreground/90 transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {m.navigation_search_btn()}
           </button>
