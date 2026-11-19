@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CHALLENGE_KEYS } from "@/features/challenge/queries";
 import {
   updateSystemConfigFn,
   updateSystemConfigSectionFn,
@@ -21,6 +22,7 @@ export function useSystemSetting() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: CONFIG_KEYS.system }),
         queryClient.invalidateQueries({ queryKey: CONFIG_KEYS.site }),
+        queryClient.removeQueries({ queryKey: CHALLENGE_KEYS.fullSiteLocked }),
         invalidateMediaProviders(),
       ]);
     },
@@ -32,6 +34,7 @@ export function useSystemSetting() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: CONFIG_KEYS.system }),
         queryClient.invalidateQueries({ queryKey: CONFIG_KEYS.site }),
+        queryClient.removeQueries({ queryKey: CHALLENGE_KEYS.fullSiteLocked }),
         invalidateMediaProviders(),
       ]);
     },

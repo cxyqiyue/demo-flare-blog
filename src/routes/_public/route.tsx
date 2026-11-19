@@ -1,11 +1,16 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  createFileRoute,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "@tanstack/react-router";
 import theme from "@theme";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { AUTH_KEYS } from "@/features/auth/queries";
-import { getFullSiteLockedFn } from "@/features/challenge/api/fullsite.api";
 import { FullSiteGateOverlay } from "@/features/challenge/components/full-site-gate-overlay";
+import { fullSiteLockedQuery } from "@/features/challenge/queries";
 import { getThemePreloadImages } from "@/features/theme/site-config.helpers";
 import { authClient } from "@/lib/auth/auth.client";
 import { getLogoutAuthErrorMessage } from "@/lib/auth/auth-errors";
@@ -13,10 +18,18 @@ import { CACHE_CONTROL } from "@/lib/constants";
 import { m } from "@/paraglide/messages";
 
 export const Route = createFileRoute("/_public")({
-  beforeLoad: async ({ location }) => {
+  beforeLoad: async ({ context, location }) => {
     // 全站人机验证：服务端判定是否锁定（读通行证 cookie + 配置）。
     // /unsubscribe 为豁免页，始终不叠加遮罩。
-    const locked = await getFullSiteLockedFn();
+    if (location.pathname === "/unsubscribe") {
+      return { fullSiteLocked: false };
+    }
+    const locked = await context.queryClient.ensureQueryData({
+      ...fullSiteLockedQuery,
+      // Revalidate expired data in the background. Existing state is enough to
+      // render this transition without making every navigation wait on D1.
+      revalidateIfStale: true,
+    });
     return { fullSiteLocked: locked && location.pathname !== "/unsubscribe" };
   },
   loader: ({ context }) => ({
@@ -38,11 +51,18 @@ export const Route = createFileRoute("/_public")({
 
 function PublicLayout() {
   const navigate = useNavigate();
+  const pathname = useLocation({ select: (location) => location.pathname });
   const { data: session, isPending: isSessionPending } =
     authClient.useSession();
   const queryClient = useQueryClient();
   const loaderData = Route.useLoaderData();
-  const fullSiteLocked = loaderData?.fullSiteLocked ?? false;
+  const { data: lockedStatus } = useQuery({
+    ...fullSiteLockedQuery,
+    enabled: pathname !== "/unsubscribe",
+  });
+  const fullSiteLocked =
+    pathname !== "/unsubscribe" &&
+    (lockedStatus ?? loaderData?.fullSiteLocked ?? false);
 
   const navOptions = [
     { label: m.nav_navigation(), to: "/navigation" as const, id: "navigation" },
