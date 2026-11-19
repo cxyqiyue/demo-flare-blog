@@ -14,13 +14,13 @@ import { ZoomableContentImage } from "@/components/content/zoomable-content-imag
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { collectImageUrls } from "@/features/moments/components/moment-editor-config";
+import { MomentVideo } from "@/features/moments/components/moment-video";
 import type { MomentWithStats } from "@/features/moments/moments.schema";
 import { MomentVideoUrlSchema } from "@/features/moments/moments.schema";
 import { cn, formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { renderCommentReact } from "../../components/comments/view/comment-render";
 import { CommentSection } from "../../components/comments/view/comment-section";
-import { MomentVideo } from "./moment-video";
 
 // TipTap 编辑器体积大，且仅在管理员编辑动态时挂载，按需加载
 const MomentEditor = lazy(() =>
@@ -49,6 +49,7 @@ function MomentImage({ src, single }: { src: string; single: boolean }) {
     <ZoomableContentImage
       src={src}
       alt=""
+      containerClassName={single ? "mx-auto w-fit" : "w-full"}
       className={cn(
         "w-full rounded-sm border border-border/40",
         single ? "h-auto max-h-[32rem] object-contain" : "h-full object-cover",
@@ -251,7 +252,7 @@ export function MomentCard({
           className={cn(
             "px-5 md:px-6 pt-4 grid gap-2",
             moment.images.length === 1
-              ? "grid-cols-1"
+              ? "grid-cols-1 justify-items-center"
               : moment.images.length === 2
                 ? "grid-cols-1 sm:grid-cols-2"
                 : "grid-cols-2 md:grid-cols-3",

@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import type {
   AuthLayoutProps,
   NavOption,
@@ -25,11 +24,6 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         <section className="flare-surface min-w-0 p-4 sm:p-6 md:p-8">
           {children}
         </section>
-        <div className="text-center">
-          <Link to="/" className="flare-chip min-h-11">
-            {m.auth_layout_back_home()}
-          </Link>
-        </div>
       </div>
     </PublicLayout>
   );

@@ -2,11 +2,15 @@ import { ClientOnly } from "@tanstack/react-router";
 import type { JSONContent } from "@tiptap/react";
 import { Heart, Loader2, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
+import { toast } from "sonner";
 import { ZoomableContentImage } from "@/components/content/zoomable-content-image";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { collectImageUrls } from "@/features/moments/components/moment-editor-config";
+import { MomentVideo } from "@/features/moments/components/moment-video";
+import { MomentVideoField } from "@/features/moments/components/moment-video-field";
 import type { MomentWithStats } from "@/features/moments/moments.schema";
+import { MomentVideoUrlSchema } from "@/features/moments/moments.schema";
 import { cn, formatDate } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import { renderCommentReact } from "../../components/comments/view/comment-render";
@@ -30,15 +34,22 @@ interface MomentCardProps {
     id: number,
     content: JSONContent,
     images: string[],
+    videoUrl?: string | null,
   ) => Promise<boolean>;
 }
 
-function MomentImage({ src }: { src: string }) {
+function MomentImage({ src, single }: { src: string; single: boolean }) {
   return (
     <ZoomableContentImage
       src={src}
       alt=""
-      className="w-full h-full object-cover rounded-sm border border-border/40"
+      containerClassName={single ? "mx-auto w-fit" : "w-full"}
+      className={cn(
+        "block rounded-sm border border-border/40",
+        single
+          ? "mx-auto h-auto max-h-[32rem] w-auto max-w-full object-contain"
+          : "h-full w-full object-cover",
+      )}
     />
   );
 }
@@ -58,6 +69,7 @@ export function MomentCard({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editing, setEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [videoUrl, setVideoUrl] = useState(moment.videoUrl ?? "");
 
   // 超管可管理所有动态；普通管理员仅可管理自己发布的动态
   const canManage =
@@ -87,10 +99,15 @@ export function MomentCard({
 
   const handleEditSubmit = async (content: JSONContent): Promise<boolean> => {
     if (isSubmitting) return false;
+    const parsed = MomentVideoUrlSchema.safeParse(videoUrl.trim() || null);
+    if (!parsed.success) {
+      toast.error(m.moments_video_invalid_url());
+      return false;
+    }
     const images = collectImageUrls(content);
     setIsSubmitting(true);
     try {
-      const ok = await onUpdate(moment.id, content, images);
+      const ok = await onUpdate(moment.id, content, images, parsed.data);
       if (ok) setEditing(false);
       return ok;
     } finally {
@@ -141,7 +158,10 @@ export function MomentCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setEditing(true)}
+                onClick={() => {
+                  setVideoUrl(moment.videoUrl ?? "");
+                  setEditing(true);
+                }}
                 className="h-auto p-1 text-muted-foreground/40 hover:text-foreground bg-transparent hover:bg-transparent"
               >
                 <Pencil size={14} />
@@ -167,9 +187,11 @@ export function MomentCard({
               onSubmit={handleEditSubmit}
               isSubmitting={isSubmitting}
               initialContent={moment.content}
+              allowEmpty={Boolean(videoUrl.trim())}
               onCancel={() => setEditing(false)}
             />
           </Suspense>
+          <MomentVideoField value={videoUrl} onChange={setVideoUrl} />
         </div>
       ) : (
         <div className="px-6 pt-4">
@@ -177,11 +199,11 @@ export function MomentCard({
             <div className="default-md text-sm leading-relaxed text-foreground/90 font-light">
               {renderedContent}
             </div>
-          ) : (
+          ) : !moment.videoUrl ? (
             <p className="text-sm text-muted-foreground/50 font-light italic">
               {m.moments_empty_content()}
             </p>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -198,12 +220,24 @@ export function MomentCard({
           )}
         >
           {moment.images.map((src, i) => (
-            <div key={i} className="min-h-0">
-              <MomentImage src={src} />
+            <div
+              key={i}
+              className={cn(
+                "min-h-0",
+                moment.images.length === 1 && "flex justify-center",
+              )}
+            >
+              <MomentImage src={src} single={moment.images.length === 1} />
             </div>
           ))}
         </div>
       )}
+
+      {moment.videoUrl && !editing ? (
+        <div className="px-6 pt-4">
+          <MomentVideo key={moment.videoUrl} url={moment.videoUrl} />
+        </div>
+      ) : null}
 
       {/* Actions */}
       {!editing && (

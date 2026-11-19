@@ -60,6 +60,8 @@ export function Turnstile({
 }: TurnstileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const internalWidgetIdRef = useRef<string | null>(null);
+  const callbacksRef = useRef({ onVerify, onError, onExpire });
+  callbacksRef.current = { onVerify, onError, onExpire };
 
   const siteKey =
     siteKeyProp !== undefined
@@ -77,9 +79,9 @@ export function Turnstile({
 
         const id = window.turnstile.render(containerRef.current, {
           sitekey: siteKey,
-          callback: onVerify,
-          "error-callback": onError,
-          "expired-callback": onExpire,
+          callback: (token: string) => callbacksRef.current.onVerify(token),
+          "error-callback": () => callbacksRef.current.onError?.(),
+          "expired-callback": () => callbacksRef.current.onExpire?.(),
           action,
           size: "compact",
           // 始终渲染 widget，避免 "interaction-only" 下无任何可见 UI
@@ -91,7 +93,7 @@ export function Turnstile({
         }
       })
       .catch(() => {
-        // Turnstile script failed to load — skip silently
+        if (mounted) callbacksRef.current.onError?.();
       });
 
     return () => {
@@ -104,7 +106,7 @@ export function Turnstile({
         }
       }
     };
-  }, [siteKey, onVerify, onError, onExpire, action, externalWidgetIdRef]);
+  }, [siteKey, action, externalWidgetIdRef]);
 
   if (!siteKey) return null;
 
