@@ -35,7 +35,14 @@ export function useSocialLogin(options: UseSocialLoginOptions) {
       provider: "github",
       errorCallbackURL: `${window.location.origin}/login`,
       callbackURL,
+      fetchOptions: {
+        headers: {
+          "X-Turnstile-Token": challenge?.token || "",
+          "X-Altcha-Solution": challenge?.altchaSolution || "",
+        },
+      },
     });
+    challenge?.reset();
 
     if (error) {
       toast.error(m.login_toast_social_failed(), {

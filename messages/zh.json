@@ -555,6 +555,16 @@
   "otp_error_invalid": "验证码不正确",
   "otp_error_expired": "验证码已过期，请重新获取。",
   "otp_error_email_disabled": "邮件服务未配置",
+  "otp_error_rate_limited": [
+    {
+      "declarations": [
+        "input seconds"
+      ],
+      "match": {
+        "seconds=*": "验证码暂不可发送，请等待 {seconds} 秒后再试。"
+      }
+    }
+  ],
   "register_title": "注册",
   "register_label": "REGISTER",
   "register_header_title": "注册账户",

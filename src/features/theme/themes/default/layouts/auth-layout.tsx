@@ -3,7 +3,7 @@ import { m } from "@/paraglide/messages";
 
 export function AuthLayout({ onBack, children }: AuthLayoutProps) {
   return (
-    <div className="default-theme min-h-screen w-full flex flex-col">
+    <div className="default-theme min-h-[100svh] w-full flex flex-col">
       <header className="h-16 flex items-center px-6 md:px-12">
         <button
           onClick={onBack}
@@ -14,13 +14,13 @@ export function AuthLayout({ onBack, children }: AuthLayoutProps) {
         </button>
       </header>
 
-      <main className="flex-1 flex flex-col justify-center items-center p-6 md:p-12">
-        <div className="w-full max-w-sm animate-in fade-in duration-500">
+      <main className="flex-1 flex flex-col justify-center items-center p-4 sm:p-6 md:p-12">
+        <div className="w-full max-w-sm min-w-0 animate-in fade-in duration-500">
           {children}
         </div>
       </main>
 
-      <footer className="h-16" />
+      <footer className="h-8 sm:h-16" />
     </div>
   );
 }

@@ -23,8 +23,8 @@ describe("isProtectedAuthPath", () => {
     expect(isProtectedAuthPath("/api/auth/sign-up/email")).toBe(true);
   });
 
-  it("should not cover other auth endpoints", () => {
-    expect(isProtectedAuthPath("/api/auth/sign-in/social")).toBe(false);
+  it("should cover OAuth sign-in and exclude unrelated auth endpoints", () => {
+    expect(isProtectedAuthPath("/api/auth/sign-in/social")).toBe(true);
     expect(isProtectedAuthPath("/api/auth/forget-password")).toBe(false);
     expect(isProtectedAuthPath("/api/auth/send-verification-email")).toBe(
       false,

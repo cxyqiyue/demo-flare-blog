@@ -5,6 +5,8 @@ const CUSTOM_AUTH_ERROR_CODES = [
   "RATE_LIMITED",
   "TURNSTILE_MISSING_TOKEN",
   "TURNSTILE_VERIFICATION_FAILED",
+  "CHALLENGE_MISSING_TOKEN",
+  "CHALLENGE_VERIFICATION_FAILED",
   "OTP_REQUIRED",
   "OTP_INVALID",
   "OTP_EXPIRED",
@@ -55,6 +57,8 @@ function getCustomAuthErrorMessage(
   switch (code) {
     case "TURNSTILE_MISSING_TOKEN":
     case "TURNSTILE_VERIFICATION_FAILED":
+    case "CHALLENGE_MISSING_TOKEN":
+    case "CHALLENGE_VERIFICATION_FAILED":
       return messages.turnstile_error_failed_desc();
     case "OTP_REQUIRED":
       return messages.otp_error_required();
@@ -151,6 +155,14 @@ export function getOtpSendErrorMessage(
   messages: Messages,
   options?: { invalidCredentialsMessage?: string },
 ): string | undefined {
+  if (getErrorCode(error) === "RATE_LIMITED") {
+    const seconds =
+      typeof error?.retryAfterMs === "number"
+        ? Math.max(1, Math.ceil(error.retryAfterMs / 1000))
+        : 60;
+    return messages.otp_error_rate_limited({ seconds: String(seconds) });
+  }
+
   const customMessage = getCustomAuthErrorMessage(error, messages);
   if (customMessage) return customMessage;
 

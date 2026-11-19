@@ -562,6 +562,16 @@
   "otp_error_invalid": "Incorrect verification code",
   "otp_error_expired": "The verification code has expired. Get a new one.",
   "otp_error_email_disabled": "Email notifications are not configured",
+  "otp_error_rate_limited": [
+    {
+      "declarations": [
+        "input seconds"
+      ],
+      "match": {
+        "seconds=*": "Code delivery is temporarily unavailable. Try again in {seconds} seconds."
+      }
+    }
+  ],
   "register_title": "Register",
   "register_label": "REGISTER",
   "register_header_title": "Create Account",

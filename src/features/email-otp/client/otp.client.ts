@@ -2,6 +2,8 @@ export interface OtpSendInput {
   email: string;
   purpose: "login" | "register";
   password?: string;
+  turnstileToken?: string | null;
+  altchaSolution?: string | null;
 }
 
 export type OtpSendResult =
@@ -12,10 +14,15 @@ export async function requestSendOtp(
   input: OtpSendInput,
 ): Promise<OtpSendResult> {
   try {
+    const { turnstileToken, altchaSolution, ...body } = input;
     const res = await fetch("/api/auth/otp/send", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      headers: {
+        "Content-Type": "application/json",
+        ...(turnstileToken ? { "X-Turnstile-Token": turnstileToken } : {}),
+        ...(altchaSolution ? { "X-Altcha-Solution": altchaSolution } : {}),
+      },
+      body: JSON.stringify(body),
     });
     const data = (await res.json().catch(() => null)) as {
       code?: string;

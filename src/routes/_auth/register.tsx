@@ -34,16 +34,12 @@ function RouteComponent() {
     config: challengeConfig,
   });
 
-  const registerForm = useRegisterForm({ isEmailConfigured });
+  const registerForm = useRegisterForm({ isEmailConfigured, challenge });
 
   const challengeElement =
     challengeConfig.provider !== "none" &&
-    registerForm.registerStep === "IDLE" ? (
-      <ChallengeWidget
-        action="register"
-        challenge={challengeConfig}
-        useChallengeInstance={challenge}
-      />
+    registerForm.registerStep !== "SUCCESS" ? (
+      <ChallengeWidget useChallengeInstance={challenge} />
     ) : null;
 
   return (

@@ -13,6 +13,7 @@ export function RegisterForm({ form }: RegisterFormProps) {
     errors,
     handleSubmit,
     isSubmitting,
+    challengePending,
     registerStep,
     otpEmail,
     resendSecondsLeft,
@@ -63,7 +64,7 @@ export function RegisterForm({ form }: RegisterFormProps) {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               <div className="space-y-2 group">
                 <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 group-focus-within:text-foreground transition-colors">
                   {m.register_password()}
@@ -103,13 +104,17 @@ export function RegisterForm({ form }: RegisterFormProps) {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || resendSecondsLeft > 0 || challengePending}
             className="w-full py-4 bg-foreground text-background text-[10px] font-mono uppercase tracking-[0.3em] hover:opacity-80 transition-all disabled:opacity-30 flex items-center justify-center gap-3"
           >
             {isSubmitting ? (
               <Loader2 className="animate-spin" size={14} />
             ) : (
-              <span>{m.otp_send_code()}</span>
+              <span>
+                {resendSecondsLeft > 0
+                  ? m.otp_resend_in({ seconds: String(resendSecondsLeft) })
+                  : m.otp_send_code()}
+              </span>
             )}
           </button>
         </>
@@ -154,7 +159,9 @@ export function RegisterForm({ form }: RegisterFormProps) {
 
           <button
             type="submit"
-            disabled={isSubmitting || registerStep === "SUCCESS"}
+            disabled={
+              isSubmitting || challengePending || registerStep === "SUCCESS"
+            }
             className="w-full py-4 bg-foreground text-background text-[10px] font-mono uppercase tracking-[0.3em] hover:opacity-80 transition-all disabled:opacity-30 flex items-center justify-center gap-3"
           >
             {registerStep === "VERIFYING" || isSubmitting ? (
@@ -179,6 +186,7 @@ export function RegisterForm({ form }: RegisterFormProps) {
               disabled={
                 resendSecondsLeft > 0 ||
                 isSubmitting ||
+                challengePending ||
                 registerStep === "SUCCESS"
               }
               className="text-muted-foreground/40 hover:text-foreground transition-colors disabled:opacity-30"

@@ -16,6 +16,7 @@ export function LoginForm({ form, isEmailConfigured }: LoginFormProps) {
     handleSubmit,
     loginStep,
     isSubmitting,
+    challengePending,
     otpEmail,
     resendSecondsLeft,
     handleResendCode,
@@ -90,13 +91,17 @@ export function LoginForm({ form, isEmailConfigured }: LoginFormProps) {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || resendSecondsLeft > 0 || challengePending}
             className="w-full py-4 bg-foreground text-background text-[10px] font-mono uppercase tracking-[0.3em] hover:opacity-80 transition-all disabled:opacity-30 flex items-center justify-center gap-3"
           >
             {isSubmitting ? (
               <Loader2 className="animate-spin" size={14} />
             ) : (
-              <span>{m.otp_send_code()}</span>
+              <span>
+                {resendSecondsLeft > 0
+                  ? m.otp_resend_in({ seconds: String(resendSecondsLeft) })
+                  : m.otp_send_code()}
+              </span>
             )}
           </button>
         </>
@@ -141,7 +146,9 @@ export function LoginForm({ form, isEmailConfigured }: LoginFormProps) {
 
           <button
             type="submit"
-            disabled={isSubmitting || loginStep === "SUCCESS"}
+            disabled={
+              isSubmitting || challengePending || loginStep === "SUCCESS"
+            }
             className="w-full py-4 bg-foreground text-background text-[10px] font-mono uppercase tracking-[0.3em] hover:opacity-80 transition-all disabled:opacity-30 flex items-center justify-center gap-3"
           >
             {loginStep === "VERIFYING" || isSubmitting ? (
@@ -164,7 +171,10 @@ export function LoginForm({ form, isEmailConfigured }: LoginFormProps) {
               type="button"
               onClick={handleResendCode}
               disabled={
-                resendSecondsLeft > 0 || isSubmitting || loginStep === "SUCCESS"
+                resendSecondsLeft > 0 ||
+                isSubmitting ||
+                challengePending ||
+                loginStep === "SUCCESS"
               }
               className="text-muted-foreground/40 hover:text-foreground transition-colors disabled:opacity-30"
             >

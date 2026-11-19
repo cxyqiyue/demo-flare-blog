@@ -73,6 +73,48 @@ describe("Durable Objects Integration", () => {
       vi.useRealTimers();
     });
 
+    it("enforces sliding-window limits and a separate cooldown", async () => {
+      const id = env.RATE_LIMITER.idFromName("email-otp-sliding-window-test");
+      const rateLimiter = env.RATE_LIMITER.get(id);
+      const options = {
+        capacity: 10,
+        interval: "1h" as const,
+        cooldownMs: 2 * 60 * 1000,
+      };
+
+      expect(
+        (
+          await rateLimiter.checkSlidingWindowLimit({
+            ...options,
+            consume: false,
+          })
+        ).allowed,
+      ).toBe(true);
+      expect((await rateLimiter.checkSlidingWindowLimit(options)).allowed).toBe(
+        true,
+      );
+      const cooldown = await rateLimiter.checkSlidingWindowLimit(options);
+      expect(cooldown.allowed).toBe(false);
+      expect(cooldown.retryAfterMs).toBe(2 * 60 * 1000);
+
+      for (let i = 1; i < 10; i += 1) {
+        await vi.advanceTimersByTimeAsync(2 * 60 * 1000);
+        expect(
+          (await rateLimiter.checkSlidingWindowLimit(options)).allowed,
+        ).toBe(true);
+      }
+
+      const hourlyLimit = await rateLimiter.checkSlidingWindowLimit(options);
+      expect(hourlyLimit.allowed).toBe(false);
+      expect(hourlyLimit.remaining).toBe(0);
+      expect(hourlyLimit.retryAfterMs).toBe(60 * 60 * 1000 - 9 * 2 * 60 * 1000);
+
+      await vi.advanceTimersByTimeAsync(42 * 60 * 1000);
+      expect((await rateLimiter.checkSlidingWindowLimit(options)).allowed).toBe(
+        true,
+      );
+    });
+
     it("should allow request if there are enough tokens", async () => {
       const id = env.RATE_LIMITER.idFromName("user-1");
       const rateLimiter = env.RATE_LIMITER.get(id);

@@ -13,8 +13,16 @@ export type RateLimitOptions = {
   cost?: number;
 };
 
+export type SlidingWindowLimitOptions = {
+  capacity: number;
+  interval: Duration;
+  cooldownMs?: number;
+  consume?: boolean;
+};
+
 export class RateLimiter extends DurableObject {
   private state: BucketState;
+  private windowEvents: number[];
   private CLEANUP_INTERVAL = ms("7d");
 
   constructor(ctx: DurableObjectState, env: Env) {
@@ -23,13 +31,78 @@ export class RateLimiter extends DurableObject {
       tokens: 0,
       lastRefill: 0,
     };
+    this.windowEvents = [];
 
     ctx.blockConcurrencyWhile(async () => {
       const stored = await ctx.storage.get<BucketState>("bucket");
       if (stored) {
         this.state = stored;
       }
+      this.windowEvents =
+        (await ctx.storage.get<number[]>("window-events")) ?? [];
     });
+  }
+
+  checkSlidingWindowLimit({
+    capacity,
+    interval,
+    cooldownMs = 0,
+    consume = true,
+  }: SlidingWindowLimitOptions): {
+    allowed: boolean;
+    remaining: number;
+    retryAfterMs: number;
+  } {
+    const now = Date.now();
+    const intervalMs = ms(interval);
+    this.windowEvents = this.windowEvents.filter(
+      (timestamp) => timestamp > now - intervalMs,
+    );
+
+    if (this.windowEvents.length >= capacity) {
+      const oldestEvent = this.windowEvents[0];
+      return {
+        allowed: false,
+        remaining: 0,
+        retryAfterMs: Math.max(1, oldestEvent + intervalMs - now),
+      };
+    }
+
+    const latestEvent = this.windowEvents.at(-1);
+    if (latestEvent !== undefined && cooldownMs > 0) {
+      const cooldownRemaining = cooldownMs - (now - latestEvent);
+      if (cooldownRemaining > 0) {
+        return {
+          allowed: false,
+          remaining: Math.max(0, capacity - this.windowEvents.length),
+          retryAfterMs: cooldownRemaining,
+        };
+      }
+    }
+
+    if (!consume) {
+      return {
+        allowed: true,
+        remaining: capacity - this.windowEvents.length,
+        retryAfterMs: 0,
+      };
+    }
+
+    this.windowEvents.push(now);
+    this.state.lastRefill = now;
+    this.ctx.waitUntil(
+      Promise.all([
+        this.ctx.storage.put("bucket", this.state),
+        this.ctx.storage.put("window-events", this.windowEvents),
+        this.ctx.storage.setAlarm(now + this.CLEANUP_INTERVAL),
+      ]),
+    );
+
+    return {
+      allowed: true,
+      remaining: capacity - this.windowEvents.length,
+      retryAfterMs: 0,
+    };
   }
 
   checkLimit({ capacity, interval, cost = 1 }: RateLimitOptions): {

@@ -81,6 +81,7 @@ export function Turnstile({
           "error-callback": onError,
           "expired-callback": onExpire,
           action,
+          size: "compact",
           // 始终渲染 widget，避免 "interaction-only" 下无任何可见 UI
           appearance: "always",
         });

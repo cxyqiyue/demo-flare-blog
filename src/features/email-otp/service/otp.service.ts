@@ -4,12 +4,8 @@ import { and, eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import * as ConfigService from "@/features/config/service/config.service";
 import { AuthEmail } from "@/features/email/templates/AuthEmail";
-import {
-  OTP_LENGTH,
-  OTP_RESEND_COOLDOWN_MS,
-  OTP_TTL_MS,
-} from "@/features/email-otp/otp-constants";
-import { checkEmailAuthRateLimit } from "@/lib/auth/email-rate-limit";
+import { OTP_LENGTH, OTP_TTL_MS } from "@/features/email-otp/otp-constants";
+import { checkEmailOtpSendLimit } from "@/lib/auth/email-rate-limit";
 import { account, user, verification } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server.env";
 import type { Locale } from "@/lib/i18n";
@@ -160,35 +156,44 @@ export async function sendOtp(
     }
   }
 
-  // 每邮箱认证邮件合并限流：10 封 / 小时（登录/注册验证码 + 重置 + 链接验证共享）
-  const mergedLimit = await checkEmailAuthRateLimit(env, email);
-  if (!mergedLimit.allowed) {
+  // Preview first so an exhausted hourly quota reports its actual recovery time
+  // without consuming quota for requests that are still cooling down.
+  const limitPreview = await checkEmailOtpSendLimit(env, email, false);
+  if (!limitPreview.allowed) {
     return {
       ok: false,
       code: "RATE_LIMITED",
-      retryAfterMs: mergedLimit.retryAfterMs,
+      retryAfterMs: limitPreview.retryAfterMs,
     };
   }
 
-  // 重发冷却：同一邮箱获得了未过期验证码时，至少间隔 30s
   const identifier = getOtpIdentifier(email, input.purpose);
-  const [existingOtp] = await db
-    .select({
-      createdAt: verification.createdAt,
-      expiresAt: verification.expiresAt,
-    })
+  const existingOtps = await db
+    .select({ expiresAt: verification.expiresAt })
     .from(verification)
-    .where(eq(verification.identifier, identifier))
-    .limit(1);
-  if (existingOtp) {
-    const elapsed = Date.now() - new Date(existingOtp.createdAt).getTime();
-    if (elapsed < OTP_RESEND_COOLDOWN_MS) {
-      return {
-        ok: false,
-        code: "RATE_LIMITED",
-        retryAfterMs: OTP_RESEND_COOLDOWN_MS - elapsed,
-      };
+    .where(eq(verification.identifier, getOtpIdentifier(email, "login")));
+  const registerOtps = await db
+    .select({ expiresAt: verification.expiresAt })
+    .from(verification)
+    .where(eq(verification.identifier, getOtpIdentifier(email, "register")));
+  const latestExpiry = [...existingOtps, ...registerOtps]
+    .map((row) => new Date(row.expiresAt).getTime())
+    .reduce((latest, value) => Math.max(latest, value), 0);
+  if (latestExpiry > 0) {
+    const retryAfterMs = latestExpiry - Date.now();
+    if (retryAfterMs > 0) {
+      return { ok: false, code: "RATE_LIMITED", retryAfterMs };
     }
+  }
+
+  // 原子预留发送名额：任意一小时至多 10 封，成功发送间至少间隔 2 分钟。
+  const sendLimit = await checkEmailOtpSendLimit(env, email);
+  if (!sendLimit.allowed) {
+    return {
+      ok: false,
+      code: "RATE_LIMITED",
+      retryAfterMs: sendLimit.retryAfterMs,
+    };
   }
 
   const code = generateOtp();

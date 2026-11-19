@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { AUTH_KEYS } from "@/features/auth/queries";
+import type { UseChallengeReturn } from "@/features/challenge/hooks/use-challenge";
 import { requestSendOtp } from "@/features/email-otp/client/otp.client";
 import { OTP_RESEND_COOLDOWN_SECONDS } from "@/features/email-otp/otp-constants";
 import { usePreviousLocation } from "@/hooks/use-previous-location";
@@ -40,10 +41,11 @@ type RegisterSchema = z.infer<ReturnType<typeof createRegisterSchema>>;
 
 export interface UseRegisterFormOptions {
   isEmailConfigured: boolean;
+  challenge: UseChallengeReturn;
 }
 
 export function useRegisterForm(options: UseRegisterFormOptions) {
-  const { isEmailConfigured } = options;
+  const { isEmailConfigured, challenge } = options;
 
   const [step, setStep] = useState<"IDLE" | "OTP" | "VERIFYING" | "SUCCESS">(
     "IDLE",
@@ -70,13 +72,23 @@ export function useRegisterForm(options: UseRegisterFormOptions) {
   }, [resendSecondsLeft]);
 
   const handleSendCode = async (data: RegisterSchema): Promise<void> => {
+    if (challenge.isPending) {
+      toast.error(m.challenge_pending_hint());
+      return;
+    }
+
     const result = await requestSendOtp({
       email: data.email,
       purpose: "register",
+      turnstileToken: challenge.token,
+      altchaSolution: challenge.altchaSolution,
     });
+    challenge.reset();
 
     if (!result.ok) {
-      setStep("IDLE");
+      if (result.code === "RATE_LIMITED" && result.retryAfterMs) {
+        setResendSecondsLeft(Math.ceil(result.retryAfterMs / 1000));
+      }
       const description =
         getOtpSendErrorMessage(result, m) ?? m.register_error_default();
       toast.error(m.otp_toast_send_failed(), { description });
@@ -91,6 +103,11 @@ export function useRegisterForm(options: UseRegisterFormOptions) {
   };
 
   const handleVerify = async (data: RegisterSchema): Promise<void> => {
+    if (challenge.isPending) {
+      toast.error(m.challenge_pending_hint());
+      return;
+    }
+
     const code = data.otp?.trim() ?? "";
     if (!OTP_CODE_PATTERN.test(code)) {
       form.setError("otp", {
@@ -109,9 +126,12 @@ export function useRegisterForm(options: UseRegisterFormOptions) {
       fetchOptions: {
         headers: {
           "X-Otp": code,
+          "X-Turnstile-Token": challenge.token || "",
+          "X-Altcha-Solution": challenge.altchaSolution || "",
         },
       },
     });
+    challenge.reset();
 
     if (error) {
       // 验证码一次性：失败或过期时回到输入态，重新获取后再试
@@ -161,6 +181,7 @@ export function useRegisterForm(options: UseRegisterFormOptions) {
     errors: form.formState.errors,
     handleSubmit: form.handleSubmit(onSubmit),
     isSubmitting: form.formState.isSubmitting,
+    challengePending: challenge.isPending,
     isSuccess,
     registerStep: step,
     otpEmail,
