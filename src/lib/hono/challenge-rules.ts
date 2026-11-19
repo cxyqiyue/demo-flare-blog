@@ -14,13 +14,14 @@ export function applyNoCachePageHeaders(headers: Headers): void {
 }
 
 /**
- * 必须始终执行人机验证的认证端点（登录 / 注册）。
+ * 必须始终执行人机验证的认证端点（登录 / 注册 / OAuth 发起）。
  * 该白名单与保护范围无关：无论是 auth-only 还是 full-site，
  * 全站通行证 cookie 都不会豁免这些端点，防止自动化批量注册/登录滥用。
  */
 export const PROTECTED_AUTH_PATHS = [
   "/api/auth/sign-in/email",
   "/api/auth/sign-up/email",
+  "/api/auth/sign-in/social",
 ] as const;
 
 export function isProtectedAuthPath(path: string): boolean {

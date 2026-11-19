@@ -95,14 +95,25 @@ export function useLoginForm(options: UseLoginFormOptions) {
   };
 
   const handleSendCode = async (data: LoginSchema): Promise<void> => {
-    setLoginStep("IDLE");
+    if (challenge.isPending) {
+      toast.error(m.challenge_pending_hint());
+      return;
+    }
+
     const result = await requestSendOtp({
       email: data.email,
       purpose: "login",
       password: data.password,
+      turnstileToken: challenge.token,
+      altchaSolution: challenge.altchaSolution,
     });
 
+    challenge.reset();
+
     if (!result.ok) {
+      if (result.code === "RATE_LIMITED" && result.retryAfterMs) {
+        setResendSecondsLeft(Math.ceil(result.retryAfterMs / 1000));
+      }
       const description =
         getOtpSendErrorMessage(result, m) ?? m.auth_error_default_desc();
       toast.error(m.otp_toast_send_failed(), { description });
@@ -117,6 +128,11 @@ export function useLoginForm(options: UseLoginFormOptions) {
   };
 
   const handleVerify = async (data: LoginSchema): Promise<void> => {
+    if (challenge.isPending) {
+      toast.error(m.challenge_pending_hint());
+      return;
+    }
+
     const code = data.otp?.trim() ?? "";
     if (!OTP_CODE_PATTERN.test(code)) {
       form.setError("otp", {
@@ -133,9 +149,12 @@ export function useLoginForm(options: UseLoginFormOptions) {
       fetchOptions: {
         headers: {
           "X-Otp": code,
+          "X-Turnstile-Token": challenge.token || "",
+          "X-Altcha-Solution": challenge.altchaSolution || "",
         },
       },
     });
+    challenge.reset();
 
     if (error) {
       // 验证码一次性：失败或过期时回到输入态，重新获取后再试
@@ -231,6 +250,7 @@ export function useLoginForm(options: UseLoginFormOptions) {
     handleSubmit: form.handleSubmit(onSubmit),
     loginStep,
     isSubmitting: form.formState.isSubmitting,
+    challengePending: challenge.isPending,
     loginSchema,
     otpEmail,
     resendSecondsLeft,

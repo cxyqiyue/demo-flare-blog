@@ -15,6 +15,8 @@ export interface RegisterFormData {
   errors: FieldErrors<RegisterSchema>;
   handleSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   isSubmitting: boolean;
+  /** 人机验证未通过时阻止注册请求 */
+  challengePending: boolean;
   isSuccess: boolean;
   registerStep: RegisterStep;
   /** 验证码已发送到的邮箱（OTP 步骤展示） */

@@ -13,6 +13,7 @@ export function RegisterForm({ form }: RegisterFormProps) {
     errors,
     handleSubmit,
     isSubmitting,
+    challengePending,
     registerStep,
     otpEmail,
     resendSecondsLeft,
@@ -66,7 +67,7 @@ export function RegisterForm({ form }: RegisterFormProps) {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground/90">
                   {m.register_password()}
@@ -106,13 +107,17 @@ export function RegisterForm({ form }: RegisterFormProps) {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || resendSecondsLeft > 0 || challengePending}
             className="w-full h-11 rounded-lg bg-foreground text-background text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isSubmitting ? (
               <Loader2 className="animate-spin" size={16} />
             ) : (
-              <span>{m.otp_send_code()}</span>
+              <span>
+                {resendSecondsLeft > 0
+                  ? m.otp_resend_in({ seconds: String(resendSecondsLeft) })
+                  : m.otp_send_code()}
+              </span>
             )}
           </button>
         </>
@@ -157,7 +162,9 @@ export function RegisterForm({ form }: RegisterFormProps) {
 
           <button
             type="submit"
-            disabled={isSubmitting || registerStep === "SUCCESS"}
+            disabled={
+              isSubmitting || challengePending || registerStep === "SUCCESS"
+            }
             className="w-full h-11 rounded-lg bg-foreground text-background text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {registerStep === "VERIFYING" || isSubmitting ? (
@@ -182,6 +189,7 @@ export function RegisterForm({ form }: RegisterFormProps) {
               disabled={
                 resendSecondsLeft > 0 ||
                 isSubmitting ||
+                challengePending ||
                 registerStep === "SUCCESS"
               }
               className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"

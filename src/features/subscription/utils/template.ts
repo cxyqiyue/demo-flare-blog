@@ -1,6 +1,11 @@
 import type { SubscriptionConfig } from "@/features/config/config.schema";
 
 export interface SubscriptionEmailVars {
+  contentType: string;
+  contentTitle: string;
+  contentUrl: string;
+  contentPreview: string;
+  /** Backwards-compatible aliases for existing article email templates. */
   articleTitle: string;
   articleUrl: string;
   siteName: string;
@@ -14,6 +19,10 @@ export interface RenderSubscriptionEmailInput {
 }
 
 const PLACEHOLDERS: Record<keyof SubscriptionEmailVars, string> = {
+  contentType: "{{contentType}}",
+  contentTitle: "{{contentTitle}}",
+  contentUrl: "{{contentUrl}}",
+  contentPreview: "{{contentPreview}}",
   articleTitle: "{{articleTitle}}",
   articleUrl: "{{articleUrl}}",
   siteName: "{{siteName}}",
@@ -48,8 +57,8 @@ function substitute(
 }
 
 function buildMandatoryBlock(vars: SubscriptionEmailVars): string {
-  const url = escapeHtml(vars.articleUrl);
-  const title = escapeHtml(vars.articleTitle);
+  const url = escapeHtml(vars.contentUrl);
+  const title = escapeHtml(vars.contentTitle);
   return [
     '<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e0e0e0;">',
     `<p style="margin:0 0 8px;font-size:15px;line-height:1.6;"><a href="${url}" style="color:#1a73e8;text-decoration:none;">${title}</a></p>`,
@@ -76,12 +85,12 @@ export function renderSubscriptionEmail(input: RenderSubscriptionEmailInput): {
   const bodyTemplate = config?.templateBody?.trim() || input.fallbackBodyHtml;
 
   let subject = substitute(sanitizeSubject(subjectTemplate), vars, false);
-  if (!subject.includes(vars.articleTitle)) {
-    subject = `${subject} - ${vars.articleTitle}`;
+  if (!subject.includes(vars.contentTitle)) {
+    subject = `${subject} - ${vars.contentTitle}`;
   }
 
   let body = substitute(bodyTemplate, vars, true);
-  if (!body.includes(vars.articleUrl)) {
+  if (!body.includes(vars.contentUrl)) {
     body += buildMandatoryBlock(vars);
   }
 

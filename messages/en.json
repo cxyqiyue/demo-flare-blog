@@ -562,6 +562,16 @@
   "otp_error_invalid": "Incorrect verification code",
   "otp_error_expired": "The verification code has expired. Get a new one.",
   "otp_error_email_disabled": "Email notifications are not configured",
+  "otp_error_rate_limited": [
+    {
+      "declarations": [
+        "input seconds"
+      ],
+      "match": {
+        "seconds=*": "Code delivery is temporarily unavailable. Try again in {seconds} seconds."
+      }
+    }
+  ],
   "register_title": "Register",
   "register_label": "REGISTER",
   "register_header_title": "Create Account",
@@ -2593,16 +2603,16 @@
   "about_editor_image_upload": "Upload image",
   "settings_tab_subscription": "Subscriptions",
   "settings_subscription_title": "Blog Subscription Notifications",
-  "settings_subscription_desc": "Configure all-user notification on article publishing and customize the email template (articles only; moments and about-page updates never trigger emails)",
-  "settings_subscription_summary": "Send an email to users when a new article is published; the email template is customizable",
+  "settings_subscription_desc": "Configure subscriber email notifications for article and moment updates, including a customizable email template",
+  "settings_subscription_summary": "Notify subscribers when an article is published or a moment is created or updated; customize the email template",
   "settings_subscription_all_user_label": "Notify all users",
-  "settings_subscription_all_user_desc": "When enabled, every registered user with a valid email receives the notification on publish (banned users excluded). This overrides individual user preferences. When disabled, only subscribed users receive notifications.",
+  "settings_subscription_all_user_desc": "When enabled, every registered user with a valid email is notified when an article is published or a moment is created or updated (banned users excluded). This overrides individual user preferences. When disabled, only subscribed users receive notifications.",
   "settings_subscription_template_subject_label": "Email subject template",
-  "settings_subscription_template_subject_ph": "e.g. [Site name] New article: Article title (insert placeholders above)",
+  "settings_subscription_template_subject_ph": "e.g. [Site name] Content update: Content title (insert placeholders above)",
   "settings_subscription_template_body_label": "Email body template (HTML)",
-  "settings_subscription_template_body_ph": "e.g. <p>Site name just published a new article. Check it out!</p>",
+  "settings_subscription_template_body_ph": "e.g. <p>Site name has published new content. Check it out!</p>",
   "settings_subscription_template_placeholders_hint": "Available placeholders:",
-  "settings_subscription_mandatory_note": "Regardless of the template, every email automatically includes the latest article title and link, and this part cannot be removed.",
+  "settings_subscription_mandatory_note": "Regardless of the template, every email automatically includes the content title and link, and this part cannot be removed.",
   "settings_storage_section_kv_title": "KV storage (cache / search index)",
   "settings_storage_section_kv_desc": "Cloudflare KV free tier is limited to 1,000 writes per day. When enabled it is used first for performance, and automatically falls back to D1 once the safe threshold is reached.",
   "settings_storage_enable_kv": "Enable KV writes",
@@ -2628,8 +2638,8 @@
   "settings_storage_fallback_3": "Search index, challenge anti-replay, import/export progress, usage-alert dedup and auto-snapshot throttling all switch to D1 table storage.",
   "settings_storage_fallback_4": "Recovery: after auto-degradation on reaching the quota, KV auto-recovers at midnight; if manually disabled, re-enable it on this page.",
   "profile_subscription_title": "Blog Subscription",
-  "profile_subscription_label": "New article email notifications",
-  "profile_subscription_desc": "Receive an email whenever the blog publishes a new article",
+  "profile_subscription_label": "Content update email notifications",
+  "profile_subscription_desc": "Receive an email when the blog publishes an article or creates or updates a moment",
   "profile_subscription_subscribed": "Subscribed",
   "profile_subscription_not_subscribed": "Not subscribed",
   "profile_subscription_enabled": "Blog subscription enabled",
@@ -2639,6 +2649,12 @@
   "subscription_email_default_subject": "[{siteName}] New article published",
   "subscription_email_default_heading": "New article published",
   "subscription_email_default_body": "{siteName} just published a new article: {articleTitle}. Follow the link below to read it.",
+  "subscription_content_type_article": "Article",
+  "subscription_content_type_moment": "Moment",
+  "subscription_email_moment_title": "Moment update",
+  "subscription_email_moment_default_subject": "[{siteName}] Moment update",
+  "subscription_email_moment_default_heading": "Moment update",
+  "subscription_email_moment_default_body": "{siteName} published or updated a moment. Follow the link below to view it.",
   "access_gate_eyebrow_private": "private",
   "access_gate_eyebrow_password": "password",
   "access_gate_eyebrow_login": "members only",

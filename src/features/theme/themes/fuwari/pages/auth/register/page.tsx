@@ -12,6 +12,7 @@ export function RegisterPage({
     errors,
     handleSubmit,
     isSubmitting,
+    challengePending,
     registerStep,
     otpEmail,
     resendSecondsLeft,
@@ -101,7 +102,7 @@ export function RegisterPage({
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-4">
+              <div className="grid grid-cols-1 gap-5">
                 {/* Password Field */}
                 <div className="flex flex-col gap-1.5 focus-within:text-(--fuwari-primary) transition-colors text-(--fuwari-text-50)">
                   <label
@@ -151,8 +152,10 @@ export function RegisterPage({
 
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="mt-4 w-full py-3.5 rounded-xl fuwari-btn-primary font-bold text-sm tracking-wide active:scale-[0.98] transition-all gap-2"
+                disabled={
+                  isSubmitting || resendSecondsLeft > 0 || challengePending
+                }
+                className="mt-4 flex w-full items-center justify-center py-3.5 rounded-xl fuwari-btn-primary font-bold text-sm tracking-wide active:scale-[0.98] transition-all gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -160,7 +163,11 @@ export function RegisterPage({
                     <span>{m.otp_sending_code()}</span>
                   </>
                 ) : (
-                  <span>{m.otp_send_code()}</span>
+                  <span>
+                    {resendSecondsLeft > 0
+                      ? m.otp_resend_in({ seconds: String(resendSecondsLeft) })
+                      : m.otp_send_code()}
+                  </span>
                 )}
               </button>
             </>
@@ -199,8 +206,10 @@ export function RegisterPage({
 
               <button
                 type="submit"
-                disabled={isSubmitting || registerStep === "SUCCESS"}
-                className="mt-4 w-full py-3.5 rounded-xl fuwari-btn-primary font-bold text-sm tracking-wide active:scale-[0.98] transition-all gap-2"
+                disabled={
+                  isSubmitting || challengePending || registerStep === "SUCCESS"
+                }
+                className="mt-4 flex w-full items-center justify-center py-3.5 rounded-xl fuwari-btn-primary font-bold text-sm tracking-wide active:scale-[0.98] transition-all gap-2"
               >
                 {registerStep === "VERIFYING" || isSubmitting ? (
                   <>
@@ -227,6 +236,7 @@ export function RegisterPage({
                   disabled={
                     resendSecondsLeft > 0 ||
                     isSubmitting ||
+                    challengePending ||
                     registerStep === "SUCCESS"
                   }
                   className="text-xs font-medium fuwari-text-50 hover:text-(--fuwari-primary) transition-colors disabled:opacity-40"

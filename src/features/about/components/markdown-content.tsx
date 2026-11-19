@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useRef } from "react";
+import { ClientOnly } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ImageLightbox } from "@/components/content/image-lightbox";
 import { renderMarkdownToHtml } from "@/features/about/utils/markdown";
 import { highlight } from "@/lib/shiki";
 import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages";
 
 interface MarkdownContentProps {
   markdown: string;
@@ -23,6 +26,10 @@ export function MarkdownContent({
   className,
 }: MarkdownContentProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const [previewImage, setPreviewImage] = useState<{
+    src: string;
+    alt: string;
+  } | null>(null);
 
   const html = useMemo(
     () => preRenderedHtml ?? renderMarkdownToHtml(markdown),
@@ -31,6 +38,19 @@ export function MarkdownContent({
 
   // 仅在非预渲染模式下执行客户端 Shiki 高亮
   const needsClientHighlight = !preRenderedHtml;
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    root.querySelectorAll("img").forEach((image) => {
+      image.style.cursor = "zoom-in";
+      image.draggable = false;
+      image.tabIndex = 0;
+      image.setAttribute("role", "button");
+      image.setAttribute("aria-label", m.common_view_full_image());
+    });
+  }, [html]);
 
   useEffect(() => {
     if (!needsClientHighlight) return;
@@ -68,10 +88,43 @@ export function MarkdownContent({
   }, [markdown, needsClientHighlight]);
 
   return (
-    <div
-      ref={rootRef}
-      className={cn("about-md", className)}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <>
+      <div
+        ref={rootRef}
+        className={cn("about-md", className)}
+        onClick={(event) => {
+          if (!(event.target instanceof HTMLImageElement)) return;
+          event.preventDefault();
+          setPreviewImage({
+            src: event.target.currentSrc || event.target.src,
+            alt: event.target.alt,
+          });
+        }}
+        onKeyDown={(event) => {
+          if (
+            !(event.target instanceof HTMLImageElement) ||
+            (event.key !== "Enter" && event.key !== " ")
+          ) {
+            return;
+          }
+          event.preventDefault();
+          setPreviewImage({
+            src: event.target.currentSrc || event.target.src,
+            alt: event.target.alt,
+          });
+        }}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      {previewImage && (
+        <ClientOnly>
+          <ImageLightbox
+            src={previewImage.src}
+            alt={previewImage.alt}
+            isOpen
+            onClose={() => setPreviewImage(null)}
+          />
+        </ClientOnly>
+      )}
+    </>
   );
 }

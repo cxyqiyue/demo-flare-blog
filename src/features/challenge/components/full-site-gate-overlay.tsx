@@ -1,9 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Turnstile as WidgetTurnstile } from "@/components/common/turnstile";
 import { useChallenge } from "@/features/challenge/hooks/use-challenge";
-import { challengeConfigQuery } from "@/features/challenge/queries";
+import {
+  CHALLENGE_KEYS,
+  challengeConfigQuery,
+} from "@/features/challenge/queries";
 import type { ChallengeClientConfig } from "@/features/challenge/service/challenge.service";
 import { m } from "@/paraglide/messages";
 
@@ -19,6 +22,7 @@ const FULLSITE_VERIFY_URL = "/api/challenge/fullsite/verify";
  * - 仅当前台被锁定（未验证访客访问受保护页）时由布局挂载。
  */
 export function FullSiteGateOverlay() {
+  const queryClient = useQueryClient();
   const {
     data: challengeConfig,
     refetch: refetchConfig,
@@ -48,7 +52,13 @@ export function FullSiteGateOverlay() {
             ) : challengeConfig ? (
               <GateChallenge
                 config={challengeConfig}
-                onVerified={() => setUnlocked(true)}
+                onVerified={() => {
+                  queryClient.setQueryData(
+                    CHALLENGE_KEYS.fullSiteLocked,
+                    false,
+                  );
+                  setUnlocked(true);
+                }}
               />
             ) : (
               <Loader2

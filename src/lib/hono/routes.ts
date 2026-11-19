@@ -237,12 +237,11 @@ protectedAuthPaths.forEach((path) => {
   );
 });
 
-// 邮箱验证码下发：受 IP 限流保护（按 IP 5/1m + 10/1h）。
-// 不挂人机验证中间件，避免消耗一次性 token 导致最终登录/注册需重复过挑战；
-// 每个邮箱的发送量由独立的「email-auth」桶（10 封/小时 + 30s 重发冷却）兜底。
+// 邮箱验证码下发：服务端挑战 + IP 限流，并按邮箱严格限制发送频率和小时总量。
 app.post(
   "/api/auth/otp/send",
   baseMiddleware,
+  challengeMiddleware,
   rateLimitMiddleware({
     capacity: 5,
     interval: "1m",

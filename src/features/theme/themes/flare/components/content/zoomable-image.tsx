@@ -1,5 +1,7 @@
 import { ClientOnly } from "@tanstack/react-router";
-import React, { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -46,20 +48,6 @@ function Lightbox({
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
-  const originalSrc = React.useMemo(() => {
-    try {
-      const base =
-        typeof window !== "undefined" ? window.location.origin : undefined;
-      const url = base ? new URL(src, base) : new URL(src);
-      url.searchParams.set("original", "true");
-      return url.toString();
-    } catch {
-      return src.includes("?")
-        ? `${src}&original=true`
-        : `${src}?original=true`;
-    }
-  }, [src]);
-
   return createPortal(
     <div
       className={`fixed inset-0 z-200 flex items-center justify-center transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
@@ -70,7 +58,7 @@ function Lightbox({
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-background/98 backdrop-blur-xl"
+        className="absolute inset-0 bg-black/90 backdrop-blur-xl"
         onClick={onClose}
       />
 
@@ -81,30 +69,23 @@ function Lightbox({
         }`}
       >
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-mono font-medium text-foreground tracking-widest uppercase">
+          <span className="text-xs font-mono font-medium text-white tracking-widest uppercase">
             {m.common_image_preview()}
           </span>
-          <span className="text-[10px] font-mono text-muted-foreground tracking-wider opacity-60">
+          <span className="text-[10px] font-mono text-white/70 tracking-wider">
             {alt || m.common_untitled()}
           </span>
         </div>
 
-        <div className="flex gap-6 items-center">
-          <a
-            href={originalSrc}
-            download
-            target="_blank"
-            rel="noreferrer"
-            className="group flex items-center gap-2"
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={m.common_close()}
+            title={m.common_close()}
+            className="inline-flex size-12 items-center justify-center rounded-full border-2 border-white bg-white text-black shadow-[0_4px_24px_rgba(0,0,0,0.65)] ring-4 ring-black/40 transition-transform hover:scale-105 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/70"
           >
-            <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
-              {m.media_preview_btn_download()}
-            </span>
-          </a>
-          <button onClick={onClose} className="group flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
-              {m.common_close()}
-            </span>
+            <X size={24} strokeWidth={2.75} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -119,6 +100,8 @@ function Lightbox({
           src={src}
           alt={alt}
           loading="eager"
+          draggable={false}
+          onContextMenu={(event) => event.preventDefault()}
           className="max-w-full max-h-full object-contain shadow-none"
         />
       </div>

@@ -16,6 +16,7 @@ export function LoginPage({
     handleSubmit,
     loginStep,
     isSubmitting,
+    challengePending: emailChallengePending,
     otpEmail,
     resendSecondsLeft,
     handleResendCode,
@@ -109,8 +110,12 @@ export function LoginPage({
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="mt-2 w-full py-3.5 rounded-xl fuwari-btn-primary font-bold text-sm tracking-wide active:scale-[0.98] transition-all gap-2"
+                  disabled={
+                    isSubmitting ||
+                    resendSecondsLeft > 0 ||
+                    emailChallengePending
+                  }
+                  className="mt-2 flex w-full items-center justify-center py-3.5 rounded-xl fuwari-btn-primary font-bold text-sm tracking-wide active:scale-[0.98] transition-all gap-2"
                 >
                   {isSubmitting ? (
                     <>
@@ -118,7 +123,13 @@ export function LoginPage({
                       <span>{m.otp_sending_code()}</span>
                     </>
                   ) : (
-                    <span>{m.otp_send_code()}</span>
+                    <span>
+                      {resendSecondsLeft > 0
+                        ? m.otp_resend_in({
+                            seconds: String(resendSecondsLeft),
+                          })
+                        : m.otp_send_code()}
+                    </span>
                   )}
                 </button>
               </>
@@ -157,8 +168,12 @@ export function LoginPage({
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || loginStep === "SUCCESS"}
-                  className="mt-2 w-full py-3.5 rounded-xl fuwari-btn-primary font-bold text-sm tracking-wide active:scale-[0.98] transition-all gap-2"
+                  disabled={
+                    isSubmitting ||
+                    emailChallengePending ||
+                    loginStep === "SUCCESS"
+                  }
+                  className="mt-2 flex w-full items-center justify-center py-3.5 rounded-xl fuwari-btn-primary font-bold text-sm tracking-wide active:scale-[0.98] transition-all gap-2"
                 >
                   {loginStep === "VERIFYING" || isSubmitting ? (
                     <>
@@ -185,6 +200,7 @@ export function LoginPage({
                     disabled={
                       resendSecondsLeft > 0 ||
                       isSubmitting ||
+                      emailChallengePending ||
                       loginStep === "SUCCESS"
                     }
                     className="text-xs font-medium fuwari-text-50 hover:text-(--fuwari-primary) transition-colors disabled:opacity-40"

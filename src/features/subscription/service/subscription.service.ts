@@ -1,7 +1,9 @@
+import type { JSONContent } from "@tiptap/react";
 import { blogConfig } from "@/blog.config";
 import type { SubscriptionConfig } from "@/features/config/config.schema";
 import * as ConfigRepo from "@/features/config/data/config.data";
 import { resolveSystemConfig } from "@/features/config/service/config.service";
+import { convertToPlainText } from "@/features/posts/utils/content";
 import { serverEnv } from "@/lib/env/server.env";
 import { err, ok } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
@@ -46,6 +48,7 @@ interface NotifiablePost {
   id: number;
   title: string;
   slug: string;
+  contentHash?: string;
 }
 
 const QUEUE_BATCH_SIZE = 10;
@@ -54,6 +57,62 @@ export async function notifySubscribersOfNewPost(
   context: DbContext,
   post: NotifiablePost,
 ) {
+  const contentHash =
+    post.contentHash ??
+    (await hashContent({ title: post.title, slug: post.slug }));
+  return notifySubscribers(context, {
+    id: post.id,
+    contentHash,
+    contentType: "article",
+    title: post.title,
+    url: `https://${serverEnv(context.env).DOMAIN}/post/${encodeURIComponent(post.slug)}`,
+    preview: "",
+  });
+}
+
+export async function notifySubscribersOfUpdatedMoment(
+  context: DbContext,
+  moment: {
+    id: number;
+    content: JSONContent | null;
+    images: string[];
+    videoUrl: string | null;
+  },
+) {
+  const contentHash = await hashContent({
+    content: moment.content,
+    images: moment.images,
+    videoUrl: moment.videoUrl,
+  });
+  const preview = convertToPlainText(moment.content)
+    .replaceAll(/\s+/g, " ")
+    .trim()
+    .slice(0, 500);
+  const { DOMAIN, LOCALE } = serverEnv(context.env);
+
+  return notifySubscribers(context, {
+    id: moment.id,
+    contentHash,
+    contentType: "moment",
+    title: m.subscription_email_moment_title({}, { locale: LOCALE }),
+    url: `https://${DOMAIN}/moments?momentId=${moment.id}#moment-${moment.id}`,
+    preview,
+  });
+}
+
+interface NotifiableContent {
+  id: number;
+  contentHash: string;
+  contentType: "article" | "moment";
+  title: string;
+  url: string;
+  preview: string;
+}
+
+async function notifySubscribers(
+  context: DbContext,
+  content: NotifiableContent,
+) {
   const config = resolveSystemConfig(
     await ConfigRepo.getSystemConfig(context.db),
   );
@@ -61,13 +120,25 @@ export async function notifySubscribersOfNewPost(
     config?.subscription;
   const allUsers = subscriptionConfig?.allUserNotifyEnabled ?? false;
 
-  const notified = await SubscriptionData.isPostNotified(context.db, post.id);
-  if (notified) {
+  const isCurrentNotification =
+    content.contentType === "article"
+      ? await SubscriptionData.isPostNotificationCurrent(
+          context.db,
+          content.id,
+          content.contentHash,
+        )
+      : await SubscriptionData.isMomentNotificationCurrent(
+          context.db,
+          content.id,
+          content.contentHash,
+        );
+  if (isCurrentNotification) {
     console.log(
       JSON.stringify({
         event: "blog_subscription_notify_skipped",
         reason: "already_notified",
-        postId: post.id,
+        contentId: content.id,
+        contentType: content.contentType,
       }),
     );
     return ok({ recipients: 0, skipped: true });
@@ -81,22 +152,38 @@ export async function notifySubscribersOfNewPost(
   let sentCount = 0;
 
   if (recipients.length > 0) {
-    const { DOMAIN, LOCALE } = serverEnv(context.env);
+    const { LOCALE } = serverEnv(context.env);
     const siteName = config?.site?.title?.trim() || blogConfig.title;
-    const articleUrl = `https://${DOMAIN}/post/${encodeURIComponent(post.slug)}`;
+    const contentType =
+      content.contentType === "article"
+        ? m.subscription_content_type_article({}, { locale: LOCALE })
+        : m.subscription_content_type_moment({}, { locale: LOCALE });
 
     const { subject, html } = renderSubscriptionEmail({
       config: subscriptionConfig,
       vars: {
-        articleTitle: post.title,
-        articleUrl,
+        contentType,
+        contentTitle: content.title,
+        contentUrl: content.url,
+        contentPreview: content.preview,
+        articleTitle: content.title,
+        articleUrl: content.url,
         siteName,
       },
-      fallbackSubject: m.subscription_email_default_subject(
-        { siteName },
-        { locale: LOCALE },
-      ),
-      fallbackBodyHtml: buildFallbackBodyHtml(post.title, siteName, LOCALE),
+      fallbackSubject:
+        content.contentType === "article"
+          ? m.subscription_email_default_subject(
+              { siteName },
+              { locale: LOCALE },
+            )
+          : m.subscription_email_moment_default_subject(
+              { siteName },
+              { locale: LOCALE },
+            ),
+      fallbackBodyHtml:
+        content.contentType === "article"
+          ? buildFallbackBodyHtml(content.title, siteName, LOCALE)
+          : buildMomentFallbackBodyHtml(content.preview, siteName, LOCALE),
     });
 
     for (let i = 0; i < recipients.length; i += QUEUE_BATCH_SIZE) {
@@ -117,18 +204,41 @@ export async function notifySubscribersOfNewPost(
     }
   }
 
-  await SubscriptionData.markPostNotified(context.db, post.id);
+  if (content.contentType === "article") {
+    await SubscriptionData.markPostNotified(
+      context.db,
+      content.id,
+      content.contentHash,
+    );
+  } else {
+    await SubscriptionData.markMomentNotified(
+      context.db,
+      content.id,
+      content.contentHash,
+    );
+  }
 
   console.log(
     JSON.stringify({
       event: "blog_subscription_notify",
-      postId: post.id,
+      contentId: content.id,
+      contentType: content.contentType,
       mode: allUsers ? "all_users" : "subscribers_only",
       recipients: sentCount,
     }),
   );
 
   return ok({ recipients: sentCount, skipped: false });
+}
+
+async function hashContent(content: unknown): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(JSON.stringify(content)),
+  );
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
 }
 
 function buildFallbackBodyHtml(
@@ -145,4 +255,33 @@ function buildFallbackBodyHtml(
     `<h2 style="margin:0 0 12px;font-size:18px;color:#222;">${heading}</h2>`,
     `<p style="margin:0;">${body}</p>`,
   ].join("");
+}
+
+function buildMomentFallbackBodyHtml(
+  preview: string,
+  siteName: string,
+  locale: "zh" | "en",
+): string {
+  const heading = m.subscription_email_moment_default_heading({}, { locale });
+  const body = m.subscription_email_moment_default_body(
+    { siteName },
+    { locale },
+  );
+  const previewHtml = preview
+    ? `<p style="margin:12px 0 0;white-space:pre-wrap;">${escapeHtml(preview)}</p>`
+    : "";
+  return [
+    `<h2 style="margin:0 0 12px;font-size:18px;color:#222;">${heading}</h2>`,
+    `<p style="margin:0;">${body}</p>`,
+    previewHtml,
+  ].join("");
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }

@@ -1,29 +1,16 @@
 import { Loader2, ShieldCheck } from "lucide-react";
 import { Turnstile as WidgetTurnstile } from "@/components/common/turnstile";
-import {
-  type UseChallengeReturn,
-  useChallenge,
-} from "@/features/challenge/hooks/use-challenge";
+import type { UseChallengeReturn } from "@/features/challenge/hooks/use-challenge";
 import { m } from "@/paraglide/messages";
 
 interface ChallengeWidgetProps {
-  action: string;
-  /** 从服务端下发的 challenge 客户端配置 */
-  challenge: Parameters<typeof useChallenge>[0]["config"];
-  /**
-   * 可选的受控实例。传入后使用同一实例，避免页面与组件各自维护
-   * 一份验证状态（例如表单提交依赖的 challengePending 与 UI 展示不一致）。
-   */
-  useChallengeInstance?: UseChallengeReturn;
+  useChallengeInstance: UseChallengeReturn;
 }
 
 export function ChallengeWidget({
-  action,
-  challenge,
   useChallengeInstance,
 }: ChallengeWidgetProps) {
-  const internal = useChallenge({ action, config: challenge });
-  const c = useChallengeInstance ?? internal;
+  const c = useChallengeInstance;
   const { mode, altchaFailed, reset, turnstileProps } = c;
 
   if (!c.active) return null;
@@ -113,7 +100,7 @@ export function ChallengeWidget({
 function TurnstileInner({
   turnstileProps,
 }: {
-  turnstileProps: ReturnType<typeof useChallenge>["turnstileProps"];
+  turnstileProps: UseChallengeReturn["turnstileProps"];
 }) {
   return <WidgetTurnstile {...turnstileProps} />;
 }

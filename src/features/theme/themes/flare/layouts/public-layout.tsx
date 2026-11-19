@@ -35,13 +35,16 @@ export function PublicLayout({
   const { siteConfig } = useRouteContext({ from: "__root__" });
   const pathname = useLocation({ select: (l) => l.pathname });
   const isHome = pathname === "/";
+  const isAuthPage = pathname === "/login" || pathname === "/register";
   const isPost = pathname.startsWith("/post/");
   const focused = isFocusedPath(pathname);
-  const bannerHeightVh = isHome
-    ? BANNER_HEIGHT_HOME
-    : focused
-      ? BANNER_HEIGHT_FOCUSED
-      : BANNER_HEIGHT_PAGE;
+  const bannerHeightVh = isAuthPage
+    ? 12
+    : isHome
+      ? BANNER_HEIGHT_HOME
+      : focused
+        ? BANNER_HEIGHT_FOCUSED
+        : BANNER_HEIGHT_PAGE;
   const bannerImage =
     siteConfig.theme?.flare?.homeBg || siteConfig.theme?.fuwari?.homeBg || "";
 
@@ -102,7 +105,11 @@ export function PublicLayout({
       <div
         id="flare-content"
         className={cn("flare-body", pageInsetClass, "pb-10 md:pb-14")}
-        style={{ marginTop: `calc(${bannerHeightVh}svh - ${bodyOverlap})` }}
+        style={{
+          marginTop: isAuthPage
+            ? "calc(12svh + 3rem)"
+            : `calc(${bannerHeightVh}svh - ${bodyOverlap})`,
+        }}
       >
         <div
           className="flare-layout"

@@ -80,7 +80,9 @@ export async function getChallengeClientConfig(
 ): Promise<ChallengeClientConfig> {
   const server = await getChallengeServerConfig(context);
   return {
-    provider: server.provider,
+    // Match the server-side fail-open rule: an incompletely configured
+    // Turnstile must not leave the client blocked on a widget it cannot render.
+    provider: isChallengeReady(server) ? server.provider : "none",
     scope: server.scope,
     siteKey: server.turnstile.siteKey,
     difficulty: server.altchaDifficulty,

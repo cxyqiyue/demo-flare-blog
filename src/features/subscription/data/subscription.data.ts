@@ -1,6 +1,7 @@
 import { and, eq, isNull, lt, or } from "drizzle-orm";
 import {
   BlogSubscriptionsTable,
+  MomentNotificationsTable,
   PostNotificationsTable,
   user,
 } from "@/lib/db/schema";
@@ -36,20 +37,68 @@ export async function setBlogSubscription(
     .onConflictDoNothing();
 }
 
-export async function isPostNotified(db: DB, postId: number) {
+export async function isPostNotificationCurrent(
+  db: DB,
+  postId: number,
+  contentHash: string,
+) {
   const [row] = await db
-    .select({ postId: PostNotificationsTable.postId })
+    .select({ contentHash: PostNotificationsTable.contentHash })
     .from(PostNotificationsTable)
     .where(eq(PostNotificationsTable.postId, postId))
     .limit(1);
-  return !!row;
+  if (!row) return false;
+  if (row.contentHash === "") {
+    // Rows written before content hashes existed still represent an email
+    // already sent. Backfill the hash once so later edits can be detected.
+    await db
+      .update(PostNotificationsTable)
+      .set({ contentHash })
+      .where(eq(PostNotificationsTable.postId, postId));
+    return true;
+  }
+  return row.contentHash === contentHash;
 }
 
-export async function markPostNotified(db: DB, postId: number) {
+export async function markPostNotified(
+  db: DB,
+  postId: number,
+  contentHash: string,
+) {
   await db
     .insert(PostNotificationsTable)
-    .values({ postId })
-    .onConflictDoNothing();
+    .values({ postId, contentHash })
+    .onConflictDoUpdate({
+      target: PostNotificationsTable.postId,
+      set: { contentHash, sentAt: new Date() },
+    });
+}
+
+export async function isMomentNotificationCurrent(
+  db: DB,
+  momentId: number,
+  contentHash: string,
+) {
+  const [row] = await db
+    .select({ contentHash: MomentNotificationsTable.contentHash })
+    .from(MomentNotificationsTable)
+    .where(eq(MomentNotificationsTable.momentId, momentId))
+    .limit(1);
+  return row?.contentHash === contentHash;
+}
+
+export async function markMomentNotified(
+  db: DB,
+  momentId: number,
+  contentHash: string,
+) {
+  await db
+    .insert(MomentNotificationsTable)
+    .values({ momentId, contentHash })
+    .onConflictDoUpdate({
+      target: MomentNotificationsTable.momentId,
+      set: { contentHash, sentAt: new Date() },
+    });
 }
 
 function activeUserCondition() {

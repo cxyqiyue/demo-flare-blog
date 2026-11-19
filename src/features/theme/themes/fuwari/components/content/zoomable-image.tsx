@@ -1,4 +1,5 @@
 import { ClientOnly } from "@tanstack/react-router";
+import { X } from "lucide-react";
 import type React from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -136,19 +137,13 @@ function Lightbox({
       >
         {/* Close Button */}
         <button
+          type="button"
           onClick={onClose}
-          className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors group"
+          aria-label={m.common_close()}
           title={m.common_close()}
+          className="inline-flex size-12 items-center justify-center rounded-full border-2 border-white bg-white text-black shadow-[0_4px_24px_rgba(0,0,0,0.65)] ring-4 ring-black/40 transition-transform hover:scale-105 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/70"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="24px"
-            viewBox="0 -960 960 960"
-            width="24px"
-            className="fill-white/70 group-hover:fill-white"
-          >
-            <path d="M480-424 284-228q-11 11-28 11t-28-11q-11-11-11-28t11-28l196-196-196-196q-11-11-11-28t11-28q11-11 28-11t28 11l196 196 196-196q11-11 28-11t28 11q11 11 11 28t-11 28L536-480l196 196q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-424Z" />
-          </svg>
+          <X size={24} strokeWidth={2.75} aria-hidden="true" />
         </button>
       </div>
 
@@ -162,6 +157,8 @@ function Lightbox({
           src={src}
           alt={alt}
           className="block max-w-full max-h-full object-contain"
+          draggable={false}
+          onContextMenu={(event) => event.preventDefault()}
           style={{ transformOrigin: "center center" }}
         />
       </div>
@@ -210,6 +207,7 @@ export default function ZoomableImage({
           width={width}
           height={height}
           loading="lazy"
+          draggable={false}
           className={cn(
             className,
             "transition-all duration-500 will-change-transform m-0 p-0",

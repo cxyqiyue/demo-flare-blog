@@ -53,12 +53,8 @@ function RouteComponent() {
   });
 
   const challengeElement =
-    challengeConfig.provider !== "none" && loginForm.loginStep === "IDLE" ? (
-      <ChallengeWidget
-        action="login"
-        challenge={challengeConfig}
-        useChallengeInstance={challenge}
-      />
+    challengeConfig.provider !== "none" && loginForm.loginStep !== "SUCCESS" ? (
+      <ChallengeWidget useChallengeInstance={challenge} />
     ) : null;
 
   return (

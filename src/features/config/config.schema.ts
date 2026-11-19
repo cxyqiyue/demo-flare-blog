@@ -52,6 +52,10 @@ export const NotificationConfigSchema = z.object({
 });
 
 export const SUBSCRIPTION_TEMPLATE_PLACEHOLDERS = [
+  "{{contentType}}",
+  "{{contentTitle}}",
+  "{{contentUrl}}",
+  "{{contentPreview}}",
   "{{articleTitle}}",
   "{{articleUrl}}",
   "{{siteName}}",

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ZoomableContentImage } from "@/components/content/zoomable-content-image";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
 import { collectImageUrls } from "@/features/moments/components/moment-editor-config";
@@ -45,10 +46,9 @@ interface MomentCardProps {
 
 function MomentImage({ src, single }: { src: string; single: boolean }) {
   return (
-    <img
+    <ZoomableContentImage
       src={src}
       alt=""
-      loading="lazy"
       className={cn(
         "w-full rounded-sm border border-border/40",
         single ? "h-auto max-h-[32rem] object-contain" : "h-full object-cover",
@@ -125,7 +125,9 @@ export function MomentCard({
     }
   };
 
-  const renderedContent = renderCommentReact(moment.content);
+  const renderedContent = renderCommentReact(moment.content, {
+    zoomableImages: true,
+  });
 
   return (
     <article

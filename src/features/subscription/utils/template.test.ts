@@ -5,6 +5,10 @@ import {
 } from "./template";
 
 const VARS: SubscriptionEmailVars = {
+  contentType: "Article",
+  contentTitle: "My First Post",
+  contentUrl: "https://example.com/post/my-first-post",
+  contentPreview: "",
   articleTitle: "My First Post",
   articleUrl: "https://example.com/post/my-first-post",
   siteName: "Demo Blog",
