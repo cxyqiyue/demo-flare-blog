@@ -18,29 +18,8 @@ export function ChallengeWidget({
   if (mode === "turnstile") {
     return (
       <div className={c.verified ? "hidden" : "flex justify-center"}>
-        <div className="w-full max-w-sm rounded-md border border-border/30 bg-background/80 px-5 py-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/30 bg-muted/30"
-              aria-hidden
-            >
-              <Loader2
-                size={18}
-                className="animate-spin text-muted-foreground"
-              />
-            </span>
-            <div className="min-w-0 space-y-0.5 text-left">
-              <p className="text-sm font-medium text-foreground">
-                {m.challenge_turnstile_verifying()}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {m.challenge_turnstile_verifying_desc()}
-              </p>
-            </div>
-          </div>
-          <div className="mt-3 flex justify-center">
-            <TurnstileInner turnstileProps={turnstileProps} />
-          </div>
+        <div className="w-full min-w-[300px] max-w-sm">
+          <TurnstileInner turnstileProps={turnstileProps} />
         </div>
       </div>
     );
