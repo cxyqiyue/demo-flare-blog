@@ -1,7 +1,7 @@
 import { List, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { TableOfContentsItem } from "@/features/posts/utils/toc";
-import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import TableOfContents from "./table-of-contents";
 
@@ -15,6 +15,10 @@ export function TocDrawer({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const hasHeaders = headers.length > 0;
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -35,18 +39,20 @@ export function TocDrawer({
       document.body.style.overflow = overflow;
       window.removeEventListener("resize", wide);
     };
-  }, [isOpen]);
+  }, [isOpen, mounted, hasHeaders]);
 
-  if (headers.length === 0) return null;
+  if (!mounted || headers.length === 0) return null;
 
   const close = () => setIsOpen(false);
 
-  return (
+  return createPortal(
     <>
       <button
         type="button"
         onClick={() => setIsOpen(true)}
         aria-label={m.post_toc()}
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
         title={m.post_toc()}
         className="flare-toc-trigger fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] right-4 md:right-6 z-40 flex items-center justify-center w-11 h-11 rounded-full flare-surface text-muted-foreground hover:text-foreground transition-all active:scale-95 min-[1280px]:hidden"
       >
@@ -56,13 +62,21 @@ export function TocDrawer({
       <dialog
         ref={dialogRef}
         onClose={close}
+        onCancel={close}
         onClick={(event) => {
-          if (event.target === event.currentTarget) close();
+          if (event.target !== event.currentTarget) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (
+            event.clientX < bounds.left ||
+            event.clientX > bounds.right ||
+            event.clientY < bounds.top ||
+            event.clientY > bounds.bottom
+          ) {
+            close();
+          }
         }}
         aria-label={m.post_toc()}
-        className={cn(
-          "fixed inset-y-0 left-auto right-0 m-0 h-dvh max-h-none w-80 max-w-[85vw] bg-background text-foreground border-l border-border p-0 overflow-hidden backdrop:bg-black/30 backdrop:backdrop-blur-sm",
-        )}
+        className="fixed inset-y-0 left-auto right-0 m-0 h-dvh max-h-none w-80 max-w-[85vw] bg-background text-foreground border-l border-border p-0 overflow-hidden backdrop:bg-black/30 backdrop:backdrop-blur-sm"
       >
         <div className="flex items-center justify-between h-14 px-5 border-b border-border shrink-0">
           <span className="text-sm font-medium text-foreground">
@@ -85,6 +99,7 @@ export function TocDrawer({
           />
         </div>
       </dialog>
-    </>
+    </>,
+    document.body,
   );
 }

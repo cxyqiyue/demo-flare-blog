@@ -83,7 +83,7 @@ export function Turnstile({
           "error-callback": () => callbacksRef.current.onError?.(),
           "expired-callback": () => callbacksRef.current.onExpire?.(),
           action,
-          size: "compact",
+          size: "flexible",
           // 始终渲染 widget，避免 "interaction-only" 下无任何可见 UI
           appearance: "always",
         });
@@ -110,7 +110,12 @@ export function Turnstile({
 
   if (!siteKey) return null;
 
-  return <div ref={containerRef} />;
+  return (
+    <div
+      ref={containerRef}
+      className="w-full min-w-[300px] min-h-[65px] shrink-0"
+    />
+  );
 }
 
 /**
