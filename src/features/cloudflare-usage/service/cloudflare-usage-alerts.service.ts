@@ -183,8 +183,11 @@ export async function checkAndDispatchUsageAlerts(
             {
               endpointId: endpoint.id,
               type: endpoint.type ?? "generic",
-              url: endpoint.url,
+              url: endpoint.type === "telegram" ? "" : endpoint.url.trim(),
               secret: endpoint.secret,
+              botToken: endpoint.botToken,
+              chatId: endpoint.chatId,
+              template: endpoint.template,
               event: {
                 type: NOTIFICATION_EVENT.CLOUDFLARE_USAGE_ALERT,
                 data: {

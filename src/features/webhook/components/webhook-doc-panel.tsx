@@ -236,7 +236,7 @@ X-Flare-Signature: sha256=...`}
 
   return (
     <>
-      <div className="group relative overflow-hidden border border-border/30 bg-muted/5 p-8 transition-all hover:bg-muted/10">
+      <div className="group relative overflow-hidden border border-border/30 bg-muted/5 p-4 transition-all hover:bg-muted/10 sm:p-6 md:p-8">
         <div className="relative z-10 flex items-start gap-6">
           <div className="rounded-full bg-foreground/5 p-3">
             <Info className="h-5 w-5 text-muted-foreground" />
@@ -260,7 +260,7 @@ X-Flare-Signature: sha256=...`}
         </div>
       </div>
 
-      <div className="space-y-6 border border-border/30 bg-background/50 p-8">
+      <div className="space-y-6 border border-border/30 bg-background/50 p-4 sm:p-6 md:p-8">
         <div className="space-y-1">
           <h5 className="text-sm font-medium text-foreground">
             {m.settings_webhook_format_title()}

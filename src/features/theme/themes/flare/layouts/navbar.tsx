@@ -34,16 +34,20 @@ export function Navbar({
     const onScroll = () => {
       // Condense before the content reaches the bar, so the links never sit
       // white-on-white over the first panel.
-      const threshold = Math.max(
-        12,
-        window.innerHeight * (bannerHeightVh / 100) - 168,
-      );
-      setScrolled(window.scrollY > threshold);
+      const content = document.getElementById("flare-content");
+      const contentTop = content
+        ? content.getBoundingClientRect().top + window.scrollY
+        : window.innerHeight * (bannerHeightVh / 100);
+      setScrolled(window.scrollY > Math.max(12, contentTop - 128));
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [bannerHeightVh]);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [bannerHeightVh, pathname]);
 
   useEffect(() => {
     setOpen(false);
@@ -92,8 +96,11 @@ export function Navbar({
   return (
     <header
       ref={headerRef}
-      className="flare-nav mx-auto transition-[max-width] duration-300 motion-reduce:transition-none"
-      style={{ maxWidth: scrolled ? "68rem" : "100%" }}
+      className="flare-nav mx-auto transition-[width,max-width] duration-300 motion-reduce:transition-none"
+      style={{
+        width: scrolled ? "calc(100% - 1rem)" : "100%",
+        maxWidth: scrolled ? "68rem" : "100%",
+      }}
       data-on-banner={onBanner ? "true" : "false"}
     >
       <div
