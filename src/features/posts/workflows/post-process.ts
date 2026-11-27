@@ -138,10 +138,21 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
 
     if (!isFuturePost) {
       await step.do("update search index", async () => {
-        const result = await upsertPostSearchIndex(
-          this.env,
-          postForSideEffects,
-        );
+        const currentPost = await fetchPost(this.env, postId);
+        if (
+          !currentPost ||
+          currentPost.status !== "published" ||
+          !currentPost.publishedAt ||
+          currentPost.publishedAt > new Date()
+        ) {
+          await SearchService.deleteIndex(
+            { env: this.env },
+            { id: postId },
+            { immediate: true },
+          );
+          return;
+        }
+        const result = await upsertPostSearchIndex(this.env, currentPost);
         // 搜索索引延迟写入 KV（~5s 去抖），保持 Worker 存活直到写入完成
         if (result.flushPromise) {
           this.ctx.waitUntil(result.flushPromise);
@@ -191,7 +202,14 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
     if (!isFuturePost && postForSideEffects.visibility === "public") {
       await step.do("notify subscribers", async () => {
         const p = await fetchPost(this.env, postId);
-        if (!p || p.status !== "published") return;
+        if (
+          !p ||
+          p.status !== "published" ||
+          p.visibility !== "public" ||
+          !p.publishedAt ||
+          p.publishedAt > new Date()
+        )
+          return;
         const contentHash = await calculatePostHash({
           title: p.title,
           contentJson: p.contentJson,
@@ -220,7 +238,11 @@ export class PostProcessWorkflow extends WorkflowEntrypoint<Env, Params> {
     if (!post) return;
 
     await step.do("remove from search index", async () => {
-      return await SearchService.deleteIndex({ env: this.env }, { id: postId });
+      await SearchService.deleteIndex(
+        { env: this.env },
+        { id: postId },
+        { immediate: true },
+      );
     });
 
     await step.do("invalidate caches", async () => {

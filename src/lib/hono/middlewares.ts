@@ -6,8 +6,6 @@ import {
   isFullSiteChallengeEnabled,
   verifyAltchaSolutionPayload,
 } from "@/features/challenge/service/challenge.service";
-import * as ConfigService from "@/features/config/service/config.service";
-import { getLinkAccessSettings } from "@/features/media/service/link-access.service";
 import { getAuth } from "@/lib/auth/auth.server";
 import { CACHE_CONTROL } from "@/lib/constants";
 import { getDb } from "@/lib/db";
@@ -73,16 +71,57 @@ const tryCacheResponse = (c: Context, cache: Cache) => {
   );
 };
 
+/** Viewer-dependent responses must never enter browser or shared caches. */
+export const privateNoStoreMiddleware = createMiddleware(async (c, next) => {
+  await next();
+  applyNoCachePageHeaders(c.res.headers);
+  c.res.headers.set("Cloudflare-CDN-Cache-Control", "private, no-store");
+});
+
+const DYNAMIC_CONTENT_PREFIXES = [
+  "/api/posts",
+  "/api/post",
+  "/api/search",
+  "/posts",
+  "/post",
+  "/search",
+  "/moments",
+  "/friend-links",
+  "/about",
+  "/navigation",
+  "/unsubscribe",
+];
+const DYNAMIC_DOCUMENT_PATHS = new Set([
+  "/",
+  "/atom.xml",
+  "/feed.json",
+  "/rss.xml",
+  "/sitemap.xml",
+]);
+
 export const cacheMiddleware = createMiddleware(async (c, next) => {
+  const path = c.req.path;
+  // Decide before cache.match: an old public response can otherwise bypass the
+  // current access check after a visibility change or with another viewer.
+  const isViewerDependent =
+    c.req.raw.headers.has("cookie") ||
+    c.req.raw.headers.has("authorization") ||
+    path === "/images" || path.startsWith("/images/") ||
+    path === "/media/file" || path.startsWith("/media/file/") ||
+    DYNAMIC_DOCUMENT_PATHS.has(path) ||
+    DYNAMIC_CONTENT_PREFIXES.some(
+      (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+    );
+  if (isViewerDependent) {
+    return privateNoStoreMiddleware(c, next);
+  }
+
   if (c.req.method !== "GET") {
     return next();
   }
 
-  const path = c.req.path;
-
-  // 排除需要 session 的 API（如 /api/auth, /api/send）
-  // 但包含 public API（/api/posts, /api/post, /api/tags, /api/search）
-  const EXCLUDED_PREFIXES = ["/api/auth", "/api/send", "/media/file"];
+  // Session endpoints and direct media downloads manage their own policies.
+  const EXCLUDED_PREFIXES = ["/api/auth", "/api/send", "/media/file", "/images"];
   if (EXCLUDED_PREFIXES.some((prefix) => path.startsWith(prefix))) {
     return next();
   }
@@ -109,24 +148,6 @@ export const cacheMiddleware = createMiddleware(async (c, next) => {
       await next();
       applyNoCachePageHeaders(c.res.headers);
       return;
-    }
-  }
-
-  // 防盗链 protected 模式下，/images/* 响应依赖 Referer，不能进边缘缓存
-  // （缓存键不含 Referer，否则白名单校验会被缓存绕过）
-  if (path.startsWith("/images/") && c.env) {
-    try {
-      const config = await ConfigService.getSystemConfig({
-        db: getDb(c.env),
-        env: c.env,
-        executionCtx: c.executionCtx,
-      });
-      if (getLinkAccessSettings(config).mode === "protected") {
-        return next();
-      }
-    } catch {
-      // 配置读取失败时保守处理：不缓存
-      return next();
     }
   }
 

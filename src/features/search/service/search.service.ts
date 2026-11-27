@@ -1,5 +1,5 @@
-import { insert, search as oramaSearch, remove } from "@orama/orama";
-import { and, eq, lte } from "drizzle-orm";
+import { getByID, insert, search as oramaSearch, remove } from "@orama/orama";
+import { and, eq, inArray, lte } from "drizzle-orm";
 import { convertToPlainText } from "@/features/posts/utils/content";
 import { createMyDb } from "@/features/search/model/schema";
 import {
@@ -30,7 +30,28 @@ export async function search(context: DbContext, data: SearchQueryInput) {
     limit: Math.min(data.limit, 25),
   });
 
-  return result.hits.map((hit) => {
+  // The index is an eventually consistent read model, never an access authority.
+  // Recheck D1 on every request before exposing indexed text, including old hits
+  // left behind by a visibility change or a delayed/failed index update.
+  const postIds = result.hits
+    .map((hit) => Number(hit.document.id))
+    .filter((id) => Number.isSafeInteger(id) && id > 0);
+  if (postIds.length === 0) return [];
+
+  const publicPosts = await context.db
+    .select({ id: PostsTable.id })
+    .from(PostsTable)
+    .where(
+      and(
+        inArray(PostsTable.id, postIds),
+        eq(PostsTable.status, "published"),
+        eq(PostsTable.visibility, "public"),
+        lte(PostsTable.publishedAt, new Date()),
+      ),
+    );
+  const publicPostIds = new Set(publicPosts.map((post) => String(post.id)));
+
+  return result.hits.filter((hit) => publicPostIds.has(hit.document.id)).map((hit) => {
     const { document, score } = hit;
     const titleHighlight = buildSnippet({
       text: document.title,
@@ -73,9 +94,9 @@ export async function upsert(
 ) {
   const db = await getOramaDb(context.env);
 
-  try {
+  if (getByID(db, data.id.toString())) {
     await remove(db, data.id.toString());
-  } catch {}
+  }
 
   const plain = convertToPlainText(data.contentJson ?? null);
   const content =
@@ -111,14 +132,17 @@ export async function deleteIndex(
   options?: { immediate?: boolean },
 ) {
   const db = await getOramaDb(context.env);
-  await remove(db, data.id.toString());
+  if (getByID(db, data.id.toString())) {
+    await remove(db, data.id.toString());
+  }
 
   if (options?.immediate) {
     await persistOramaDb(context.env, db);
-  } else {
-    persistOramaDbDeferred(context.env, db);
+    return { id: data.id };
   }
-  return { id: data.id };
+
+  const flushPromise = persistOramaDbDeferred(context.env, db);
+  return { id: data.id, flushPromise };
 }
 
 export async function rebuildIndex(context: DbContext) {

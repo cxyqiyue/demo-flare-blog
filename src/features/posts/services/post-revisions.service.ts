@@ -1,3 +1,4 @@
+import { assertPostMediaReferencesReadable } from "@/features/media/service/post-media-access.service";
 import { syncPostMedia } from "@/features/posts/data/post-media.data";
 import * as PostRevisionRepo from "@/features/posts/data/post-revisions.data";
 import * as PostRepo from "@/features/posts/data/posts.data";
@@ -11,10 +12,40 @@ import type {
   RestorePostRevisionInput,
 } from "@/features/posts/schema/post-revisions.schema";
 import { PostRevisionSnapshotSchema } from "@/features/posts/schema/post-revisions.schema";
+import { createViewerAccess } from "@/features/posts/services/post-access.service";
 import { logPostAutoSnapshot } from "@/features/posts/services/post-auto-snapshot.logging";
 import { calculatePostHash } from "@/features/posts/utils/sync";
+import { isSuperAdmin } from "@/lib/auth/access";
 import { ms } from "@/lib/duration";
 import { err, ok } from "@/lib/errors";
+import { createPermissionError } from "@/lib/errors/request-errors";
+
+type RevisionContext = DbContext & { session?: Session | null };
+
+/** Sessionless MCP/workflow callers already pass their own trusted authorization. */
+function canManagePost(context: RevisionContext, authorId: string | null) {
+  return (
+    !context.session ||
+    isSuperAdmin(context.session.user, context.env) ||
+    context.session.user.id === authorId
+  );
+}
+
+function stripStoredSecrets<
+  T extends {
+    passwordHash?: unknown;
+    passwordCipher?: unknown;
+    publicContentJson?: unknown;
+  },
+>(post: T) {
+  const {
+    passwordHash: _passwordHash,
+    passwordCipher: _passwordCipher,
+    publicContentJson: _publicContentJson,
+    ...safePost
+  } = post;
+  return safePost;
+}
 
 const AUTO_SNAPSHOT_MIN_INTERVAL = "2m";
 const MAX_AUTO_REVISIONS_PER_POST = 30;
@@ -53,9 +84,12 @@ async function hashSnapshot(snapshot: PostRevisionSnapshot) {
 }
 
 export async function listPostRevisions(
-  context: DbContext,
+  context: RevisionContext,
   data: ListPostRevisionsInput,
 ) {
+  const post = await PostRepo.findPostById(context.db, data.postId);
+  if (!post || !canManagePost(context, post.authorId)) return [];
+
   const revisions = await PostRevisionRepo.listPostRevisions(
     context.db,
     data.postId,
@@ -73,9 +107,12 @@ export async function listPostRevisions(
 }
 
 export async function findPostRevisionById(
-  context: DbContext,
+  context: RevisionContext,
   data: FindPostRevisionByIdInput,
 ) {
+  const post = await PostRepo.findPostById(context.db, data.postId);
+  if (!post || !canManagePost(context, post.authorId)) return null;
+
   return await PostRevisionRepo.findPostRevisionById(
     context.db,
     data.postId,
@@ -84,7 +121,7 @@ export async function findPostRevisionById(
 }
 
 export async function createPostRevision(
-  context: DbContext,
+  context: RevisionContext,
   data: CreatePostRevisionInput,
 ) {
   const reason = data.reason ?? "auto";
@@ -96,7 +133,7 @@ export async function createPostRevision(
   }
 
   const post = await PostRepo.findPostById(context.db, data.postId);
-  if (!post) {
+  if (!post || !canManagePost(context, post.authorId)) {
     if (reason === "auto") {
       logPostAutoSnapshot(context.env, "create_revision_post_not_found", {
         postId: data.postId,
@@ -184,15 +221,19 @@ export async function createPostRevision(
 }
 
 export async function restorePostRevision(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: RevisionContext & { executionCtx: ExecutionContext },
   data: RestorePostRevisionInput,
 ) {
   const [post, revision] = await Promise.all([
     PostRepo.findPostById(context.db, data.postId),
-    findPostRevisionById(context, data),
+    PostRevisionRepo.findPostRevisionById(
+      context.db,
+      data.postId,
+      data.revisionId,
+    ),
   ]);
 
-  if (!post) {
+  if (!post || !canManagePost(context, post.authorId)) {
     return err({ reason: "POST_NOT_FOUND" });
   }
 
@@ -216,10 +257,23 @@ export async function restorePostRevision(
 
   if (currentHash === targetHash) {
     return ok({
-      post,
+      post: stripStoredSecrets(post),
       restored: false,
       revisionId: revision.id,
     });
+  }
+
+  if (context.session && !isSuperAdmin(context.session.user, context.env)) {
+    const readable = await assertPostMediaReferencesReadable(
+      {
+        db: context.db,
+        env: context.env,
+        viewer: createViewerAccess(context.env, context.session.user),
+      },
+      post.contentJson,
+      targetSnapshot.contentJson,
+    );
+    if (!readable) throw createPermissionError();
   }
 
   const restoredPost = await PostRevisionRepo.restorePostSnapshot(context.db, {
@@ -244,16 +298,21 @@ export async function restorePostRevision(
   }
 
   return ok({
-    post: restoredPost,
+    post: stripStoredSecrets(restoredPost),
     restored: true,
     revisionId: revision.id,
   });
 }
 
 export async function deletePostRevisions(
-  context: DbContext,
+  context: RevisionContext,
   data: DeletePostRevisionsInput,
 ) {
+  const post = await PostRepo.findPostById(context.db, data.postId);
+  if (!post || !canManagePost(context, post.authorId)) {
+    return ok({ deletedIds: [] as number[], deletedCount: 0 });
+  }
+
   const deletedRevisions = await PostRevisionRepo.deletePostRevisions(
     context.db,
     data.postId,

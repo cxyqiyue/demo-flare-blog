@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeader } from "@tanstack/react-start/server";
 import {
   CreateCommentInputSchema,
   DeleteCommentInputSchema,
@@ -7,6 +8,7 @@ import {
   GetRepliesByRootIdInputSchema,
 } from "@/features/comments/comments.schema";
 import * as CommentService from "@/features/comments/comments.service";
+import { createViewerAccess } from "@/features/posts/services/post-access.service";
 import {
   authMiddleware,
   createRateLimitMiddleware,
@@ -20,10 +22,17 @@ export const getRootCommentsByTargetFn = createServerFn()
   .handler(async ({ data, context }) => {
     const session = context.session;
 
-    const result = await CommentService.getRootCommentsByTarget(context, {
-      ...data,
-      viewerId: session?.user.id,
-    });
+    const result = await CommentService.getRootCommentsByTarget(
+      {
+        ...context,
+        viewer: createViewerAccess(
+          context.env,
+          session?.user,
+          getRequestHeader("cookie"),
+        ),
+      },
+      { ...data, viewerId: session?.user.id },
+    );
 
     return result;
   });
@@ -35,10 +44,17 @@ export const getRepliesByRootIdFn = createServerFn()
   .handler(async ({ data, context }) => {
     const session = context.session;
 
-    const result = await CommentService.getRepliesByRootId(context, {
-      ...data,
-      viewerId: session?.user.id,
-    });
+    const result = await CommentService.getRepliesByRootId(
+      {
+        ...context,
+        viewer: createViewerAccess(
+          context.env,
+          session?.user,
+          getRequestHeader("cookie"),
+        ),
+      },
+      { ...data, viewerId: session?.user.id },
+    );
 
     return result;
   });
@@ -56,9 +72,18 @@ export const createCommentFn = createServerFn({
     authMiddleware,
   ])
   .inputValidator(CreateCommentInputSchema)
-  .handler(
-    async ({ data, context }) =>
-      await CommentService.createComment(context, data),
+  .handler(async ({ data, context }) =>
+    CommentService.createComment(
+      {
+        ...context,
+        viewer: createViewerAccess(
+          context.env,
+          context.session?.user,
+          getRequestHeader("cookie"),
+        ),
+      },
+      data,
+    ),
   );
 
 export const deleteCommentFn = createServerFn({

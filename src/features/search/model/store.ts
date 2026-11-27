@@ -130,8 +130,32 @@ let inflight: Promise<MyOramaDB> | null = null;
 
 // --- 延迟持久化：合并短时间内的多次写入，减少后端写入次数 ---
 let dirtyDb: MyOramaDB | null = null;
+let dirtyEnv: Env | null = null;
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingFlush: {
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (error: unknown) => void;
+} | null = null;
+let flushQueue: Promise<unknown> = Promise.resolve();
 const FLUSH_DEBOUNCE_MS = 5_000;
+
+function takePendingFlush() {
+  if (flushTimer) clearTimeout(flushTimer);
+  flushTimer = null;
+  dirtyDb = null;
+  dirtyEnv = null;
+  const pending = pendingFlush;
+  pendingFlush = null;
+  return pending;
+}
+
+function enqueueFlush(env: Env, db: MyOramaDB) {
+  // A running deferred write must finish before a newer immediate revocation.
+  const flush = flushQueue.then(() => flushToBackend(env, db));
+  flushQueue = flush.catch(() => {});
+  return flush;
+}
 
 async function flushToBackend(env: Env, db: MyOramaDB) {
   const raw = save(db);
@@ -159,9 +183,11 @@ async function flushToBackend(env: Env, db: MyOramaDB) {
         error: err instanceof Error ? err.message : String(err),
       }),
     );
+    throw err;
   }
 
   setOramaDb(db, newVersion);
+  return newVersion;
 }
 
 async function loadFromBackend(env: Env): Promise<MyOramaDB | null> {
@@ -229,76 +255,51 @@ export async function getOramaDb(env: Env): Promise<MyOramaDB> {
  * 立即持久化搜索索引（用于需要确保写入的场景，如 rebuildIndex）。
  */
 export async function persistOramaDb(env: Env, db: MyOramaDB) {
-  // 取消任何待执行的延迟写入，因为即将立即写入
-  if (flushTimer) {
-    clearTimeout(flushTimer);
-    flushTimer = null;
-  }
-  dirtyDb = null;
-
-  const raw = save(db);
-  const compressed = await compressRaw(raw);
-
-  const newVersion = Date.now().toString();
-
-  const meta = {
-    version: newVersion,
-    updatedAt: new Date().toISOString(),
-    sizeInBytes: compressed.byteLength,
-  };
-
-  await guardedKvPut(env, KV_KEY, compressed);
-  await guardedKvPut(env, KV_META_KEY, JSON.stringify(meta));
-
-  try {
-    await saveIndexToD1(env, KV_KEY, compressed);
-    await saveIndexToD1(env, KV_META_KEY, JSON.stringify(meta));
-  } catch (err) {
-    console.error(
-      JSON.stringify({
-        message: "orama D1 shard persist (immediate) failed",
-        error: err instanceof Error ? err.message : String(err),
-      }),
-    );
-  }
-
-  setOramaDb(db, newVersion);
-  return newVersion;
+  // An immediate write also fulfills every caller waiting on the debounced write.
+  const pending = takePendingFlush();
+  const flush = enqueueFlush(env, db);
+  if (pending) void flush.then(pending.resolve, pending.reject);
+  return await flush;
 }
 
 /**
  * 延迟持久化搜索索引：合并短时间内的多次写入（如 Workflow 中的
- * upsert + delete），仅在最后一次写入后 ~5s 才实际持久化，
- * 显著减少发布流程中的后端写入次数。
- *
- * 返回 Promise，调方可通过 executionCtx.waitUntil() 保持 Worker 存活。
+ * upsert + delete），仅在最后一次写入后 ~5s 才实际持久化。
+ * 返回共享 Promise，调方通过 executionCtx.waitUntil() 保持 Worker 存活。
  */
 export function persistOramaDbDeferred(env: Env, db: MyOramaDB): Promise<void> {
   dirtyDb = db;
   dirtyEnv = env;
-  if (flushTimer) {
-    clearTimeout(flushTimer);
+  if (flushTimer) clearTimeout(flushTimer);
+
+  if (!pendingFlush) {
+    let resolve!: () => void;
+    let reject!: (error: unknown) => void;
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    pendingFlush = { promise, resolve, reject };
   }
+  const promise = pendingFlush.promise;
 
-  return new Promise<void>((resolve) => {
-    flushTimer = setTimeout(() => {
-      flushTimer = null;
-      flushToBackend(dirtyEnv!, dirtyDb!)
-        .then(() => resolve())
-        .catch((err) => {
-          console.error(
-            JSON.stringify({
-              message: "deferred orama flush failed",
-              error: err instanceof Error ? err.message : String(err),
-            }),
-          );
-          resolve();
-        });
-    }, FLUSH_DEBOUNCE_MS);
-  });
+  flushTimer = setTimeout(() => {
+    const flushEnv = dirtyEnv!;
+    const flushDb = dirtyDb!;
+    const pending = takePendingFlush()!;
+    void enqueueFlush(flushEnv, flushDb).then(pending.resolve, (error) => {
+      console.error(
+        JSON.stringify({
+          message: "deferred orama flush failed",
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      pending.reject(error);
+    });
+  }, FLUSH_DEBOUNCE_MS);
+
+  return promise;
 }
-
-let dirtyEnv: Env | null = null;
 
 export async function getOramaMeta(
   env: Env,

@@ -1,8 +1,6 @@
 import type { Context } from "hono";
 import {
-  extractUnlockTokens,
-  isSuperAdminUser,
-  UNAUTHENTICATED_VIEWER,
+  createViewerAccess,
   type ViewerAccess,
 } from "@/features/posts/services/post-access.service";
 import { CACHE_CONTROL } from "@/lib/constants";
@@ -45,18 +43,8 @@ export async function getViewerContext(
   c: Context<{ Bindings: Env }>,
 ): Promise<ViewerAccess> {
   const cookieHeader = c.req.header("cookie");
-  const unlockTokens = extractUnlockTokens(cookieHeader);
-
-  let isAdmin = false;
-  if (cookieHeader) {
-    const session = await c.get("auth").api.getSession({
-      headers: c.req.raw.headers,
-    });
-    isAdmin = isSuperAdminUser(session?.user, c.env);
-  }
-
-  if (unlockTokens.length === 0 && !isAdmin) {
-    return UNAUTHENTICATED_VIEWER;
-  }
-  return { isAdmin, unlockTokens };
+  const session = cookieHeader
+    ? await c.get("auth").api.getSession({ headers: c.req.raw.headers })
+    : null;
+  return createViewerAccess(c.env, session?.user, cookieHeader);
 }

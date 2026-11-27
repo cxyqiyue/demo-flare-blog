@@ -18,8 +18,7 @@ import { DEFAULT_CONFIG } from "@/features/config/config.schema";
 import * as ConfigRepo from "@/features/config/data/config.data";
 import * as ConfigService from "@/features/config/service/config.service";
 import * as EmailData from "@/features/email/data/email.data";
-import * as PostService from "@/features/posts/services/posts.service";
-import { CommentsTable } from "@/lib/db/schema";
+import { CommentsTable, PostsTable } from "@/lib/db/schema";
 import { unwrap } from "@/lib/errors";
 
 describe("Comments Integration", () => {
@@ -59,19 +58,19 @@ describe("Comments Integration", () => {
 
   describe("CommentService", () => {
     beforeEach(async () => {
-      // Create a published post for comments
-      const { id } = await PostService.createEmptyPost(adminContext);
-      unwrap(
-        await PostService.updatePost(adminContext, {
-          id,
-          data: {
-            title: "Test Post",
-            status: "published",
-            slug: `test-post-${Date.now()}`,
-          },
-        }),
-      );
-      postId = id;
+      // Seed the exact public state required by the comment access gate.
+      const [post] = await adminContext.db
+        .insert(PostsTable)
+        .values({
+          title: "Test Post",
+          status: "published",
+          visibility: "public",
+          authorId: adminContext.session.user.id,
+          publishedAt: new Date("2020-01-01"),
+          slug: `test-post-${Date.now()}`,
+        })
+        .returning({ id: PostsTable.id });
+      postId = post.id;
 
       await ConfigRepo.upsertSystemConfig(adminContext.db, DEFAULT_CONFIG);
     });
@@ -501,19 +500,19 @@ describe("Comments Integration", () => {
       });
 
       it("should return ROOT_COMMENT_POST_MISMATCH when root belongs to different post", async () => {
-        // Create another post
-        const { id: otherPostId } =
-          await PostService.createEmptyPost(adminContext);
-        unwrap(
-          await PostService.updatePost(adminContext, {
-            id: otherPostId,
-            data: {
-              title: "Other Post",
-              status: "published",
-              slug: `other-post-${Date.now()}`,
-            },
-          }),
-        );
+        // Create another independently published, readable comment target.
+        const [otherPost] = await adminContext.db
+          .insert(PostsTable)
+          .values({
+            title: "Other Post",
+            status: "published",
+            visibility: "public",
+            authorId: adminContext.session.user.id,
+            publishedAt: new Date("2020-01-01"),
+            slug: `other-post-${Date.now()}`,
+          })
+          .returning({ id: PostsTable.id });
+        const otherPostId = otherPost.id;
 
         const otherPostComment = unwrap(
           await CommentService.createComment(userContext, {
@@ -1193,22 +1192,22 @@ describe("Comments Integration", () => {
       userContext = createAuthTestContext({ session: userSession });
       await seedUser(userContext.db, userSession.user);
 
-      const { id } = await PostService.createEmptyPost(adminContext);
-      unwrap(
-        await PostService.updatePost(adminContext, {
-          id,
-          data: {
-            title: "上下文测试文章",
-            summary: "这是一篇讨论代码审核与评论交流边界的文章摘要。",
-            status: "published",
-            slug: `workflow-test-${Date.now()}`,
-            contentJson: createCommentContent(
-              "文章正文详细讨论了如何区分正常反驳、友好调侃、恶意辱骂和广告灌水。",
-            ),
-          },
-        }),
-      );
-      postId = id;
+      const [post] = await adminContext.db
+        .insert(PostsTable)
+        .values({
+          title: "上下文测试文章",
+          summary: "这是一篇讨论代码审核与评论交流边界的文章摘要。",
+          status: "published",
+          visibility: "public",
+          authorId: adminContext.session.user.id,
+          publishedAt: new Date("2020-01-01"),
+          slug: `workflow-test-${Date.now()}`,
+          contentJson: createCommentContent(
+            "文章正文详细讨论了如何区分正常反驳、友好调侃、恶意辱骂和广告灌水。",
+          ),
+        })
+        .returning({ id: PostsTable.id });
+      postId = post.id;
     });
 
     it("passes post and reply context to AI moderation", async () => {

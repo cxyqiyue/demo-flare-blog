@@ -5,10 +5,15 @@ import * as PostRepo from "@/features/posts/data/posts.data";
 import {
   buildUnlockCookieHeader,
   createUnlockCookieValue,
+  extractUnlockTokens,
 } from "@/features/posts/services/post-access.service";
 import { verifyPassword } from "@/features/posts/utils/post-secret";
 import { getServiceContext } from "@/lib/hono/helper";
-import { baseMiddleware, rateLimitMiddleware } from "@/lib/hono/middlewares";
+import {
+  baseMiddleware,
+  privateNoStoreMiddleware,
+  rateLimitMiddleware,
+} from "@/lib/hono/middlewares";
 
 const VerifyPasswordInputSchema = z.object({
   slug: z.string().trim().min(1),
@@ -17,7 +22,7 @@ const VerifyPasswordInputSchema = z.object({
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use("*", baseMiddleware);
+app.use("*", baseMiddleware, privateNoStoreMiddleware);
 
 const route = app.post(
   "/verify-password",
@@ -50,8 +55,13 @@ const route = app.post(
       serviceContext.env,
       gateMeta.id,
       gateMeta.passwordHash,
+      extractUnlockTokens(c.req.header("cookie")),
     );
-    c.header("Set-Cookie", buildUnlockCookieHeader(token));
+    c.header(
+      "Set-Cookie",
+      buildUnlockCookieHeader(token, new URL(c.req.url).protocol === "https:"),
+    );
+    c.header("Cache-Control", "private, no-store");
     return c.json({ ok: true });
   },
 );

@@ -7,11 +7,8 @@ import { siteConfigQuery, siteDomainQuery } from "@/features/config/queries";
 import { recordPageViewFn } from "@/features/pageview/api/pageview.api";
 import { postBySlugQuery, relatedPostsQuery } from "@/features/posts/queries";
 import { CACHE_CONTROL } from "@/lib/constants";
-import {
-  buildArticleJsonLd,
-  buildCanonicalUrl,
-  canonicalLink,
-} from "@/lib/seo";
+import { buildPostHead } from "@/features/posts/utils/post-seo";
+import { buildCanonicalUrl } from "@/lib/seo";
 
 const searchSchema = z.object({
   highlightCommentId: z.coerce.number().optional(),
@@ -26,7 +23,7 @@ export const Route = createFileRoute("/_public/post/$slug")({
   loader: async ({ context, params }) => {
     // 1. Critical: Main post data - use serverFn (executes directly on server, no HTTP)
     const [post, domain, siteConfig] = await Promise.all([
-      context.queryClient.ensureQueryData(postBySlugQuery(params.slug)),
+      context.queryClient.fetchQuery(postBySlugQuery(params.slug)),
       context.queryClient.ensureQueryData(siteDomainQuery),
       context.queryClient.ensureQueryData(siteConfigQuery),
     ]);
@@ -47,47 +44,15 @@ export const Route = createFileRoute("/_public/post/$slug")({
       ),
     };
   },
-  head: ({ loaderData }) => {
-    const post = loaderData?.post;
-    const canonicalHref = loaderData?.canonicalHref ?? "";
-
-    return {
-      meta: [
-        {
-          title: post?.title,
-        },
-        {
-          name: "description",
-          content: post?.summary ?? "",
-        },
-        { property: "og:title", content: post?.title ?? "" },
-        { property: "og:description", content: post?.summary ?? "" },
-        { property: "og:type", content: "article" },
-        { property: "og:url", content: canonicalHref },
-      ],
-      links: [canonicalLink(canonicalHref)],
-      scripts: post
-        ? [
-            {
-              type: "application/ld+json",
-              children: buildArticleJsonLd({
-                authorName: loaderData.authorName,
-                canonicalHref,
-                post,
-              }),
-            },
-          ]
-        : [],
-    };
-  },
+  head: ({ loaderData }) =>
+    buildPostHead({
+      post: loaderData?.post,
+      authorName: loaderData?.authorName ?? "",
+      canonicalHref: loaderData?.canonicalHref ?? "",
+    }),
   pendingComponent: () => <theme.PostPageSkeleton />,
   pendingMs: __THEME_CONFIG__.pendingMs,
-  headers: ({ loaderData }) => {
-    // 受限文章（私密/密码）若已解锁，SSR 页面会携带正文，绝不能进入共享缓存；
-    // 未解锁时渲染的是壳，同样走 no-store（壳的 JSON 已由 detailGated 边缘缓存）。
-    const isRestricted = loaderData?.post?.visibility !== "public";
-    return isRestricted ? CACHE_CONTROL.private : CACHE_CONTROL.public;
-  },
+  headers: () => CACHE_CONTROL.private,
 });
 
 function RouteComponent() {

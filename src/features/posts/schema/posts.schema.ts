@@ -48,7 +48,11 @@ export const PostUpdateSchema = createUpdateSchema(PostsTable, {
   publicContentJson: NullableJsonContentSchema.optional(),
 })
   .omit({
+    id: true,
+    createdAt: true,
     publicContentJson: true,
+    passwordHash: true,
+    passwordCipher: true,
   })
   .extend({
     /**

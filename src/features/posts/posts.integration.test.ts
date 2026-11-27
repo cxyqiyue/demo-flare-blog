@@ -298,12 +298,12 @@ describe("Posts Integration", () => {
       await PostService.findPostBySlug(adminContext, { slug: "version-test" });
       await waitForBackgroundTasks(adminContext.executionCtx);
 
-      // Get current bootstrap generation before any bump
+      // Publishing already rotates the generation; a later bump must rotate it again.
       const oldVersion = await CacheService.getVersion(
         adminContext,
         "posts:detail",
       );
-      expect(oldVersion).toBe("v0");
+      expect(oldVersion).not.toBe("v0");
 
       // One rotation must make the old cache generation unreachable
       await CacheService.bumpVersion(adminContext, "posts:detail");
@@ -352,7 +352,7 @@ describe("Posts Integration", () => {
       expect(input.tagName).toBeUndefined();
     });
 
-    it("should not let an empty Tag filter bypass the unfiltered cache", async () => {
+    it("should read fresh published metadata with an empty Tag filter", async () => {
       const initialPublicContext = createTestContext();
       const emptyList = await PostService.getPostsCursor(
         initialPublicContext,
@@ -368,7 +368,9 @@ describe("Posts Integration", () => {
         { tagName: "" },
       );
 
-      expect(emptyTagList.items).toEqual([]);
+      expect(emptyTagList.items.map((post) => post.slug)).toEqual(["new-post"]);
+      const unfiltered = await PostService.getPostsCursor(createTestContext(), {});
+      expect(emptyTagList.items).toEqual(unfiltered.items);
     });
 
     it("should keep a real Tag named all distinct from the unfiltered list", async () => {

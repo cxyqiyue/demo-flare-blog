@@ -24,6 +24,8 @@ import {
   type S3Config,
 } from "@/features/image-hosting/s3/s3-upload";
 import { err, ok, type Result } from "@/lib/errors";
+import { getMediaByKey } from "../data/media.data";
+import { normalizeMediaIdentity } from "../utils/post-media-access";
 
 export interface LinkAccessSettings {
   mode: "direct" | "protected";
@@ -313,7 +315,10 @@ export async function resolveProxiedMedia(
   provider: string,
   key: string,
 ): Promise<Result<Response, ProxyResolveError>> {
+  const identity = normalizeMediaIdentity(provider, key);
+  if (!identity) return err(proxyError("INVALID_KEY", "Invalid media key"));
   const config = await ConfigService.getSystemConfig(context);
+  if (provider !== "telegram") key = identity.key;
 
   switch (provider) {
     case "telegram":
@@ -334,9 +339,21 @@ export async function resolveProxiedMedia(
           "R2 objects are served via /images/",
         ),
       );
-    default:
-      return err(
-        proxyError("UNSUPPORTED_PROVIDER", `Unsupported provider: ${provider}`),
-      );
+    default: {
+      // API-key beds have no read credentials: only a registered uploaded URL
+      // may be fetched, without forwarding any viewer cookies/Authorization.
+      const media = await getMediaByKey(context.db, key);
+      if (!media || media.provider !== provider)
+        return err(proxyError("UNSUPPORTED_PROVIDER", "Unregistered media"));
+      let url: URL;
+      try {
+        url = new URL(media.url);
+      } catch {
+        return err(proxyError("INVALID_URL", "Invalid upstream URL"));
+      }
+      if (!/^https?:$/.test(url.protocol) || url.username || url.password)
+        return err(proxyError("INVALID_URL", "Invalid upstream URL"));
+      return fetchUpstream(url.href);
+    }
   }
 }

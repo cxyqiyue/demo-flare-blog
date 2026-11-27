@@ -61,10 +61,16 @@ import {
   normalizeFolderPath,
 } from "@/features/media/utils/media.utils";
 import * as PostMediaRepo from "@/features/posts/data/post-media.data";
-import { CACHE_CONTROL } from "@/lib/constants";
+import { canReadPost } from "@/features/posts/services/post-access.service";
 import { getDb } from "@/lib/db";
 import { err, ok, type Result } from "@/lib/errors";
 import { m } from "@/paraglide/messages";
+import {
+  applyMediaNoStoreHeaders,
+  filterReadableMediaItems,
+  getCurrentMediaAccessPosts,
+  mediaViewer,
+} from "./post-media-access.service";
 
 const DEFAULT_DIRECTORY_LIMIT = 50;
 
@@ -463,7 +469,11 @@ export async function getMediaList(
   context: DbContext,
   data: GetMediaListInput,
 ) {
-  return await MediaRepo.getMediaList(context.db, data);
+  const result = await MediaRepo.getMediaList(context.db, data);
+  return {
+    ...result,
+    items: await filterReadableMediaItems(context, result.items),
+  };
 }
 
 export async function isMediaInUse(context: DbContext, key: string) {
@@ -471,7 +481,31 @@ export async function isMediaInUse(context: DbContext, key: string) {
 }
 
 export async function getLinkedPosts(context: DbContext, key: string) {
-  return await PostMediaRepo.getPostsByMediaKey(context.db, key);
+  const rows = await PostMediaRepo.getPostsByMediaKey(context.db, key);
+  const viewer = mediaViewer(context);
+  const current = new Map(
+    (await getCurrentMediaAccessPosts(context.db)).map((post) => [
+      post.id,
+      post,
+    ]),
+  );
+  const result = [];
+  for (const row of rows) {
+    const post = current.get(row.id);
+    if (!post) continue;
+    const owner =
+      viewer.isSuperAdmin ||
+      (viewer.userId !== null && viewer.userId === post.authorId);
+    if (
+      owner ||
+      (post.status === "published" &&
+        post.publishedAt !== null &&
+        post.publishedAt <= new Date() &&
+        (await canReadPost(context.env, post, viewer)))
+    )
+      result.push(row);
+  }
+  return result;
 }
 
 export async function getLinkedMediaKeys(
@@ -847,7 +881,7 @@ async function enrichDirectoryFiles(
     await PostMediaRepo.getLinkedMediaKeys(context.db, keys),
   );
 
-  return keys.map((key) => {
+  const files = keys.map((key) => {
     const rec = mediaByKey.get(key);
     return {
       key,
@@ -864,6 +898,7 @@ async function enrichDirectoryFiles(
       isLinked: linkedKeys.has(key),
     };
   });
+  return filterReadableMediaItems(context, files);
 }
 
 export async function getMediaDirectory(
@@ -1289,6 +1324,7 @@ export async function handleImageRequest(
   env: Env,
   key: string,
   request: Request,
+  options?: { originalOnly?: boolean },
 ) {
   const url = new URL(request.url);
   const searchParams = url.searchParams;
@@ -1296,7 +1332,9 @@ export async function handleImageRequest(
   const serveOriginal = async () => {
     const object = await env.R2.get(key);
     if (!object) {
-      return new Response("Image not found", { status: 404 });
+      const headers = new Headers();
+      applyMediaNoStoreHeaders(headers);
+      return new Response("Image not found", { status: 404, headers });
     }
 
     const contentType =
@@ -1309,7 +1347,10 @@ export async function handleImageRequest(
     headers.set("Content-Type", contentType);
     headers.set("ETag", object.httpEtag);
 
-    return new Response(object.body, { headers });
+    applyMediaNoStoreHeaders(headers);
+    return new Response(request.method === "HEAD" ? null : object.body, {
+      headers,
+    });
   };
 
   // 1. 防止循环调用 & 显式请求原图
@@ -1317,7 +1358,12 @@ export async function handleImageRequest(
   const isLoop = viaHeader && /image-resizing/.test(viaHeader);
   const wantsOriginal = searchParams.get("original") === "true";
 
-  if (isLoop || wantsOriginal) {
+  if (
+    options?.originalOnly ||
+    request.method === "HEAD" ||
+    isLoop ||
+    wantsOriginal
+  ) {
     return await serveOriginal();
   }
 
@@ -1368,10 +1414,7 @@ export async function handleImageRequest(
     const newResponse = new Response(response.body, response);
 
     // 覆盖/补充必要的缓存头
-    newResponse.headers.set("Vary", "Accept");
-    Object.entries(CACHE_CONTROL.immutable).forEach(([k, v]) => {
-      newResponse.headers.set(k, v);
-    });
+    applyMediaNoStoreHeaders(newResponse.headers);
 
     return newResponse;
   } catch (e) {
@@ -1587,14 +1630,22 @@ export async function listExternalDirectory(
   // enumerate chat history, so the blog's own upload index is the only
   // possible (and authoritative-for-blog) view of these channels.
   if (provider === "telegram" || provider === "api-key") {
-    return listExternalDirectoryFromD1(context, data);
+    const result = await listExternalDirectoryFromD1(context, data);
+    return {
+      ...result,
+      files: await filterReadableMediaItems(context, result.files, provider),
+    };
   }
 
   // S3, Discord, HuggingFace, WebDAV: the remote channel listing is
   // authoritative and complete — anything uploaded outside the blog shows
   // up and remotely deleted files disappear. No D1 merge, otherwise records
   // whose real object is gone would linger and duplicates would appear.
-  return listExternalDirectoryDirect(context, data);
+  const result = await listExternalDirectoryDirect(context, data);
+  return {
+    ...result,
+    files: await filterReadableMediaItems(context, result.files, provider),
+  };
 }
 
 async function listExternalDirectoryFromD1(
