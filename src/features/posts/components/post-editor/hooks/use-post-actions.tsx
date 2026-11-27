@@ -15,6 +15,7 @@ import type { Tag } from "@/features/tags/tags.schema";
 import { useDebounce } from "@/hooks/use-debounce";
 import { toLocalDateString } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
+import { arePostEditorSnapshotsEqual, toPostEditorSnapshot } from "../post-editor-save-state";
 
 interface UsePostActionsOptions {
   postId: number;
@@ -23,6 +24,7 @@ interface UsePostActionsOptions {
   setPost: React.Dispatch<React.SetStateAction<PostEditorData>>;
   setError: (error: string | null) => void;
   allTags: Array<Tag>;
+  saveBeforePublish: () => Promise<PostEditorData>;
 }
 
 export function usePostActions({
@@ -32,6 +34,7 @@ export function usePostActions({
   setPost,
   setError,
   allTags,
+  saveBeforePublish,
 }: UsePostActionsOptions) {
   const queryClient = useQueryClient();
 
@@ -76,29 +79,10 @@ export function usePostActions({
   // Compare current post to kvSnapshot to determine if KV needs an update.
   // This is INDEPENDENT of the auto-save state.
   const isDirty = useMemo(() => {
-    const compareTags = (a: Array<number>, b: Array<number>) => {
-      return JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
-    };
-
-    // If backend reports not synced, and we haven't synced in this session, it's dirty.
-    if (!initialData.isSynced && !sessionSynced) {
-      return true;
-    }
-
-    return (
-      post.title !== kvSnapshot.title ||
-      post.slug !== kvSnapshot.slug ||
-      post.status !== kvSnapshot.status ||
-      post.summary !== kvSnapshot.summary ||
-      post.readTimeInMinutes !== kvSnapshot.readTimeInMinutes ||
-      post.publishedAt?.getTime() !== kvSnapshot.publishedAt?.getTime() ||
-      post.pinnedAt?.getTime() !== kvSnapshot.pinnedAt?.getTime() ||
-      post.skillId !== kvSnapshot.skillId ||
-      (post.categoryId ?? null) !== (kvSnapshot.categoryId ?? null) ||
-      // For content, referential comparison is usually enough since Tiptap
-      // returns a new object on change, but we'll stick to it.
-      post.contentJson !== kvSnapshot.contentJson ||
-      !compareTags(post.tagIds, kvSnapshot.tagIds)
+    if (!initialData.isSynced && !sessionSynced) return true;
+    return !arePostEditorSnapshotsEqual(
+      toPostEditorSnapshot(kvSnapshot),
+      toPostEditorSnapshot(post),
     );
   }, [post, kvSnapshot, initialData.isSynced, sessionSynced]);
 
@@ -114,9 +98,20 @@ export function usePostActions({
   const debouncedTitle = useDebounce(post.title, 500);
   const debouncedContentJson = useDebounce(post.contentJson, 500);
 
+  const processingRef = useRef(false);
   const processDataMutation = useMutation({
-    mutationFn: startPostProcessWorkflowFn,
-    onSuccess: () => {
+    mutationFn: async () => {
+      const savedPost = await saveBeforePublish();
+      await startPostProcessWorkflowFn({
+        data: {
+          id: postId,
+          status: savedPost.status,
+          clientToday: toLocalDateString(new Date()),
+        },
+      });
+      return savedPost;
+    },
+    onSuccess: (savedPost) => {
       // Feedback: Notify user task is running
       toast(m.editor_action_publish_start(), {
         description: m.editor_action_publish_desc(),
@@ -130,33 +125,26 @@ export function usePostActions({
       // Update the KV snapshot to match what we just published.
       // This effectively 'resets' the isDirty state for the sync UI.
       setSessionSynced(true);
-      setKvSnapshot(post);
+      setKvSnapshot(savedPost);
 
       // Reset after cooldown
       setTimeout(() => {
+        processingRef.current = false;
         setProcessState("IDLE");
       }, 3000);
     },
     onSettled: (_data, error) => {
       if (!error) return;
+      processingRef.current = false;
       setProcessState("IDLE");
     },
   });
 
   const handleProcessData = () => {
-    if (processState !== "IDLE") return;
-
+    if (processingRef.current || processState !== "IDLE") return;
+    processingRef.current = true;
     setProcessState("PROCESSING");
-
-    setTimeout(() => {
-      processDataMutation.mutate({
-        data: {
-          id: postId,
-          status: post.status,
-          clientToday: toLocalDateString(new Date()),
-        },
-      });
-    }, 800);
+    processDataMutation.mutate();
   };
 
   // Slug generation mutation

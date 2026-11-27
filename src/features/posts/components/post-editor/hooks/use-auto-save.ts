@@ -1,4 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  arePostEditorSnapshotsEqual,
+  toPostEditorSnapshot,
+} from "../post-editor-save-state";
 import type { PostEditorData, SaveStatus } from "../types";
 
 interface UseAutoSaveOptions {
@@ -15,6 +19,7 @@ interface UseAutoSaveReturn {
   setSaveStatus: (status: SaveStatus) => void;
   isDirty: boolean;
   markSaved: (post: PostEditorData) => void;
+  flushSave: () => Promise<PostEditorData>;
 }
 
 export function useAutoSave({
@@ -25,153 +30,96 @@ export function useAutoSave({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("SYNCED");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const isFirstMount = useRef(true);
   const isMounted = useRef(false);
-  const isSaving = useRef(false);
   const latestPostRef = useRef(post);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Track last-saved snapshot (shallow)
-  const lastSavedSnapshot = useRef<{
-    title: string;
-    summary: string;
-    slug: string;
-    status: string;
-    readTimeInMinutes: number;
-    publishedAt: number | null;
-    pinnedAt: number | null;
-    tagIds: string; // Serialize for easy comparison
-    categoryId: number | null;
-    skillId: number | null;
-    contentRef: PostEditorData["contentJson"];
-  } | null>(null);
-  // Store onSave in ref to avoid effect re-running when onSave reference changes
   const onSaveRef = useRef(onSave);
+  const lastSavedSnapshot = useRef(toPostEditorSnapshot(post));
+  const pendingSave = useRef<Promise<void> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  latestPostRef.current = post;
   onSaveRef.current = onSave;
 
-  const toComparable = (p: PostEditorData) => ({
-    title: p.title,
-    summary: p.summary,
-    slug: p.slug,
-    status: p.status,
-    readTimeInMinutes: p.readTimeInMinutes,
-    publishedAt: p.publishedAt ? p.publishedAt.valueOf() : null,
-    pinnedAt: p.pinnedAt ? p.pinnedAt.valueOf() : null,
-    tagIds: [...p.tagIds].sort().join(","),
-    categoryId: p.categoryId ?? null,
-    skillId: p.skillId,
-    contentRef: p.contentJson,
-  });
-
-  const isDirty = (curr: ReturnType<typeof toComparable>) => {
-    const prev = lastSavedSnapshot.current;
-    if (!prev) return true;
-    return (
-      prev.title !== curr.title ||
-      prev.summary !== curr.summary ||
-      prev.slug !== curr.slug ||
-      prev.status !== curr.status ||
-      prev.readTimeInMinutes !== curr.readTimeInMinutes ||
-      prev.publishedAt !== curr.publishedAt ||
-      prev.pinnedAt !== curr.pinnedAt ||
-      prev.tagIds !== curr.tagIds ||
-      prev.categoryId !== curr.categoryId ||
-      prev.skillId !== curr.skillId ||
-      prev.contentRef !== curr.contentRef
-    );
-  };
-
-  const markSaved = (savedPost: PostEditorData) => {
-    if (retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
+  const cancelTimer = useCallback(() => {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
-    latestPostRef.current = savedPost;
-    lastSavedSnapshot.current = toComparable(savedPost);
+  }, []);
+
+  const markSaved = useCallback((savedPost: PostEditorData) => {
+    cancelTimer();
+    lastSavedSnapshot.current = toPostEditorSnapshot(savedPost);
     setError(null);
     setSaveStatus("SYNCED");
     setLastSaved(new Date());
-  };
+  }, [cancelTimer]);
 
-  // Track mount / unmount
+  // Publishing shares the same queue as auto-save. Wait for any older request,
+  // then save all edits that arrived while it was in flight before resolving.
+  const flushSave = useCallback(async (): Promise<PostEditorData> => {
+    cancelTimer();
+    try {
+      while (
+        pendingSave.current ||
+        !arePostEditorSnapshotsEqual(
+          lastSavedSnapshot.current,
+          toPostEditorSnapshot(latestPostRef.current),
+        )
+      ) {
+        if (isMounted.current) {
+          setSaveStatus("SAVING");
+          setError(null);
+        }
+        if (!pendingSave.current) {
+          const savingPost = latestPostRef.current;
+          pendingSave.current = Promise.resolve()
+            .then(() => onSaveRef.current(savingPost))
+            .then(() => {
+              lastSavedSnapshot.current = toPostEditorSnapshot(savingPost);
+              if (isMounted.current) setLastSaved(new Date());
+            });
+        }
+        const request = pendingSave.current;
+        try {
+          await request;
+        } finally {
+          if (pendingSave.current === request) pendingSave.current = null;
+        }
+      }
+      if (isMounted.current) setSaveStatus("SYNCED");
+      return latestPostRef.current;
+    } catch (err) {
+      if (isMounted.current) {
+        setSaveStatus("ERROR");
+        setError("AUTO_SAVE_FAILED");
+      }
+      throw err;
+    }
+  }, [cancelTimer]);
+
   useEffect(() => {
     isMounted.current = true;
     return () => {
       isMounted.current = false;
-      if (retryTimerRef.current) {
-        clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
+      cancelTimer();
     };
-  }, []);
+  }, [cancelTimer]);
 
-  // Auto-save effect - always enabled
   useEffect(() => {
-    latestPostRef.current = post;
-    const current = toComparable(post);
-
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      lastSavedSnapshot.current = current;
+    if (arePostEditorSnapshotsEqual(lastSavedSnapshot.current, toPostEditorSnapshot(post))) {
+      if (!pendingSave.current) setSaveStatus("SYNCED");
       return;
     }
-
-    if (!isDirty(current)) {
-      setSaveStatus("SYNCED");
-      return;
-    }
-
     setSaveStatus("SAVING");
-
-    const attemptSave = async () => {
-      if (isSaving.current) return;
-      isSaving.current = true;
-
-      try {
-        setError(null);
-        const latestPost = latestPostRef.current;
-        await onSaveRef.current(latestPost);
-        const latestComparable = toComparable(latestPost);
-        lastSavedSnapshot.current = latestComparable;
-        if (!isMounted.current) return;
-        setLastSaved(new Date());
-
-        // After saving, if new changes arrived during the request, schedule another save (debounced)
-        const stillDirty = isDirty(toComparable(latestPostRef.current));
-        if (stillDirty) {
-          if (retryTimerRef.current) {
-            clearTimeout(retryTimerRef.current);
-          }
-          retryTimerRef.current = setTimeout(() => {
-            if (!isMounted.current) return;
-            // respect debounce and avoid overlapping saves
-            attemptSave();
-          }, debounceMs);
-          setSaveStatus("SAVING");
-        } else {
-          setSaveStatus("SYNCED");
-        }
-      } catch (err) {
+    cancelTimer();
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      void flushSave().catch((err: unknown) => {
         console.error("Auto-save failed:", err);
-        setSaveStatus("ERROR");
-        setError("AUTO_SAVE_FAILED");
-      } finally {
-        isSaving.current = false;
-      }
-    };
-
-    const timer = setTimeout(() => {
-      void attemptSave();
+      });
     }, debounceMs);
-
-    return () => {
-      clearTimeout(timer);
-      if (retryTimerRef.current) {
-        clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
-      }
-    };
-  }, [post, debounceMs]);
+    return cancelTimer;
+  }, [post, debounceMs, cancelTimer, flushSave]);
 
   return {
     saveStatus,
@@ -179,7 +127,8 @@ export function useAutoSave({
     error,
     setError,
     setSaveStatus,
-    isDirty: isDirty(toComparable(post)),
+    isDirty: !arePostEditorSnapshotsEqual(lastSavedSnapshot.current, toPostEditorSnapshot(post)),
     markSaved,
+    flushSave,
   };
 }
