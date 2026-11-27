@@ -1,11 +1,14 @@
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { AUTH_KEYS } from "@/features/auth/queries";
+import {
+  runSessionTransition,
+  sessionQueryIdentity,
+} from "@/features/auth/session-query-cache";
 import type { UseChallengeReturn } from "@/features/challenge/hooks/use-challenge";
 import { requestSendOtp } from "@/features/email-otp/client/otp.client";
 import { OTP_RESEND_COOLDOWN_SECONDS } from "@/features/email-otp/otp-constants";
@@ -46,6 +49,7 @@ export function useLoginForm(options: UseLoginFormOptions) {
   const [resendSecondsLeft, setResendSecondsLeft] = useState(0);
 
   const navigate = useNavigate();
+  const router = useRouter();
   const previousLocation = usePreviousLocation();
   const queryClient = useQueryClient();
   const loginSchema = createLoginSchema(m);
@@ -63,7 +67,7 @@ export function useLoginForm(options: UseLoginFormOptions) {
     return () => clearInterval(timer);
   }, [resendSecondsLeft]);
 
-  const performRedirect = (
+  const performRedirect = async (
     redirectTarget: string | undefined,
     fallback: string,
   ) => {
@@ -76,7 +80,8 @@ export function useLoginForm(options: UseLoginFormOptions) {
 
     if (target.startsWith(window.location.origin)) {
       const url = new URL(target);
-      navigate({ to: `${url.pathname}${url.search}${url.hash}` });
+      await navigate({ to: `${url.pathname}${url.search}${url.hash}` });
+      await router.invalidate();
       return;
     }
 
@@ -143,17 +148,22 @@ export function useLoginForm(options: UseLoginFormOptions) {
     }
     setLoginStep("VERIFYING");
 
-    const { error } = await authClient.signIn.email({
-      email: data.email,
-      password: data.password,
-      fetchOptions: {
-        headers: {
-          "X-Otp": code,
-          "X-Turnstile-Token": challenge.token || "",
-          "X-Altcha-Solution": challenge.altchaSolution || "",
-        },
-      },
-    });
+    const { error } = await runSessionTransition(
+      queryClient,
+      () =>
+        authClient.signIn.email({
+          email: data.email,
+          password: data.password,
+          fetchOptions: {
+            headers: {
+              "X-Otp": code,
+              "X-Turnstile-Token": challenge.token || "",
+              "X-Altcha-Solution": challenge.altchaSolution || "",
+            },
+          },
+        }),
+      (result) => sessionQueryIdentity(result.data?.user),
+    );
     challenge.reset();
 
     if (error) {
@@ -176,11 +186,10 @@ export function useLoginForm(options: UseLoginFormOptions) {
       return;
     }
 
-    queryClient.removeQueries({ queryKey: AUTH_KEYS.session });
     setLoginStep("SUCCESS");
 
     setTimeout(() => {
-      performRedirect(redirectTo, previousLocation);
+      void performRedirect(redirectTo, previousLocation);
       toast.success(m.login_toast_success());
     }, 800);
   };
