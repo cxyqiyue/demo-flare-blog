@@ -1,12 +1,13 @@
 import { ClientOnly } from "@tanstack/react-router";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
   AccessGateError,
   AccessGateMode,
 } from "@/components/common/access-gate.types";
 import { DefaultGateContent } from "@/components/common/gate-dialog/gate-default";
+import { FlareGateDialog } from "@/components/common/gate-dialog/gate-flare";
 import { FuwariGateContent } from "@/components/common/gate-dialog/gate-fuwari";
 
 export type {
@@ -21,6 +22,7 @@ interface AccessGateDialogProps {
   channel?: string | null;
   hint?: string | null;
   error?: AccessGateError | null;
+  retryAfterSeconds?: number;
   isSubmitting?: boolean;
   isSuccess?: boolean;
   loginUrl?: string;
@@ -35,6 +37,7 @@ function AccessGateDialogInternal({
   channel,
   hint,
   error,
+  retryAfterSeconds = 0,
   isSubmitting = false,
   isSuccess = false,
   loginUrl = "/login",
@@ -42,14 +45,15 @@ function AccessGateDialogInternal({
   onOpenChange,
 }: AccessGateDialogProps) {
   const [password, setPassword] = useState("");
+  const passwordId = useId();
 
   useEffect(() => {
     if (open) setPassword("");
-  }, [open]);
+  }, [open, mode]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!password.trim() || isSubmitting) return;
+    if (!password.trim() || isSubmitting || isSuccess || retryAfterSeconds > 0) return;
     void onSubmitPassword?.(password);
   };
 
@@ -68,6 +72,8 @@ function AccessGateDialogInternal({
     channel,
     hint,
     error,
+    retryAfterSeconds,
+    passwordId,
     isSubmitting,
     isSuccess,
     loginUrl,
@@ -83,8 +89,9 @@ function AccessGateDialogInternal({
     case "fuwari":
       dialogContent = <FuwariGateContent {...contentProps} />;
       break;
-    case "default":
     case "flare":
+      return <FlareGateDialog {...contentProps} open={open} />;
+    case "default":
       dialogContent = <DefaultGateContent {...contentProps} />;
       break;
     default:

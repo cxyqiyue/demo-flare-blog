@@ -22,6 +22,8 @@ import {
   handleImageRequest,
   resolveMediaRequestContext,
 } from "@/features/media/service/media.service";
+import { canReadPostMedia } from "@/features/media/service/post-media-access.service";
+import { parseManagedMediaUrl } from "@/features/media/utils/post-media-access";
 import navigationFaviconRoute from "@/features/navigation/api/hono/favicon.route";
 import postsAdjacentRoute from "@/features/posts/api/hono/posts.adjacent.route";
 import postsDetailRoute from "@/features/posts/api/hono/posts.detail.route";
@@ -29,6 +31,7 @@ import postsListRoute from "@/features/posts/api/hono/posts.list.route";
 import postsPageRoute from "@/features/posts/api/hono/posts.page.route";
 import postsRelatedRoute from "@/features/posts/api/hono/posts.related.route";
 import postsUnlockRoute from "@/features/posts/api/hono/posts.unlock.route";
+import { createViewerAccess } from "@/features/posts/services/post-access.service";
 import searchRoute from "@/features/search/api/hono/search.route";
 import siteDocumentsRoute from "@/features/site-documents/api/hono/site-documents.route";
 import tagsRoute from "@/features/tags/api/hono/tags.list.route";
@@ -41,6 +44,7 @@ import {
   baseMiddleware,
   cacheMiddleware,
   challengeMiddleware,
+  privateNoStoreMiddleware,
   rateLimitMiddleware,
   shieldMiddleware,
 } from "./middlewares";
@@ -118,101 +122,146 @@ function ownSiteDomains(request: Request, env: Env): string[] {
   return domains;
 }
 
-app.get("/images/:key{.+}", async (c) => {
-  const key = c.req.param("key");
+app.on(
+  ["GET", "HEAD"],
+  "/images/:key{.+}",
+  privateNoStoreMiddleware,
+  baseMiddleware,
+  async (c) => {
+    try {
+      const context = resolveMediaRequestContext(c);
+      const target = parseManagedMediaUrl(c.req.url, [
+        new URL(c.req.url).origin,
+      ]);
+      if (!target) return c.text("Not Found", 404);
+      const session = await c.get("auth").api.getSession({
+        headers: c.req.raw.headers,
+        query: { disableCookieCache: true },
+      });
+      const access = await canReadPostMedia(
+        {
+          ...context,
+          viewer: createViewerAccess(
+            c.env,
+            session?.user,
+            c.req.header("cookie"),
+          ),
+        },
+        target,
+        { ownOrigins: [new URL(c.req.url).origin] },
+      );
+      if (!access.allowed) return c.text("Not Found", 404);
 
-  if (!key) return c.text("Image key is required", 400);
+      const config = await ConfigService.getSystemConfig(context);
+      const settings = getLinkAccessSettings(
+        config,
+        ownSiteDomains(c.req.raw, c.env),
+      );
+      if (
+        settings.mode === "protected" &&
+        !isRefererAllowed(c.req.raw, settings)
+      )
+        return c.text("Forbidden", 403);
 
-  // 防盗链：protected 模式下校验 Referer 白名单
-  try {
-    const context = resolveMediaRequestContext(c);
-    const config = await ConfigService.getSystemConfig(context);
-    const settings = getLinkAccessSettings(
-      config,
-      ownSiteDomains(c.req.raw, c.env),
-    );
-    if (
-      settings.mode === "protected" &&
-      !isRefererAllowed(c.req.raw, settings)
-    ) {
-      return c.text("Forbidden", 403);
-    }
-  } catch {
-    // 配置读取失败时放行，避免阻断正常图片访问
-  }
-
-  try {
-    return await handleImageRequest(c.env, key, c.req.raw);
-  } catch (error) {
-    console.error(
-      JSON.stringify({
-        message: "r2 image fetch failed",
-        key,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    );
-    return c.text("Internal server error", 500);
-  }
-});
-
-// 第三方渠道媒体代理（Telegram/Discord 始终经此路由；其余渠道仅在
-// protected 防盗链模式下使用）。回源凭据只存在于 Worker 内部。
-app.get("/media/file/:provider/:key{.+}", async (c) => {
-  const provider = c.req.param("provider");
-  const key = c.req.param("key");
-  if (!provider || !key) return c.text("Not Found", 404);
-
-  const context = resolveMediaRequestContext(c);
-
-  try {
-    const config = await ConfigService.getSystemConfig(context);
-    const settings = getLinkAccessSettings(
-      config,
-      ownSiteDomains(c.req.raw, c.env),
-    );
-    if (!isRefererAllowed(c.req.raw, settings)) {
-      return c.text("Forbidden", 403);
-    }
-  } catch {
-    return c.text("Internal server error", 500);
-  }
-
-  try {
-    const result = await resolveProxiedMedia(context, provider, key);
-    if (result.error) {
+      // All Post-associated images bypass shared Image Resizing, even while public,
+      // so switching to private does not leave a reusable transformed response.
+      return await handleImageRequest(c.env, target.key, c.req.raw, {
+        originalOnly: access.associated,
+      });
+    } catch (error) {
       console.error(
         JSON.stringify({
-          message: "media proxy resolve failed",
-          provider,
-          error: result.error,
+          message: "r2 image access failed",
+          error: error instanceof Error ? error.message : String(error),
         }),
       );
-      // 响应体附带短错误码（不含敏感信息），便于在浏览器 F12 中直接定位失败类别；
-      // 完整错误消息仅写入 Worker 日志
-      return c.text(`Upstream unavailable (${result.error.reason})`, 502);
+      return c.text("Internal server error", 500);
     }
+  },
+);
 
-    const upstream = result.data;
-    const headers = new Headers();
-    for (const name of ["content-type", "content-length", "etag"]) {
-      const value = upstream.headers.get(name);
-      if (value) headers.set(name, value);
+// Provider credentials remain entirely inside the Worker, after current Post access.
+app.on(
+  ["GET", "HEAD"],
+  "/media/file/:provider/:key{.+}",
+  privateNoStoreMiddleware,
+  baseMiddleware,
+  async (c) => {
+    try {
+      const context = resolveMediaRequestContext(c);
+      const target = parseManagedMediaUrl(c.req.url, [
+        new URL(c.req.url).origin,
+      ]);
+      if (!target) return c.text("Not Found", 404);
+      const session = await c.get("auth").api.getSession({
+        headers: c.req.raw.headers,
+        query: { disableCookieCache: true },
+      });
+      const access = await canReadPostMedia(
+        {
+          ...context,
+          viewer: createViewerAccess(
+            c.env,
+            session?.user,
+            c.req.header("cookie"),
+          ),
+        },
+        target,
+        { ownOrigins: [new URL(c.req.url).origin] },
+      );
+      if (!access.allowed) return c.text("Not Found", 404);
+
+      const config = await ConfigService.getSystemConfig(context);
+      const settings = getLinkAccessSettings(
+        config,
+        ownSiteDomains(c.req.raw, c.env),
+      );
+      if (
+        settings.mode === "protected" &&
+        !isRefererAllowed(c.req.raw, settings)
+      )
+        return c.text("Forbidden", 403);
+      if (target.provider === "r2")
+        return handleImageRequest(c.env, target.key, c.req.raw, {
+          originalOnly: true,
+        });
+
+      const result = await resolveProxiedMedia(
+        context,
+        c.req.param("provider"),
+        c.req.param("key"),
+      );
+      if (result.error) {
+        console.error(
+          JSON.stringify({
+            message: "media proxy resolve failed",
+            provider: target.provider,
+            error: result.error,
+          }),
+        );
+        return c.text("Upstream unavailable", 502);
+      }
+      const upstream = result.data;
+      const headers = new Headers();
+      for (const name of ["content-type", "content-length", "etag"]) {
+        const value = upstream.headers.get(name);
+        if (value) headers.set(name, value);
+      }
+      return new Response(c.req.method === "HEAD" ? null : upstream.body, {
+        status: 200,
+        headers,
+      });
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          message: "media proxy access failed",
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      return c.text("Internal server error", 500);
     }
-    // 内容按需现取（签名地址会轮换），仅允许浏览器私有缓存
-    headers.set("Cache-Control", "private, max-age=3600");
-
-    return new Response(upstream.body, { status: 200, headers });
-  } catch (error) {
-    console.error(
-      JSON.stringify({
-        message: "media proxy failed",
-        provider,
-        error: error instanceof Error ? error.message : String(error),
-      }),
-    );
-    return c.text("Internal server error", 500);
-  }
-});
+  },
+);
 
 app.get("/api/auth/*", baseMiddleware, forwardAuthRequest);
 

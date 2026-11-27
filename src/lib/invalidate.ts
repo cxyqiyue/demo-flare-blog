@@ -112,12 +112,19 @@ export async function purgePostCDNCache(env: Env, slug: string) {
       `/post/${encodeURIComponent(slug)}`, // 页面
       `/api/post/${encodeURIComponent(slug)}`, // 单篇 API（单数）
       `/api/post/${encodeURIComponent(slug)}/related`, // 相关文章 API
+      `/api/post/${encodeURIComponent(slug)}/adjacent`, // 相邻文章 API
       `/api/tags`, // 标签 API
+      "/feed.json",
+      "/rss.xml",
+      "/atom.xml",
+      "/sitemap.xml",
       "/",
     ],
     prefixes: [
       "/posts", // 列表页面
       "/api/posts", // 列表 API（复数）
+      "/api/post", // 其他文章的 related/adjacent 也可能引用这篇文章
+      "/post", // 文章页面可能包含受影响的相关文章或相邻文章
       "/search", // 搜索页面
       "/api/search", // 搜索 API
     ],

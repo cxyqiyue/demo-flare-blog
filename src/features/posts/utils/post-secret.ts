@@ -3,6 +3,7 @@ import { serverEnv } from "@/lib/env/server.env";
 const PASSWORD_CHARSET =
   "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*()-_=+[]{}";
 const IV_BYTES = 12;
+export const UNLOCK_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
 
 function toBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -51,7 +52,7 @@ export async function generateStrongPassword(length = 24): Promise<string> {
 }
 
 /**
- * 密码摘要：salt(16B 十六进制) + ":" + sha256(salt + password)。
+ * 密码摘要：base64(salt[16B]) + ":" + sha256(base64(salt) + ":" + password)。
  * 只用于服务端校验，绝不落明文。
  */
 export async function hashPassword(password: string): Promise<string> {
@@ -113,27 +114,27 @@ async function signUnlock(
   env: Env,
   postId: number,
   passwordHash: string,
+  expiresAt: number,
 ): Promise<string> {
   const key = await deriveHmacKey(env);
   const mac = await crypto.subtle.sign(
     "HMAC",
     key,
-    new TextEncoder().encode(`${postId}:${passwordHash}`),
+    new TextEncoder().encode(
+      `post-unlock:v2:${postId}:${passwordHash}:${expiresAt}`,
+    ),
   );
   return toBase64Url(mac);
 }
 
-/**
- * 文章解锁令牌：`{postId}.{HMAC(postId:passwordHash)}`。
- * - 绑定 passwordHash：改密码即旧令牌失效；令牌不携带明文口令。
- * - 冷启动验证安全：靠带密钥的 HMAC，无需持久化。
- */
+/** Signed, expiring grants are revoked whenever the Post password changes. */
 export async function createUnlockToken(
   env: Env,
   postId: number,
   passwordHash: string,
 ): Promise<string> {
-  return `${postId}.${await signUnlock(env, postId, passwordHash)}`;
+  const expiresAt = Math.floor(Date.now() / 1000) + UNLOCK_TOKEN_TTL_SECONDS;
+  return `${postId}.${expiresAt}.${await signUnlock(env, postId, passwordHash, expiresAt)}`;
 }
 
 export async function isUnlockTokenValid(
@@ -142,13 +143,20 @@ export async function isUnlockTokenValid(
   postId: number,
   passwordHash: string,
 ): Promise<boolean> {
-  const separatorIndex = token.indexOf(".");
-  if (separatorIndex < 0) return false;
-  if (token.slice(0, separatorIndex) !== String(postId)) return false;
-
-  const actual = token.slice(separatorIndex + 1);
-  const expected = await signUnlock(env, postId, passwordHash);
-  return timingSafeEqual(actual, expected);
+  const match = /^(\d+)\.(\d+)\.([A-Za-z0-9_-]{43})$/.exec(token);
+  if (!match || match[1] !== String(postId)) return false;
+  const expiresAt = Number(match[2]);
+  const now = Math.floor(Date.now() / 1000);
+  if (
+    !Number.isSafeInteger(expiresAt) ||
+    expiresAt <= now ||
+    expiresAt > now + UNLOCK_TOKEN_TTL_SECONDS
+  )
+    return false;
+  return timingSafeEqual(
+    match[3],
+    await signUnlock(env, postId, passwordHash, expiresAt),
+  );
 }
 
 /** AES-256-GCM 加密访问密码（供管理端展示）。返回 base64(iv):base64(ciphertext+tag) */

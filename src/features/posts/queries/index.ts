@@ -64,6 +64,12 @@ export const POSTS_KEYS = {
     ["posts", "revision-detail", postId, revisionId] as const,
 };
 
+const PUBLIC_POST_FRESHNESS = {
+  staleTime: 0,
+  gcTime: 0,
+  refetchOnMount: "always" as const,
+};
+
 export function publicPostsPageQuery(
   filters: { offset?: number; limit?: number; paginatePinned?: boolean } = {},
 ) {
@@ -72,15 +78,23 @@ export function publicPostsPageQuery(
   const paginatePinned = filters.paginatePinned ? ("true" as const) : undefined;
   return queryOptions({
     queryKey: [...POSTS_KEYS.publicPage, offset, limit, paginatePinned],
-    queryFn: async () => {
+    ...PUBLIC_POST_FRESHNESS,
+    queryFn: async ({ signal }) => {
       if (isSSR) {
         return await getPublicPostsPageFn({
           data: { offset, limit, paginatePinned },
         });
       }
-      const res = await apiClient.posts.page.$get({
-        query: { offset: String(offset), limit: String(limit), paginatePinned },
-      });
+      const res = await apiClient.posts.page.$get(
+        {
+          query: {
+            offset: String(offset),
+            limit: String(limit),
+            paginatePinned,
+          },
+        },
+        { init: { cache: "no-store", signal } },
+      );
       if (!res.ok) throw new Error("Failed to fetch posts page");
       return PublicPostsPageResponseSchema.parse(await res.json());
     },
@@ -95,7 +109,8 @@ export function postsInfiniteQueryOptions(
   const categoryName = normalizePostTagName(filters.categoryName);
   return infiniteQueryOptions({
     queryKey: POSTS_KEYS.list({ ...filters, tagName, categoryName }),
-    queryFn: async ({ pageParam }) => {
+    ...PUBLIC_POST_FRESHNESS,
+    queryFn: async ({ pageParam, signal }) => {
       if (isSSR) {
         return await getPostsCursorFn({
           data: {
@@ -106,14 +121,17 @@ export function postsInfiniteQueryOptions(
           },
         });
       }
-      const res = await apiClient.posts.$get({
-        query: {
-          cursor: pageParam?.toString(),
-          limit: String(pageSize),
-          tagName,
-          categoryName,
+      const res = await apiClient.posts.$get(
+        {
+          query: {
+            cursor: pageParam?.toString(),
+            limit: String(pageSize),
+            tagName,
+            categoryName,
+          },
         },
-      });
+        { init: { cache: "no-store", signal } },
+      );
       if (!res.ok) throw new Error("Failed to fetch posts");
       return PostListResponseSchema.parse(await res.json());
     },
@@ -125,11 +143,15 @@ export function postsInfiniteQueryOptions(
 export function postBySlugQuery(slug: string) {
   return queryOptions({
     queryKey: POSTS_KEYS.detail(slug),
-    queryFn: async () => {
+    ...PUBLIC_POST_FRESHNESS,
+    queryFn: async ({ signal }) => {
       if (isSSR) {
         return await findPostBySlugFn({ data: { slug } });
       }
-      const res = await apiClient.post[":slug"].$get({ param: { slug } });
+      const res = await apiClient.post[":slug"].$get(
+        { param: { slug } },
+        { init: { cache: "no-store", signal } },
+      );
       if (!res.ok) throw new Error("Failed to fetch post");
       return PostWithTocSchema.parse(await res.json());
     },
@@ -139,13 +161,17 @@ export function postBySlugQuery(slug: string) {
 export function adjacentPostsQuery(slug: string) {
   return queryOptions({
     queryKey: POSTS_KEYS.adjacent(slug),
-    queryFn: async () => {
+    ...PUBLIC_POST_FRESHNESS,
+    queryFn: async ({ signal }) => {
       if (isSSR) {
         return await findAdjacentPostsFn({ data: { slug } });
       }
-      const res = await apiClient.post[":slug"].adjacent.$get({
-        param: { slug },
-      });
+      const res = await apiClient.post[":slug"].adjacent.$get(
+        {
+          param: { slug },
+        },
+        { init: { cache: "no-store", signal } },
+      );
       if (!res.ok) throw new Error("Failed to fetch adjacent posts");
       return AdjacentPostsResponseSchema.parse(await res.json());
     },
@@ -162,14 +188,18 @@ export function postByIdQuery(id: number) {
 export function relatedPostsQuery(slug: string, limit?: number) {
   return queryOptions({
     queryKey: POSTS_KEYS.related(slug, limit),
-    queryFn: async () => {
+    ...PUBLIC_POST_FRESHNESS,
+    queryFn: async ({ signal }) => {
       if (isSSR) {
         return await getRelatedPostsFn({ data: { slug, limit } });
       }
-      const res = await apiClient.post[":slug"].related.$get({
-        param: { slug },
-        query: { limit: limit != null ? String(limit) : undefined },
-      });
+      const res = await apiClient.post[":slug"].related.$get(
+        {
+          param: { slug },
+          query: { limit: limit != null ? String(limit) : undefined },
+        },
+        { init: { cache: "no-store", signal } },
+      );
       if (!res.ok) throw new Error("Failed to fetch related posts");
       const json = await res.json();
       const result = PostItemSchema.array().safeParse(json);
@@ -206,6 +236,7 @@ export function postRevisionDetailQuery(postId: number, revisionId: number) {
 export function popularPostsQuery(limit?: number) {
   return queryOptions({
     queryKey: [...POSTS_KEYS.popular, limit],
+    ...PUBLIC_POST_FRESHNESS,
     queryFn: () => getPopularPostsFn({ data: { limit } }),
   });
 }

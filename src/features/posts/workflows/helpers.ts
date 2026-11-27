@@ -45,9 +45,9 @@ export async function upsertPostSearchIndex(
     tags: Array<{ name: string }>;
   },
 ) {
-  // 受限文章不进搜索索引，避免正文内容泄露
+  // 受限文章也要删除旧索引，覆盖从 public 切换后的历史正文。
   if (post.visibility !== "public") {
-    return { id: post.id, flushPromise: undefined };
+    return await SearchService.deleteIndex({ env }, { id: post.id });
   }
 
   return await SearchService.upsert(

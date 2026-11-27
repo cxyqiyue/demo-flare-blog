@@ -24,6 +24,7 @@ export function useComments(target?: CommentTargetInput) {
         switch (reason) {
           case "ROOT_COMMENT_NOT_FOUND":
           case "REPLY_TO_COMMENT_NOT_FOUND":
+          case "POST_NOT_FOUND":
             toast.error(m.comments_toast_deleted_refresh());
             return;
           case "INVALID_ROOT_ID":

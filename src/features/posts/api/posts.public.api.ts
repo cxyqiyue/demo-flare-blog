@@ -12,11 +12,7 @@ import {
   GetPostsCursorInputSchema,
   GetPublicPostsPageInputSchema,
 } from "@/features/posts/schema/posts.schema";
-import {
-  extractUnlockTokens,
-  isSuperAdminUser,
-  UNAUTHENTICATED_VIEWER,
-} from "@/features/posts/services/post-access.service";
+import { createViewerAccess } from "@/features/posts/services/post-access.service";
 import * as PostService from "@/features/posts/services/posts.service";
 import { getAuth } from "@/lib/auth/auth.server";
 import { dbMiddleware } from "@/lib/middlewares";
@@ -30,21 +26,12 @@ const viewerAccessMiddleware = createMiddleware({ type: "function" })
   .middleware([dbMiddleware])
   .server(async ({ next, context }) => {
     const cookieHeader = getRequestHeader("cookie");
-    const unlockTokens = extractUnlockTokens(cookieHeader);
-
-    let isAdmin = false;
-    if (cookieHeader) {
-      const auth = getAuth({ db: context.db, env: context.env });
-      const session = await auth.api.getSession({
-        headers: getRequestHeaders(),
-      });
-      isAdmin = isSuperAdminUser(session?.user, context.env);
-    }
-
-    const viewer =
-      unlockTokens.length === 0 && !isAdmin
-        ? UNAUTHENTICATED_VIEWER
-        : { isAdmin, unlockTokens };
+    const session = cookieHeader
+      ? await getAuth({ db: context.db, env: context.env }).api.getSession({
+          headers: getRequestHeaders(),
+        })
+      : null;
+    const viewer = createViewerAccess(context.env, session?.user, cookieHeader);
 
     return next({ context: { viewer } });
   });
@@ -71,14 +58,14 @@ export const findPostBySlugFn = createServerFn()
   });
 
 export const findAdjacentPostsFn = createServerFn()
-  .middleware([dbMiddleware])
+  .middleware([viewerAccessMiddleware])
   .inputValidator(FindAdjacentPostsInputSchema)
   .handler(async ({ data, context }) => {
     return await PostService.findAdjacentPosts(context, data);
   });
 
 export const getRelatedPostsFn = createServerFn()
-  .middleware([dbMiddleware])
+  .middleware([viewerAccessMiddleware])
   .inputValidator(FindRelatedPostsInputSchema)
   .handler(async ({ data, context }) => {
     return await PostService.getRelatedPosts(context, data);

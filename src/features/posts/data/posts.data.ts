@@ -138,6 +138,7 @@ export async function getPostsCursor(
     excludePinned?: boolean;
     /** 列表中允许的可见性；管理员传含 private 的集合，否则默认公开+密码 */
     allowedVisibilities?: Array<PostVisibility>;
+    privateAuthorId?: string;
   } = {},
 ): Promise<{
   items: Array<PostListItem>;
@@ -151,12 +152,14 @@ export async function getPostsCursor(
     categoryName,
     excludePinned,
     allowedVisibilities,
+    privateAuthorId,
   } = options;
 
   // Build base conditions from helper
   const baseConditions = buildPostWhereClause({
     publicOnly,
     allowedVisibilities,
+    privateAuthorId,
   });
 
   // Add cursor condition if provided
@@ -490,6 +493,24 @@ export async function findPostGateBySlug(db: DB, slug: string) {
   return { ...rest, author: author?.name ?? null };
 }
 
+/** Minimal, current published Post gate for related-resource authorization. */
+export async function findPostGateById(db: DB, id: number) {
+  return (
+    (await db.query.PostsTable.findFirst({
+      where: and(
+        eq(PostsTable.id, id),
+        buildPostWhereClause({ publicOnly: true, excludeRestricted: false }),
+      ),
+      columns: {
+        id: true,
+        authorId: true,
+        visibility: true,
+        passwordHash: true,
+      },
+    })) ?? null
+  );
+}
+
 export async function updatePost(
   db: DB,
   id: number,
@@ -762,6 +783,7 @@ export async function getPublicPostsPage(
     limit?: number;
     /** 列表中允许的可见性；管理员传含 private 的集合，否则默认公开+密码 */
     allowedVisibilities?: Array<PostVisibility>;
+    privateAuthorId?: string;
     paginatePinned?: boolean;
   } = {},
 ): Promise<{
@@ -775,6 +797,7 @@ export async function getPublicPostsPage(
   const publicWhereClause = buildPostWhereClause({
     publicOnly: true,
     allowedVisibilities: options.allowedVisibilities,
+    privateAuthorId: options.privateAuthorId,
   });
   const pageWhereClause = options.paginatePinned
     ? publicWhereClause

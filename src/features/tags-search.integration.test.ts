@@ -251,7 +251,15 @@ describe("Tags & Search Integration", () => {
         tags: ["tag1", "tag2"],
       };
 
-      await SearchService.upsert(context, doc);
+      await context.db.insert(PostsTable).values({
+        id: doc.id,
+        title: doc.title,
+        slug: doc.slug,
+        status: "published",
+        visibility: "public",
+        publishedAt: new Date(Date.now() - 10_000),
+      });
+      await SearchService.upsert(context, doc, { immediate: true });
 
       const results = await SearchService.search(context, {
         q: "Title",
@@ -273,7 +281,15 @@ describe("Tags & Search Integration", () => {
         contentJson: null,
         tags: [],
       };
-      await SearchService.upsert(context, doc);
+      await context.db.insert(PostsTable).values({
+        id: doc.id,
+        title: doc.title,
+        slug: doc.slug,
+        status: "published",
+        visibility: "public",
+        publishedAt: new Date(Date.now() - 10_000),
+      });
+      await SearchService.upsert(context, doc, { immediate: true });
 
       let results = await SearchService.search(context, {
         q: "Deleted",
@@ -282,7 +298,7 @@ describe("Tags & Search Integration", () => {
       });
       expect(results).toHaveLength(1);
 
-      await SearchService.deleteIndex(context, { id: doc.id });
+      await SearchService.deleteIndex(context, { id: doc.id }, { immediate: true });
 
       results = await SearchService.search(context, {
         q: "Deleted",

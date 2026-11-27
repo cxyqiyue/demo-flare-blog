@@ -105,7 +105,7 @@ export function PostEditor({
     onSave,
   });
 
-  const { saveStatus, lastSaved, setError, markSaved } = useAutoSaveReturn;
+  const { saveStatus, lastSaved, setError, markSaved, flushSave } = useAutoSaveReturn;
 
   const { proceed, reset, status } = useBlocker({
     shouldBlockFn: () => saveStatus === "SAVING",
@@ -133,6 +133,7 @@ export function PostEditor({
     setPost,
     setError,
     allTags,
+    saveBeforePublish: flushSave,
   });
 
   const handleContentChange = useCallback((json: JSONContent) => {

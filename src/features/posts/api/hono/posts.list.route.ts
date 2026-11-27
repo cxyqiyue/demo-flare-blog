@@ -6,13 +6,15 @@ import * as PostService from "@/features/posts/services/posts.service";
 import {
   getServiceContext,
   getViewerContext,
-  setCacheHeaders,
 } from "@/lib/hono/helper";
-import { baseMiddleware } from "@/lib/hono/middlewares";
+import {
+  baseMiddleware,
+  privateNoStoreMiddleware,
+} from "@/lib/hono/middlewares";
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use("*", baseMiddleware);
+app.use("*", privateNoStoreMiddleware, baseMiddleware);
 
 const route = app.get(
   "/",
@@ -30,7 +32,6 @@ const route = app.get(
       { ...getServiceContext(c), viewer },
       data,
     );
-    setCacheHeaders(c.res.headers, "public");
     return c.json(result);
   },
 );

@@ -3,11 +3,12 @@ import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import * as PageviewService from "@/features/pageview/service/pageview.service";
 import { sha256 } from "@/features/pageview/utils/hash";
+import { createViewerAccess } from "@/features/posts/services/post-access.service";
 import { serverEnv } from "@/lib/env/server.env";
-import { dbMiddleware } from "@/lib/middlewares";
+import { sessionMiddleware } from "@/lib/middlewares";
 
 export const recordPageViewFn = createServerFn()
-  .middleware([dbMiddleware])
+  .middleware([sessionMiddleware])
   .inputValidator(z.object({ postId: z.number().int().positive() }))
   .handler(async ({ data, context }) => {
     const ip = getRequestHeader("cf-connecting-ip") || "";
@@ -16,17 +17,32 @@ export const recordPageViewFn = createServerFn()
 
     const visitorHash = await sha256(`${ip}:${ua}:${salt}`);
 
-    context.executionCtx.waitUntil(
-      context.env.QUEUE.send({
-        type: "PAGEVIEW",
-        data: { postId: data.postId, visitorHash },
-      }),
+    await PageviewService.recordPageView(
+      {
+        ...context,
+        viewer: createViewerAccess(
+          context.env,
+          context.session?.user,
+          getRequestHeader("cookie"),
+        ),
+      },
+      { postId: data.postId, visitorHash },
     );
   });
 
 export const getViewCountsFn = createServerFn()
-  .middleware([dbMiddleware])
+  .middleware([sessionMiddleware])
   .inputValidator(z.object({ slugs: z.array(z.string()).max(50) }))
   .handler(({ data, context }) =>
-    PageviewService.getViewCounts(context, data.slugs),
+    PageviewService.getViewCounts(
+      {
+        ...context,
+        viewer: createViewerAccess(
+          context.env,
+          context.session?.user,
+          getRequestHeader("cookie"),
+        ),
+      },
+      data.slugs,
+    ),
   );

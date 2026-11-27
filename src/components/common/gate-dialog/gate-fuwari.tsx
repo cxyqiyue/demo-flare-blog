@@ -1,26 +1,7 @@
 import { ArrowLeft, ExternalLink, Loader2, X } from "lucide-react";
-import type React from "react";
-import type {
-  AccessGateError,
-  AccessGateMode,
-} from "@/components/common/access-gate.types";
+import type { AccessGateMode, GateContentProps } from "@/components/common/access-gate.types";
 import { m } from "@/paraglide/messages";
-
-export interface GateContentProps {
-  mode: AccessGateMode;
-  title?: string;
-  channel?: string | null;
-  hint?: string | null;
-  error?: AccessGateError | null;
-  isSubmitting?: boolean;
-  isSuccess?: boolean;
-  loginUrl?: string;
-  password: string;
-  setPassword: (value: string) => void;
-  onSubmit: (event: React.FormEvent) => void;
-  onClose: () => void;
-  onChannelOpen: () => void;
-}
+import { gateErrorMessage } from "./gate-messages";
 
 const eyebrowOf = (mode: AccessGateMode): string =>
   mode === "private"
@@ -44,14 +25,6 @@ const titleOf = (mode: AccessGateMode, title?: string): string =>
       ? m.access_gate_title_login()
       : m.access_gate_title_password());
 
-const errorMessage: Record<AccessGateError, string> = {
-  wrongPassword: m.access_gate_error_wrong_password(),
-  rateLimited: m.access_gate_error_rate_limited(),
-  locked: m.access_gate_error_locked_too_many(),
-  invalidLink: m.access_gate_error_invalid_link(),
-  generic: m.access_gate_error_generic(),
-};
-
 export function FuwariGateContent(props: GateContentProps) {
   const {
     mode,
@@ -59,6 +32,8 @@ export function FuwariGateContent(props: GateContentProps) {
     channel,
     hint,
     error,
+    retryAfterSeconds = 0,
+    passwordId,
     isSubmitting,
     isSuccess,
     loginUrl = "/login",
@@ -113,13 +88,13 @@ export function FuwariGateContent(props: GateContentProps) {
 
             <div className="flex flex-col gap-1.5">
               <label
-                htmlFor="access-gate-password"
+                htmlFor={passwordId}
                 className="text-sm font-bold fuwari-text-50"
               >
                 {m.access_gate_input_label()}
               </label>
               <input
-                id="access-gate-password"
+                id={passwordId}
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -133,7 +108,8 @@ export function FuwariGateContent(props: GateContentProps) {
 
             {error && (
               <p role="alert" className="text-xs font-semibold text-red-500">
-                {errorMessage[error]}
+                {gateErrorMessage(error)}
+                {retryAfterSeconds > 0 && ` ${m.access_gate_retry_countdown({ seconds: String(retryAfterSeconds) })}`}
               </p>
             )}
 
@@ -166,7 +142,7 @@ export function FuwariGateContent(props: GateContentProps) {
 
               <button
                 type="submit"
-                disabled={isSubmitting || isSuccess || !password.trim()}
+                disabled={isSubmitting || isSuccess || retryAfterSeconds > 0 || !password.trim()}
                 className="flex items-center justify-center gap-2 py-3 px-6 rounded-xl fuwari-btn-primary font-bold text-sm active:scale-[0.98] transition-all"
               >
                 {isSubmitting && <Loader2 size={14} className="animate-spin" />}

@@ -1,5 +1,5 @@
 import type { SQL } from "drizzle-orm";
-import { and, asc, desc, eq, inArray, like, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import type { PostStatus, PostVisibility } from "@/lib/db/schema";
 import { PostsTable } from "@/lib/db/schema";
 
@@ -27,6 +27,7 @@ export function buildPostWhereClause(options: {
   excludeRestricted?: boolean;
   /** 列表中允许出现的可见性集合；默认仅公开+密码（私密仅管理员可见） */
   allowedVisibilities?: Array<PostVisibility>;
+  privateAuthorId?: string;
 }) {
   const whereClauses = [];
 
@@ -49,9 +50,17 @@ export function buildPostWhereClause(options: {
   // 密码文章默认仍在列表展示（点击后被密码拦截）；私密文章仅管理员列表可见
   if (options.publicOnly && options.excludeRestricted !== false) {
     whereClauses.push(
-      inArray(
-        PostsTable.visibility,
-        options.allowedVisibilities ?? PUBLIC_LIST_VISIBILITIES,
+      or(
+        inArray(
+          PostsTable.visibility,
+          options.allowedVisibilities ?? PUBLIC_LIST_VISIBILITIES,
+        ),
+        options.privateAuthorId
+          ? and(
+              eq(PostsTable.visibility, "private"),
+              eq(PostsTable.authorId, options.privateAuthorId),
+            )
+          : undefined,
       ),
     );
   }

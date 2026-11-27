@@ -61,3 +61,7 @@ export type DashboardResponse = z.infer<typeof DashboardResponseSchema>;
 export type DashboardRange = "24h" | "7d" | "30d" | "90d";
 
 export const ALL_RANGES: Array<DashboardRange> = ["24h", "7d", "30d", "90d"];
+
+export const DASHBOARD_CACHE_KEYS = {
+  traffic: ["dashboard", "traffic", "owner-scope-v1"] as const,
+};

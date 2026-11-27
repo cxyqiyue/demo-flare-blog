@@ -14,8 +14,15 @@ import * as CommentRepo from "@/features/comments/data/comments.data";
 import { sendReplyNotification } from "@/features/comments/workflows/helpers";
 import * as MomentRepo from "@/features/moments/data/moments.data";
 import { publishNotificationEvent } from "@/features/notification/service/notification.publisher";
+import * as PostRepo from "@/features/posts/data/posts.data";
+import {
+  canReadPost,
+  createViewerAccess,
+  type ViewerAccess,
+} from "@/features/posts/services/post-access.service";
 import * as PostService from "@/features/posts/services/posts.service";
 import { convertToPlainText } from "@/features/posts/utils/content";
+import { isSuperAdmin } from "@/lib/auth/access";
 import { serverEnv } from "@/lib/env/server.env";
 import { err, ok } from "@/lib/errors";
 import { normalizeRawMarkdownContent } from "@/lib/markdown/raw-markdown";
@@ -44,6 +51,26 @@ function resolveTarget(data: {
     return { momentId: data.momentId };
   }
   return { postId: data.postId ?? 0 };
+}
+
+type CommentViewerContext = DbContext & {
+  viewer?: ViewerAccess;
+  session?: AuthContext["session"] | null;
+};
+
+async function canReadCommentTarget(
+  context: CommentViewerContext,
+  target: CommentTarget,
+): Promise<boolean> {
+  if (!("postId" in target)) return true;
+
+  const post = await PostRepo.findPostGateById(context.db, target.postId);
+  if (!post) return false;
+
+  const viewer =
+    context.viewer ??
+    createViewerAccess(context.env, context.session?.user, undefined);
+  return canReadPost(context.env, post, viewer);
 }
 
 async function getTargetContext(
@@ -214,10 +241,13 @@ async function notifyAdminRootComment(
 // ============ Public Service Methods ============
 
 export async function getRootCommentsByTarget(
-  context: DbContext,
+  context: CommentViewerContext,
   data: GetCommentsByTargetInput & { viewerId?: string },
 ) {
   const target = resolveTarget(data);
+  if (!(await canReadCommentTarget(context, target))) {
+    return { items: [], total: 0 };
+  }
 
   const [items, total] = await Promise.all([
     CommentRepo.getRootCommentsByTarget(context.db, target, {
@@ -252,13 +282,16 @@ export async function getRootCommentsByTarget(
 }
 
 export async function getRepliesByRootId(
-  context: DbContext,
+  context: CommentViewerContext,
   data: GetCommentsByTargetInput & {
     rootId: number;
     viewerId?: string;
   },
 ) {
   const target = resolveTarget(data);
+  if (!(await canReadCommentTarget(context, target))) {
+    return { items: [], total: 0 };
+  }
 
   const [items, total] = await Promise.all([
     CommentRepo.getRepliesByRootId(context.db, target, data.rootId, {
@@ -283,7 +316,10 @@ export async function getRepliesByRootId(
 // ============ Authed User Service Methods ============
 
 export async function createComment(
-  context: AuthContext & { executionCtx: ExecutionContext },
+  context: AuthContext & {
+    executionCtx: ExecutionContext;
+    viewer?: ViewerAccess;
+  },
   data: CreateCommentInput,
 ) {
   // Validation: ensure exactly one target is provided
@@ -301,6 +337,11 @@ export async function createComment(
   const targetPostId = hasPost ? data.postId! : null;
   const targetMomentId = hasMoment ? data.momentId! : null;
   const targetAboutArticleId = hasAbout ? data.aboutArticleId! : null;
+
+  // Authorize before looking up the thread or starting any write side effects.
+  if (!(await canReadCommentTarget(context, target))) {
+    return err({ reason: "POST_NOT_FOUND" });
+  }
 
   // Validation: ensure 2-level structure
   let rootId: number | null = null;
@@ -429,9 +470,14 @@ export async function getMyComments(
 // ============ Admin Service Methods ============
 
 export async function getAllComments(
-  context: DbContext,
+  context: DbContext & { session?: AuthContext["session"] | null },
   data: GetAllCommentsInput,
 ) {
+  // Match Post management ownership; sessionless internal/MCP callers retain full access.
+  const postAuthorId =
+    context.session && !isSuperAdmin(context.session.user, context.env)
+      ? context.session.user.id
+      : undefined;
   const [itemsRaw, total] = await Promise.all([
     CommentRepo.getAllComments(context.db, {
       offset: data.offset,
@@ -442,6 +488,7 @@ export async function getAllComments(
       aboutArticleId: data.aboutArticleId,
       userId: data.userId,
       userName: data.userName,
+      postAuthorId,
     }),
     CommentRepo.getAllCommentsCount(context.db, {
       status: data.status,
@@ -450,6 +497,7 @@ export async function getAllComments(
       aboutArticleId: data.aboutArticleId,
       userId: data.userId,
       userName: data.userName,
+      postAuthorId,
     }),
   ]);
 

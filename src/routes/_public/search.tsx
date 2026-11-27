@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import theme from "@theme";
 import { useEffect, useMemo, useState } from "react";
@@ -64,8 +64,8 @@ function SearchRoute() {
   const { data: results, isLoading: isSearching } = useQuery({
     ...searchDocsQueryOptions(debouncedQuery, meta?.version || "init"),
     enabled: debouncedQuery.length > 0 && !!meta?.version,
-    staleTime: Infinity,
-    placeholderData: keepPreviousData,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const searchResults = useMemo(() => results ?? [], [results]);

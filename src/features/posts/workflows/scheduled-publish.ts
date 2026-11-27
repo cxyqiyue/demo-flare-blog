@@ -7,6 +7,7 @@ import {
   invalidatePostCaches,
   upsertPostSearchIndex,
 } from "@/features/posts/workflows/helpers";
+import * as SearchService from "@/features/search/service/search.service";
 import * as SubscriptionService from "@/features/subscription/service/subscription.service";
 import { getDb } from "@/lib/db";
 
@@ -35,14 +36,36 @@ export class ScheduledPublishWorkflow extends WorkflowEntrypoint<Env, Params> {
     });
 
     await step.do("update search index", async () => {
-      const result = await upsertPostSearchIndex(this.env, post);
+      const currentPost = await fetchPost(this.env, postId);
+      if (
+        !currentPost ||
+        currentPost.status !== "published" ||
+        !currentPost.publishedAt ||
+        currentPost.publishedAt > new Date()
+      ) {
+        await SearchService.deleteIndex(
+          { env: this.env },
+          { id: postId },
+          { immediate: true },
+        );
+        return;
+      }
+      const result = await upsertPostSearchIndex(this.env, currentPost);
       if (result.flushPromise) {
         this.ctx.waitUntil(result.flushPromise);
       }
     });
 
     await step.do("notify subscribers", async () => {
-      if (post.visibility !== "public") return;
+      const post = await fetchPost(this.env, postId);
+      if (
+        !post ||
+        post.status !== "published" ||
+        post.visibility !== "public" ||
+        !post.publishedAt ||
+        post.publishedAt > new Date()
+      )
+        return;
       const contentHash = await calculatePostHash({
         title: post.title,
         contentJson: post.contentJson,

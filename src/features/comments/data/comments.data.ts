@@ -1,4 +1,15 @@
-import { and, asc, count, desc, eq, inArray, like, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  like,
+  or,
+  sql,
+} from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { buildCommentWhereClause } from "@/features/comments/data/helper";
 import type { CommentStatus } from "@/lib/db/schema";
@@ -308,6 +319,7 @@ export async function getAllComments(
     aboutArticleId?: number;
     userId?: string;
     userName?: string;
+    postAuthorId?: string;
   } = {},
 ) {
   const {
@@ -319,6 +331,7 @@ export async function getAllComments(
     aboutArticleId,
     userId,
     userName,
+    postAuthorId,
   } = options;
 
   const conditions = buildCommentWhereClause({
@@ -328,9 +341,13 @@ export async function getAllComments(
     aboutArticleId,
     userId,
   });
-  const finalConditions = userName
-    ? and(conditions, like(user.name, `%${userName}%`))
-    : conditions;
+  const finalConditions = and(
+    conditions,
+    userName ? like(user.name, `%${userName}%`) : undefined,
+    postAuthorId !== undefined
+      ? or(isNull(CommentsTable.postId), eq(PostsTable.authorId, postAuthorId))
+      : undefined,
+  );
 
   const parentComment = alias(CommentsTable, "parent_comment");
   const parentUser = alias(user, "parent_user");
@@ -401,10 +418,18 @@ export async function getAllCommentsCount(
     aboutArticleId?: number;
     userId?: string;
     userName?: string;
+    postAuthorId?: string;
   } = {},
 ) {
-  const { status, postId, momentId, aboutArticleId, userId, userName } =
-    options;
+  const {
+    status,
+    postId,
+    momentId,
+    aboutArticleId,
+    userId,
+    userName,
+    postAuthorId,
+  } = options;
 
   const conditions = buildCommentWhereClause({
     status,
@@ -413,14 +438,21 @@ export async function getAllCommentsCount(
     aboutArticleId,
     userId,
   });
-  const finalConditions = userName
-    ? and(conditions, like(user.name, `%${userName}%`))
-    : conditions;
+  const finalConditions = and(
+    conditions,
+    userName ? like(user.name, `%${userName}%`) : undefined,
+    postAuthorId !== undefined
+      ? or(isNull(CommentsTable.postId), eq(PostsTable.authorId, postAuthorId))
+      : undefined,
+  );
 
   let query = db.select({ count: count() }).from(CommentsTable).$dynamic();
 
   if (userName) {
     query = query.leftJoin(user, eq(CommentsTable.userId, user.id));
+  }
+  if (postAuthorId !== undefined) {
+    query = query.leftJoin(PostsTable, eq(CommentsTable.postId, PostsTable.id));
   }
 
   const result = await query.where(finalConditions);

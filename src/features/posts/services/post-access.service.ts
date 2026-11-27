@@ -1,36 +1,55 @@
 import {
   createUnlockToken,
   isUnlockTokenValid,
+  UNLOCK_TOKEN_TTL_SECONDS,
 } from "@/features/posts/utils/post-secret";
-import { isAdmin } from "@/lib/auth/access";
+import { isSuperAdmin } from "@/lib/auth/access";
+import type { PostVisibility } from "@/lib/db/schema";
 
-/** 单 cookie 存多个文章的解锁令牌，`&` 分隔 */
 export const UNLOCK_COOKIE_NAME = "blog_post_unlock";
-export const UNLOCK_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+export const UNLOCK_COOKIE_MAX_AGE_SECONDS = UNLOCK_TOKEN_TTL_SECONDS;
+const MAX_UNLOCK_TOKENS = 32;
 
 export interface ViewerAccess {
-  isAdmin: boolean;
+  userId: string | null;
+  isSuperAdmin: boolean;
   unlockTokens: string[];
 }
 
 export const UNAUTHENTICATED_VIEWER: ViewerAccess = {
-  isAdmin: false,
+  userId: null,
+  isSuperAdmin: false,
   unlockTokens: [],
 };
 
 export function extractUnlockTokens(
   cookieHeader: string | null | undefined,
 ): string[] {
-  if (!cookieHeader) return [];
-  const match = cookieHeader
-    .split(";")
-    .find((part) => part.trim().startsWith(`${UNLOCK_COOKIE_NAME}=`));
-  if (!match) return [];
-  const value = match.trim().slice(UNLOCK_COOKIE_NAME.length + 1);
-  return value ? value.split("&").filter(Boolean) : [];
+  const part = cookieHeader
+    ?.split(";")
+    .find((item) => item.trim().startsWith(`${UNLOCK_COOKIE_NAME}=`));
+  return part
+    ? part
+        .trim()
+        .slice(UNLOCK_COOKIE_NAME.length + 1)
+        .split("&")
+        .filter(Boolean)
+        .slice(-MAX_UNLOCK_TOKENS)
+    : [];
 }
 
-/** 请求方提供的解锁令牌中是否包含该文章的合法令牌（不区分管理员） */
+export function createViewerAccess(
+  env: Env,
+  user: { id: string; email: string; role?: string | null } | null | undefined,
+  cookieHeader?: string | null,
+): ViewerAccess {
+  return {
+    userId: user?.id ?? null,
+    isSuperAdmin: !!user && isSuperAdmin(user, env),
+    unlockTokens: extractUnlockTokens(cookieHeader),
+  };
+}
+
 export async function hasPostUnlock(
   env: Env,
   postId: number,
@@ -38,30 +57,58 @@ export async function hasPostUnlock(
   unlockTokens: string[],
 ): Promise<boolean> {
   if (!passwordHash) return false;
-  for (const token of unlockTokens) {
-    if (await isUnlockTokenValid(env, token, postId, passwordHash)) {
-      return true;
-    }
+  for (const token of unlockTokens.slice(-MAX_UNLOCK_TOKENS)) {
+    if (await isUnlockTokenValid(env, token, postId, passwordHash)) return true;
   }
   return false;
 }
 
+/** The same ownership policy applies to Post bodies and every related resource. */
+export async function canReadPost(
+  env: Env,
+  post: {
+    id: number;
+    authorId: string | null;
+    visibility: PostVisibility;
+    passwordHash: string | null;
+  },
+  viewer: ViewerAccess,
+): Promise<boolean> {
+  if (post.visibility === "public") return true;
+  if (
+    viewer.isSuperAdmin ||
+    (viewer.userId !== null && viewer.userId === post.authorId)
+  )
+    return true;
+  return (
+    post.visibility === "password" &&
+    (await hasPostUnlock(env, post.id, post.passwordHash, viewer.unlockTokens))
+  );
+}
+
+/** Preserve other Post grants, bound the cookie size, and discard expired grants. */
 export async function createUnlockCookieValue(
   env: Env,
   postId: number,
   passwordHash: string,
+  existingTokens: string[] = [],
 ): Promise<string> {
-  return await createUnlockToken(env, postId, passwordHash);
+  const now = Math.floor(Date.now() / 1000);
+  const tokens = new Map<string, string>();
+  for (const token of existingTokens) {
+    const match = /^(\d+)\.(\d+)\.[A-Za-z0-9_-]{43}$/.exec(token);
+    if (!match || match[1] === String(postId)) continue;
+    const expiresAt = Number(match[2]);
+    if (expiresAt <= now || expiresAt > now + UNLOCK_TOKEN_TTL_SECONDS)
+      continue;
+    tokens.set(match[1], token);
+  }
+  return [
+    ...Array.from(tokens.values()).slice(-(MAX_UNLOCK_TOKENS - 1)),
+    await createUnlockToken(env, postId, passwordHash),
+  ].join("&");
 }
 
-export function buildUnlockCookieHeader(token: string): string {
-  return `${UNLOCK_COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${UNLOCK_COOKIE_MAX_AGE_SECONDS.toString()}`;
-}
-
-export function isSuperAdminUser(
-  user: { email?: string | null; role?: string | null } | null | undefined,
-  env: Env,
-): boolean {
-  if (!user?.email) return false;
-  return isAdmin(user as { email: string; role?: string | null }, env);
+export function buildUnlockCookieHeader(token: string, secure = true): string {
+  return `${UNLOCK_COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${UNLOCK_COOKIE_MAX_AGE_SECONDS}${secure ? "; Secure" : ""}`;
 }

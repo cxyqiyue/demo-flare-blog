@@ -1,26 +1,7 @@
 import { ArrowLeft, ExternalLink, Loader2, X } from "lucide-react";
-import type React from "react";
-import type {
-  AccessGateError,
-  AccessGateMode,
-} from "@/components/common/access-gate.types";
+import type { AccessGateMode, GateContentProps } from "@/components/common/access-gate.types";
 import { m } from "@/paraglide/messages";
-
-export interface GateContentProps {
-  mode: AccessGateMode;
-  title?: string;
-  channel?: string | null;
-  hint?: string | null;
-  error?: AccessGateError | null;
-  isSubmitting?: boolean;
-  isSuccess?: boolean;
-  loginUrl?: string;
-  password: string;
-  setPassword: (value: string) => void;
-  onSubmit: (event: React.FormEvent) => void;
-  onClose: () => void;
-  onChannelOpen: () => void;
-}
+import { gateErrorMessage } from "./gate-messages";
 
 const eyebrowOf = (mode: AccessGateMode): string =>
   mode === "private"
@@ -44,14 +25,6 @@ const titleOf = (mode: AccessGateMode, title?: string): string =>
       ? m.access_gate_title_login()
       : m.access_gate_title_password());
 
-const errorMessage: Record<AccessGateError, string> = {
-  wrongPassword: m.access_gate_error_wrong_password(),
-  rateLimited: m.access_gate_error_rate_limited(),
-  locked: m.access_gate_error_locked_too_many(),
-  invalidLink: m.access_gate_error_invalid_link(),
-  generic: m.access_gate_error_generic(),
-};
-
 export function DefaultGateContent(props: GateContentProps) {
   const {
     mode,
@@ -59,6 +32,8 @@ export function DefaultGateContent(props: GateContentProps) {
     channel,
     hint,
     error,
+    retryAfterSeconds = 0,
+    passwordId,
     isSubmitting,
     isSuccess,
     loginUrl = "/login",
@@ -113,13 +88,13 @@ export function DefaultGateContent(props: GateContentProps) {
 
             <div className="space-y-2 group">
               <label
-                htmlFor="access-gate-password"
+                htmlFor={passwordId}
                 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60 group-focus-within:text-foreground transition-colors"
               >
                 {m.access_gate_input_label()}
               </label>
               <input
-                id="access-gate-password"
+                id={passwordId}
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -136,7 +111,8 @@ export function DefaultGateContent(props: GateContentProps) {
                 role="alert"
                 className="text-[10px] font-mono uppercase tracking-widest text-destructive"
               >
-                {errorMessage[error]}
+                {gateErrorMessage(error)}
+                {retryAfterSeconds > 0 && ` ${m.access_gate_retry_countdown({ seconds: String(retryAfterSeconds) })}`}
               </p>
             )}
 
@@ -169,7 +145,7 @@ export function DefaultGateContent(props: GateContentProps) {
 
               <button
                 type="submit"
-                disabled={isSubmitting || isSuccess || !password.trim()}
+                disabled={isSubmitting || isSuccess || retryAfterSeconds > 0 || !password.trim()}
                 className="text-[10px] font-mono font-bold uppercase tracking-widest text-foreground hover:opacity-70 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed inline-flex items-center gap-2"
               >
                 {isSubmitting && <Loader2 size={12} className="animate-spin" />}

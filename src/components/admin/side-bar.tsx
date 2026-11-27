@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
   BookOpenCheck,
   Compass,
@@ -17,12 +17,11 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
-import { AUTH_KEYS, sessionQuery } from "@/features/auth/queries";
+import { useLogout } from "@/features/auth/hooks/use-logout";
+import { sessionQuery } from "@/features/auth/queries";
 import type { EnrichedSessionUser } from "@/features/auth/service/auth.service";
-import { authClient } from "@/lib/auth/auth.client";
 import { isFlare, isFuwari } from "@/lib/theme-mode";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
@@ -44,8 +43,7 @@ export function SideBar({
   isMobileSidebarOpen: boolean;
   closeMobileSidebar: () => void;
 }) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { logout } = useLogout({ redirectTo: "/login", admin: true });
   const { data: session } = useQuery(sessionQuery);
   const user = session?.user;
 
@@ -58,21 +56,12 @@ export function SideBar({
 
   const handleConfirmSignOut = async () => {
     setIsLoggingOut(true);
-    const { error } = await authClient.signOut();
-    setIsLoggingOut(false);
-    setShowLogoutConfirm(false);
-
-    if (error) {
-      toast.error(m.admin_sidebar_logout_failed(), {
-        description: m.admin_sidebar_logout_failed_desc(),
-      });
-      return;
+    try {
+      await logout();
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutConfirm(false);
     }
-
-    queryClient.removeQueries({ queryKey: AUTH_KEYS.session });
-
-    toast.success(m.admin_sidebar_logout_success());
-    navigate({ to: "/login" });
   };
 
   const navItems = [

@@ -7,10 +7,11 @@ import { buildFeed } from "@/features/posts/utils/feed";
 import { getDb } from "@/lib/db";
 
 export const SITE_DOCUMENT_CACHE_CONTROL = {
-  feed: "public, max-age=3600, s-maxage=3600",
+  // Feeds contain post bodies and must observe visibility changes on every read.
+  feed: "no-store",
   manifest: "public, max-age=3600, s-maxage=3600",
   robots: "public, max-age=86400, s-maxage=86400",
-  sitemap: "public, max-age=3600, s-maxage=3600",
+  sitemap: "no-store",
 } as const;
 
 function buildManifest(

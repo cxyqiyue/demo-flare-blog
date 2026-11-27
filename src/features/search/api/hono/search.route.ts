@@ -3,7 +3,6 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { SearchQuerySchema } from "@/features/search/search.schema";
 import * as SearchService from "@/features/search/service/search.service";
-import { setCacheHeaders } from "@/lib/hono/helper";
 import { baseMiddleware } from "@/lib/hono/middlewares";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -24,7 +23,7 @@ const route = app.get(
       { db: c.get("db"), env: c.env },
       data,
     );
-    setCacheHeaders(c.res.headers, "immutable");
+    c.header("Cache-Control", "no-store");
     return c.json(result);
   },
 );

@@ -3,15 +3,17 @@ import type {
   DashboardRange,
   DashboardResponse,
 } from "@/features/dashboard/dashboard.schema";
-import { ALL_RANGES } from "@/features/dashboard/dashboard.schema";
+import {
+  ALL_RANGES,
+  DASHBOARD_CACHE_KEYS,
+} from "@/features/dashboard/dashboard.schema";
 import * as DashboardRepo from "@/features/dashboard/data/dashboard.data";
 import * as MediaRepo from "@/features/media/data/media.data";
-import * as PageviewRepo from "@/features/pageview/data/pageview.data";
 import {
   CachedAllRangesSchema,
-  PAGEVIEW_CACHE_KEYS,
   type TrafficRangeData,
 } from "@/features/pageview/pageview.schema";
+import { isSuperAdmin } from "@/lib/auth/access";
 import { m } from "@/paraglide/messages";
 
 function getTimeRange(range: DashboardRange) {
@@ -41,15 +43,16 @@ function getTimeRange(range: DashboardRange) {
 async function fetchTrafficDataForRange(
   db: DbContext["db"],
   range: DashboardRange,
+  authorId?: string,
 ): Promise<TrafficRangeData> {
   const { startAt, endAt, prevStartAt } = getTimeRange(range);
   const unit = range === "24h" ? "hour" : "day";
 
   const [stats, prevStats, traffic, topPages] = await Promise.all([
-    PageviewRepo.getStats(db, startAt, endAt),
-    PageviewRepo.getStats(db, prevStartAt, startAt),
-    PageviewRepo.getTrafficTrend(db, startAt, endAt, unit),
-    PageviewRepo.getTopPages(db, startAt, endAt, 5),
+    DashboardRepo.getTrafficStats(db, startAt, endAt, authorId),
+    DashboardRepo.getTrafficStats(db, prevStartAt, startAt, authorId),
+    DashboardRepo.getTrafficTrend(db, startAt, endAt, unit, authorId),
+    DashboardRepo.getTopPages(db, startAt, endAt, 5, authorId),
   ]);
 
   return {
@@ -64,9 +67,17 @@ async function fetchTrafficDataForRange(
 }
 
 export async function getDashboardStats(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: DbContext & {
+    executionCtx: ExecutionContext;
+    session?: Session | null;
+  },
 ) {
   const { db } = context;
+  // OAuth-authorized MCP callers have no session, matching Post service scope.
+  const authorId =
+    context.session && !isSuperAdmin(context.session.user, context.env)
+      ? context.session.user.id
+      : undefined;
 
   const [
     pendingComments,
@@ -77,12 +88,12 @@ export async function getDashboardStats(
     recentPosts,
     recentUsers,
   ] = await Promise.all([
-    DashboardRepo.getPendingCommentsCount(db),
-    DashboardRepo.getPublishedPostsCount(db),
-    DashboardRepo.getDraftsCount(db),
+    DashboardRepo.getPendingCommentsCount(db, authorId),
+    DashboardRepo.getPublishedPostsCount(db, authorId),
+    DashboardRepo.getDraftsCount(db, authorId),
     MediaRepo.getTotalMediaSize(db),
-    DashboardRepo.getRecentComments(db, 10),
-    DashboardRepo.getRecentPosts(db, 10),
+    DashboardRepo.getRecentComments(db, 10, authorId),
+    DashboardRepo.getRecentPosts(db, 10, authorId),
     DashboardRepo.getRecentUsers(db, 10),
   ]);
 
@@ -91,7 +102,7 @@ export async function getDashboardStats(
     const results = await Promise.all(
       ALL_RANGES.map(async (range) => ({
         range,
-        data: await fetchTrafficDataForRange(db, range),
+        data: await fetchTrafficDataForRange(db, range, authorId),
       })),
     );
 
@@ -100,13 +111,18 @@ export async function getDashboardStats(
     ) as NonNullable<DashboardResponse["trafficByRange"]>;
   };
 
-  const trafficByRange = await CacheService.get(
-    context,
-    PAGEVIEW_CACHE_KEYS.traffic,
-    CachedAllRangesSchema,
-    fetcher,
-    { ttl: "3h" },
-  );
+  // Author-scoped metadata is read live so reassignment immediately revokes access.
+  // Only full-access callers may use the separate all-data traffic cache.
+  const trafficByRange =
+    authorId === undefined
+      ? await CacheService.get(
+          context,
+          DASHBOARD_CACHE_KEYS.traffic,
+          CachedAllRangesSchema,
+          fetcher,
+          { ttl: "3h" },
+        )
+      : await fetcher();
 
   const activities = [
     ...recentComments

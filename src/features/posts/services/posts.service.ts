@@ -4,6 +4,10 @@ import * as AiService from "@/features/ai/ai.service";
 import * as CacheService from "@/features/cache/cache.service";
 import * as EdgeCacheService from "@/features/cache/edge-cache.service";
 import {
+  assertPostMediaReferencesReadable,
+  rewritePostMediaUrls,
+} from "@/features/media/service/post-media-access.service";
+import {
   ADMIN_LIST_VISIBILITIES,
   PUBLIC_LIST_VISIBILITIES,
 } from "@/features/posts/data/helper";
@@ -31,15 +35,13 @@ import type {
   UpdatePostInput,
 } from "@/features/posts/schema/posts.schema";
 import {
-  AdjacentPostsResponseSchema,
   normalizePostTagName,
   POSTS_CACHE_KEYS,
-  PostListResponseSchema,
   PostWithTocSchema,
-  PublicPostsPageResponseSchema,
 } from "@/features/posts/schema/posts.schema";
 import {
-  hasPostUnlock,
+  canReadPost,
+  createViewerAccess,
   UNAUTHENTICATED_VIEWER,
   type ViewerAccess,
 } from "@/features/posts/services/post-access.service";
@@ -55,6 +57,7 @@ import {
   decryptPassword,
   encryptPassword,
   hashPassword,
+  verifyPassword,
 } from "@/features/posts/utils/post-secret";
 import { calculatePostHash } from "@/features/posts/utils/sync";
 import { generateTableOfContents } from "@/features/posts/utils/toc";
@@ -118,6 +121,22 @@ async function fastInvalidatePublicCaches(
   await Promise.all(tasks);
 }
 
+function redactLockedListSummaries<
+  T extends {
+    visibility: string;
+    authorId: string | null;
+    summary: string | null;
+  },
+>(posts: T[], viewer?: ViewerAccess): T[] {
+  return posts.map((post) =>
+    post.visibility === "password" &&
+    !viewer?.isSuperAdmin &&
+    !(viewer?.userId && viewer.userId === post.authorId)
+      ? { ...post, summary: "" }
+      : post,
+  );
+}
+
 export async function getPostsCursor(
   context: DbContext & {
     executionCtx: ExecutionContext;
@@ -127,44 +146,26 @@ export async function getPostsCursor(
 ) {
   const tagName = normalizePostTagName(data.tagName);
   const categoryName = normalizePostTagName(data.categoryName);
-  const isAdminViewer = context.viewer?.isAdmin === true;
-  const allowedVisibilities = isAdminViewer
+  const isSuperAdminViewer = context.viewer?.isSuperAdmin === true;
+  const allowedVisibilities = isSuperAdminViewer
     ? ADMIN_LIST_VISIBILITIES
     : PUBLIC_LIST_VISIBILITIES;
-  const fetcher = async () =>
-    await PostRepo.getPostsCursor(context.db, {
-      cursor: data.cursor,
-      limit: data.limit,
-      publicOnly: true,
-      tagName,
-      categoryName,
-      excludePinned: data.excludePinned,
-      allowedVisibilities,
-    });
-
-  // 列表键随分页/游标/标签组合无上限增长，且每次发布后全部重写 ——
-  // 数据本体改存 Cache API（零 KV 配额），KV 只保留版本指针（读多写少）。
-  // 管理员视图含私密文章，需与公开列表分开缓存，避免私密元数据泄漏给访客。
-  return await EdgeCacheService.getVersionedJson(
-    context,
-    "posts:list",
-    (version) => [
-      ...POSTS_CACHE_KEYS.list(
-        version,
-        data.limit ?? 10,
-        data.cursor ?? 0,
-        tagName,
-        isAdminViewer ? "admin" : "public",
-        categoryName,
-      ),
-      "first-image",
-    ],
-    PostListResponseSchema,
-    fetcher,
-    {
-      ttl: "7d",
-    },
-  );
+  // Visibility and ownership can change independently of eventually consistent
+  // cache generations. Always obtain viewer-specific list metadata from D1.
+  const result = await PostRepo.getPostsCursor(context.db, {
+    cursor: data.cursor,
+    limit: data.limit,
+    publicOnly: true,
+    tagName,
+    categoryName,
+    excludePinned: data.excludePinned,
+    allowedVisibilities,
+    privateAuthorId: context.viewer?.userId ?? undefined,
+  });
+  return {
+    ...result,
+    items: redactLockedListSummaries(result.items, context.viewer),
+  };
 }
 
 export async function findPostBySlug(
@@ -181,6 +182,14 @@ export async function findPostBySlug(
       excludeRestricted: false,
     });
     if (!post) return null;
+    // Re-check the row used for the body if access changed since the preflight.
+    if (!(await canReadPost(context.env, post, viewer))) {
+      const currentGate = await PostRepo.findPostGateBySlug(
+        context.db,
+        data.slug,
+      );
+      return currentGate ? buildGatedShell(currentGate) : null;
+    }
 
     let contentJson = post.publicContentJson ?? post.contentJson;
     let needsUpdate = false;
@@ -213,8 +222,13 @@ export async function findPostBySlug(
       );
     }
 
+    const {
+      passwordHash: _passwordHash,
+      passwordCipher: _passwordCipher,
+      ...safePost
+    } = stripPublicContentJson(post);
     return {
-      ...stripPublicContentJson(post),
+      ...safePost,
       contentJson,
       toc: generateTableOfContents(contentJson),
       gate: null,
@@ -226,7 +240,7 @@ export async function findPostBySlug(
   if (!gateMeta) return null;
 
   if (gateMeta.visibility === "public") {
-    return await EdgeCacheService.getVersionedJson(
+    const post = await EdgeCacheService.getVersionedJson(
       context,
       "posts:detail",
       (version) => POSTS_CACHE_KEYS.detail(version, data.slug),
@@ -234,46 +248,20 @@ export async function findPostBySlug(
       fetchContent,
       { ttl: "7d" },
     );
+    return post && !post.gate
+      ? { ...post, contentJson: await rewritePostMediaUrls(context, post.contentJson) }
+      : post;
   }
 
-  const buildShell = async () => buildGatedShell(gateMeta);
-
-  // 私密：仅管理员可读（无口令解锁）。
-  if (gateMeta.visibility === "private") {
-    if (viewer.isAdmin) {
-      return await fetchContent();
-    }
-    return await EdgeCacheService.getVersionedJson(
-      context,
-      "posts:detail",
-      (version) => POSTS_CACHE_KEYS.detailGated(version, data.slug),
-      PostWithTocSchema,
-      buildShell,
-      { ttl: "7d" },
-    );
+  // Restricted responses and gate hints must reflect the current row, rather
+  // than a seven-day public shell cached under an older permission or password.
+  if (await canReadPost(context.env, gateMeta, viewer)) {
+    const post = await fetchContent();
+    return post && !post.gate
+      ? { ...post, contentJson: await rewritePostMediaUrls(context, post.contentJson) }
+      : post;
   }
-
-  // 密码保护：解锁令牌（无 DB/Session 开销）优先，兜底管理员。
-  const unlocked = await hasPostUnlock(
-    context.env,
-    gateMeta.id,
-    gateMeta.passwordHash,
-    viewer.unlockTokens,
-  );
-  if (unlocked) {
-    return await fetchContent();
-  }
-  if (viewer.isAdmin) {
-    return await fetchContent();
-  }
-  return await EdgeCacheService.getVersionedJson(
-    context,
-    "posts:detail",
-    (version) => POSTS_CACHE_KEYS.detailGated(version, data.slug),
-    PostWithTocSchema,
-    buildShell,
-    { ttl: "7d" },
-  );
+  return buildGatedShell(gateMeta);
 }
 
 /** 受限文章的公开壳：仅元信息，无正文；gate 指示前台渲染门禁形态 */
@@ -282,23 +270,24 @@ function buildGatedShell(
     Awaited<ReturnType<typeof PostRepo.findPostGateBySlug>>
   >,
 ) {
+  const isPrivate = gateMeta.visibility === "private";
   return {
     id: gateMeta.id,
     slug: gateMeta.slug,
-    title: gateMeta.title,
-    summary: gateMeta.summary,
+    title: isPrivate ? "" : gateMeta.title,
+    summary: "",
     readTimeInMinutes: gateMeta.readTimeInMinutes,
     status: gateMeta.status,
     visibility: gateMeta.visibility,
-    passwordChannel: gateMeta.passwordChannel,
-    passwordHint: gateMeta.passwordHint,
+    passwordChannel: isPrivate ? null : gateMeta.passwordChannel,
+    passwordHint: isPrivate ? null : gateMeta.passwordHint,
     publishedAt: gateMeta.publishedAt,
     pinnedAt: gateMeta.pinnedAt,
     createdAt: gateMeta.createdAt,
     updatedAt: gateMeta.updatedAt,
-    skillId: gateMeta.skillId,
-    authorId: gateMeta.authorId,
-    author: gateMeta.author ?? null,
+    skillId: null,
+    authorId: isPrivate ? null : gateMeta.authorId,
+    author: isPrivate ? null : (gateMeta.author ?? null),
     publicContentRenderVersion: gateMeta.publicContentRenderVersion,
     tags: [],
     contentJson: null,
@@ -311,9 +300,22 @@ function buildGatedShell(
 }
 
 export async function getRelatedPosts(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: DbContext & {
+    executionCtx: ExecutionContext;
+    viewer?: ViewerAccess;
+  },
   data: FindRelatedPostsInput,
 ) {
+  const gate = await PostRepo.findPostGateBySlug(context.db, data.slug);
+  if (
+    !gate ||
+    !(await canReadPost(
+      context.env,
+      gate,
+      context.viewer ?? UNAUTHENTICATED_VIEWER,
+    ))
+  )
+    return [];
   const fetcher = async () => {
     const postIds = await PostRepo.getRelatedPostIds(context.db, data.slug, {
       limit: data.limit,
@@ -347,7 +349,7 @@ export async function getRelatedPosts(
     .map((id) => posts.find((p) => p.id === id))
     .filter((p): p is NonNullable<typeof p> => !!p);
 
-  return orderedPosts;
+  return redactLockedListSummaries(orderedPosts);
 }
 
 export async function getPublicPostsPage(
@@ -360,66 +362,50 @@ export async function getPublicPostsPage(
   const offset = data.offset ?? 0;
   const limit = Math.min(data.limit ?? 10, 50);
   const paginatePinned = data.paginatePinned === "true";
-  const isAdminViewer = context.viewer?.isAdmin === true;
-  const allowedVisibilities = isAdminViewer
+  const isSuperAdminViewer = context.viewer?.isSuperAdmin === true;
+  const allowedVisibilities = isSuperAdminViewer
     ? ADMIN_LIST_VISIBILITIES
     : PUBLIC_LIST_VISIBILITIES;
 
-  const result = await EdgeCacheService.getVersionedJson(
-    context,
-    "posts:list",
-    (version) =>
-      POSTS_CACHE_KEYS.publicPage(
-        version,
-        offset,
-        limit,
-        isAdminViewer ? "admin" : "public",
-        paginatePinned,
-      ),
-    PublicPostsPageResponseSchema,
-    async () => {
-      const { items, total, pageItemCount } = await PostRepo.getPublicPostsPage(
-        context.db,
-        {
-          offset,
-          limit,
-          allowedVisibilities,
-          paginatePinned,
-        },
-      );
-      return {
-        items,
-        total,
-        offset,
-        limit,
-        hasNextPage: offset + pageItemCount < total,
-        hasPrevPage: offset > 0,
-      };
+  const { items, total, pageItemCount } = await PostRepo.getPublicPostsPage(
+    context.db,
+    {
+      offset,
+      limit,
+      allowedVisibilities,
+      privateAuthorId: context.viewer?.userId ?? undefined,
+      paginatePinned,
     },
-    { ttl: "7d" },
   );
-
-  return result;
+  return {
+    items: redactLockedListSummaries(items, context.viewer),
+    total,
+    offset,
+    limit,
+    hasNextPage: offset + pageItemCount < total,
+    hasPrevPage: offset > 0,
+  };
 }
 
 export async function findAdjacentPosts(
-  context: DbContext & { executionCtx: ExecutionContext },
+  context: DbContext & {
+    executionCtx: ExecutionContext;
+    viewer?: ViewerAccess;
+  },
   data: FindAdjacentPostsInput,
 ): Promise<AdjacentPostsResponse> {
-  return await EdgeCacheService.getVersionedJson(
-    context,
-    "posts:detail",
-    (version) => POSTS_CACHE_KEYS.adjacent(version, data.slug),
-    AdjacentPostsResponseSchema,
-    async () => {
-      const { previous, next } = await PostRepo.findAdjacentPosts(
-        context.db,
-        data.slug,
-      );
-      return { previous, next };
-    },
-    { ttl: "7d" },
-  );
+  const gate = await PostRepo.findPostGateBySlug(context.db, data.slug);
+  if (
+    !gate ||
+    !(await canReadPost(
+      context.env,
+      gate,
+      context.viewer ?? UNAUTHENTICATED_VIEWER,
+    ))
+  ) {
+    return { previous: null, next: null };
+  }
+  return await PostRepo.findAdjacentPosts(context.db, data.slug);
 }
 
 export async function generateSummaryByPostId({
@@ -543,15 +529,20 @@ export async function getPostsCount(
 }
 
 export async function findPostBySlugAdmin(
-  context: DbContext,
+  context: OwnerContext,
   data: FindPostBySlugInput,
 ) {
   const post = await PostRepo.findPostBySlug(context.db, data.slug, {
     publicOnly: false,
   });
-  if (!post) return null;
+  if (!post || !isPostOwner(context, post.authorId)) return null;
+  const {
+    passwordHash: _passwordHash,
+    passwordCipher: _passwordCipher,
+    ...safePost
+  } = stripPublicContentJson(post);
   return {
-    ...stripPublicContentJson(post),
+    ...safePost,
     toc: generateTableOfContents(post.contentJson),
   };
 }
@@ -633,9 +624,15 @@ export async function updatePost(
 
   // 密码门禁：编辑器传来明文 password（不含 passwordHash/passwordCipher）。
   // 服务端在此派生安全字段后落库，确保明文/杂凑的生成只在服务端完成。
-  const persisted = { ...data.data };
-  delete persisted.password;
-  delete persisted.categoryId;
+  const {
+    password: plainPassword,
+    categoryId: _categoryId,
+    ...input
+  } = data.data;
+  const persisted: Parameters<typeof PostRepo.updatePost>[2] = { ...input };
+  // Enforce server-only derivation even for internal callers bypassing the API schema.
+  delete persisted.passwordHash;
+  delete persisted.passwordCipher;
 
   if (data.data.categoryId != null) {
     const category = await context.db
@@ -656,17 +653,42 @@ export async function updatePost(
     delete persisted.authorId;
   }
 
-  if (persisted.visibility === "public" || persisted.visibility === "private") {
-    // 离开密码门禁：清除密码相关字段，并使已签发解锁令牌失效。
+  const visibility = persisted.visibility ?? existingPost.visibility;
+  if (visibility !== "password") {
+    // Removing the hash revokes previously issued grants, including on mode changes.
     persisted.passwordHash = null;
     persisted.passwordCipher = null;
-  } else if (persisted.visibility === "password") {
-    const plain = data.data.password;
-    if (typeof plain === "string" && plain !== "") {
-      persisted.passwordHash = await hashPassword(plain);
-      persisted.passwordCipher = await encryptPassword(plain, context.env);
+  } else if (typeof plainPassword === "string" && plainPassword !== "") {
+    if (!plainPassword.trim()) return err({ reason: "PASSWORD_REQUIRED" });
+    // Autosave resubmits the decrypted value. Keep the hash stable unless the
+    // password actually changes so unrelated edits do not invalidate grants.
+    if (!(await verifyPassword(plainPassword, existingPost.passwordHash))) {
+      persisted.passwordHash = await hashPassword(plainPassword);
+      persisted.passwordCipher = await encryptPassword(
+        plainPassword,
+        context.env,
+      );
+    } else if (!existingPost.passwordCipher) {
+      persisted.passwordCipher = await encryptPassword(
+        plainPassword,
+        context.env,
+      );
     }
-    // 留空 = 保持现有密码（改密码才派生新字段）。
+  } else if (!existingPost.passwordHash) {
+    return err({ reason: "PASSWORD_REQUIRED" });
+  }
+
+  if (persisted.contentJson !== undefined && !actorIsSuper) {
+    const readable = await assertPostMediaReferencesReadable(
+      {
+        db: context.db,
+        env: context.env,
+        viewer: createViewerAccess(context.env, context.session?.user),
+      },
+      existingPost.contentJson,
+      persisted.contentJson,
+    );
+    if (!readable) return err({ reason: "PERMISSION_DENIED" });
   }
 
   const updatedPost = Object.values(persisted).some(
@@ -688,15 +710,72 @@ export async function updatePost(
       });
   }
 
-  // Pin changes affect the home page list ordering, so invalidate the cached
-  // public posts list (KV-backed, long TTL).
+  const accessChanged =
+    existingPost.visibility !== updatedPost.visibility ||
+    existingPost.passwordHash !== updatedPost.passwordHash ||
+    existingPost.authorId !== updatedPost.authorId;
+  const publicationChanged =
+    existingPost.status !== updatedPost.status ||
+    existingPost.slug !== updatedPost.slug ||
+    existingPost.publishedAt?.getTime() !== updatedPost.publishedAt?.getTime();
   const pinnedAtChanged =
-    (existingPost.pinnedAt != null ? 1 : 0) !==
-    (updatedPost.pinnedAt != null ? 1 : 0);
-  if (pinnedAtChanged) {
-    context.executionCtx.waitUntil(
-      CacheService.bumpVersion(context, "posts:list"),
-    );
+    existingPost.pinnedAt?.getTime() !== updatedPost.pinnedAt?.getTime();
+
+  if (
+    (accessChanged || publicationChanged || pinnedAtChanged) &&
+    (existingPost.status === "published" || updatedPost.status === "published")
+  ) {
+    // Revocation takes effect at D1 reads immediately; refresh derived stores
+    // as part of this request as well, rather than waiting for a later Publish.
+    const tasks: Array<Promise<unknown>> = [
+      fastInvalidatePublicCaches(context.env, [
+        ...new Set([existingPost.slug, updatedPost.slug]),
+      ]),
+      CacheService.deleteKey(
+        context,
+        POSTS_CACHE_KEYS.syncHash(updatedPost.id),
+      ),
+    ];
+    if (
+      updatedPost.visibility !== "public" ||
+      updatedPost.status !== "published" ||
+      !updatedPost.publishedAt ||
+      updatedPost.publishedAt > new Date()
+    ) {
+      tasks.push(
+        SearchService.deleteIndex(
+          context,
+          { id: updatedPost.id },
+          { immediate: true },
+        ),
+      );
+    } else if (accessChanged || publicationChanged) {
+      tasks.push(
+        SearchService.upsert(
+          context,
+          {
+            id: updatedPost.id,
+            slug: updatedPost.slug,
+            title: updatedPost.title,
+            summary: updatedPost.summary,
+            contentJson:
+              updatedPost.publicContentJson ?? updatedPost.contentJson,
+            tags: existingPost.tags.map((tag) => tag.name),
+          },
+          { immediate: true },
+        ),
+      );
+    }
+    const results = await Promise.allSettled(tasks);
+    for (const result of results) {
+      if (result.status === "rejected") {
+        console.error(
+          "Post access side-effect refresh failed",
+          updatedPost.id,
+          result.reason,
+        );
+      }
+    }
   }
 
   if (data.data.contentJson !== undefined) {
@@ -712,8 +791,13 @@ export async function updatePost(
     }),
   );
 
+  const {
+    passwordHash: _passwordHash,
+    passwordCipher: _passwordCipher,
+    ...safeUpdatedPost
+  } = stripPublicContentJson(updatedPost);
   return ok({
-    ...updatedPost,
+    ...safeUpdatedPost,
     categoryId:
       data.data.categoryId === undefined
         ? existingPost.categoryId
@@ -837,7 +921,9 @@ export async function deletePost(
     tasks.push(CacheService.bumpVersion(context, "posts:detail"));
     tasks.push(CacheService.bumpVersion(context, "posts:list"));
     tasks.push(CacheService.bumpVersion(context, "tags:list"));
-    tasks.push(SearchService.deleteIndex(context, { id: data.id }));
+    tasks.push(
+      SearchService.deleteIndex(context, { id: data.id }, { immediate: true }),
+    );
     tasks.push(purgePostCDNCache(context.env, post.slug));
     tasks.push(
       CacheService.deleteKey(context, POSTS_CACHE_KEYS.syncHash(data.id)),
